@@ -1,0 +1,29 @@
+digraph { 
+       cbl_amp1_ant1 [ini="umd-cable-AMP-ANT_LF.ini" condition="f <= 1e9"] 
+       cbl_amp2_ant2 [ini="umd-cable-AMP-ANT_HF.ini" condition="f > 1e9"] 
+       cbl_amp1_pm1 [ini="umd-cable-PM-FWD_LF.ini" condition="f <= 1e9"] 
+       cbl_amp2_pm1 [ini="umd-cable-PM-FWD_HF.ini" condition="f > 1e9"] 
+       cbl_ant1_pm2 [ini="umd-cable-PM-REV_LF.ini" condition="f <= 1e9"] 
+       cbl_ant2_pm2 [ini="umd-cable-PM-REV_HF.ini" condition="f > 1e9"] 
+       
+       a2 -> a2_a1
+       a2 -> a2_a2
+       a2_a1 -> ant_e1 [dev=cbl_amp1_ant1 what="S21"]
+       a2_a2 -> ant_e2 [dev=cbl_amp2_ant2 what="S21"]
+       a2_a1 -> pm1_e1 [dev=cbl_amp1_pm1 what="S21"]
+       a2_a2 -> pm1_e2 [dev=cbl_amp2_pm1 what="S21"]
+       pm1_e1 -> pm1
+       pm1_e2 -> pm1
+       ant_e1 -> ant
+       ant_e2 -> ant
+       ant -> ant1 
+       ant -> ant2 
+       ant1 -> ant 
+       ant2 -> ant 
+       ant -> ant_a1
+       ant -> ant_a2
+       ant_a1 -> pm2_e1 [dev=cbl_ant1_pm2 what="S21"]
+       ant_a2 -> pm2_e2 [dev=cbl_ant2_pm2 what="S21"]
+       pm2_e1 -> pm2
+       pm2_e2 -> pm2
+       }

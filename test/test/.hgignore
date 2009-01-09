@@ -1,0 +1,10 @@
+syntax: glob
+*.pyc
+*.pyd
+*~
+*.bak
+.DS_Store
+parser_DatFile_parsetab.py
+
+syntax: regexp
+.*\#.*\#$

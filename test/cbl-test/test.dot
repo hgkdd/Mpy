@@ -1,0 +1,11 @@
+digraph {
+	cbl1 [ini="cable.ini" condition="10<=f<=30" action="from action import do\ndo('f', 30)"]
+	cbl2 [ini="10dB.ini"  condition="f>30" action="from action import do\ndo('f', 30)"]
+
+	c1 -> d1 [dev=cbl1 what="S21"]
+	a -> c1 
+	a -> c2
+	c2 -> d2 [dev=cbl2 what="S21"]
+	d1 -> b
+	d2 -> b
+}

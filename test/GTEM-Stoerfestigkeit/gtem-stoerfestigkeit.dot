@@ -1,0 +1,19 @@
+digraph {
+	sg [ini="M:\\umd-config\\GTEM\\ini\\umd-gt-12000A-real.ini"]
+	amp [ini="M:\\umd-config\\GTEM\\ini\\ar100W1000M1-3dB-real.ini" condition="80e6<=f<=1e9"]
+	pm1 [ini="M:\\umd-config\\GTEM\\ini\\umd-rs-nrvd-1-real.ini" ch=1]
+	pm2 [ini="M:\\umd-config\\GTEM\\ini\\umd-rs-nrvd-1-real.ini" ch=2]
+	rk  [ini="M:\\umd-config\\GTEM\\ini\\umd-nport1.ini"]
+	cbl_sg_amp [ini="M:\\umd-config\\GTEM\\ini\\cbl_sg_amp.ini" condition="10e6<=f<=18e9"]
+	cbl_amp_dc [ini="M:\\umd-config\\GTEM\\ini\\cbl_amp_dc.ini" condition="10e6<=f<=18e9"]
+
+	sg -> amp_in       [dev=cbl_sg_amp what="S21"]
+	amp_in -> amp_out  [dev=amp what="S21"]
+	amp_out -> rk_1    [dev=cbl_amp_dc what="S21"]
+	rk_1 -> rk_2       [dev=rk what="S21"]
+	rk_2 -> gtem
+	rk_1 -> rk_3       [dev=rk what="S31"]
+	rk_2 -> rk_4       [dev=rk what="S42"]
+	rk_3 -> pm1
+	rk_4 -> pm2
+}

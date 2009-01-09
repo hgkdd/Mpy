@@ -1,0 +1,9 @@
+# -*- coding: utf-8 -*-
+
+from scuq import units, si
+
+AMPLITUDERATIO=units.AlternateUnit('(V/V)', si.VOLT/si.VOLT)
+POWERRATIO=AMPLITUDERATIO**2
+EFIELD=si.VOLT/si.METER
+HFIELD=si.AMPERE/si.METER
+POYNTING=si.WATT/(si.METER**2)

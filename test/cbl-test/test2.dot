@@ -1,0 +1,7 @@
+digraph {
+	cbl1 [ini="10dB.ini"]
+	cbl2 [ini="10dB.ini"]
+
+	a -> b [dev=cbl1 what="S21"]
+	b -> c [dev=cbl2 what="S21"]
+}

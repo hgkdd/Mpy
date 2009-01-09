@@ -1,0 +1,6 @@
+# only for test purpose
+#
+FUNIT: Hz
+UNIT: powerratio
+80e6   (0.75,0) (0.75,0) (0.75,0) 
+18e9 0.750000 0.750000 0.750000
