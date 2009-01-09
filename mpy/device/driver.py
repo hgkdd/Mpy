@@ -39,6 +39,7 @@ class DRIVER(object):
             self.query=self._debug_query
             return True
         else:
+    	    import visa	
             if values_format is None:
                 values_format=visa.ascii
             if lock is None:
@@ -107,7 +108,7 @@ class DRIVER(object):
         else:
             self.Configuration=Configuration(ininame, self.conftmpl)
             self.conf.update(self.Configuration.conf)
-            if True or not self.conf['init_value']['virtual']:
+            if not self.conf['init_value']['virtual']:
                 buspars={}
                 #print "Here"
                 for k in ('timeout',
@@ -122,7 +123,7 @@ class DRIVER(object):
                     except AttributeError:
                         pass
                 
-                self.dev=self._init_bus(buspars)
+                self.dev=self._init_bus(**buspars)
                 if self.dev != None:
                     dct=self._do_cmds('Init', locals())
                     self._update(dct)

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import visa
-from amplifier import AMPLIFIER
+from mpy.device.amplifier import AMPLIFIER
 
 class SMX25(AMPLIFIER):
+    conftmpl=AMPLIFIER.conftmpl
+    conftmpl['init_value']['gpib']=int
     def __init__(self):
         AMPLIFIER.__init__(self)
         self._cmds={'POn':  [("ON", None)],
@@ -21,7 +23,9 @@ class SMX25(AMPLIFIER):
     def SetFreq(self, freq):
         AMPLIFIER.SetFreq(self,freq)
         dct=self.query('ST', r'(?P<st>.*)')
-        B1=int(dct['st'])
+        B1=int(dct['st'][:2],16)
+        E=int(dct['st'][2:],16)
+        assert E==0, "IFI SMX25: error from ST command. error = %d"%E
         if (B1 & 1<<5) and (freq >= 250e6):
             self.write('B2')
         elif (B1 & 1<<6) and (freq < 250e6):
@@ -39,20 +43,20 @@ def main():
     except IndexError:
         ini=format_block("""
                          [description]
-                         DESCRIPTION = Test Amplifier
+                         DESCRIPTION = SMX25
                          TYPE = AMPLIFIER
-                         VENDOR = HGK
+                         VENDOR = IFI
                          SERIALNR = 
                          DEVICEID = 
                          DRIVER =
 
                          [INIT_VALUE]
-                         FSTART = 80e6
+                         FSTART = 10e3
                          FSTOP = 1e9
                          FSTEP = 0.0
                          NR_OF_CHANNELS = 2
-                         GPIB = 2
-                         VIRTUAL = 1
+                         GPIB = 9
+                         VIRTUAL = 0
 
                          [CHANNEL_1]
                          NAME = S21
