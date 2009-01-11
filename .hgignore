@@ -5,6 +5,10 @@ syntax: glob
 *.bak
 .DS_Store
 parser_DatFile_parsetab.py
+MANIFEST
+build/*
+dist/*
+mpy/__version__.py
 
 syntax: regexp
 .*\#.*\#$
