@@ -20,10 +20,10 @@ remembered_version = False
 def get_version(doreload=False):
     """Return version information if available."""
     try:
-        import __version__
+        import mpy.__version__
         if doreload:
-            reload(__version__)
-        version = __version__.version
+            reload(mpy.__version__)
+        version = mpy.__version__.version
     except ImportError:
         version = unknown_version
     return version
