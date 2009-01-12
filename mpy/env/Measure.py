@@ -4,7 +4,7 @@ Measure: Base class for other measure classes
 
 Author: Prof. Dr. Hans Georg Krauthaeuser, hgk@ieee.org
 
-Copyright (c) 2001-2008 All rights reserved
+Copyright (c) 2001-2009 All rights reserved
 """
 
 import sys
@@ -15,9 +15,9 @@ import cPickle
 import gzip
 import math
 
-import device
-import util
-
+from mpy.device import device
+from mpy.tools import util
+import scuq as uq
 
 try:
     import pyTTS
@@ -69,25 +69,18 @@ class Measure(object):
         @rtype: None
         @return: None
         """
-        if hasattr(item, 'keys'):  # a dict
+        if hasattr(item, 'keys'):  # a dict like object
             print "{",
             for k in item.keys():
                 print str(k)+":",
                 self.out(item[k])
             print "}",
-        elif hasattr(item,'get_v'): # MResult or CMResult
-            print item,
-        elif hasattr(item, 'sort'):  # a list
+        elif hasattr(item, 'index'):  # a list like object
             print "[",
             for i in item:
                 self.out(i)
             print "]",
-        elif type(item) == type((1,)):  # a tuple
-            print "(",
-            for i in item:
-                self.out(i)
-            print ")",
-        elif hasattr(item, 'append'): # vector
+        elif hasattr(item, '__iter__'):  # a sequence 
             print "(",
             for i in item:
                 self.out(i)
@@ -123,33 +116,38 @@ class Measure(object):
             """
             Helper function to log something.
             """
-            if b.has_key('comment'):
+            assert hasattr(b, 'keys'), "Argument b has to be a dict."
+            try:
                 print repr(b['comment']),
-            if b.has_key('parameter'):
+            except KeyError:
+                pass
+            try:
                 par = b['parameter']
                 for des,p in par.items():
                     print des,
                     out_block(p)
-                if b.has_key('value'):
+                try:
                     item = b['value']
-                else:
+                except KeyError:
                     item = None
                 self.out(item)
+            except KeyError:
+                pass
             sys.stdout.flush()
             
-        stdout = sys.stdout
+        stdout = sys.stdout #save stdout
         if self.logfile is not None:
             sys.stdout = self.logfile
         try:
-            if hasattr(block, 'keys'):
-                for des in block.keys():
+            try:
+                for des,bd in block.items():
                     print util.tstamp(), des,
-                    out_block(block[des])
-                    print
-            else:
+                    out_block(bd)
+                    print # New Line
+            except AttributeError:
                 print block
         finally:
-            sys.stdout=stdout
+            sys.stdout=stdout #restore stdout
 
 
     def stdUserMessenger(self, msg="Are you ready?", but=["Ok","Quit"], level='', dct={}):
@@ -224,14 +222,14 @@ class Measure(object):
         """
         log = None
         try:
-            log = file(name, "a+")
-        except:
+            log = open (name, "a+")
+        except IOError:
             util.LogError (self.messenger)
         else:
             if self.logfile is not None:
                 try:
                     self.logfile.close()
-                except:
+                except IOError:
                     util.LogError (self.messenger)            
 
             self.logfilename=name
@@ -249,7 +247,7 @@ class Measure(object):
         """
         if logger is None:
             self.logger = [self.stdlogger]
-        elif type(logger) in [types.ListType, types.TupleType]:
+        elif hasattr(logger, '__iter__'): # sequence
             self.logger = [l for l in logger if callable(l)]
         else:
             if callable(logger):
