@@ -45,9 +45,6 @@ None of the discussion in this section constitutes legal advice. The R Core Team
 So, my understanding is that I can use it.
 """
 from __future__ import division
-import UMDMeasure
-import umddevice
-import umdutil
 import math
 import sys
 import time
@@ -63,6 +60,11 @@ for p in scipy_pkgs:
         scipy.pkgload(p)
 
 
+from mpy.device import device
+from mpy.tools import util
+from mpy.env import Measure
+
+
 #from win32com.client import Dispatch
 #import sys
 
@@ -76,24 +78,13 @@ for p in scipy_pkgs:
 #    f.write(img)
 #    f.close()
 
-AmplifierProtectionError=UMDMeasure.AmplifierProtectionError
+AmplifierProtectionError=Measure.AmplifierProtectionError
 
-class MSC(UMDMeasure.UMDMeasure):
+class MSC(Measure.Measure):
     """A class for MSC measurements 
     """
     def __init__(self):
-        self.asname=None
-        self.ascmd=None
-        self.autosave = False
-        self.autosave_interval = 3600
-        self.lastautosave = time.time()
-        self.logger=[self.stdlogger]
-        self.logfile=None
-        self.logfilename=None
-        self.messenger=self.stdUserMessenger
-        self.UserInterruptTester=self.stdUserInterruptTester
-        self.PreUserEvent=self.stdPreUserEvent
-        self.PostUserEvent=self.stdPostUserEvent        
+        super(MSC, self).__init__()
         self.TPosCmp = self.stdTPosCmp
         self.rawData_MainCal = {}
         self.processedData_MainCal = {}
@@ -108,37 +99,11 @@ class MSC(UMDMeasure.UMDMeasure):
         self.std_Standard='IEC 61000-4-21'
 
     def __setstate__(self, dct):
-        if dct['logfilename'] is None:
-            logfile = None
-        else:
-            logfile = file(dct['logfilename'], "a+")
-        self.__dict__.update(dct)
-        self.logfile = logfile
-        self.messenger=self.stdUserMessenger
-        self.logger=[self.stdlogger]
-        self.UserInterruptTester=self.stdUserInterruptTester
-        self.PreUserEvent=self.stdPreUserEvent
-        self.PostUserEvent=self.stdPostUserEvent        
+        super(MSC, self).__setstate__(dct)
         self.TPosCmp = self.stdTPosCmp
-        # for 'old' pickle files
-        if not hasattr(self, 'asname'):
-            self.asname=None
-            self.ascmd=None
-            self.autosave = False
-        if not hasattr(self, 'autosave_interval'):
-            self.autosave_interval = 3600
-            self.lastautosave = time.time()
-        if not hasattr(self, 'std_Standard'):
-            self.std_Standard='IEC 61000-4-21'
 
     def __getstate__(self):
-        odict = self.__dict__.copy()
-        del odict['logfile']
-        del odict['logger']
-        del odict['messenger']
-        del odict['UserInterruptTester']
-        del odict['PreUserEvent']
-        del odict['PostUserEvent']        
+        odict = super(MSC, self).__getstate__()
         del odict['TPosCmp']
         return odict
 
@@ -198,7 +163,7 @@ class MSC(UMDMeasure.UMDMeasure):
                                   'pmref': ['pmref1']}):
         """Performs a msc main calibration according to IEC 61000-4-21
         """
-        self.PreUserEvent()
+        self.pre_user_event()
 
         if self.autosave:
             self.messenger(umdutil.tstamp()+" Resume main calibration measurement from autosave...", [])
@@ -240,7 +205,7 @@ class MSC(UMDMeasure.UMDMeasure):
             self.messenger(umdutil.tstamp()+" ...done", [])
 
             try:
-                level = self.setLevel(mg, names, SGLevel)
+                level = self.set_level(mg, names, SGLevel)
             except AmplifierProtectionError, _e:
                 self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                 raise  # re raise to reach finaly clause
@@ -454,7 +419,7 @@ class MSC(UMDMeasure.UMDMeasure):
                         self.messenger(umdutil.tstamp()+" RF On...", [])
                         stat = mg.RFOn_Devices()   # switch on just before measure
 
-                        level2 = self.doLeveling(leveling, mg, names, locals())
+                        level2 = self.do_leveling(leveling, mg, names, locals())
                         if level2:
                             level=level2
 
@@ -595,7 +560,7 @@ class MSC(UMDMeasure.UMDMeasure):
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
         self.messenger(umdutil.tstamp()+" End of msc main calibration. Status: %d"%stat, [])
-        self.PostUserEvent()
+        self.post_user_event()
         return stat
 
 
@@ -618,7 +583,7 @@ class MSC(UMDMeasure.UMDMeasure):
                                   'tuner': ['tuner1']}):
         """Performs a msc autocorrelation measurement
         """
-        self.PreUserEvent()
+        self.pre_user_event()
         if self.autosave:
             self.messenger(umdutil.tstamp()+" Resume autocorrelation measurement from autosave...", [])
         else:
@@ -656,7 +621,7 @@ class MSC(UMDMeasure.UMDMeasure):
             stat = mg.Zero_Devices()
             self.messenger(umdutil.tstamp()+" ...done", [])
             try:
-                level = self.setLevel(mg, names, SGLevel)
+                level = self.set_level(mg, names, SGLevel)
             except AmplifierProtectionError, _e:
                 self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                 raise  # re raise to reach finaly clause
@@ -743,7 +708,7 @@ class MSC(UMDMeasure.UMDMeasure):
                     self.messenger(umdutil.tstamp()+" RF On...", [])
                     stat = mg.RFOn_Devices()   # switch on just before measure
 
-                    level2 = self.doLeveling(leveling, mg, names, locals())
+                    level2 = self.do_leveling(leveling, mg, names, locals())
                     if level2:
                         level=level2
 
@@ -835,7 +800,7 @@ class MSC(UMDMeasure.UMDMeasure):
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
         self.messenger(umdutil.tstamp()+" End of msc autocorelation measurement. Status: %d"%stat, [])
-        self.PostUserEvent()
+        self.post_user_event()
         return stat
 
     def __HandleUserInterrupt(self, dct, ignorelist='', handler=None):
@@ -845,12 +810,12 @@ class MSC(UMDMeasure.UMDMeasure):
             return self.stdUserInterruptHandler(dct,ignorelist=ignorelist)
     
     def stdUserInterruptHandler(self, dct, ignorelist=''):
-        key = self.UserInterruptTester() 
+        key = self.user_interrupt_tester() 
         if key and not chr(key) in ignorelist:
             # empty key buffer
-            _k = self.UserInterruptTester()
+            _k = self.user_interrupt_tester()
             while not _k is None:
-                _k = self.UserInterruptTester()
+                _k = self.user_interrupt_tester()
 
             mg = dct['mg']
             names = dct['names']
@@ -900,7 +865,7 @@ class MSC(UMDMeasure.UMDMeasure):
                     stat = mg.Zero_Devices()
                     if hassg:
                         try:
-                            level = self.setLevel(mg, names, SGLevel)
+                            level = self.set_level(mg, names, SGLevel)
                         except AmplifierProtectionError, _e:
                             self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
 
@@ -920,7 +885,7 @@ class MSC(UMDMeasure.UMDMeasure):
             self.messenger(umdutil.tstamp()+" RF On...", [])
             stat = mg.RFOn_Devices()   # switch on just before measure
             if hassg:
-                level2 = self.doLeveling(leveling, mg, names, locals())
+                level2 = self.do_leveling(leveling, mg, names, locals())
                 if level2:
                     level=level2
             try:
@@ -952,7 +917,7 @@ class MSC(UMDMeasure.UMDMeasure):
         """Performs a msc EUT calibration according to IEC 61000-4-21
         """
 
-        self.PreUserEvent()
+        self.pre_user_event()
         if self.autosave:
             self.messenger(umdutil.tstamp()+" Resume EUT calibration measurement from autosave...", [])
         else:
@@ -995,7 +960,7 @@ class MSC(UMDMeasure.UMDMeasure):
             self.messenger(umdutil.tstamp()+" ...done", [])
             # set level
             try:
-                level = self.setLevel(mg, names, SGLevel)
+                level = self.set_level(mg, names, SGLevel)
             except AmplifierProtectionError, _e:
                 self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                 raise  # re raise to reach finaly clause
@@ -1149,7 +1114,7 @@ class MSC(UMDMeasure.UMDMeasure):
                     self.messenger(umdutil.tstamp()+" RF On...", [])
                     stat = mg.RFOn_Devices()   # switch on just before measure
 
-                    level2 = self.doLeveling(leveling, mg, names, locals())
+                    level2 = self.do_leveling(leveling, mg, names, locals())
                     if level2:
                         level=level2
 
@@ -1259,7 +1224,7 @@ class MSC(UMDMeasure.UMDMeasure):
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
         self.messenger(umdutil.tstamp()+" End of EUT main calibration. Status: %d"%stat, [])
-        self.PostUserEvent()
+        self.post_user_event()
         return stat
 
     def Measure_Immunity (self,
@@ -1282,7 +1247,7 @@ class MSC(UMDMeasure.UMDMeasure):
         """Performs a msc immunity measurement according to IEC 61000-4-21
         """
 
-        self.PreUserEvent()
+        self.pre_user_event()
         if kernel[0] is None:
             if kernel[1] is None:
                 kernel=(stdImmunityKernel,{'field': umddevice.UMDMResult(10, umddevice.UMD_Voverm),
@@ -1552,7 +1517,7 @@ class MSC(UMDMeasure.UMDMeasure):
                     self.messenger("DEBUG: power: %s, c_sg_ant: %s, sgpower: %s"%(str(power), str(c_sg_ant['total']), str(sgpower)),[])
                     olevel=level
                     try:
-                        level = self.setLevel(mg,names,sgpower)
+                        level = self.set_level(mg,names,sgpower)
                     except AmplifierProtectionError, _e:
                         self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                         level=olevel
@@ -1672,7 +1637,7 @@ class MSC(UMDMeasure.UMDMeasure):
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
         self.messenger(umdutil.tstamp()+" End of Immunity mesurement. Status: %d"%stat, [])
-        self.PostUserEvent()
+        self.post_user_event()
         return stat
                           
 
@@ -1796,7 +1761,7 @@ class MSC(UMDMeasure.UMDMeasure):
         """Performs a msc emission measurement according to IEC 61000-4-21
         """
 
-        self.PreUserEvent()
+        self.pre_user_event()
         if self.autosave:
             self.messenger(umdutil.tstamp()+" Resume MSC emission measurement from autosave...", [])
         else:
@@ -2112,7 +2077,7 @@ Quit: quit measurement.
             self.messenger(umdutil.tstamp()+" Quit...", [])
             stat = mg.Quit_Devices()
         self.messenger(umdutil.tstamp()+" End of Emission mesurement. Status: %d"%stat, [])
-        self.PostUserEvent()
+        self.post_user_event()
         return stat
 
     def GetAllTPos (self, description):
@@ -2250,8 +2215,8 @@ Quit: quit measurement.
 
 
     def __OutputRawData(self, thedata, description, what):
-        deslist = self.MakeDeslist(thedata, description)
-        whatlist = self.MakeWhatlist(thedata, what)
+        deslist = self.make_deslist(thedata, description)
+        whatlist = self.make_whatlist(thedata, what)
         for d in deslist:
             print "# Description:", d
             for w in whatlist:
@@ -2352,8 +2317,8 @@ Quit: quit measurement.
             sys.stdout=stdout
 
     def __OutputProcessedData(self, thedata, description, what):
-        deslist = self.MakeDeslist(thedata, description)
-        whatlist = self.MakeWhatlist(thedata, what)
+        deslist = self.make_deslist(thedata, description)
+        whatlist = self.make_whatlist(thedata, what)
         for d in deslist:
             data = thedata[d]
             print "Description:", d
@@ -2805,7 +2770,7 @@ Quit: quit measurement.
             EUT_cal=None
 
         if EUT_OK==None:
-            EUT_OK = self.stdEUTStatusChecker
+            EUT_OK = self.std_eut_status_checker
 
         zeroPR = umddevice.UMDMResult(0.0,umddevice.UMD_powerratio)
         

@@ -8,29 +8,66 @@ Copyright (c) 2001-2009 All rights reserved
 """
 
 import sys
+import os
 import time
-import types
-import inspect
 import cPickle
 import gzip
-import math
+import re
+import tempfile
 
 from mpy.device import device
-from mpy.tools import util
+from mpy.tools import util,calling
 import scuq as uq
 
 try:
     import pyTTS
-    tts=pyTTS.Create()
-    tts.SetVoiceByName('MSMary')
+    __tts=pyTTS.Create()
+    __tts.SetVoiceByName('MSMary')
 except:
-    tts=None
+    __tts=None
     pass
 
 class Measure(object):
     """
     Base class for measurements.
     """
+    def __init__(self):
+        self.asname=None
+        self.ascmd=None
+        self.autosave = False
+        self.autosave_interval = 3600
+        self.lastautosave = time.time()
+        self.logger=[self.std_logger]
+        self.logfile=None
+        self.logfilename=None
+        self.messenger=self.std_user_messenger
+        self.user_interrupt_tester=self.std_user_interrupt_tester
+        self.pre_user_event=self.std_pre_user_event
+        self.post_user_event=self.std_post_user_event        
+
+    def __setstate__(self, dct):
+        if dct['logfilename'] is None:
+            logfile = None
+        else:
+            logfile = file(dct['logfilename'], "a+")
+        self.__dict__.update(dct)
+        self.logfile = logfile
+        self.messenger=self.std_user_messenger
+        self.logger=[self.std_logger]
+        self.user_interrupt_tester=self.std_user_interrupt_tester
+        self.pre_user_event=self.std_pre_user_event
+        self.post_user_event=self.std_post_user_event        
+
+    def __getstate__(self):
+        odict = self.__dict__.copy()
+        del odict['logfile']
+        del odict['logger']
+        del odict['messenger']
+        del odict['user_interrupt_tester']
+        del odict['pre_user_event']
+        del odict['post_user_event']        
+        return odict
+
     def wait(self, delay, dct, uihandler, intervall=0.1):
         """
         A wait function that can de interrupted.
@@ -80,7 +117,7 @@ class Measure(object):
             for i in item:
                 self.out(i)
             print "]",
-        elif hasattr(item, '__iter__'):  # a sequence 
+        elif util.issequence(item):  # other sequence 
             print "(",
             for i in item:
                 self.out(i)
@@ -88,7 +125,7 @@ class Measure(object):
         else:
             print item,
             
-    def SetAutoSaveInterval (self, interval):
+    def set_autosave_interval (self, interval):
         """
         Set the intervall between auto save.
 
@@ -99,7 +136,7 @@ class Measure(object):
         """
         self.autosave_interval = interval
         
-    def stdlogger(self, block):
+    def std_logger(self, block):
         """
         The standard logger.
         Print block to self.logfile or to stdout (if self.logfile is None).
@@ -123,7 +160,7 @@ class Measure(object):
                 pass
             try:
                 par = b['parameter']
-                for des,p in par.items():
+                for des,p in par.iteritems():
                     print des,
                     out_block(p)
                 try:
@@ -140,7 +177,7 @@ class Measure(object):
             sys.stdout = self.logfile
         try:
             try:
-                for des,bd in block.items():
+                for des,bd in block.iteritems():
                     print util.tstamp(), des,
                     out_block(bd)
                     print # New Line
@@ -150,7 +187,7 @@ class Measure(object):
             sys.stdout=stdout #restore stdout
 
 
-    def stdUserMessenger(self, msg="Are you ready?", but=["Ok","Quit"], level='', dct={}):
+    def std_user_messenger(self, msg="Are you ready?", but=["Ok","Quit"], level='', dct={}):
         """
         The standard (default) method to present messages to the user.
         The behaviour depends on the value of the parameter 'but'.
@@ -176,31 +213,27 @@ class Measure(object):
         print msg
         for l in self.logger:
             l(msg)                
-        if level in ['email']:
+        if level in ('email',):
             try:
                 send_email(to=dct['to'], fr=dct['from'], subj=dct['subject'], msg=msg)
             except KeyError:
-                pass
+                util.LogError(self.messenger)
 
         if len(but): # button(s) are given -> wait
-            if not tts is None:
-                tts.Speak(msg, pyTTS.tts_async)
+            if __tts:
+                __tts.Speak(msg, pyTTS.tts_async)
             while True:
-                key = util.keypress()
+                key=chr(util.keypress())
+                key=key.lower()
                 for s in but:
-                    if len(s):  # ignore empty 'buttons' 
-                        if key in map(ord, s[0]+s[0].lower()):
-                            if not tts is None:
-                                tts.Speak(s, pyTTS.tts_purge_before_speak)
-                            return but.index(s)
-    #                    else:
-    #                        if not tts is None:
-    #                            tts.Speak('Default', pyTTS.tts_purge_before_speak)
-    #                        return None
+                    if s.startswith(key):
+                        if __tts:
+                            __tts.Speak(s, pyTTS.tts_purge_before_speak)
+                        return but.index(s)
         else:
             return -1
     
-    def stdUserInterruptTester(self):
+    def std_user_interrupt_tester(self):
         """
         The standard (default) user interrupt tester.
         Returns L{util.anykeyevent()}
@@ -210,7 +243,7 @@ class Measure(object):
         """
         return util.anykeyevent()
         
-    def setLogFile (self, name):
+    def set_logfile (self, name):
         """
         Tries to open a file with the given name with mode 'a+'
         If that fails, nothing will happen, else stdloogger will log to that file.
@@ -235,10 +268,10 @@ class Measure(object):
             self.logfilename=name
             self.logfile=log
 
-    def setLogger(self, logger=None):
+    def set_logger(self, logger=None):
         """
         Setup the list of logger fuctions (C{self.logger})
-        If C{logger is None}, C{self.stdlogger} is used.
+        If C{logger is None}, C{self.std_logger} is used.
 
         @type logger: None, callable, or sequence of callables
         @param logger: functions to log
@@ -246,38 +279,35 @@ class Measure(object):
         @return: None
         """
         if logger is None:
-            self.logger = [self.stdlogger]
-        elif hasattr(logger, '__iter__'): # sequence
-            self.logger = [l for l in logger if callable(l)]
-        else:
-            if callable(logger):
-                self.logger = [logger]
+            logger = [self.std_logger]
+        logger=util.flatten(logger) # ensure flat list
+        self.logger = [l for l in logger if callable(l)]
 
-    def setMessenger(self, messenger):
+    def set_messenger(self, messenger):
         """
         Set function to present messages.
 
         @type messenger: callable
-        @param messenger: the messenger (see L{self.stdUserMessenger})
+        @param messenger: the messenger (see L{self.std_user_messenger})
         @rtype: None
         @return: None
         """
         if callable(messenger):
             self.messenger=messenger
 
-    def setUserInterruptTester(self, tester):
+    def set_user_interrupt_tester(self, tester):
         """
         Set function to test for user interrupt.
 
         @type tester: callable
-        @param tester: the tester (see L{self.stdUserInterruptTester})
+        @param tester: the tester (see L{self.std_user_interrupt_tester})
         @rtype: None
         @return: None
         """
         if callable(tester):
-            self.UserInterruptTester=tester
+            self.user_interrupt_tester=tester
 
-    def setAutoSave(self, name):
+    def set_autosave(self, name):
         """
         Setter for the class attribute C{asname} (name of the auto save file).
         
@@ -288,108 +318,92 @@ class Measure(object):
         """
         self.asname = name
 
-    def do_autosave(self):
+    def do_autosave(self, name_or_obj=None, depth=None, prefixes=None):
         """
         Serialize 'self' using cPickle.
 
-        The calling sequence assumed here is:
+        Assuming a calling sequence like so:
         
         script -> method of measurement class -> do_autosave
 
-        Thus, the issued command in 'script' (grand parent of this method) is extracted and saved in C{self.ascmd}.
+        depth = 1 (default) will set C{self.ascmd} to the command issued in the script.
+        If depth is to large, the outermost command is used.
+
+        Thus, the issued command in 'script' is extracted and saved in C{self.ascmd}.
         This can be used to redo the command after a crash.
 
         @rtype: None
         @return: None
         """
+        if depth is None:
+            depth=1
+        if name_or_obj is None:
+            name_or_obj=getattr(self, 'asname', None)
+
         # we want to save the cmd that has been used
         # (in order to get all the calling parameters)
         try:
             self.autosave = True  # mark the state
-            frame = inspect.currentframe()  # this function
-            outerframes = inspect.getouterframes(frame)  # all outerframes
-            caller = outerframes[1][0]  # the caller (parent)
-##            cargs, cvarargs, ckwargs, clocals = inspect.getargvalues(caller)
-##            print "DEBUG: cargs: %r cvarargs: %r ckwargs %r"%(cargs, cvarargs, ckwargs)
-            ccframe = outerframes[2][0]  # the grand parent
-            ccfname = outerframes[2][1]  # the name of the file of grand parent
-            ccmodule = inspect.getmodule(ccframe) # get the module
-            if ccfname == '<string>':    # we are in a 'recall-from-autosave run' (exec(cmd))
-                pass   # self.ascmd already exist
-            else:
-                try:
-                    slines, start = inspect.getsourcelines(ccmodule)
-                except:
-                    clen = 100
-                else:
-                    clen = len(slines)
-                finfo = inspect.getframeinfo(ccframe, clen)
-                theindex = finfo[4]
-                lines = finfo[3]
-                theline = lines[theindex]  # the current line
-                cmd = theline
-                # the command can be a multi line command
-                # the idea here is to check if we can compile the line(s)
-                for i in range(theindex-1, 0, -1):
-                    line = lines[i]
-                    try:
-                        compile (cmd.lstrip(), '<string>', 'exec')
-                    except SyntaxError:
-                        cmd = line + cmd
-                    else:
-                        break
-                self.ascmd = cmd.lstrip()
-##                print "DEBUG: ascmd: %s"%self.ascmd 
-##                for _arg in cargs:
-##                    _argstr='%s=%r'%(_arg, clocals[_arg])
-##                    print "DEBUG: argstr: %s"%_argstr 
-##                if not ckwargs is None:
-##                    try:
-##                        ckwargs[0]
-##                    except:
-##                        ckwargs=(ckwargs,)
-##                    for _kw in ckwargs:
-##                        self.ascmd=self.ascmd.replace('**%s'%_kw, '**%s'%repr(clocals[_kw]))
-            # now, we can serialize 'self'
+            calling_sequence = calling.get_calling_sequence(prefixes=prefixes)
+            calling_sequence=[cs for cs in calling_sequence if cs != '<string>']
+            #print calling_sequence
             try:
+                self.ascmd=calling_sequence[depth]
+            except IndexError:
+                self.ascmd=calling_sequence[-1]
+            if self.ascmd.startswith('exec'):
+                print self.ascmd
+                self.ascmd = str(re.match( r'exec.*\(.*[\'\"](.*)[\'\"].*\)', self.ascmd ).groups()[0]) # extrace arg of exec
+
+            # now, we can serialize 'self'
+            pfile=None
+            if isinstance(name_or_obj, basestring):   # it's a string (filename)
                 try:
-                    if self.asname[-3:] == '.gz':  # gzip
+                    if name_or_obj.endswith(('.gz','.zip')):  # gzip
                         pfile = gzip.open(self.asname,"wb")
                     else:
-                        pfile = file(self.asname,"wb")   # regular pickle                     
+                        pfile = open(self.asname,"wb")   # regular pickle                     
+                except IOError:
+                    util.LogError (self.messenger)
+            elif hasattr(name_or_obj, 'write'):  # file-like object
+                pfile=name_or_obj
+            if pfile is None:
+                fd, fname=tempfile.mkstemp(suffix='.p', prefix='autosave', dir='.', text=False)
+                pfile=os.fdopen(fd, 'wb')
+            #print pfile, type(pfile)
+
+                
+            try:
+                try:
                     cPickle.dump(self, pfile, 2)
                     self.lastautosave = time.time()
-                except:
+                except IOError:
                     util.LogError (self.messenger)
             finally:
                 try:
                     pfile.close()
-                except:
+                except IOError:
                     util.LogError (self.messenger)            
-                
-        finally:        
+        finally:
             self.autosave = False
-            del frame
-            del outerframes
-            del caller
-            del ccframe
-            del ccmodule
 
-    def stdPreUserEvent(self):
+        #print self.ascmd
+                
+    def std_pre_user_event(self):
         """
         Just calls L{util.unbuffer_stdin()}.
         See there...
         """
         util.unbuffer_stdin()
 
-    def stdPostUserEvent(self):
+    def std_post_user_event(self):
         """
         Just calls L{util.restore_stdin()}
         See there...
         """
         util.restore_stdin()
         
-    def doLeveling(self, leveling, mg, names, dct):
+    def do_leveling(self, leveling, mg, names, dct):
         """
         Perform leveling on the measurement graph.
         
@@ -442,21 +456,21 @@ class Measure(object):
                         break
                 
                 if ac_min == ac_max:
-                    return self.setLevel(mg, names, ac_min)
+                    return self.set_level(mg, names, ac_min)
 
                 def __objective (x, mg=mg):
-                    self.setLevel(mg, names, x)
+                    self.set_level(mg, names, x)
                     actual = mg.Read([names[reader]])[names[reader]]
                     actual = device.UMDCMResult(actual)
-                    cond, a, n = self.__TestLevelingCondition(actual, nominal, c_level)
+                    cond, a, n = self.__test_leveling_condition(actual, nominal, c_level)
                     return a-n
 
                 l = util.secant_solve(__objective, ac_min, ac_max, nominal.get_u()-nominal.get_v(), 0.1)
-                return self.setLevel(mg, names, l)
+                return self.set_level(mg, names, l)
                 #break  # only first true condition ie evaluated
         return None
 
-    def setLevel(self, mg, names, l):
+    def set_level(self, mg, names, l):
         sg = mg.nodes[names['sg']]['inst']
         # get unit for sg
         if mg.nodes[names['sg']].has_key('ch'):
@@ -484,67 +498,45 @@ class Measure(object):
         self.messenger(util.tstamp()+" Signal Generator set to %s"%(str(level)), [])
         return level
 
-    def __TestLevelingCondition(self, actual, nominal, c_level):
+    def __test_leveling_condition(self, actual, nominal, c_level):
         cond = True
-        if hasattr(actual, "append"):  # vector
-            for i in range(len(actual)):
-                actual[i] *= c_level
-                if hasattr(nominal[i].get_v(), 'mag'): # a complex
-                    nominal[i] = nominal[i].mag()
-                    actual[i] = actual[i].mag()
-                actual[i] = actual[i].convert(nominal.unit)
-                cond &= (nominal[i].get_l() <= actual[i].get_v() <= nominal[i].get_u())
-        else:
-            actual *= c_level
-            if hasattr(nominal, 'mag'): # a complex
-                nominal = nominal.mag()
-            if hasattr(actual, 'mag'): # a complex
-                actual = actual.mag()
-            actual = actual.convert(nominal.unit)
-            cond = (nominal.get_l() <= actual.get_v() <= nominal.get_u())
+        actual = util.flatten(actual)  # ensure lists
+        nominal= util.flatten(nominal)
+        for ac,nom in zip(actual,nominal):
+            ac *= c_level
+            if hasattr(nom.get_v(), 'mag'): # a complex
+                nom = nom.mag()
+                ac = ac.mag()
+            ac = ac.convert(nominal.unit)
+            cond &= (nom.get_l() <= ac.get_v() <= nom.get_u())
         return cond, actual.get_v(), nominal.get_v()
 
-
-    def MakeDeslist(self, thedata, description):
+    def make_deslist(self, thedata, description):
         if description is None:
-            deslist = thedata.keys()
+            description = []
+        if util.issequence(description): # a sequence
+            deslist = [des for des in description if des in thedata]
         else:
-            deslist = []
-            if hasattr(description,'append'):
-                #description is a list
-                for des in description:
-                    if thedata.has_key(des):
-                        deslist.append(des)
+            if description in thedata:
+                deslist=[description]
             else:
-                if thedata.has_key(description):
-                    deslist.append(description)
+                deslist=[]
         return deslist
 
-    def MakeWhatlist (self, thedata, what):
-        allwhat_withdupes = []
-        for d in thedata.keys():
-            # d: description
-            allwhat_withdupes += thedata[d].keys()
-        allwhat = []
-        [allwhat.append(i) for i in allwhat_withdupes if not allwhat.count(i)]
-    
+    def make_whatlist (self, thedata, what):
+        allwhat_withdupes = util.flatten([v.keys() for v in thedata.itervalues()])
+        allwhat=list(set(allwhat_withdupes))
+
         if what is None:
             whatlist = allwhat
         else:
             whatlist = []
-            if hasattr(what,'append'):
-                for w in what:
-                    if w in allwhat:
-                        whatlist.append(w)
-            else:
-                if what in allwhat:
-                    whatlist.append(what)
+            what=util.flatten(what)
+            whatlist = [w for w in what if w in allwhat]
         return whatlist
 
-    def stdEUTStatusChecker(self, status):
-        if status in ['ok', 'OK']:
-            return True
-        return False
+    def std_eut_status_checker(self, status):
+        return status in ['ok', 'OK']
 
 class Error(Exception):
     """
@@ -556,30 +548,5 @@ class AmplifierProtectionError(Error):
     def __init__ (self, message):
         self.message = message
 
-##class UnintentionalRad(object):
-##    twopi=2*math.pi
-##    cvacuum=299792458
-##    def __init__(self, min_radius):
-##        self.a=min_radius
-##    def ka(self, f):
-##        return UnintentionalRad.twopi*f*self.a/UnintentionalRad.cvacuum
-##    def chisq2fac(self, n):
-##        return 0.577+math.log(n)+0.5/n
-##
-##class Dmax_uRad_OneCut(UnintentionalRad):
-##    def __init__(self, min_radius):
-##        super(Dmax_uRad_OneCut, self).__init__(min_radius)
-##        self.a=min_radius
-##    def n_ind(self, ka):
-##        return 4*ka+2
-##    def chisq2fac(self, n):
-##        return super(Dmax_uRad_OneCut, self).chisq2fac(n)
-##    def ka(self, f):
-##        return super(Dmax_uRad_OneCut, self).ka(f)
-##    def Dmax(self, f):
-##        ka=self.ka(f)
-##        if ka<1:
-##            ka=1
-##        return self.chisq2fac(self.n_ind(ka))
         
         

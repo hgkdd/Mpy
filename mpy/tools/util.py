@@ -17,6 +17,7 @@ import csv
 import cPickle
 import traceback
 import pprint
+import tempfile
 
 scipy_pkgs=('interpolate','integrate','special','stats')
 for p in scipy_pkgs:
@@ -455,7 +456,7 @@ def frange(start, end=None, inc=None):
 
 class OutputError:
     def __init__(self):
-        self.clear () 
+        self.clear() 
     def write (self, obj):
         self.values.append(obj)
     def readlines(self, lines = None):
@@ -480,11 +481,9 @@ def LogError(Messenger):
     (ErrorType,ErrorValue,ErrorTB)=sys.exc_info()
     traceback.print_exc(ErrorTB, out)
     error = out.readlines()
-    for i in range(len(error)):
-        error[i] = error[i].replace ('\n', '; ')
-    err_msg = tstamp()+" *** Error: "
     for err in error:
-        err_msg += err
+        err = err.replace ('\n', '; ')
+    err_msg = "%s ***Error: %s"%(tstamp(), ''.join(error))
     Messenger (msg = err_msg, but = [])
 
 def idxset(n, m):
@@ -529,9 +528,14 @@ def removefrom (obj, pat):
         pass
     return
 
+def issequence(a):
+    return hasattr(a, '__iter__') and not isinstance(a, basestring) 
+
 def flatten(a):
-    if not isinstance(a,(tuple,list)): return [a]
-    if len(a)==0: return []
+    if not issequence(a): 
+        return [a]  # be sure to return a list
+    if len(a)==0:
+        return []
     return flatten(a[0])+flatten(a[1:])
 
 def send_email (to=None, fr=None, subj='a message from umdutil', msg=''):

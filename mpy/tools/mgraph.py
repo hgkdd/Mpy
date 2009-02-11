@@ -1,230 +1,92 @@
-import os
-import inspect
-import re
+#import os
+#import re
+import pydot
 import ConfigParser
-import measure.tools.dot as dot
-import measure.device.device as device #new_umddevice as device
+
+import mpy.device.device as device
 from scuq import *
-from measure.device.aunits import *
+from mpy.tools.aunits import *
+from mpy.tools.Configuration import fstrcmp
 
-def getUMDPath():
-    env = os.environ
-    umdpath = env.setdefault('UMDPATH', os.path.curdir)
-    return umdpath
-
-def OpenFileFromPath(name, mode='r', path='.'):
-    _file = None
-    #print type(name), type(path)
-    #print "Name:", name, "Path:", repr(path), "End"
-    name=os.path.normpath(name)
-    if os.path.isabs(name):  # absolute pathname
-        try:
-            _file = open(name, mode)
-        except:
-            _file = None
-        return _file
-    reldir, fname = os.path.split(name)  # seperate file name
-    for _dir in path.split(';'):
-        # first, try if file (may be with a relativ path) is in thar dir
-        try:
-            _file = open(os.path.join(_dir,name), mode)
-        except:
-            _file = None
+class Graph(object):
+    def __init__(self, fname_or_data=None):
+        methods=('graph_from_dot_file','graph_from_dot_data','graph_from_edges',
+                 'graph_from_adjacency_matrix','graph_from_incidence_matrix')             
+        dotgraph=None
+        for m in methods:
+            meth=getattr(pydot, m)
+            try:
+                dotgraph=meth(fname_or_data)
+            except (IOError, IndexError):
+                continue
+            else:
+                break
+        if dotgraph:
+            self.graph=dotgraph
+            self.edges=self.graph.get_edges()
         else:
-            return _file
-        for root, dirs, files in os.walk(_dir):
-            for f in files:
-                if f == fname:  # we got it
-                    try:
-                        _file = open(os.path.join(root,f), mode)
-                    except:
-                        _file = None
-                    return _file
-    # file not found
-    return _file 
-
-def GetFileFromPath(name, path='.'):
-    name=os.path.normpath(name)
-    name=os.path.abspath(name)
-    if os.path.isfile(name):
-        return name
-    else:
-        reldir, fname = os.path.split(name)  # seperate file name
-        for _dir in path.split(os.pathsep):
-            # first, try if file (may be with a relativ path) is in thar dir
-            if os.path.isfile(os.path.join(_dir,name)):
-                return os.path.join(_dir,name)
-            for root, dirs, files in os.walk(_dir):
-                for f in files:
-                    if f == fname:  # we got it
-                        return os.path.join(root,f)
-    # file not found
-    return None 
-
-
-class MGraph:
-    def __getstate__ (self):
-        import copy
-        #import pprint
-        odict={}
-        src = self.__dict__
-        odict['graph']=src['graph'].copy()        
-        odict['nodes']={}
-        for k, n in src['nodes'].items():
-            odict['nodes'][k] = {}
-            for key,val in n.items():
-                if not key == 'inst':
-                    odict['nodes'][k][key] = copy.copy(val)
-        #pprint.pprint(odict)
-        return odict
-
-    def __setstate__ (self, dct):
-        self.__dict__.update(dct)
-##        __frame = inspect.currentframe()
-##        __outerframes = inspect.getouterframes(__frame)
-##        __caller = __outerframes[1][0]
-##        self.CallerGlobals = __caller.f_globals
-##        self.CallerLocals = __caller.f_locals
-
-    def __init__(self, dotfile=None, n={}, g={}, globals=None, locals=None):
-        if dotfile is None:
-            self.nodes = n.copy()
-            self.graph = g.copy()
-        else:
-            (self.nodes, self.graph) = self.ReadDOTFile (dotfile)
-            #print "dotfile: %s, nodes: %r, graph: %r"%(dotfile, self.nodes, self.graph)
-        self.dotfile=dotfile
+            raise "Graph could no be created"
         
-        # no dict given -> try globals in caller frame
-##        __frame = inspect.currentframe()
-##        __outerframes = inspect.getouterframes(__frame)
-##        __caller = __outerframes[1][0]
-##        if globals is None:
-##            self.CallerGlobals = __caller.f_globals
-##        else:
-##            self.CallerGlobals = globals()
-##        if locals is None:
-##            self.CallerLocals = __caller.f_locals
-##        else:
-##            self.CallerLocals = locals()
-##        self.CreateDevices () 
-
     def __str__(self):
-        what=['graph', 'nodes']
-        ret=''
-        for w in what:
-            ret += '# %s\n'%w
-            ret += pprint.pformat(getattr(self,w))
-            ret += '\n'
-        return ret
-    
-    def ReadDOTFile(self, dotfile):
-        """
-        reads a graph description in the DOT language
-        and returns a tuple (n,g) of nodes (dict) and graph (dict)
-        Input: dotfile -> file to open; may be abspath, relpath or filename
-                          uses ENV variable from getUMDPath (UMDPATH) to search file
-                          Exception is raised if file was not found
-        Output: (n,g): n dict with node keys from dotfile
-                       value for each key is a dict with keys, vals from the node arguments taken from the dot file 
-        """
-        umdpath = getUMDPath()
-        _file = OpenFileFromPath (dotfile, 'r', umdpath)
-        try:
-            gr = _file.read()
-            _file.close()
-        except:
-            gr = None
-            raise
-        if gr is None:
-            (n,g) = {}, {}
-        else:
-            #print gr
-            (n, g) = dot.parse ("graph", gr )
-            #print n,g
-        return (n,g)
-
-    def zero (self, unit):
-        """
-        Returns zero 
-        """
-        return 0.0
+        return self.graph.to_string()
 
     def find_path(self, start, end, path=[]):
         """
         Returns a path from start to end.
-        Ignores nodes with key isActive = False.
+        Ignores edges with attribute active==False.
         """
-        path = path + [start]     # add start to path
-        if start == end:          # finished
-            return path
-        if not self.graph.has_key(start): # start not in graph
+        try:
+            return self.find_all_paths(start, end, path)[0]
+        except IndexError:
             return None
-        for node in self.graph[start]:    # for all nodes connected to start
-            can_traverse = True
-            edge = self.graph[start][str(node)] 
-            if edge.has_key('dev'):
-                edgedev = self.nodes[edge['dev']] 
-                if edgedev.has_key('isActive'):
-                    if not edgedev['isActive']:
-                        can_traverse = False
-            if can_traverse and node not in path:
-                newpath = self.find_path(node, end, path)  # recursion
-                if newpath:
-                    return newpath
-        return None
 
-    def find_all_paths(self, start, end, path=[]):
+    def find_all_paths(self, start, end, path=[], edge=None):
         """
         Find all paths in graph from start to end (without circles)
-        Ignores nodes with key isActive = False.
+        Ignores edges with attribute active==False.
         """
-        path = path + [start]
-        if start == end:
-            return [path]
-        if not self.graph.has_key(start):
-            return []
+        #print 'enter:', start, end, path 
+        #path = path + [start]
+        if edge:
+            path = path + [edge]
+            #print "added edge to path:", edge.get_source(), edge.get_destination(), path
+        if start == end:    # end node reached
+            #print "start==end: returing", [path]
+            return [path]   # this is the end of the recursion
         paths = []
-        for node in self.graph[start]:
-            can_traverse = True
-            edge = self.graph[start][str(node)] 
-            if edge.has_key('dev'):
-                edgedev = self.nodes[edge['dev']] 
-                if edgedev.has_key('isActive'):
-                    if not edgedev['isActive']:
-                        can_traverse = False
-            if can_traverse and node not in path:
-                newpaths = self.find_all_paths(node, end, path)
+        # list of all edges with source==start
+        start_edges=[e for e in self.edges if e.get_source() == start] 
+        for edge in start_edges:
+            next_node=edge.get_destination()
+            gnode=self.graph.get_node(next_node)
+            is_active = edge.get_attributes().setdefault('active', True) and gnode.get_attributes().setdefault('active', True) 
+            if is_active and edge not in path:
+                newpaths = self.find_all_paths(next_node, end, path, edge)
+                #print "newpaths returned:", newpaths
                 for newpath in newpaths:
                     paths.append(newpath)
+        #print 'exit:', paths
         return paths
 
     def find_shortest_path(self, start, end, path=[]):
         """
         returns the shortest path from start to end
-        Ignores nodes with key isActive = False.
+        Ignores edges with attribute active==False.
         """
-        path = path + [start]
-        if start == end:
-            return path
-        if not self.graph.has_key(start):
+        allpaths=self.find_all_paths(start, end, path)
+        if allpaths:
+            return sorted(allpaths)[0]
+        else:
             return None
-        shortest = None
-        for node in self.graph[start]:
-            can_traverse = True
-            edge = self.graph[start][str(node)] 
-            if edge.has_key('dev'):
-                edgedev = self.nodes[edge['dev']] 
-                if edgedev.has_key('isActive'):
-                    if not edgedev['isActive']:
-                        can_traverse = False
-            if can_traverse and node not in path:
-                newpath = self.find_shortest_path(node, end, path)
-                if newpath:
-                    if not shortest or len(newpath) < len(shortest):
-                        shortest = newpath
-        return shortest
 
+class MGraph(Graph):
+    def __init__(self, fname_or_data=None):
+        super(MGraph, self).__init__(fname_or_data)
+        self.gnodes=self.graph.get_nodes()
+        self.gedges=self.graph.get_edges()
+        self.nodes=dict.fromkeys([n.get_name() for n in self.gnodes], n)
+        self.activenodes=self.nodes.keys()
+    
     def get_path_correction (self, start, end, unit=None):
         """
         Returns a dict with the corrections for all edges
@@ -233,30 +95,24 @@ class MGraph:
         """
         assert unit in (AMPLITUDERATIO, POWERRATIO)
         result = {}
-        all_paths = self.find_all_paths (start, end)
+        all_paths = self.find_all_paths(start, end) # returs a list of (list of edges)
         #print all_paths
-        Total = quantities.Quantity (unit, 0.0)
-        for p in all_paths:
-            corr = []
-            for i in range(len(p)-1):
-                left  = p[i]
-                right = p[i+1]
-                corr.append(self.graph[left][right])
+        Total = quantities.Quantity (unit, 0.0) # init total path correction with 0
+        for p in all_paths: # p is a list of edges
             # totals in that path
-            TotalPath = None
-            #print corr
-            for n in corr:
+            TotalPath = quantities.Quantity (unit, 1.0)  # init total corection fpr this path
+            for n in p:  # for all edges in this path
                 #print n
-                if (n.has_key('dev')):
-                    # the edge
-                    dev = str(n['dev'])
-                    # edge instance
-                    inst = self.nodes[str(n['dev'])]['inst']
-                    what = str(n['what'])
+                n_attr=n.get_attributes() # dict with edge atributs
+                if 'dev' in n_attr:
+                    # the edge device
+                    dev = str(n_attr['dev'])
+                    # edge device instance
+                    inst = self.nodes[dev]['inst']
+                    what = str(n_attr['what'])
                     try:
-                        cmds = ['getData', 'GetData']
                         stat = -1
-                        for cmd in cmds:
+                        for cmd in ['getData', 'GetData']:
                             #print cmd
                             if hasattr(inst, cmd):
                                 #print "Vor getattr", getattr(inst,cmd)
@@ -272,19 +128,14 @@ class MGraph:
                     # store the values unconverted
                     #print dev, result[dev]
                     r=result[dev].get_value(unit)
-                    if TotalPath:
-                        TotalPath *= r
-                    else:
-                        TotalPath=r
-            
+                    TotalPath *= r            
 
             # for different paths between two points, s parameters have
             # to be summed.
             #print TotalPath
             #for k,v in result.items():
             #    print k,v
-            Total += quantities.Quantity(unit, TotalPath)
-
+            Total += TotalPath
         result['total'] = Total        
         return result
 
@@ -295,25 +146,26 @@ class MGraph:
         __frame = inspect.currentframe()
         __outerframes = inspect.getouterframes(__frame)
         __caller = __outerframes[1][0]
-        for n in self.nodes:
-            #print "Node:", n, self.nodes[n] 
-            if self.nodes[n].has_key('condition'):
-                stmt = "(" + str(self.nodes[n]['condition']) + ")"
+        for name,node in self.nodes.items():
+            n_attr=node.get_attributes() # dict with node or edge atributs
+            if 'condition' in n_attr:
+                stmt = "(" + str(n_attr['condition']) + ")"
                 #print " Cond:", stmt, " = ", 
                 cond = eval (stmt, __caller.f_globals, __caller.f_locals)
                 #print cond
                 if cond:
-                    self.nodes[n]['isActive']=True
-                    if doAction and self.nodes[n].has_key('action'):
-                        act = self.nodes[n]['action']
+                    n_attr['active']=True
+                    if doAction and 'action' in n_attr:
+                        act = n_attr['action']
                         #print str(act)
                         #print self.CallerLocals['f']
                         #print act
                         exec str(act) # in self.CallerGlobals, self.CallerLocals
                 else:
-                    self.nodes[n]['isActive']=False
+                    n_attr['active']=False
             else:
-                self.nodes[n]['isActive']=True
+                n_attr['active']=True
+        self.activenodes=[name for name in self.nodes if self.nodes[name].get_attributes()['active']]
         del __caller
         del __outerframes
         del __frame
@@ -321,7 +173,7 @@ class MGraph:
     def CreateDevices (self):
         """
         Should be called once after creating the instance.
-        - Sets isActive = True for all nodes
+        - Sets attribute active = True for all nodes and edges
         - Reads the ini-file (if ini atrib is present)
         - Creates the device instances of all nodes and save the variable in the nodes dict
           (nodes[key]['inst'])
@@ -330,50 +182,45 @@ class MGraph:
             for k,v in ddict.items():
                 globals()['k']=v
         """
+        dev_map={'signalgenerator': 'Signalgenerator',
+                 'powermeter': 'Powermeter',
+                 'switch': 'Switch',
+                 'probe': 'Fieldprobe',
+                 'cable': 'Cable',
+                 'motorcontroller': 'MotorController',
+                 'tuner': 'Tuner',
+                 'antenna': 'Antenna',
+                 'nport': 'NPort',
+                 'amplifier': 'Amplifier',
+                 'step2port': 'SwitchedTwoPort',
+                 'spectrumanalyzer': 'Spectrumanalyzer',
+                 'vectornetworkanalyser': 'NetworkAnalyser'}
+        devs=dev_map.keys()
         ddict={}
-        for key,attribs in self.nodes.items():
-            attribs['isActive'] = True
+        for name,obj in self.nodes:
+            attribs=obj.get_attributes()
+            attribs['active']=True
             try:
-                ini = attribs['ini']   # the ini file name
+                ini=attribs['ini']   # the ini file name
             except KeyError:    
-                attribs['inst'] = None # no ini file, no device
+                ini=attribs['inst']=None # no ini file, no device
                 continue            
             #print "ini:", self.nodes
-            attribs['inidic'] = self.__parse_ini (ini)  # parse the ini file and save it as dict in the nodes dict
+            attribs['inidic'] = self.__parse_ini(ini)  # parse the ini file and save it as dict in the attributes
             try:
-                typetxt = attribs['inidic']['description']['type'].lower()
+                typetxt = attribs['inidic']['description']['type']
             except:
-                raise UserWarning, "No type found for node '%s'."%key
+                raise UserWarning, "No type found for node '%s'."%obj.get_name()
             
             # create device instances    
             d = None
-            if (re.search('signalgenerator', typetxt)):
-                d = device.Signalgenerator()
-            elif (re.search('powermeter', typetxt)):
-                d = device.Powermeter ()
-            elif (re.search('switch', typetxt)):
-                d = device.Switch()
-            elif (re.search('probe', typetxt)):
-                d = device.Fieldprobe ()
-            elif (re.search('cable', typetxt)):
-                d = device.Cable ()
-            elif (re.search('motorcontroller', typetxt)):
-                d = device.MotorController ()
-            elif (re.search('tuner', typetxt)):
-                d = device.Tuner ()
-            elif (re.search('antenna', typetxt)):
-                d = device.Antenna ()
-            elif (re.search('nport', typetxt)):
-                d = device.NPort ()
-            elif (re.search('amplifier', typetxt)):
-                d = device.Amplifier ()
-            elif (re.search('step2port', typetxt)):
-                d = device.SwitchedTwoPort ()
-            elif (re.search('spectrumanalyzer', typetxt)):
-                d = device.Spectrumanalyzer ()
-            elif (re.search('vectornetworkanalyser', typetxt)):
-                d = device.NetworkAnalyser()
-            ddict[key]=attribs['inst'] = d # save instances in nodes dict and in return value
+            try:
+                # fuzzy type matching...
+                best_type_guess=fstrcmp(typetxt, devs, n=1, cutoff=0, ignorecase=True)[0]
+            except IndexError:
+                raise IndexError, 'Instrument type %s from file %s not in list of valid instrument types: %r'%(typetxt,ini,devs)
+            d=getattr(device, dev_map[best_type_guess])()
+            ddict[name]=attribs['inst']=d # save instances in nodes dict and in return value
             #self.CallerGlobals['d']=d
             #exec str(key)+'=d' in self.CallerGlobals # valiable in caller context
             #exec 'self.'+str(key)+'=d'   # as member variable
@@ -386,20 +233,19 @@ class MGraph:
         (node exists, has dev instance, is active, and has Trigger method)
         Returns dict: keys->list items, vals->None or return val from Trigger method
         """
+        devices=[l for l in list if l in self.activenodes]  # intersept of list and activenodes
         result={}
-        for n in list:
-            stat = None
+        for name in devices:
+            obj=self.nodes[name]
+            attribs=obj.get_attributes()
+            if not attribs['active']:
+                continue
             try:
-                node = self.nodes[n]
-                dev = node['inst']
-                active = node['isActive']
-            except KeyError:
-                pass
-            else:
-                if active and dev and hasattr(dev,'Trigger'):
-                    stat = dev.Trigger()
-            result[n]=stat
-        return result        
+                stat=attribs['inst'].Trigger()
+                result[name]=stat
+            except (KeyError, AttributeError):
+                continue
+        return result   
 
     def __Read (self, list, result=None):
         """
@@ -416,13 +262,14 @@ class MGraph:
             cmds = ('getDataNB', 'ReadDataNB')
             NB=True
 
-        for n in list:
-            if NB and result.has_key(n):
+        devices=[l for l in list if l in self.activenodes]  # intersept of list and activenodes
+        for n in devices:
+            if NB and n in result:
                 continue
             try:
                 node = self.nodes[n]
-                dev = node['inst']
-                active = node['isActive']
+                nattr=node.get_attributes()
+                dev = nattr['inst']
             except KeyError:
                 result[n] = None
             else:
@@ -460,35 +307,26 @@ class MGraph:
         if IgnoreInactice is True, only active devices are used
          
         """
+        devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept of list and activenodes
         cmd = str(cmd)
         serr=0
-        for n,attribs in self.nodes.items():
+        for n in devices:
+            attribs=self.nodes[n].get_attributes()
             if attribs['inst'] is None: # not a real device
                 continue
             err = 0
             stat = 0
-            if (not IgnoreInactive) or (attribs.has_key('isActive') and attribs['isActive']):
-                dev = attribs['inst']
-                try:
-                    ans = getattr(dev, cmd)(*args)
-                    if isinstance(ans, tuple):
-                        stat=ans[0]
-                    else:
-                        stat=ans
-                    if (stat < 0):
-                        err = attribs['inst'].GetLastError()
-                except AttributeError:
-                    pass
-##                if (hasattr(dev,cmd)):
-##                    cmdline = "stat = attribs['inst']." + cmd + "("
-##                    for arg in args:
-##                        cmdline = cmdline + repr(arg) + ","
-##                    if cmdline[-1] == ',':
-##                        cmdline = cmdline[:-1]
-##                    cmdline = cmdline + ")"
-##                    exec cmdline    
-##                    if (stat < 0):
-##                        err = self.nodes[str(n)]['inst'].GetLastError()
+            dev = attribs['inst']
+            try:
+                ans = getattr(dev, cmd)(*args)
+                if isinstance(ans, tuple):
+                    stat=ans[0]
+                else:
+                    stat=ans
+                if (stat < 0):
+                    err = attribs['inst'].GetLastError()
+            except AttributeError:
+                pass
             self.nodes[str(n)]['ret'] = stat
             self.nodes[str(n)]['err'] = err
             serr += stat
@@ -501,26 +339,27 @@ class MGraph:
         If IgnoreInactive = False (default), all devices are initialized, 
         else only active devices are initialized
         """
+        devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept        
         serr=0
-        for n,attribs in self.nodes.items():
+        for n in devices:
             print "Init %s ..."%str(n)
+            attribs=self.nodes[n].get_attributes()
             if attribs['inst'] is None:
                 continue
             err = 0
             stat = 0
-            ini = str(attribs['ini'])
-            if attribs.has_key('ch'):
-                ch = int(str(attribs['ch']))
+            ini = attribs['ini']
+            if 'ch' in attribs:
+                ch = int(attribs['ch'])
             else:
                 ch = 1
-            if (not IgnoreInactive) or (attribs.has_key('isActive') and attribs['isActive']):
-                dev=attribs['inst']
-                if (hasattr(dev,'Init')):
-                    #print n
-                    stat = dev.Init(ini, ch)
-                    if (stat < 0):
-                        #print ini, ch
-                        err = dev.GetLastError()
+            dev=attribs['inst']
+            if (hasattr(dev,'Init')):
+                #print n
+                stat = dev.Init(ini, ch)
+                if (stat < 0):
+                    #print ini, ch
+                    err = dev.GetLastError()
             attribs['ret'] = stat
             attribs['err'] = err
             if stat < 0:
@@ -539,18 +378,19 @@ class MGraph:
     def SetFreq_Devices (self, freq, IgnoreInactive=True):
         minfreq = 1e100
         maxfreq = -1e100
-        for n,attribs in self.nodes.items():
+        devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept        
+        for n in devices:
+            attribs=self.nodes[n].get_attributes()
             if attribs['inst'] is None:
                 continue
             err = 0
-            if (not IgnoreInactive) or (attribs.has_key('isActive') and attribs['isActive']):
-                dev=attribs['inst']
-                if (hasattr(dev,'SetFreq')):
-                    err, f = dev.SetFreq(freq)
-                    minfreq = min(minfreq,f)
-                    maxfreq = max(maxfreq,f)
-                    attribs['ret'] = f
-                attribs['err'] = err
+            dev=attribs['inst']
+            if (hasattr(dev,'SetFreq')):
+                err, f = dev.SetFreq(freq)
+                minfreq = min(minfreq,f)
+                maxfreq = max(maxfreq,f)
+                attribs['ret'] = f
+            attribs['err'] = err
         return (minfreq, maxfreq)
 
     def ConfReceivers(self, conf, IgnoreInactive=True):
@@ -596,30 +436,31 @@ class MGraph:
                      'GetSweepCount',
                      'GetSpan')
         rdict={}
-        for n,attribs in self.nodes.items():
+        devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept        
+        for n in devices:
+            attribs=self.nodes[n].get_attributes()
             if attribs['inst'] is None:
                 continue  # not a device
             err = 0
-            if (not IgnoreInactive) or (attribs.has_key('isActive') and attribs['isActive']):
-                dev=attribs['inst']
-                if not hasattr(dev, set_names[0]):
-                    continue   # not a spectrumanalyzer
-                # ok, a spec analyzer
-                rdict[str(n)]={}
-                for index,par in enumerate(parlist):
-                    if conf.has_key(par):
-                        val = conf[par]
-                    else:
-                        val = None
-                    if (hasattr(dev,set_names[index]) and val):
-                        try:
-                            err, val = getattr(dev,set_names[index])(val)
-                        except TypeError: 
-                            err, val = getattr(dev,set_names[index])(*val)
-                        rdict[str(n)][par] = val
-                    elif hasattr(dev,get_names[index]):
-                        err, val = getattr(dev,get_names[index])()
-                        rdict[str(n)][par] = val
+            dev=attribs['inst']
+            if not hasattr(dev, set_names[0]):
+                continue   # not a spectrumanalyzer
+            # ok, a spec analyzer
+            rdict[str(n)]={}
+            for index,par in enumerate(parlist):
+                if conf.has_key(par):
+                    val = conf[par]
+                else:
+                    val = None
+                if (hasattr(dev,set_names[index]) and val):
+                    try:
+                        err, val = getattr(dev,set_names[index])(val)
+                    except TypeError: 
+                        err, val = getattr(dev,set_names[index])(*val)
+                    rdict[str(n)][par] = val
+                elif hasattr(dev,get_names[index]):
+                    err, val = getattr(dev,get_names[index])()
+                    rdict[str(n)][par] = val
         return rdict
 
     def Zero_Devices (self, IgnoreInactive=True):
@@ -662,21 +503,22 @@ class MGraph:
         """
         lowBatList = []
         #print self.nodes.items()
-        for n,attribs in self.nodes.items():
+        devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept        
+        for n in devices:
+            attribs=self.nodes[n].get_attributes()
             if attribs['inst'] is None:
                 continue
             err = 0
-            if (not IgnoreInactive) or (attribs.has_key('isActive') and attribs['isActive']):
-                dev=self.nodes[str(n)]['inst']
-                if (hasattr(dev,'getBatteryState')):
-                    #print "check bat state for node ", n
-                    stat, bat = dev.getBatteryState()
-                    if (stat < 0):
-                        err = dev.GetLastError()
-                    elif bat < 0: # Low
-                        lowBatList.append(n)
-                    attribs['ret'] = bat
-                attribs['err'] = err
+            dev=attribs['inst']
+            if (hasattr(dev,'getBatteryState')):
+                #print "check bat state for node ", n
+                stat, bat = dev.getBatteryState()
+                if (stat < 0):
+                    err = dev.GetLastError()
+                elif bat < 0: # Low
+                    lowBatList.append(n)
+                attribs['ret'] = bat
+            attribs['err'] = err
         return lowBatList
 
     def GetAntennaEfficiency(self, node):
@@ -690,28 +532,29 @@ class MGraph:
         eta = None
         cmds = ('getData', 'GetData')
         # look for an antenna connected to 'node' ...
-        for n,attribs in self.nodes.items():
+        devices=[n for n in self.nodes if n in self.activenodes]
+        for n in devices:
+            attribs=self.nodes[n].get_attributes()
             if attribs['inst'] is None:
                 continue  # not a real device
-            if not attribs['inidic']['description']['type'] in ['antenna', 'ANTENNA']:
+            if not attribs['inidic']['description']['type'] in ('antenna', 'ANTENNA'):
                 continue  # n is not an antenna
-            if (attribs.has_key('isActive') and attribs['isActive']):
-                # a real, active antenna
-                if self.find_path(n, node) or self.find_path(node, n):
-                    # ok, there is a coonection to our node
-                    try:
-                        stat = -1
-                        inst = attribs['inst']
-                        for cmd in cmds:
-                            if hasattr(inst, cmd):
-                                stat, result = getattr(inst, cmd)('EFF')
-                                break
-                        if stat == 0:
-                            eta = result
+            # a real, active antenna
+            if self.find_path(n, node) or self.find_path(node, n):
+                # ok, there is a coonection to our node
+                try:
+                    stat = -1
+                    inst = attribs['inst']
+                    for cmd in cmds:
+                        if hasattr(inst, cmd):
+                            stat, result = getattr(inst, cmd)('EFF')
                             break
-                    except AttributeError:
-                        # function not callable
-                        pass
+                    if stat == 0:
+                        eta = result
+                        break
+                except AttributeError:
+                    # function not callable
+                    pass
         return eta
                     
     def AmplifierProtect (self, start, end, startlevel, sg_unit, typ='save'):
@@ -720,21 +563,22 @@ class MGraph:
         if not hasattr(startlevel, '__unit__'):
             startlevel = quantities.Quantity(sg_unit, startlevel)
         allpaths = self.find_all_paths(start, end)
-        for path in allpaths:
+        for path in allpaths: #path is a list of edges
             edges = []
-            for i in range(len(path)-1):
-                left  = path[i]
-                right = path[i+1]
-                edges.append((left,right,self.graph[left][right]))
+            for p in path:
+                left  = p.get_source()
+                right = p.get_destination()
+                edges.append((left,right,p))
             for left,right,edge in edges:
                 try:
-                    attribs = self.nodes[edge['dev']]
+                    edge_dev=edge.get_attributes()['dev']
+                    attribs = self.nodes[edge_dev].get_attributes()
                 except KeyError:
                     continue
                 if attribs['inst'] is None:
                     continue
                 err = 0
-                if (attribs.has_key('isActive') and attribs['isActive']):
+                if attribs['active']:
                     dev=attribs['inst']
                     cmds = ['getData', 'GetData']
                     stat = -1
@@ -770,7 +614,7 @@ class MGraph:
                                 #    condition=level.get_u() > result.get_l() #be safe: errorbars overlap
                                 if condition: 
                                     isSafe=False
-                                    msg += "Amplifier Pretection failed for node '%s'. What = '%s', Level = %s, Max = %s, Startlevel = %s, Corr = %s\n"%(edge['dev'], w, level, result, startlevel, corr['total'])
+                                    msg += "Amplifier Pretection failed for node '%s'. What = '%s', Level = %s, Max = %s, Startlevel = %s, Corr = %s\n"%(edge_dev, w, level, result, startlevel, corr['total'])
                             break        
         return isSafe,msg
 
@@ -793,8 +637,8 @@ class MGraph:
             
             Return configVals
             """
-            configVals = ConfigParser.ConfigParser()
-            configVals.read(os.path.normpath(filename))
+            configVals = ConfigParser.SafeConfigParser()
+            configVals.readfp(filename)
             return (configVals)
 
         def makeDict(configData):
@@ -810,9 +654,9 @@ class MGraph:
                     d[s][o] = configData.get(section,option)
             return(d)
 
-        umdpath = getUMDPath()
-        _ini = GetFileFromPath (ini, umdpath)
-        if _ini is None:
-            raise "Ini file '%s' not found. Path is '%s'"%(ini,umdpath)
-        v = readConfig(_ini)
+        #umdpath = getUMDPath()
+        #_ini = GetFileFromPath (ini, umdpath)
+        #if _ini is None:
+        #    raise "Ini file '%s' not found. Path is '%s'"%(ini,umdpath)
+        v=readConfig(ini)
         return makeDict(v)
