@@ -35,6 +35,7 @@ class Configuration(object):
         # read the whole ini file in to a dict
         config=ConfigParser.SafeConfigParser()
         config.readfp(fp)
+        fp.close()
         
         self.sections_in_ini=config.sections()
         self.channel_list=[]

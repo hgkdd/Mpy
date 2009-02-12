@@ -50,6 +50,7 @@ class POWERMETER(DRIVER):
         self.freq= None
         self.power=None
         self.unit=None
+        self._internal_unit='dBm'
 
     def SetFreq(self, freq):
         self.error=0
@@ -58,8 +59,10 @@ class POWERMETER(DRIVER):
         dct=self._do_cmds('GetFreq', locals())
         self._update(dct)
         if self.error == 0:
-            print self.freq, type(self.freq)
-            self.freq=float(self.freq)
+            if not dct:
+                self.freq=freq
+            else:
+                self.freq=float(self.freq)
             #print self.freq
         return self.error, self.freq
 
@@ -67,8 +70,8 @@ class POWERMETER(DRIVER):
         self.error=0
         dct=self._do_cmds('Trigger', locals())
         self._update(dct)
-        if self.error == 0:
-            print "Device triggered."
+        #if self.error == 0:
+        #    print "Device triggered."
         return self.error
 
     def Zero(self, state):        
@@ -83,12 +86,22 @@ class POWERMETER(DRIVER):
 
     def GetData(self):
         self.error=0
-        return self.error, data
+        dct=self._do_cmds('GetData', locals()) 
+        self._update(dct)
+
+        if self.error==0 and self.power:
+            self.power=float(self.power)
+            try:
+                obj=quantities.Quantity(eval(self._internal_unit), self.power)
+            except (AssertionError, NameError):
+                self.power,self.unit=self.convert.c2scuq(self._internal_unit, float(self.power))
+                obj=quantities.Quantity(self.unit, self.power)
+        else:
+            obj=None
+        return self.error, obj
 
     def GetDataNB(self, retrigger):
-        self.error=0
-        return self.error, data
-    
+        return self.GetData()
 
 if __name__ == '__main__':
     import sys

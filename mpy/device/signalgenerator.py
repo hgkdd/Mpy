@@ -68,6 +68,7 @@ class SIGNALGENERATOR(DRIVER):
         self.freq= None
         self.level=None
         self.unit=None
+        self._internal_unit='dBm'
 
     def SetFreq(self, freq):
         self.error=0
