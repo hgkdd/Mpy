@@ -2,8 +2,9 @@
 
 import sys
 import StringIO
-from scuq import *
+import visa
 
+from scuq import *
 from mpy.device.signalgenerator import SIGNALGENERATOR
 #import pprint
 
@@ -13,11 +14,12 @@ class SWM(SIGNALGENERATOR):
         SIGNALGENERATOR.__init__(self)
         self._internal_unit='dBm'
         self._cmds={'Init':     [('*RST', None),
+                                 (':FREQ:CW 10MHZ', None),
                                  (':RF_POWER OFF', None)],
                     'SetFreq':  [("':FREQUENCY:CW %.4f Hz'%freq", None)],
                     'GetFreq':  [( ':FREQUENCY:CW?', r':FREQUENCY:CW (?P<freq>%s)'%self._FP)],
                     'SetLevel': [("':RF_LEVEL:INTERNAL %f DBM'%self.convert.scuq2c(unit, self._internal_unit, float(level))[0]", None)],
-                    'GetLevel': [( ':RF_LEVEL:INTERNAL?', r':RF_LEVEL:INTERNAL (?P<level>%s) DBM'%(self._FP))],
+                    'GetLevel': [( ':RF_LEVEL:INTERNAL?', r':RF_LEVEL:INTERNAL (?P<level>%s)'%(self._FP))],
                     'ConfAM':   [("':MODULATION:AM:INTERNAL %d PCT'%(min(80,int(depth*100)))", None),
                                  ( ':MODULATION:AM:INTERNAL?', ':MODULATION:AM:INTERNAL (?P<depth>\d+) PCT')],
                     'RFOn':     [(':RF_POWER ON', None)],
@@ -31,6 +33,7 @@ class SWM(SIGNALGENERATOR):
 
 
     def Init(self, ini=None, channel=None):
+        self.term_chars=visa.LF
         if channel is None:
             channel=1
         self.error=SIGNALGENERATOR.Init(self, ini, channel)
@@ -96,7 +99,7 @@ def main():
                         fstop: 18e9
                         fstep: 1
                         gpib: 15
-                        virtual: 1
+                        virtual: 0
 
                         [Channel_1]
                         name: RFOut

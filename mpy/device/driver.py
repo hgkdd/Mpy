@@ -21,7 +21,7 @@ class DRIVER(object):
     def _init_bus(self,timeout=5,
                        chunk_size=20480,
                        values_format=None,
-                       term_char=None,
+                       term_chars=None,
                        send_end=True,
                        delay=0,
                        lock=None):
@@ -39,7 +39,7 @@ class DRIVER(object):
             self.query=self._debug_query
             return True
         else:
-    	    import visa	
+            import visa
             if values_format is None:
                 values_format=visa.ascii
             if lock is None:
@@ -48,7 +48,7 @@ class DRIVER(object):
                                      timeout=timeout,
                                      chunk_size=chunk_size,
                                      values_format=values_format,
-                                     term_char=term_char,
+                                     term_chars=term_chars,
                                      send_end=send_end,
                                      delay=delay,
                                      lock=lock)
@@ -114,7 +114,7 @@ class DRIVER(object):
                 for k in ('timeout',
                           'chunk_size',
                           'values_format',
-                          'term_char',
+                          'term_chars',
                           'send_end',
                           'delay',
                           'lock'):

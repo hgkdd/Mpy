@@ -15,8 +15,10 @@ class SMX25(AMPLIFIER):
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
     def Init(self, ini=None, channel=None):
-        self.term_char=visa.CR+visa.LF
+        self.term_chars=visa.CR+visa.LF
         self.error=AMPLIFIER.Init(self, ini, channel)
+        self.POn()
+        self.Operate()
         self.write('M1')
         self.write('ZA')
         return self.error
