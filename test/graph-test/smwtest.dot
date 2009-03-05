@@ -1,0 +1,5 @@
+digraph {
+   sg [ini="rs_swm.ini"]
+   pm [ini="gt8540c.ini" ch=2]
+   sg -> pm
+}       

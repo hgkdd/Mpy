@@ -1,0 +1,11 @@
+digraph {
+    sg [ini="rs_swm.ini"]
+    amp [ini="smx25.ini"]
+    pm_fwd [ini="gt8540c.ini" ch=1]
+    pm_bwd [ini="gt8540c.ini" ch=2]
+
+    sg -> amp
+    amp -> pm_fwd
+    amp -> gtem
+    gtem -> pm_bwd
+}
