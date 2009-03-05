@@ -1,5 +1,6 @@
 #import os
 #import re
+import inspect
 import pydot
 import ConfigParser
 
@@ -84,7 +85,10 @@ class MGraph(Graph):
         super(MGraph, self).__init__(fname_or_data)
         self.gnodes=self.graph.get_nodes()
         self.gedges=self.graph.get_edges()
-        self.nodes=dict.fromkeys([n.get_name() for n in self.gnodes], n)
+        self.nodes=dict([[n.get_name(),{}] for n in self.gnodes])
+        nametonode=dict([[n.get_name(),n] for n in self.gnodes])
+        for n,dct in self.nodes.items():
+            dct['gnode']=nametonode[n]
         self.activenodes=self.nodes.keys()
     
     def get_path_correction (self, start, end, unit=None):
@@ -146,7 +150,8 @@ class MGraph(Graph):
         __frame = inspect.currentframe()
         __outerframes = inspect.getouterframes(__frame)
         __caller = __outerframes[1][0]
-        for name,node in self.nodes.items():
+        for name,dct in self.nodes.items():
+            node=dct['gnode']
             n_attr=node.get_attributes() # dict with node or edge atributs
             if 'condition' in n_attr:
                 stmt = "(" + str(n_attr['condition']) + ")"
@@ -154,7 +159,7 @@ class MGraph(Graph):
                 cond = eval (stmt, __caller.f_globals, __caller.f_locals)
                 #print cond
                 if cond:
-                    n_attr['active']=True
+                    dct['active']=True
                     if doAction and 'action' in n_attr:
                         act = n_attr['action']
                         #print str(act)
@@ -162,10 +167,10 @@ class MGraph(Graph):
                         #print act
                         exec str(act) # in self.CallerGlobals, self.CallerLocals
                 else:
-                    n_attr['active']=False
+                    dct['active']=False
             else:
-                n_attr['active']=True
-        self.activenodes=[name for name in self.nodes if self.nodes[name].get_attributes()['active']]
+                dct['active']=True
+        self.activenodes=[name for name,dct in self.nodes.items() if dct['active']]
         del __caller
         del __outerframes
         del __frame
@@ -197,18 +202,23 @@ class MGraph(Graph):
                  'vectornetworkanalyser': 'NetworkAnalyser'}
         devs=dev_map.keys()
         ddict={}
-        for name,obj in self.nodes:
+        for name,dct in self.nodes.items():
+            obj=dct['gnode']
             attribs=obj.get_attributes()
-            attribs['active']=True
+            for n,v in attribs.items():
+                attribs[n]=v.strip("'")   # strip '
+                attribs[n]=v.strip('"')   # strip "
+                
+            dct['active']=True
             try:
-                ini=attribs['ini']   # the ini file name
+                ini=dct['ini']=attribs['ini']   # the ini file name
             except KeyError:    
-                ini=attribs['inst']=None # no ini file, no device
+                ini=dct['ini']=dct['inst']=None # no ini file, no device
                 continue            
             #print "ini:", self.nodes
-            attribs['inidic'] = self.__parse_ini(ini)  # parse the ini file and save it as dict in the attributes
+            dct['inidic'] = self.__parse_ini(ini)  # parse the ini file and save it as dict in the attributes
             try:
-                typetxt = attribs['inidic']['description']['type']
+                typetxt = dct['inidic']['description']['type']
             except:
                 raise UserWarning, "No type found for node '%s'."%obj.get_name()
             
@@ -220,7 +230,7 @@ class MGraph(Graph):
             except IndexError:
                 raise IndexError, 'Instrument type %s from file %s not in list of valid instrument types: %r'%(typetxt,ini,devs)
             d=getattr(device, dev_map[best_type_guess])()
-            ddict[name]=attribs['inst']=d # save instances in nodes dict and in return value
+            ddict[name]=dct['inst']=d # save instances in nodes dict and in return value
             #self.CallerGlobals['d']=d
             #exec str(key)+'=d' in self.CallerGlobals # valiable in caller context
             #exec 'self.'+str(key)+'=d'   # as member variable
@@ -236,8 +246,7 @@ class MGraph(Graph):
         devices=[l for l in list if l in self.activenodes]  # intersept of list and activenodes
         result={}
         for name in devices:
-            obj=self.nodes[name]
-            attribs=obj.get_attributes()
+            attribs=self.nodes[name]
             if not attribs['active']:
                 continue
             try:
@@ -255,11 +264,11 @@ class MGraph(Graph):
         Non blocking is finished when len(result) = len(list)
         """
         if result is None:  #blocking
-            cmds = ('getData', 'ReadData')
+            cmds = ('GetData', 'getData', 'ReadData')
             result = {}
             NB=False
         else: # none blocking
-            cmds = ('getDataNB', 'ReadDataNB')
+            cmds = ('GetData', 'getDataNB', 'ReadDataNB')
             NB=True
 
         devices=[l for l in list if l in self.activenodes]  # intersept of list and activenodes
@@ -267,8 +276,7 @@ class MGraph(Graph):
             if NB and n in result:
                 continue
             try:
-                node = self.nodes[n]
-                nattr=node.get_attributes()
+                nattr=self.nodes[n]
                 dev = nattr['inst']
             except KeyError:
                 result[n] = None
@@ -276,7 +284,7 @@ class MGraph(Graph):
                 c=-1
                 for cmd in cmds:
                     try:
-                        c,val=getattr(dev, cmd)(0)
+                        c,val=getattr(dev, cmd)()
                         #print "DEBUG:", dev, cmd, val
                     except AttributeError:
                         continue   # try other command(s)
@@ -311,7 +319,7 @@ class MGraph(Graph):
         cmd = str(cmd)
         serr=0
         for n in devices:
-            attribs=self.nodes[n].get_attributes()
+            attribs=self.nodes[n]
             if attribs['inst'] is None: # not a real device
                 continue
             err = 0
@@ -339,20 +347,23 @@ class MGraph(Graph):
         If IgnoreInactive = False (default), all devices are initialized, 
         else only active devices are initialized
         """
-        devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept        
+        devices=[name for name in self.nodes if IgnoreInactive or name in self.activenodes]  # intersept        
         serr=0
         for n in devices:
             print "Init %s ..."%str(n)
-            attribs=self.nodes[n].get_attributes()
+            attribs=self.nodes[n]
             if attribs['inst'] is None:
                 continue
             err = 0
             stat = 0
             ini = attribs['ini']
-            if 'ch' in attribs:
-                ch = int(attribs['ch'])
-            else:
-                ch = 1
+            gattr=attribs['gnode'].get_attributes()
+            ch=1
+            for c in ('ch', 'channel'):
+                try:
+                    ch=int(gattr[c])
+                except KeyError:
+                    continue
             dev=attribs['inst']
             if (hasattr(dev,'Init')):
                 #print n
@@ -378,9 +389,9 @@ class MGraph(Graph):
     def SetFreq_Devices (self, freq, IgnoreInactive=True):
         minfreq = 1e100
         maxfreq = -1e100
-        devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept        
+        devices=[name for name in self.nodes if IgnoreInactive or name in self.activenodes]  # intersept        
         for n in devices:
-            attribs=self.nodes[n].get_attributes()
+            attribs=self.nodes[n]
             if attribs['inst'] is None:
                 continue
             err = 0
@@ -436,9 +447,9 @@ class MGraph(Graph):
                      'GetSweepCount',
                      'GetSpan')
         rdict={}
-        devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept        
+        devices=[name for name in self.nodes if IgnoreInactive or name in self.activenodes]  # intersept        
         for n in devices:
-            attribs=self.nodes[n].get_attributes()
+            attribs=self.nodes[n]
             if attribs['inst'] is None:
                 continue  # not a device
             err = 0
@@ -503,9 +514,9 @@ class MGraph(Graph):
         """
         lowBatList = []
         #print self.nodes.items()
-        devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept        
+        devices=[name for name in self.nodes if IgnoreInactive or name in self.activenodes]  # intersept        
         for n in devices:
-            attribs=self.nodes[n].get_attributes()
+            attribs=self.nodes[n]
             if attribs['inst'] is None:
                 continue
             err = 0
@@ -534,7 +545,7 @@ class MGraph(Graph):
         # look for an antenna connected to 'node' ...
         devices=[n for n in self.nodes if n in self.activenodes]
         for n in devices:
-            attribs=self.nodes[n].get_attributes()
+            attribs=self.nodes[n]
             if attribs['inst'] is None:
                 continue  # not a real device
             if not attribs['inidic']['description']['type'] in ('antenna', 'ANTENNA'):
@@ -572,7 +583,7 @@ class MGraph(Graph):
             for left,right,edge in edges:
                 try:
                     edge_dev=edge.get_attributes()['dev']
-                    attribs = self.nodes[edge_dev].get_attributes()
+                    attribs = self.nodes[edge_dev]
                 except KeyError:
                     continue
                 if attribs['inst'] is None:
@@ -638,7 +649,10 @@ class MGraph(Graph):
             Return configVals
             """
             configVals = ConfigParser.SafeConfigParser()
-            configVals.readfp(filename)
+            if hasattr(filename, 'readline'):  # file like object
+                configVals.readfp(filename)
+            else:
+                configVals.read(filename)  # filename
             return (configVals)
 
         def makeDict(configData):
