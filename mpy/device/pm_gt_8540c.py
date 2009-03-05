@@ -5,13 +5,13 @@ import StringIO
 import visa
 
 from scuq import *
-from mpy.device.powermeter import POWERMETER
+from mpy.device.powermeter import POWERMETER as PWRMTR
 #import pprint
 
 
-class GT8540C(POWERMETER):
+class POWERMETER(PWRMTR):
     def __init__(self):
-        POWERMETER.__init__(self)
+        PWRMTR.__init__(self)
         self._internal_unit='dBm'
         self.ch_tup=('','A','B')
         self._cmds={'SetFreq':  [("'%sE FR %s HZ'%(self.ch_tup[self.channel], freq)", None)],
@@ -30,7 +30,7 @@ class GT8540C(POWERMETER):
             self.channel=1
         else:
             self.channel=channel
-        self.error=POWERMETER.Init(self, ini, self.channel)
+        self.error=PWRMTR.Init(self, ini, self.channel)
         sec='channel_%d'%self.channel
         try:
             self.levelunit=self.conf[sec]['unit']
@@ -104,8 +104,8 @@ def main():
 
     fr=300e6
 
-    pm1=GT8540C()
-    pm2=GT8540C()
+    pm1=POWERMETER()
+    pm2=POWERMETER()
     err=pm1.Init(StringIO.StringIO(ini), 1)
     err=pm2.Init(StringIO.StringIO(ini), 2)
 

@@ -5,13 +5,13 @@ import StringIO
 import visa
 
 from scuq import *
-from mpy.device.signalgenerator import SIGNALGENERATOR
+from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 #import pprint
 
 
-class SWM(SIGNALGENERATOR):
+class SIGNALGENERATOR(SGNLGNRTR):
     def __init__(self):
-        SIGNALGENERATOR.__init__(self)
+        SGNLGNRTR.__init__(self)
         self._internal_unit='dBm'
         self._cmds={'Init':     [('*RST', None),
                                  (':FREQ:CW 10MHZ', None),
@@ -36,7 +36,7 @@ class SWM(SIGNALGENERATOR):
         self.term_chars=visa.LF
         if channel is None:
             channel=1
-        self.error=SIGNALGENERATOR.Init(self, ini, channel)
+        self.error=SGNLGNRTR.Init(self, ini, channel)
         sec='channel_%d'%channel
         try:
             self.levelunit=self.conf[sec]['unit']
@@ -112,7 +112,7 @@ def main():
     lv=quantities.Quantity(si.WATT, 1e-4)
     fr=300e6
 
-    sg=SWM()
+    sg=SIGNALGENERATOR()
     err=sg.Init(ini)
     assert err==0, 'Init() fails with error %d'%(err)
     err,freq=sg.SetFreq(fr)

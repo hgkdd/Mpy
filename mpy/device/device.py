@@ -284,7 +284,7 @@ class Device(object):
                 setattr(self, "%s"%klass, getattr(self, "_%s_wrap"%klass)(getattr(self, "_%s"%klass)))
         # call the init method
         #print self._lib_Init
-        ret=self._lib_Init(ininame=self.ininame, channel=channel)
+        ret=self._lib_Init(ini=self.ininame, channel=channel)
         for tt in tmpfiles:
             tt.close()
         # update self.virtual
@@ -376,10 +376,12 @@ class Device(object):
         return m
         
     def _getTypeAndDLL(self,ininame):
-        self.config=ConfigParser.ConfigParser()
+        self.config=ConfigParser.SafeConfigParser()
         self.config.read(ininame)
-        thetype=self.config.get("description","type")
-        theDLL=self.config.get("description","driver")
+        self.confsections=self.config.sections()
+        sec=fstrcmp('description',self.confsections,n=1,cutoff=0,ignorecase=True)[0]
+        thetype=self.config.get(sec,"type")
+        theDLL=self.config.get(sec,"driver")
         return (thetype,theDLL)
 
     def GetLastError(self):
@@ -533,7 +535,8 @@ class Signalgenerator(Device):
             channel=1
             
         ret=Device.Init(self, ininame, channel)
-        self.levelunit=self.config.get('CHANNEL_%d'%channel,'unit')
+        sec=fstrcmp('CHANNEL_%d'%channel,self.confsections,n=1,cutoff=0,ignorecase=True)[0]
+        self.levelunit=self.config.get(sec,'unit')
         
         # register additional wrappers
         self._addAttributes()
@@ -843,7 +846,8 @@ class Spectrumanalyzer(Powermeter):
             channel=1
         ret=Powermeter.Init(self, ininame, channel)
         #self.levelunit=self.config.get('channel_%d'%channel,'unit')
-        self.levelunit=self.config.get('CHANNEL_%d'%channel,'unit') #MH
+        sec=fstrcmp('CHANNEL_%d'%channel,self.confsections,n=1,cutoff=0,ignorecase=True)[0]
+        self.levelunit=self.config.get(sec,'unit') #MH
         # register additional wrappers
         self._addAttributes()
         return ret
@@ -1699,7 +1703,8 @@ class Motorcontroller(Device):
         if channel==None:
             channel=1
         ret=Device.Init(self, ininame, channel)
-        self.posunit=self.config.get('channel_%d'%channel,'unit')
+        sec=fstrcmp('CHANNEL_%d'%channel,self.confsections,n=1,cutoff=0,ignorecase=True)[0]
+        self.posunit=self.config.get(sec,'unit')
 
         # register additional wrappers
         self._addAttributes()
@@ -1892,7 +1897,8 @@ class Step2port(NPort):
     def Init (self, ininame, channel=None):
         # load DLL or pyd (etc), register wrappers for common methods
         ret=NPort.Init(self, ininame, channel)
-        self.chunit=self.config.get('channel_%d'%channel,'unit')
+        sec=fstrcmp('CHANNEL_%d'%channel,self.confsections,n=1,cutoff=0,ignorecase=True)[0]
+        self.chunit=self.config.get(sec,'unit')
 
         # register additional wrappers
         self._addAttributes()

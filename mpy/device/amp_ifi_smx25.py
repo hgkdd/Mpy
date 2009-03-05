@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import visa
 import time
-from mpy.device.amplifier import AMPLIFIER
+from mpy.device.amplifier import AMPLIFIER as AMP
 
-class SMX25(AMPLIFIER):
-    conftmpl=AMPLIFIER.conftmpl
+class AMPLIFIER(AMP):
+    conftmpl=AMP.conftmpl
     conftmpl['init_value']['gpib']=int
     def __init__(self):
-        AMPLIFIER.__init__(self)
+        AMP.__init__(self)
         self._cmds={'POn':  [("ON", None)],
                     'POff':  [("SB", None)],
                     'Operate': [("ON", None)],
@@ -16,7 +16,7 @@ class SMX25(AMPLIFIER):
 
     def Init(self, ini=None, channel=None):
         self.term_chars=visa.CR+visa.LF
-        self.error=AMPLIFIER.Init(self, ini, channel)
+        self.error=AMP.Init(self, ini, channel)
         self.POn()
         self.Operate()
         self.write('M1')
@@ -31,7 +31,7 @@ class SMX25(AMPLIFIER):
         return B1, E
         
     def SetFreq(self, freq):
-        AMPLIFIER.SetFreq(self,freq)
+        AMP.SetFreq(self,freq)
         B1,E=self._getstat()
         #use ~B1 because active is LOW
         # bit 5 is Band 1 active
@@ -39,13 +39,13 @@ class SMX25(AMPLIFIER):
         if (~B1 & 1<<5) and (freq >= 250e6):
             self.write('B2')
             while(~B1 & 1<<5 or E):
-                time.sleep(.2)
                 B1, E = self._getstat()
+                time.sleep(.4)
         elif (~B1 & 1<<6) and (freq < 250e6):
             self.write('B1')
             while(~B1 & 1<<6 or E):
-                time.sleep(.2)
                 B1, E = self._getstat()
+                time.sleep(.4)
         return self.error, freq
 
 def main():
@@ -101,7 +101,7 @@ def main():
                          """)
         ini=StringIO.StringIO(ini)
 
-    amp=SMX25()
+    amp=AMPLIFIER()
     err=amp.Init(ini)
     ctx=scuq.ucomponents.Context()
     while(True):
