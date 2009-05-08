@@ -4,7 +4,9 @@ from mpy.device.nport import NPORT   # parent class
 from mpy.tools.Configuration import fstrcmp # fuzzy string compare
 
 class AMPLIFIER(NPORT):
-    """Driver for an amplifier (derived from NPORT).
+    """
+	Child class for all py-drivers for amplifiers
+	The parent class is NPORT
     
     This class is to be used for all passive amplifiers (no remote control). 
     The class adds the methods 'Operate', 'Standby', 'Pon', 'POff' and

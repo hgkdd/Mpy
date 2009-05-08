@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 
 import re
 from mpy.tools.Configuration import Configuration,strbool,fstrcmp
@@ -7,6 +7,10 @@ from mpy.device.device import CONVERT, Device
 from mpy.device.driver import DRIVER
 
 class SIGNALGENERATOR(DRIVER):
+    """
+    Child class for all py-drivers for signal generators
+	The parent class is DRIVER
+    """
     AM_sources=('INT1', 'INT2','EXT1','EXT2','EXT_AC','EXT_DC','TWOTONE_AC','TWOTONE_DC','OFF')
     AM_waveforms=('SINE', 'SQUARE', 'TRIANGLE', 'NOISE', 'SAWTOOTH')
     AM_LFOut=('OFF','ON')
@@ -38,9 +42,13 @@ class SIGNALGENERATOR(DRIVER):
                      'outputstate': str,
                      'attmode': str,
                      'attenuation': float}}
-
+					 
+    # regular expression for a Fixed Point value in the raw string notation
+	# this is the same as %e,%E,%f,%F known from scanf
     _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
-        
+    # defintion from http://docs.python.org/library/re.html
+    #_FP=r'[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?'
+    
     def __init__(self):
         DRIVER.__init__(self)
         self._cmds={'SetFreq':  [("'FREQ %s HZ'%freq", None)],
@@ -71,15 +79,14 @@ class SIGNALGENERATOR(DRIVER):
         self._internal_unit='dBm'
 
     def SetFreq(self, freq):
-        self.error=0
+        # set a certain frequency
+        self.error=0 # reset error number
         dct=self._do_cmds('SetFreq', locals())
         self._update(dct)
         dct=self._do_cmds('GetFreq', locals())
         self._update(dct)
         if self.error == 0:
-            #print self.freq, type(self.freq)
             self.freq=float(self.freq)
-            #print self.freq
         return self.error, self.freq
     
     def SetLevel(self, lv):

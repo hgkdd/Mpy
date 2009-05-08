@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 
 import re
 from mpy.tools.Configuration import Configuration,fstrcmp
@@ -58,6 +58,7 @@ class DRIVER(object):
             return self.dev
         
     def _gpib_write(self, cmd):
+        #print "In write", cmd 
         stat=-1
         if self.dev:
             stat=self.dev.write(cmd)
@@ -78,7 +79,9 @@ class DRIVER(object):
         dct=None
         if self.dev:
             ans=self.dev.ask(cmd)
+            #print "ans=",ans
             m=re.match(tmpl, ans)
+            #print "m=",m
             if m:
                 dct=m.groupdict()
         return dct
@@ -88,7 +91,7 @@ class DRIVER(object):
         return 0
     
     def _debug_read(self, tmpl):
-        #print "In read", tmpl 
+        print "In read", tmpl 
         dct=None
         ans=raw_input('%s in: %s -> '%(self.IDN, tmpl))
         m=re.match(tmpl, ans)
@@ -97,7 +100,7 @@ class DRIVER(object):
         return dct
 
     def _debug_query(self, cmd, tmpl):
-        #print "In query", cmd, tmpl 
+        print "In query", cmd, tmpl 
         self.write(cmd)
         return self.read(tmpl)
 
@@ -140,6 +143,7 @@ class DRIVER(object):
         return self.conf[sectok][keytok]
     
     def _do_cmds(self, key, callerdict=None):
+		#print self
         dct={} # preset returned dictionary
         if not hasattr(self, '_cmds'): 
             return dct
@@ -149,14 +153,14 @@ class DRIVER(object):
                     expr=eval(cmd,callerdict) # try to eval cmd as a python expression in callerdict and assign result to expr
                 except (SyntaxError, NameError):
                     expr=cmd # else, expr is set to cmd
-                    
                 # tmpl is the mask for the string to read
                 if not tmpl: # no mask, no read
                     self.write(expr)
                 elif not cmd: # no cmd, no write
-                    dct=self.read(tmpl)
+                    dct=self.read(tmpl)					
                 else: # both -> write and read
                     dct=self.query(expr, tmpl)
+                #print "key=",key,"cmd=",cmd,"tmpl=",tmpl,'expr=',expr,'dct=',dct
         return dct
 
         #print dct

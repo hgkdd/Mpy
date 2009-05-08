@@ -7,6 +7,10 @@ from mpy.device.device import CONVERT, Device
 from mpy.device.driver import DRIVER
 
 class POWERMETER(DRIVER):
+    """
+    Child class for all py-drivers for power meters
+	The parent class is DRIVER
+    """
     ZeroCorrection=('OFF', 'ON')
     RANGE=('MANUAL', 'AUTO', 'AUTOONCE')
     

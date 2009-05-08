@@ -1,48 +1,75 @@
 ﻿# -*- coding: utf-8 -*-
 
+# Driver for Signal Generator Giga-tronics Series 12000A Microwave Synthesizer 
+
+# System-specific parameters and functions
 import sys
+# implements a file-like class, StringIO, that reads and writes a string buffer
 import StringIO
+# enables you to control all kinds of measurement equipment through various busses (GPIB, RS232, USB)
 import visa
 
+# class library for the evaluation of scalar- and complex-valued uncertain quantities
 from scuq import *
+# parent class for all signal generators
 from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 #import pprint
 
-
+# child class for the special signalgenerator
 class SIGNALGENERATOR(SGNLGNRTR):
+	# function for initialization
     def __init__(self):
+		# initialize parent class
         SGNLGNRTR.__init__(self)
+		# overwrite internal unit
         self._internal_unit='dBm'
-        self._cmds={'Init':     [('*RST', None),
-                                 (':FREQ:CW 10MHZ', None),
-                                 (':RF_POWER OFF', None)],
-                    'SetFreq':  [("':FREQUENCY:CW %.4f Hz'%freq", None)],
-                    'GetFreq':  [( ':FREQUENCY:CW?', r':FREQUENCY:CW (?P<freq>%s)'%self._FP)],
-                    'SetLevel': [("':RF_LEVEL:INTERNAL %f DBM'%self.convert.scuq2c(unit, self._internal_unit, float(level))[0]", None)],
-                    'GetLevel': [( ':RF_LEVEL:INTERNAL?', r':RF_LEVEL:INTERNAL (?P<level>%s)'%(self._FP))],
+		# overwrite defined commands, save as a dictionary
+		# key is a string
+		# value is a list of a tuples
+		# a tuble consists of a command (string) and a template (string)
+		# the template is only used for command that read
+        self._cmds={# for initialization
+		            'Init':     [('*RST', None),	# reset
+                                 ('CW 10 MZ', None),# set frequency to 10 MHz
+                                 ('RF 0', None)],	# turn RF off
+					# set a certain continous wave frequecy
+                    'SetFreq':  [("'CW %.4f HZ'%freq", None)],
+					# read the continuos wave frequency value
+                    'GetFreq':  [( 'OPCW', r'(?P<freq>%s)'%self._FP)],
+					# set a continous wave power level
+                    'SetLevel': [("'PL %f DBM'%self.convert.scuq2c(unit, self._internal_unit, float(level))[0]", None)],
+					# read the continous wave power level
+                    'GetLevel': [( 'OPPL', r'(?P<level>%s)'%(self._FP))],
                     'ConfAM':   [("':MODULATION:AM:INTERNAL %d PCT'%(min(80,int(depth*100)))", None),
                                  ( ':MODULATION:AM:INTERNAL?', ':MODULATION:AM:INTERNAL (?P<depth>\d+) PCT')],
-                    'RFOn':     [(':RF_POWER ON', None)],
-                    'RFOff':    [(':RF_POWER OFF', None)],
+                    'RFOn':     [('RF 1', None)],
+                    'RFOff':    [('RF 0', None)],
                     'AMOn':     [(':MODULATION:AM:INTERNAL ON', None)],
                     'AMOff':    [(':MODULATION:AM:INTERNAL OFF', None)],
                     'PMOn':     [(':MODULATION:PULS:INTERNAL ON', None)],
                     'PMOff':    [(':MODULATION:PULS:INTERNAL OFF', None)],
-                    'Quit':     [(':RF_POWER OFF', None)],
+					# turn off after measurement has finished
+                    'Quit':     [('RF 0', None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
 
     def Init(self, ini=None, channel=None):
+        # line feed character from PyVISA
         self.term_chars=visa.LF
+		# use standard channel 1 if no channel is set
         if channel is None:
             channel=1
+        # initialize the parent class of all signal generators
         self.error=SGNLGNRTR.Init(self, ini, channel)
+        # string with current channel
         sec='channel_%d'%channel
         try:
+            # set levelunit with the 'unit' of the parent class
             self.levelunit=self.conf[sec]['unit']
         except KeyError:
+            # use the interal defined unit otherwise
             self.levelunit=self._internal_unit
-            
+        # delete all presets from the command list
         self._cmds['Preset']=[]
         # key, vals, actions
         presets=[('attmode',
@@ -87,42 +114,55 @@ def main():
     except IndexError:
         ini=format_block("""
                         [DESCRIPTION]
-                        description: 'SWM'
+                        description: 'GT_12000A'
                         type:        'SIGNALGENERATOR'
-                        vendor:      'Rohde&Schwarz'
+                        vendor:      'Giga-tronics'
                         serialnr:
                         deviceid:
                         driver:
 
                         [Init_Value]
-                        fstart: 100e6
-                        fstop: 18e9
+                        fstart: 2e9
+                        fstop: 8e9
                         fstep: 1
-                        gpib: 15
+                        gpib: 6
                         virtual: 0
 
                         [Channel_1]
                         name: RFOut
                         level: -100
                         unit: 'dBm'
-                        outpoutstate: 0
+                        outputstate: 0
                         """)
         ini=StringIO.StringIO(ini)
 
-    lv=quantities.Quantity(si.WATT, 1e-4)
-    fr=300e6
+    # define a signal level
+    lv=quantities.Quantity(si.WATT, 1e-2)
+	# define a frequency
+    fr=1e9
 
+	# load the signalgenerator class
     sg=SIGNALGENERATOR()
+	
+	# try to initialize
     err=sg.Init(ini)
     assert err==0, 'Init() fails with error %d'%(err)
+	
+	# try to set frequency
     err,freq=sg.SetFreq(fr)
     assert err==0, 'SetFreq() fails with error %d'%(err)
     assert freq==fr, 'SetFreq() returns freq=%e instead of %e'%(freq, fr)
+	
+	# try to switch RF on
     err, _ =sg.RFOn()
     assert err==0, 'RFOn() fails with error %d'%(err)
+	
+	# try to set a level
     err,level=sg.SetLevel(lv)
     assert err==0, 'SetLevel() fails with error %d'%(err)
     assert level==lv, 'SetLevel() returns level=%s instead of %s'%(level, lv)
+	
+	# try to quit
     err=sg.Quit()
     assert err==0, 'Quit() fails with error %d'%(err)
             
