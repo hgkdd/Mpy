@@ -81,7 +81,16 @@ from mpy.env import Measure
 AmplifierProtectionError=Measure.AmplifierProtectionError
 
 class MSC(Measure.Measure):
-    """A class for MSC measurements 
+    """
+    A class for Mode Stirred Chamber measurements 
+    
+    The following main functions are defined:
+    Measure_MainCal -> Performs a msc main calibration according to IEC 61000-4-21
+    Measure_Autocorrelation -> Performs a msc autocorrelation measurement
+    Measure_EUTCal -> Performs a msc EUT calibration according to IEC 61000-4-21
+    Measure_Immunity -> Performs a msc immunity measurement according to IEC 61000-4-21
+    getMaxE -> Determine maximum E-field strength
+    Measure_Emission -> Performs a msc emission measurement according to IEC 61000-4-21
     """
     def __init__(self):
         super(MSC, self).__init__()
