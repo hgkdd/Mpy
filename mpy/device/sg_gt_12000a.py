@@ -31,25 +31,32 @@ class SIGNALGENERATOR(SGNLGNRTR):
         self._cmds={# for initialization
 		            'Init':     [('*RST', None),	# reset
                                  ('CW 10 MZ', None),# set frequency to 10 MHz
-                                 ('RF 0', None)],	# turn RF off
+                                 ('RF 0', None)],	# turn RF output off
 					# set a certain continous wave frequecy
-                    'SetFreq':  [("'CW %.4f HZ'%freq", None)],
+                    'SetFreq':  [("'CW %.1f HZ'%freq", None)],
 					# read the continuos wave frequency value
                     'GetFreq':  [( 'OPCW', r'(?P<freq>%s)'%self._FP)],
 					# set a continous wave power level
                     'SetLevel': [("'PL %f DBM'%self.convert.scuq2c(unit, self._internal_unit, float(level))[0]", None)],
 					# read the continous wave power level
                     'GetLevel': [( 'OPPL', r'(?P<level>%s)'%(self._FP))],
-                    'ConfAM':   [("':MODULATION:AM:INTERNAL %d PCT'%(min(80,int(depth*100)))", None),
-                                 ( ':MODULATION:AM:INTERNAL?', ':MODULATION:AM:INTERNAL (?P<depth>\d+) PCT')],
+                    # configure amplitude modulation
+                    'ConfAM':   [("'AD %d'%(min(80,int(depth*100)))", None)],
+                    # turn RF output on
                     'RFOn':     [('RF 1', None)],
+                    # turn RF output off
                     'RFOff':    [('RF 0', None)],
-                    'AMOn':     [(':MODULATION:AM:INTERNAL ON', None)],
-                    'AMOff':    [(':MODULATION:AM:INTERNAL OFF', None)],
-                    'PMOn':     [(':MODULATION:PULS:INTERNAL ON', None)],
-                    'PMOff':    [(':MODULATION:PULS:INTERNAL OFF', None)],
+                    # turn amplitude modulation on
+                    'AMOn':     [('AM 2', None)],
+					# turn amplitude modulation off
+                    'AMOff':    [('AM 0', None)],
+					# turn pulse modulation on
+                    'PMOn':     [('PM 2', None)],
+					# turn pulse modulation off
+                    'PMOff':    [('PM 0', None)],
 					# turn off after measurement has finished
                     'Quit':     [('RF 0', None)],
+					# ask for the instrument id
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
 
