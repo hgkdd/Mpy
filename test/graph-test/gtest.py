@@ -12,8 +12,8 @@ for k,v in instrumentation.items():
 mg.Init_Devices()  # init all devices in graph
 
 try:
-    amp.POn()
-    amp.Operate()
+    amp.POn()  #power on amplifier
+    amp.Operate() # switch amplifier to 'operate'
 
     mg.RFOn_Devices()
     lv=quantities.Quantity(si.WATT, 1e-4)
