@@ -113,6 +113,16 @@ def main():
     fr=300e6
 
     sg=SIGNALGENERATOR()
+
+    try:
+        from mpy.device.signalgenerator_ui import UI as UI
+    except ImportError:
+        pass
+    else:
+        ui=UI(sg,ini=ini)
+        ui.configure_traits()
+        sys.exit(0)
+        
     err=sg.Init(ini)
     assert err==0, 'Init() fails with error %d'%(err)
     err,freq=sg.SetFreq(fr)
