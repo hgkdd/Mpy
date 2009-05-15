@@ -6,7 +6,11 @@ import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
 import enthought.traits.ui.menu as tuim
 
+import scuq
 from mpy.tools.util import format_block
+from mpy.device.device import CONVERT
+
+conv=CONVERT()
 
 std_ini=format_block("""
                 [DESCRIPTION]
@@ -40,6 +44,8 @@ class UI(tapi.HasTraits):
     Init=tapi.Button()
     INI=tapi.Str()
     FREQ=tapi.Float()
+    LEVEL=tapi.Range(-100.,0.)
+    int_unit='dBm'
     
     def __init__(self, instance, ini=None):
         self.sg=instance
@@ -52,6 +58,10 @@ class UI(tapi.HasTraits):
         ini=StringIO.StringIO(self.INI)
         self.sg.Init(ini)
         self.RF_is_on=(self.sg.conf['channel_1']['outputstate'] in ('1','on'))
+        self.level=self.sg.conf['channel_1']['level']
+        self.unit=self.sg.conf['channel_1']['unit']
+        self.level=conv.c2c(self.unit, self.int_unit, self.level)
+        self.LEVEL=self.level
         self.update_rf()
 
     def _RF_fired(self):
@@ -62,8 +72,13 @@ class UI(tapi.HasTraits):
             self.sg.RFOff()
         self.update_rf()
             
-    def _FREQ_fired(self):
+    def _FREQ_changed(self):
         self.sg.SetFreq(self.FREQ)
+        
+    def _LEVEL_changed(self):
+        self.level=self.LEVEL
+        lv,unit=conv.c2scuq(self.int_unit, self.level)
+        self.sg.SetLevel(scuq.quantities.Quantity(unit,lv))
             
     def update_rf(self):
         if self.RF_is_on:
@@ -74,11 +89,12 @@ class UI(tapi.HasTraits):
     RF_grp=tuiapi.Group(tuiapi.Item('RF_on', show_label=False,style='readonly'), 
                         tuiapi.Item('RF', show_label=False),
                         label='RF')
-    INI_grp=tuiapi.Group(tuiapi.Item('INI', style='custom',springy=True,width=500,height=500,show_label=False),
+    INI_grp=tuiapi.Group(tuiapi.Item('INI', style='custom',springy=True,width=500,height=200,show_label=False),
                          tuiapi.Item('Init', show_label=False),
                          label='Ini')
     FREQ_grp=tuiapi.Group(tuiapi.Item('FREQ'),label='Freq')
+    LEVEL_grp=tuiapi.Group(tuiapi.Item('LEVEL'), label='Level')
     
     traits_view=tuiapi.View(tuiapi.Group(
-                                tuiapi.Group(INI_grp, FREQ_grp,layout='tabbed'), 
+                                tuiapi.Group(INI_grp, FREQ_grp, LEVEL_grp,layout='tabbed'),  
                                 RF_grp, layout='normal'), title="Signalgenerator", buttons=[tuim.CancelButton])
