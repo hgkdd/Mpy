@@ -1,4 +1,6 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
+"""This is the :mod:`mpy.device.driver` module.
+"""
 
 import re
 from mpy.tools.Configuration import Configuration,fstrcmp

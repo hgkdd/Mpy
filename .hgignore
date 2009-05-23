@@ -8,6 +8,9 @@ parser_DatFile_parsetab.py
 MANIFEST
 build/*
 dist/*
+docs/html/*
+docs/latex/*
+.ropeproject/*
 mpy/__version__.py
 
 syntax: regexp
