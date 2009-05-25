@@ -178,14 +178,18 @@ class MGraph(Graph):
     def CreateDevices (self):
         """
         Should be called once after creating the instance.
-        - Sets attribute active = True for all nodes and edges
+
+        - Sets attribute `active = True` for all nodes and edges
         - Reads the ini-file (if ini atrib is present)
         - Creates the device instances of all nodes and save the variable in the nodes dict
-          (nodes[key]['inst'])
+          (`nodes[key]['inst']`)
+
         Returns a dict with keys from the graphs nodes names and val are the device instances
-        Can be used to create local references like so:
+        Can be used to create local references like so::
+
             for k,v in ddict.items():
                 globals()['k']=v
+
         """
         dev_map={'signalgenerator': 'Signalgenerator',
                  'powermeter': 'Powermeter',
@@ -311,8 +315,8 @@ class MGraph(Graph):
 
     def CmdDevices (self, IgnoreInactive, cmd, *args):
         """
-        Tries to send 'cmd(*arg)' to all devices in graph
-        if IgnoreInactice is True, only active devices are used
+        Tries to send `cmd(*arg)` to all devices in graph
+        if `IgnoreInactice` is `True`, only active devices are used
          
         """
         devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept of list and activenodes
@@ -407,14 +411,16 @@ class MGraph(Graph):
     def ConfReceivers(self, conf, IgnoreInactive=True):
         """
         Configures all SA/Receivers in Graph
-        Input: conf: a dict with keys from 
-                     ('rbw', 'vbw', 'att', 'preamp', 'reflevel',
-                      'detector', 'tracemode', 'sweeptime', 'sweepcount', 'span')
+        Input: `conf`: a dict with keys from 
+                     `('rbw', 'vbw', 'att', 'preamp', 'reflevel', 'detector', 'tracemode', 'sweeptime', 'sweepcount', 'span')`
                       and values for these parameters
+
                 If a key, val pair exists in conf, we try to set this parameter
-                If the a key is not in conf, or if the value is missing (None),
+                If the a key is not in `conf`, or if the value is missing (`None`),
+
                 we try to read the val from the instrument
-        Return: rdict: a dict of dicts with rdict[node][key] = val mapping
+
+        Return: `rdict`: a dict of dicts with `rdict[node][key] = val` mapping
         """
         parlist = ('rbw',
                    'vbw',
@@ -534,11 +540,15 @@ class MGraph(Graph):
 
     def GetAntennaEfficiency(self, node):
         """
-        Get the antenna efficiency of an antenna connected to node
-        Input: node, the node to which the antenna is connected. Typically this is a 
-               'virtual' node in the graph, e.g. 'ant' to which the real antennas are connected.  
-        Return: antenna efficiency of the first active , real antenna connected to 'node'
-                None is returned if no antenna is found
+        Get the antenna efficiency of an antenna connected to node.
+
+        Input: 
+           node, the node to which the antenna is connected. Typically this is a 
+           'virtual' node in the graph, e.g. 'ant' to which the real antennas are connected.  
+        
+        Return: 
+           antenna efficiency of the first active , real antenna connected to 'node'
+           None is returned if no antenna is found
         """
         eta = None
         cmds = ('getData', 'GetData')

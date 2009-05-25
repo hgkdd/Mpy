@@ -1,10 +1,7 @@
 # -*- coding: iso-8859-1 -*-
-"""
-Measure: Base class for other measure classes
-
+"""Measure: Base class for other measure classes
 Author: Prof. Dr. Hans Georg Krauthaeuser, hgk@ieee.org
-
-Copyright (c) 2001-2009 All rights reserved
+Copyright (c) 2001-2009: All rights reserved
 """
 
 import sys
@@ -28,8 +25,7 @@ except:
     pass
 
 class Measure(object):
-    """
-    Base class for measurements.
+    """Base class for measurements.
     """
     def __init__(self):
         self.asname=None
@@ -203,7 +199,8 @@ class Measure(object):
         @param but: list of 'button' text
         @type level: string
         @param level: Mainly for future use.
-                      If level is 'email', msc is send by email using fields from dct (L{util.send_email}).
+        If level is 'email', msg is send by email using fields from dct (L{util.send_email}).
+        
         @type dct: dict
         @param dct: used for level == 'email': fields 'to', 'from', 'subject'
         @rtype: integer
@@ -412,6 +409,7 @@ class Measure(object):
         'conditions', 'actor', 'watch', 'nominal', 'reader', 'path', 'actor_min', and 'actor_max'.
         
         The meaning is:
+
             - condition: has to be True in order that this lewveling takes place. The condition is evaluated in the global namespace and in C{dct}.
             - actor: at the moment, this can only be a signalgenerator 'sg'
             - watch: the point in the graph to be monitored (e.g. antena input)
@@ -419,6 +417,7 @@ class Measure(object):
             - reader: the device reading the value for watch (e.g. forward poer meter)
             - path: Path between reader and watch
             - actor_min, actor_max: valid range for actor values
+
         @type mg: instance of L{device.mgraph}
         @partam mg: the measurement graph
         @type names: dict
