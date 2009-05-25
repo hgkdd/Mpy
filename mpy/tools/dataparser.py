@@ -55,6 +55,46 @@ class UConv(object):
 
 
 class DatFile(Parser):
+    """
+    :class:`DatFile` is the parser for data files, e.g. with S-parameter values.
+
+    A typical usage is like so::
+
+        import sys
+        import StringIO
+        import scuq
+        from mpy.tools.util import format_block
+        from mpy.tools.dataparser import DatFile
+
+        name=None
+        if len(sys.argv)>1:
+            name=sys.argv[1]
+        else:
+            name=StringIO.StringIO(format_block('''
+                                                FUNIT: Hz
+                                                UNIT: powerratio
+                                                ABSERROR: [0.1, 1]
+                                                10 [1, 0]
+                                                11 1
+                                                20 [0.9, 40]
+                                                30 [0.8, 70]
+                                                40 [0.7, 120]
+                                                50 [0.6, 180]
+                                                60 [0.5, 260]
+                                                70 [0.4, 310]
+                                                80 [0.3, 10]
+                                                90 [0.2, 50]
+                                                '''))
+
+        DF=DatFile(filename=name)
+        result=DF.run()
+        ctx=scuq.ucomponents.Context()
+        for f in sorted(result):
+            uq=result[f]
+            val,err,unit=ctx.value_uncertainty_unit(uq)
+            print f, uq, val, err, unit
+
+    """
     
     reserved = ('FUNIT',
                 'UNIT',

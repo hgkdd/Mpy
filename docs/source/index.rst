@@ -16,6 +16,7 @@ Contents:
    intro-install-de
    intro-structure-de
    intro-driver-de
+   dat-file-grammar
    FAQ-de
    mpy
 
