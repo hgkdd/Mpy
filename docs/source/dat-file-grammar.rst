@@ -15,7 +15,7 @@ This is the grammar of data files which can be parsed with the :class:`mpy.tools
          | ( fp_value , fp_value )   # complex: (real part, imaginary part)
          | [ fp_value , fp_value ]   # complex: [magnitude, angle in deg]
 
-Allowed units and unit conversions are taken from al dictionary `uconv` in :class:`mpy.tools.dataparser.UConv`::
+Allowed units and unit conversions are taken from a dictionary `uconv` in :class:`mpy.tools.dataparser.UConv`::
 
     uconv={ "1":    (units.ONE, _ident),
             "dimensionless":    (units.ONE, _ident),
@@ -50,4 +50,20 @@ Allowed units and unit conversions are taken from al dictionary `uconv` in :clas
             "powerratio": (POWERRATIO, _ident),
             "h": (si.HENRY,_ident),
             "f": (si.FARAD,_ident)}
+
+
+Example data files are::
+
+   FUNIT: Hz
+   UNIT: powerratio
+   ABSERROR: [0.1, 1]
+   10 [1, 0]
+   20 [0.9, 40]
+   30 [0.8, 70]
+   40 [0.7, 120]
+   50 [0.6, 180]
+   60 [0.5, 260]
+   70 [0.4, 310]
+   80 [0.3, 10]
+   90 [0.2, 50]
 
