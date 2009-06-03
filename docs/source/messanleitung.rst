@@ -17,9 +17,9 @@ können jederzeit neue Geräte integriert werden, falls einmal der
 Messaufbau erweitert werden sollte. Somit wird für die einzelnen
 Messungen jeweils nur ein relativ kurzes Programm benötigt, welches
 die jeweils notwendigen Routinen aufruft. Diesem Programm wird als
-Parameter beim Aufruf eine kleine Konﬁgurationsdatei, die ebenfalls in
-Python geschrieben wurde, übergeben. Diese Konﬁgurationsdatei wird für
-jede einzelne Messung benötigt. Der Name der Kondﬁgurationsdatei
+Parameter beim Aufruf eine kleine Konfigurationsdatei, die ebenfalls in
+Python geschrieben wurde, übergeben. Diese Konfigurationsdatei wird für
+jede einzelne Messung benötigt. Der Name der Kondfigurationsdatei
 beginnt aus Übersichtsgründen mit `conf_`. In ihr sind alle für die
 Messung notwendigen Parameter, wie Messbereich, Schrittweite oder die
 Anzahl der zu untersuchenden Tunerpositionen enthalten, die dann
@@ -28,16 +28,16 @@ während der einzelnen Funktionsaufrufe jeweils an die Routinen
 
 Bei Störfestigkeitsmessungen ist es sinnvoll (wenn es mit
 nicht allzu großem Aufwand realisierbar ist) eine
-automatische Prüﬂingsüberwachung im Programmablauf zu integrieren. 
+automatische Prüflingsüberwachung im Programmablauf zu integrieren. 
 
 Es
-empﬁehlt sich, für jede einzelne Messung einen seperaten Ordner
+empfiehlt sich, für jede einzelne Messung einen seperaten Ordner
 anzulegen. Dieser Ordner muss das gewünschte Messprogramm sowie die
-Koﬁgurationsdatei enthalten, Weiterhin kann eine `.dot` Datei in diesem
-Ordner abgelegt werden, in der der Messaufbau deﬁniert wird und auf
+Kofigurationsdatei enthalten, Weiterhin kann eine `.dot` Datei in diesem
+Ordner abgelegt werden, in der der Messaufbau definiert wird und auf
 die noch näher eingegangen wird. Werden Messserien aufgenommen, bei
 denen sich der Messaufbau nicht ändert, kann die `.dot` Datei auch
-zentral abgelegt werden und der Pfad in der Konﬁgurationsdatei
+zentral abgelegt werden und der Pfad in der Konfigurationsdatei
 entsprechend angepasst werden (mehr dazu später im Beispiel). In
 diesen Ordner werden während der Messungen auch die Ergebnisse und
 andere Dateien gespeichert, auf die später noch näher eingegangen
@@ -67,7 +67,7 @@ Geräte und die Signalwege, erhält die Klasse durch Auswertung der
 `.dot` Datei. 
 
 Anschließend wird der gesamte Stand der abgeschlossenen
-Messungen in einem `pickle` ﬁle gespeichert. Das Pickling stellt einen
+Messungen in einem `pickle` file gespeichert. Das Pickling stellt einen
 sehr hilfreichen und nützlichen Algorithmus dar, mit dem sich
 strukturierte Datenobjekte zu einer Bytefolge "serialisieren" und dann
 in einer Datei abspeichern lassen. Diese Datei lässt sich später
@@ -82,7 +82,7 @@ besteht.
 Der Messgraph
 ^^^^^^^^^^^^^^
 
-Vor Beginn der Messungen muss der Messaufbau deﬁniert werden. Diese
+Vor Beginn der Messungen muss der Messaufbau definiert werden. Diese
 Daten benötigt die Messsoftware, um die aufgenommenen Daten auswerten
 zu können. Die Beschreibung des Messaufbaus erfolgt mit Hilfe eines
 Graphen. In einer Datei mit der Endung `.dot` ist der Messaufbau in
@@ -181,13 +181,13 @@ Textform hinterlegt. Ein Beispiel für eine solche `.dot` Datei ist::
 
 Als Beschreibungssprache für den Graphen wird DOT-language
 benutzt. Weitere Informationen zu dieser Spache sind unter
-http://www.graphviz.org/ zu ﬁnden.
+http://www.graphviz.org/ zu finden.
 
 Nach einigen globalen (optionalen) Anweisungen zur Graphenvisualisierung werden
 zunächst alle verwendeten Geräte und Kabel aufgelistet und somit als
-Knoten im Graphen deﬁniert. 
+Knoten im Graphen definiert. 
 
-In unserem Beispielfall ﬁnden also ein
+In unserem Beispielfall finden also ein
 Signalgenerator (`sg`), diverse Kabel (`cbl`), ein Abschwächer (`att`), ein
 Verstärker (`amp`), eine Sende- und eine Referenzantenne (`ant`), der
 Rührer (`tuner`) und einige Leistungsmesser (`pm`) Anwendung. 
@@ -207,18 +207,18 @@ Textdatei mit der Endung `.ini`, in der alle wichtigen Informationen
 
 Weitere mögliche
 Parameter sind zum Beispiel der Arbeitsbereich der Geräte, die als
-`condition` deﬁniert werden. Weiterhin ist es möglich, beim Erreichen
-dieser `condition` bestimmte Aktionen, die als `action` deﬁniert werden,
+`condition` definiert werden. Weiterhin ist es möglich, beim Erreichen
+dieser `condition` bestimmte Aktionen, die als `action` definiert werden,
 auszuführen. 
 
 In den zweiten eckigen Klammern sind Attribute zur
-Visualisierung des Graphen zu ﬁnden. 
+Visualisierung des Graphen zu finden. 
 
 Anschließend beginnt die
-eigentliche Beschreibung des Messaufbaus. Hierbei wird deﬁniert, wie
+eigentliche Beschreibung des Messaufbaus. Hierbei wird definiert, wie
 und in welche Richtungen die einzelnen Geräte (Knoten) miteinander
-verbunden sind. Abbildung 1.1 stellt den im `.dot` ﬁle beschriebenen
-Aufbau noch einmal graﬁsch dar. Zur Visualisierung des `.dot` ﬁles wurde
+verbunden sind. Abbildung 1.1 stellt den im `.dot` file beschriebenen
+Aufbau noch einmal grafisch dar. Zur Visualisierung des `.dot` files wurde
 das Programm :program:`Graphviz` benutzt, das sich ebenfalls auf
 der oben angegebenen Homepage herunterladen lässt. 
 
@@ -226,7 +226,7 @@ Bei der Darstellung wurden allerdings aus Gründen der Übersichtlichkeit alle K
 Verbindungen repräsentieren, also keine wirklichen Knoten sind, ausgeblendet.
 
 Bei jeder Art von Messungen gibt es bestimmte Knoten, die auf alle Fälle im Messaufbau enthalten sein müssen. 
-Diese sind hier grau markiert. Dieser Aufbau ﬁndet bei Störemissions- und Störfestigkeitsmessungen Anwendung. 
+Diese sind hier grau markiert. Dieser Aufbau findet bei Störemissions- und Störfestigkeitsmessungen Anwendung. 
 Als weiteres Beispiel sei noch ein typischer Aufbau für die Kalibrierung einer Modenverwirbelungskammer angefügt::
 
    digraph {
@@ -521,7 +521,7 @@ und Stopfrequenz, die Schrittweite, die GPIB-Adresse und die
 Betriebsart übergeben. Zum Schluss folgt für jeden nutzbaren Kanal des
 Gerätes ein Block, in dem die für dieses Gerät typischen
 Einstellmöglichkeiten mit Startwerten belegt werden, damit beim
-Initialisieren der Geräte keine undeﬁnierten Zustände entstehen oder
+Initialisieren der Geräte keine undefinierten Zustände entstehen oder
 Einstellungen von alten Messungen beibehalten werden, die evtl. den
 aktuellen Messaufbau zum Beispiel durch zu hohe Feldstärken gefährden.
 
@@ -529,7 +529,7 @@ aktuellen Messaufbau zum Beispiel durch zu hohe Feldstärken gefährden.
 Kalibriermessungen
 -------------------
 
-Der Ablauf einer typischen Kalibriermessung soll am Beispiel der Kalibrierung einer leeren Modenverwirbelungskammer erläutert werden. Wie bereits angesprochen, ist es günstiger, für jede Messung einen gesonderten Ordner zu benutzen, um in diesem alle Daten zu speichern. In dieses Ordner gehören jeweils die Konﬁgurationsdatei, das aufrufende Messprogramm und evtl. die entsprechende .dot-Datei. In der fogenden Abbildung  ist ein Beispiel für den Inhalt eines Messordners zu sehen. Zusätzlich beﬁndet sich im Ordner noch eine zweite Konﬁgurationsdatei für die Auswertung und zwei Batchdateien, mit denen die Messung oder Auswertung auch gestartet werden kann.
+Der Ablauf einer typischen Kalibriermessung soll am Beispiel der Kalibrierung einer leeren Modenverwirbelungskammer erläutert werden. Wie bereits angesprochen, ist es günstiger, für jede Messung einen gesonderten Ordner zu benutzen, um in diesem alle Daten zu speichern. In dieses Ordner gehören jeweils die Konfigurationsdatei, das aufrufende Messprogramm und evtl. die entsprechende .dot-Datei. In der fogenden Abbildung  ist ein Beispiel für den Inhalt eines Messordners zu sehen. Zusätzlich befindet sich im Ordner noch eine zweite Konfigurationsdatei für die Auswertung und zwei Batchdateien, mit denen die Messung oder Auswertung auch gestartet werden kann.
 
 .. figure:: maincal-before.png
 
@@ -551,35 +551,35 @@ Sie ist im folgendem Listing dargestellt::
             edge [fontsize=10]; 
             rankdir=LR;
 
-            sg [ini="C:\\UMD\\umd−config\\ini\\rs−smg.ini"] [style=filled, color=lightgrey]
-	    fp1 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−1.ini"ch=1] [style=filled,color=lightgrey]
-	    fp2 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−1.ini"ch=2] [style=filled,color=lightgrey]
-	    fp3 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−1.ini"ch=3] [style=filled,color=lightgrey]
-	    fp4 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−1.ini"ch=4] [style=filled,color=lightgrey]
-	    fp5 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−2.ini"ch=1] [style=filled,color=lightgrey]
-	    fp6 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−2.ini"ch=2] [style=filled,color=lightgrey]
-	    fp7 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−2.ini"ch=3] [style=filled,color=lightgrey]
-	    fp8 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−2.ini"ch=4] [style=filled,color=lightgrey]
-	    amp [ini="C:\\UMD\\umd−config\\ini\\AR80W1000M1.ini"]
-	    tuner [ini="C:\\UMD\\umd−config\\ini\\tuner.ini"] [style=filled,color=lightgrey]
-	    ant [ini="C:\\UMD\\umd−config\\ini\\AT4000A.ini" condition="200e6<f<=1e9"] [style=filled,color=lightgrey]
-	    refant [ini="C:\\UMD\\umd−config\\ini\\HL223.ini" condition="200e6<f<=1.3e9"] [style=filled,color=lightgrey]
-	    pmref [ini="C:\\UMD\\umd−config\\ini\\NRV−Rx.ini"ch=1] [style=filled,color=lightgrey]
-	    pm1 [ini="C:\\UMD\\umd−config\\ini\\NRVPA.ini"ch=1] [style=filled,color=lightgrey]
-	    pm2 [ini="C:\\UMD\\umd−config\\ini\\NRVPA.ini"ch=2] [style=filled,color=lightgrey]
+            sg [ini="C:\\UMD\\umd-config\\ini\\rs-smg.ini"] [style=filled, color=lightgrey]
+	    fp1 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-1.ini"ch=1] [style=filled,color=lightgrey]
+	    fp2 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-1.ini"ch=2] [style=filled,color=lightgrey]
+	    fp3 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-1.ini"ch=3] [style=filled,color=lightgrey]
+	    fp4 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-1.ini"ch=4] [style=filled,color=lightgrey]
+	    fp5 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-2.ini"ch=1] [style=filled,color=lightgrey]
+	    fp6 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-2.ini"ch=2] [style=filled,color=lightgrey]
+	    fp7 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-2.ini"ch=3] [style=filled,color=lightgrey]
+	    fp8 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-2.ini"ch=4] [style=filled,color=lightgrey]
+	    amp [ini="C:\\UMD\\umd-config\\ini\\AR80W1000M1.ini"]
+	    tuner [ini="C:\\UMD\\umd-config\\ini\\tuner.ini"] [style=filled,color=lightgrey]
+	    ant [ini="C:\\UMD\\umd-config\\ini\\AT4000A.ini" condition="200e6<f<=1e9"] [style=filled,color=lightgrey]
+	    refant [ini="C:\\UMD\\umd-config\\ini\\HL223.ini" condition="200e6<f<=1.3e9"] [style=filled,color=lightgrey]
+	    pmref [ini="C:\\UMD\\umd-config\\ini\\NRV-Rx.ini"ch=1] [style=filled,color=lightgrey]
+	    pm1 [ini="C:\\UMD\\umd-config\\ini\\NRVPA.ini"ch=1] [style=filled,color=lightgrey]
+	    pm2 [ini="C:\\UMD\\umd-config\\ini\\NRVPA.ini"ch=2] [style=filled,color=lightgrey]
 
 	    a1 [style=filled,color=lightgrey]
  	    a2 [style=filled,color=lightgrey]
-	    conn_sg_amp [ini="C:\\UMD\\umd−config\\ini\\CONNSMG−−PA4.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_amp_msc [ini="C:\\UMD\\umd−config\\ini\\CONN−PA4−MSC.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_msc_ant [ini="C:\\UMD\\umd−config\\ini\\CBL−716G3.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_amp_dc_fwd [ini="C:\\UMD\\umd−config\\ini\\CONN−Bonn_BDC0810_Fwd_7−16.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_msc_dc_rev [ini="C:\\UMD\\umd−config\\ini\\CONN−Bonn_BDC0810_Rev_7−16.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_dc_fwd_pm1 [ini="C:\\UMD\\umd−config\\ini\\CONN−PA4−NRV_A.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_dc_rev_pm2 [ini="C:\\UMD\\umd−config\\ini\\CONN−PA4−NRV_B.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_refant_att [ini="C:\\UMD\\umd−config\\ini\\CONN−HL223−NRV_RX_Antenna.ini" condition="80e6<=f<=1e9"] [color=white, fontcolor=white]
-	    conn_att_pmref [ini="C:\\UMD\\umd−config\\ini\\CONN−Weinschel−46−20−34.ini" condition="f<=18e9"] [color=white,fontcolor=white]
-	    cbl_rg214_5m_2003 [ini="C:\\UMD\\umd−config\\ini\\CBL−RG214−5m−2003.ini" condition="80e6<=f<=1e9"] [color=white, fontcolor=white]
+	    conn_sg_amp [ini="C:\\UMD\\umd-config\\ini\\CONNSMG--PA4.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_amp_msc [ini="C:\\UMD\\umd-config\\ini\\CONN-PA4-MSC.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_msc_ant [ini="C:\\UMD\\umd-config\\ini\\CBL-716G3.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_amp_dc_fwd [ini="C:\\UMD\\umd-config\\ini\\CONN-Bonn_BDC0810_Fwd_7-16.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_msc_dc_rev [ini="C:\\UMD\\umd-config\\ini\\CONN-Bonn_BDC0810_Rev_7-16.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_dc_fwd_pm1 [ini="C:\\UMD\\umd-config\\ini\\CONN-PA4-NRV_A.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_dc_rev_pm2 [ini="C:\\UMD\\umd-config\\ini\\CONN-PA4-NRV_B.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_refant_att [ini="C:\\UMD\\umd-config\\ini\\CONN-HL223-NRV_RX_Antenna.ini" condition="80e6<=f<=1e9"] [color=white, fontcolor=white]
+	    conn_att_pmref [ini="C:\\UMD\\umd-config\\ini\\CONN-Weinschel-46-20-34.ini" condition="f<=18e9"] [color=white,fontcolor=white]
+	    cbl_rg214_5m_2003 [ini="C:\\UMD\\umd-config\\ini\\CBL-RG214-5m-2003.ini" condition="80e6<=f<=1e9"] [color=white, fontcolor=white]
 
 
 	    subgraph cluster_amp {
@@ -665,35 +665,35 @@ Der entsprechende Messgraph sieht wie folgt aus:
             edge [fontsize=10]; 
             rankdir=LR;
 
-            sg [ini="C:\\UMD\\umd−config\\ini\\rs−smg.ini"] [style=filled, color=lightgrey]
-	    fp1 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−1.ini"ch=1] [style=filled,color=lightgrey]
-	    fp2 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−1.ini"ch=2] [style=filled,color=lightgrey]
-	    fp3 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−1.ini"ch=3] [style=filled,color=lightgrey]
-	    fp4 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−1.ini"ch=4] [style=filled,color=lightgrey]
-	    fp5 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−2.ini"ch=1] [style=filled,color=lightgrey]
-	    fp6 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−2.ini"ch=2] [style=filled,color=lightgrey]
-	    fp7 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−2.ini"ch=3] [style=filled,color=lightgrey]
-	    fp8 [ini="C:\\UMD\\umd−config\\ini\\ar−fm7004−2.ini"ch=4] [style=filled,color=lightgrey]
-	    amp [ini="C:\\UMD\\umd−config\\ini\\AR80W1000M1.ini"]
-	    tuner [ini="C:\\UMD\\umd−config\\ini\\tuner.ini"] [style=filled,color=lightgrey]
-	    ant [ini="C:\\UMD\\umd−config\\ini\\AT4000A.ini" condition="200e6<f<=1e9"] [style=filled,color=lightgrey]
-	    refant [ini="C:\\UMD\\umd−config\\ini\\HL223.ini" condition="200e6<f<=1.3e9"] [style=filled,color=lightgrey]
-	    pmref [ini="C:\\UMD\\umd−config\\ini\\NRV−Rx.ini"ch=1] [style=filled,color=lightgrey]
-	    pm1 [ini="C:\\UMD\\umd−config\\ini\\NRVPA.ini"ch=1] [style=filled,color=lightgrey]
-	    pm2 [ini="C:\\UMD\\umd−config\\ini\\NRVPA.ini"ch=2] [style=filled,color=lightgrey]
+            sg [ini="C:\\UMD\\umd-config\\ini\\rs-smg.ini"] [style=filled, color=lightgrey]
+	    fp1 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-1.ini"ch=1] [style=filled,color=lightgrey]
+	    fp2 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-1.ini"ch=2] [style=filled,color=lightgrey]
+	    fp3 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-1.ini"ch=3] [style=filled,color=lightgrey]
+	    fp4 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-1.ini"ch=4] [style=filled,color=lightgrey]
+	    fp5 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-2.ini"ch=1] [style=filled,color=lightgrey]
+	    fp6 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-2.ini"ch=2] [style=filled,color=lightgrey]
+	    fp7 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-2.ini"ch=3] [style=filled,color=lightgrey]
+	    fp8 [ini="C:\\UMD\\umd-config\\ini\\ar-fm7004-2.ini"ch=4] [style=filled,color=lightgrey]
+	    amp [ini="C:\\UMD\\umd-config\\ini\\AR80W1000M1.ini"]
+	    tuner [ini="C:\\UMD\\umd-config\\ini\\tuner.ini"] [style=filled,color=lightgrey]
+	    ant [ini="C:\\UMD\\umd-config\\ini\\AT4000A.ini" condition="200e6<f<=1e9"] [style=filled,color=lightgrey]
+	    refant [ini="C:\\UMD\\umd-config\\ini\\HL223.ini" condition="200e6<f<=1.3e9"] [style=filled,color=lightgrey]
+	    pmref [ini="C:\\UMD\\umd-config\\ini\\NRV-Rx.ini"ch=1] [style=filled,color=lightgrey]
+	    pm1 [ini="C:\\UMD\\umd-config\\ini\\NRVPA.ini"ch=1] [style=filled,color=lightgrey]
+	    pm2 [ini="C:\\UMD\\umd-config\\ini\\NRVPA.ini"ch=2] [style=filled,color=lightgrey]
 
 	    a1 [style=filled,color=lightgrey]
  	    a2 [style=filled,color=lightgrey]
-	    conn_sg_amp [ini="C:\\UMD\\umd−config\\ini\\CONNSMG−−PA4.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_amp_msc [ini="C:\\UMD\\umd−config\\ini\\CONN−PA4−MSC.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_msc_ant [ini="C:\\UMD\\umd−config\\ini\\CBL−716G3.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_amp_dc_fwd [ini="C:\\UMD\\umd−config\\ini\\CONN−Bonn_BDC0810_Fwd_7−16.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_msc_dc_rev [ini="C:\\UMD\\umd−config\\ini\\CONN−Bonn_BDC0810_Rev_7−16.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_dc_fwd_pm1 [ini="C:\\UMD\\umd−config\\ini\\CONN−PA4−NRV_A.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_dc_rev_pm2 [ini="C:\\UMD\\umd−config\\ini\\CONN−PA4−NRV_B.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
-	    conn_refant_att [ini="C:\\UMD\\umd−config\\ini\\CONN−HL223−NRV_RX_Antenna.ini" condition="80e6<=f<=1e9"] [color=white, fontcolor=white]
-	    conn_att_pmref [ini="C:\\UMD\\umd−config\\ini\\CONN−Weinschel−46−20−34.ini" condition="f<=18e9"] [color=white,fontcolor=white]
-	    cbl_rg214_5m_2003 [ini="C:\\UMD\\umd−config\\ini\\CBL−RG214−5m−2003.ini" condition="80e6<=f<=1e9"] [color=white, fontcolor=white]
+	    conn_sg_amp [ini="C:\\UMD\\umd-config\\ini\\CONNSMG--PA4.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_amp_msc [ini="C:\\UMD\\umd-config\\ini\\CONN-PA4-MSC.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_msc_ant [ini="C:\\UMD\\umd-config\\ini\\CBL-716G3.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_amp_dc_fwd [ini="C:\\UMD\\umd-config\\ini\\CONN-Bonn_BDC0810_Fwd_7-16.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_msc_dc_rev [ini="C:\\UMD\\umd-config\\ini\\CONN-Bonn_BDC0810_Rev_7-16.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_dc_fwd_pm1 [ini="C:\\UMD\\umd-config\\ini\\CONN-PA4-NRV_A.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_dc_rev_pm2 [ini="C:\\UMD\\umd-config\\ini\\CONN-PA4-NRV_B.ini" condition="80e6<=f<=1e9"] [color=white,fontcolor=white]
+	    conn_refant_att [ini="C:\\UMD\\umd-config\\ini\\CONN-HL223-NRV_RX_Antenna.ini" condition="80e6<=f<=1e9"] [color=white, fontcolor=white]
+	    conn_att_pmref [ini="C:\\UMD\\umd-config\\ini\\CONN-Weinschel-46-20-34.ini" condition="f<=18e9"] [color=white,fontcolor=white]
+	    cbl_rg214_5m_2003 [ini="C:\\UMD\\umd-config\\ini\\CBL-RG214-5m-2003.ini" condition="80e6<=f<=1e9"] [color=white, fontcolor=white]
 
 
 	    subgraph cluster_amp {
@@ -772,10 +772,10 @@ Der entsprechende Messgraph sieht wie folgt aus:
 
 
 
-Konﬁgurationsdatei
+Konfigurationsdatei
 ++++++++++++++++++
 
-Die bei der Kalibrierung verwendete Konﬁgurationsdatei ist im folgenden Listing zu ﬁnden:: 
+Die bei der Kalibrierung verwendete Konfigurationsdatei ist im folgenden Listing zu finden:: 
 
    import os
    import umdutil
@@ -836,7 +836,7 @@ Umgebungsvariable abgefragt und der Variable *umdpath* zugeordnet. Diese
 Umgebungvarable muss unter dem Namen `UMDPATH` auf dem benutzten
 Arbeitsplatzrechner eingerichtet werden und enthält alle Pfade, in
 denen das Messprogramm nach benötigten Dateien suchern soll, wenn sich
-selbige nicht im Messordner beﬁnden oder mit Verweis auf den
+selbige nicht im Messordner befinden oder mit Verweis auf den
 vollständigen Pfad übergeben werden. Eine dieser Dateien wäre zum
 Beispiel die `.dot` Datei, die in dem Sammelordner für `.dot` Dateien
 hinterlegt ist, dessen Pfad ebenfalls in der Umgebungsvariable `UMDPATH`
@@ -855,34 +855,34 @@ natürlich die Angabe mit Pfad nötig.
 
 In Zeile 7 erfolgt Befehl, zur
 Kontrolle noch einmal auszugeben, welche `dot` Datei nun für die Messung
-verwendet wird. Anschließend wird noch ein Konﬁgurationsblock *cdict*
+verwendet wird. Anschließend wird noch ein Konfigurationsblock *cdict*
 erzeugt, dass alle festgelegten Parameter, Dateien und Namen enthält
 und dann vom aufrufenden Messprogramm ausgewertet bzw. der Instanz der
-:class:`MSC` Klasse übergeben wird. Hierbei beﬁnden sich jeweils an erster
+:class:`MSC` Klasse übergeben wird. Hierbei befinden sich jeweils an erster
 Stelle die Namen, die von der Software intern benutzt werden, gefolgt
 von den Bezeichnungen, die der Anwender wünscht oder bereits verwendet
 hat.
 
 Die Punkte bedeuten im Einzelnen: 
 
-   - autosave_ﬁlename ist der Name der Autosave-Datei. 
-   - pickle_output_ﬁlename ist der Name der auszugebenen pickle-Datei. 
-   - pickle_input_ﬁlename ist der Name einer schon vorhandenen pickle-Datei, die vor Beginn der Messungen eingelesen werden soll. 
-   - rawdata_output_ﬁlename ist der Name der Ausgabedatei für die unbehandelten Messdaten. 
-   - processeddata_output_ﬁlename ist Name der Ausgabedatei für die Ergebnisdaten. 
-   - after_measurement_pickle_ﬁle bezeichnet den Namen des pickle-ﬁles, das nach Abschluss der Kalibriermessung erstellt wird. 
-   - log_logﬁlename ist der Name der Datei, die alle Vorgänge während der Messung mitprotokolliert. 
+   - autosave_filename ist der Name der Autosave-Datei. 
+   - pickle_output_filename ist der Name der auszugebenen pickle-Datei. 
+   - pickle_input_filename ist der Name einer schon vorhandenen pickle-Datei, die vor Beginn der Messungen eingelesen werden soll. 
+   - rawdata_output_filename ist der Name der Ausgabedatei für die unbehandelten Messdaten. 
+   - processeddata_output_filename ist Name der Ausgabedatei für die Ergebnisdaten. 
+   - after_measurement_pickle_file bezeichnet den Namen des pickle-files, das nach Abschluss der Kalibriermessung erstellt wird. 
+   - log_logfilename ist der Name der Datei, die alle Vorgänge während der Messung mitprotokolliert. 
    - logger legt die Routine zum Führen der Protokolldatei fest. 
    - minimal_autosave_interval ist die minimale Zeitspanne für die Autosaves in Sekunden, im Beispiel also eine halbe Stunde. 
    - description ist die Bezeichnung für die aktuelle Messung. 
 
 Anschließend erfolgt die Übergabe der Messparameter für die Instanz der MSC-Klasse. Dabei werden folgende Werte übergeben:
 
-   - dotﬁle ist der Name der, den Aufbau charakterisierenden, dot-Datei, welche weiter oben bereits deﬁniert wurde. 
+   - dotfile ist der Name der, den Aufbau charakterisierenden, dot-Datei, welche weiter oben bereits definiert wurde. 
    - delay ist eine zusätzliche Verzögerung in Sekunden nach der Positionierung des Rührers, bevor die Messung begonnen wird, um dem Rührer die Gelgenheit zu geben, auszuschwingen o.ä.. 
    - FStart ist die Startfrequenz, ab der gemessen wird in Hz. 
    - FStop ist die höchste Frequenz in Hz, bei der gemessen wird. 
-   - SGLevel Ist der Ausgangslevel des Signalgenerators in dBm, bei dem die Messung erfolgt. Dieser Pegel wird in der Regel noch durch den im Messaufbau beﬁndlichen Verstärker erhöht. 
+   - SGLevel Ist der Ausgangslevel des Signalgenerators in dBm, bei dem die Messung erfolgt. Dieser Pegel wird in der Regel noch durch den im Messaufbau befindlichen Verstärker erhöht. 
    - leveling
    - ftab ist eine Liste von Frequenzgrenzen, innerhalb derer eine bestimmte Anzahl von Frequenzen, Tunerpositionen, Feldsondenpositionen und Referenzantennenpositionen zu untersuchen sind. Die Grenzen sind samt der zu untersuchenden Positionen in der Norm nachzulesen. Es wird in den Bereich bis zur dreifachen Startfrequenz 3fs , den Bereich von 3fs bis 6fs , von 6fs bis 10 fs und darüber in Dekaden unterschieden, in denen jeweils eine bestimmte Anzahl von Frequenzen, Tuner- und Messpositionen zu untersuchen sind.- nftab ist die Liste mit der Anzahl der zu untersuchenden Frequenzen pro Abschnitt. 
    - ntuntab ist die Liste mit der Anzahl der zu untersuchenden Tunerpositionen pro Abschnitt. 
@@ -895,12 +895,12 @@ Anschließend erfolgt die Übergabe der Messparameter für die Instanz der MSC-K
 Messung
 ^^^^^^^^
 
-Zum Start der Messung muss man sich im Konsolenmodus beﬁnden. Dazu
+Zum Start der Messung muss man sich im Konsolenmodus befinden. Dazu
 ruft man über :menuselection:`Start -> Ausführen...` die
 Eingabeaufforderung auf und gibt das Kommando `cmd` :kbd:`Enter`
 ein. Anschließend wechselt man in der sich öffnenden Konsole in das
 Verzeichnis des aktuellen Messordners. Dort ruft man zum Start in der
-Umgebung :program:`python` das Messprogramm, gefolgt vom Konﬁgurationsﬁle,
+Umgebung :program:`python` das Messprogramm, gefolgt vom Konfigurationsfile,
 auf. Dies ist in der fiolgenden Abbildung zu sehen. Alternativ kann die Messung
 auch durch Doppelklick auf die Batchdatei maincal.bat gestartet
 werden.
@@ -1166,7 +1166,7 @@ Das aufrufende Messprogramm ist im folgenden Listing zu sehen::
 
 
 Diese Datei muss in der Regel nicht geändert werden, da Veränderungen am Messaufbau oder der Messparameter, wie z.B. 
-der zu untersuchende Frequenzbereich durch Änderungen in der `dot` Datei bzw. in der Konﬁgurationsdatei 
+der zu untersuchende Frequenzbereich durch Änderungen in der `dot` Datei bzw. in der Konfigurationsdatei 
 dem Messprogramm mitgeteilt werden. 
 
 
@@ -1176,16 +1176,16 @@ erforderlich. MSC und umddevice sind an der Universität Magdeburg
 programmierte Module zur Durchführung der einzelnen Messroutinen
 bzw. zur Kommunikation mit den Messgeräten. Danach erfolgt die
 Vorbelegung der Variablen des dictionaries mit default-Werten. Diese
-werden dann später ggf. beim Einladen des Konﬁgurationsﬁles
-aktualisiert. Anschließend werden einige Routinen deﬁniert. Die
+werden dann später ggf. beim Einladen des Konfigurationsfiles
+aktualisiert. Anschließend werden einige Routinen definiert. Die
 Routine myopen liefert bei Aufruf die in der Variable name geforderte
 Datei zurück, sollte sie gepackt sein, wird sie vorher noch
 entpackt. Durch update_conf wird ein Update des
-Koﬁgurationsdictionaries durchgeführt, die bisherigen Einträge in dict
+Kofigurationsdictionaries durchgeführt, die bisherigen Einträge in dict
 also gegebenfalls durch neue Einträge ersetzt, die, in Abhängigkeit
 von der aufrufenden Routine, aus einer Autosavedatei, einer geladen
 pickle-Datei oder auch aus der mit dem Messprogramm aufgerufenen
-Konﬁgurationsdatei stammen können. Durch die Routine
+Konfigurationsdatei stammen können. Durch die Routine
 load_from_autosave wird eine Autosavedatei geladen. make_logger_list
 stellt eine Liste von für Protokolldateien zuständigen Routinen zur
 Verfügung. Dann beginnt in Zeile 133 das eigentliche
@@ -1193,7 +1193,7 @@ Programm. Zunächst wird ein Update der Messvariablen durchgeführt und
 diese dann anschließend ausgegeben. Dann versucht das Messprogramm,
 eine Instanz der Klasse MSC zu erstellen. Hierzu wird zunächst mit
 Hilfe der Routine load_from_autosave überprüft, ob bereits eine
-Autosavedatei unter dem im Koﬁgurationsblockcdict angegebenen Namen
+Autosavedatei unter dem im Kofigurationsblockcdict angegebenen Namen
 existiert. Gibt es diese Autosavedatei, wird abgefragt, ob sie
 eingelesen werden soll und bei Bestätigung in Zeile 141 nach dem
 Einlesen der Daten der Autosavedatei die gespeicherte Instanz der
@@ -1208,14 +1208,14 @@ dem erneuten Aufruf der in cmd gespeicherten letzten aufgerufenen
 Routine an der gesicherten Stelle weitergeführt. Gibt es keine
 Autosavedatei unter dem angegebenen Namen oder soll diese nicht
 benutzt werden, wird der Messordner nach dem im cdict angegebenen
-pickle-ﬁle durchsucht und dieses geladen. In diesem Fall würde dann
+pickle-file durchsucht und dieses geladen. In diesem Fall würde dann
 aus den in der pickle-Datei enthaltenen Daten die Instanz der Klasse
 MSC wieder erzeugt werden. Anschließend werden ab Zeile 152 dieser
-Instanz die Konﬁgurationen und die measurement_parameters aus dem
+Instanz die Konfigurationen und die measurement_parameters aus dem
 cdict übergeben. Nun wird untersucht, ob in dieser Instanz bereits
 Messungen unter der description abgelegt sind, die für die aktuelle
-Messung laut Konﬁgurationsdatei benutzt werden sollen. Dies kann
-natürlich nur beim Laden eines alten pickle-ﬁles der Fall sein. Wird
+Messung laut Konfigurationsdatei benutzt werden sollen. Dies kann
+natürlich nur beim Laden eines alten pickle-files der Fall sein. Wird
 eine Messung gefunden, wird diese mit der entsprechenden description
 ausgegeben und in Zeile 172 abgefragt, wie weiter zu verfahren ist. Es
 besteht die Möglichkeit, die aktuelle Messung weiterzuführen
@@ -1224,15 +1224,15 @@ der Auswertung der vorhandenen Daten fortgefahren werden (Skip). Es
 ist ebenfalls möglich, sowohl die aktuelle Messung als auch die
 Auswertung abzubrechen (Break) oder das Messprogramm komplett zu
 beenden (Exit). Wird ein Fortsetzen der Messungen gewählt, würde der
-alte Datensatz aus dem pickleﬁle überschrieben werden und die Routine
+alte Datensatz aus dem picklefile überschrieben werden und die Routine
 msc.Measure_MainCal führt die Messung mit den in mp übergebenen
 Messparametern vom Zeitpunkt der erfolgten Sicherung an
 fort. Anschließend, bzw. wenn nur die Auswertung der Daten ausgewählt
 wurde, erfolgt in Zeile 198 erst durch die Routine
 msc.OutputRawData_MainCal die Ausgabe der Rohdaten in die im
-Konﬁgurationsblock cdict unter rawdata_output_ﬁlename angegebene
+Konfigurationsblock cdict unter rawdata_output_filename angegebene
 Datei, anschließend durch die Routine msc.Evaluate_MainCal die
-Auswertung der Daten. Dabei wird überprüft sind Konﬁgurationsblock
+Auswertung der Daten. Dabei wird überprüft sind Konfigurationsblock
 mehrere descriptions enthalten, wird überprüft, ob bereits Messungen
 mit anderen Bezeichnungen fertig sind und falls vorhanden die
 Datensätze der Messungen auch miteinander ausgewertet. Das wäre
@@ -1243,13 +1243,13 @@ werden. Dann könnte anschließend durch die Funktion
 msc.CalculateLoading_MainCal in Zeile 201 gleich das Loading der
 Kammer berechnet werden. Anschließend erfolgt in Zeile 203 durch die
 Routine msc.OutputProzessedData_MainCal die Ausgabe der ausgewerteten
-und geordneten Daten in die im Konﬁgurationsblock cdict unter
-prozesseddata_output_ﬁlename angegebene Datei. Sollten keine
+und geordneten Daten in die im Konfigurationsblock cdict unter
+prozesseddata_output_filename angegebene Datei. Sollten keine
 Sicherungsdateien vorhanden oder gewünscht werden, wird die eine neue
 Instanz der Klasse MSC erstellt und eine neue Messung mit den eben
 angesprochenen Routinen der Klasse MSC begonnen und anschließend
 ausgewertet. Diese Messung erhält dann als Bezeichnung den ersten
-Eintrag der Liste descriptions aus dem Konﬁgurationsblock. Die Messung
+Eintrag der Liste descriptions aus dem Konfigurationsblock. Die Messung
 wird dann für alle weiteren in description eingetragenen Bezeichnungen
 wiederholt. Nachdem mit der Ausgabe der Daten die Auswertung
 abgeschlossen ist, wird eine abschließende pickle-Datei angelegt, die
@@ -1257,7 +1257,7 @@ alle bisherigen Messungen dieser Instanz der Klasse enthält, also die
 soeben beendete Messung samt Auswertung, sowie die, die in einer
 evtl. zuvor eingelesen Sicherungsdatei (Input-pickle-Datei oder
 autosavedatei) gespeichert waren. Der Name dieser Output-pickle-Datei
-wurde ebenfalls in der Konﬁgurationsdatei festgelegt. Zunächst wird in
+wurde ebenfalls in der Konfigurationsdatei festgelegt. Zunächst wird in
 Zeile 218 geprüft, ob es bereits eine Datei unter diesem Namen
 gibt. Falls das der Fall ist, wird abgefragt, ob diese
 evtl. überschrieben werden soll, oder ob die neue pickle-Datei einfach
@@ -1266,10 +1266,10 @@ Messung als Outputpickle-Datei gesichert wurde, wird letzlich noch die
 evtl. vorhanden Autosavedatei gelöscht, da sie ja durch die beendete
 Messung und Auswertung nicht benötig wird. Achtung: Wird die Messung
 aus einer Autosavedatei gestartet, wird nach Abschluss der Messung
-keine Auswertung ausgeführt, sondern nur das Output-pickle-ﬁle
-erstellt. In diesem Fall muss die Messung mit diesem Output-pickle-ﬁle
-als Input-pickle-ﬁle nocheinmal gestartet werden. Dann würde, wie oben
-beschrieben, die Meldung, dass im eingelesenen pickle-ﬁle bereits eine
+keine Auswertung ausgeführt, sondern nur das Output-pickle-file
+erstellt. In diesem Fall muss die Messung mit diesem Output-pickle-file
+als Input-pickle-file nocheinmal gestartet werden. Dann würde, wie oben
+beschrieben, die Meldung, dass im eingelesenen pickle-file bereits eine
 Messung mit der aktuellen description vorhanden ist und die Abfrage,
 was geschehen soll, erscheinen. Durch Auswahl von Skip wird dann die
 aktuelle Messung abgebrochen und es werden nur die vorhandenen Daten
@@ -1339,7 +1339,7 @@ Rechnerausfallarten unterschieden:
 Messablauf
 ^^^^^^^^^^^
 
-Der Prüﬂing sollten während der Untersuchung mit cw-Signalen sowie mit pulsmodulierten Signalen 
+Der Prüfling sollten während der Untersuchung mit cw-Signalen sowie mit pulsmodulierten Signalen 
 unter Variation der Pulsparameter beaufschlagt werden.
 
 In der folgenden Abbildung ist der prinzipielle Aufbau der Messung dargestellt.
@@ -1378,8 +1378,8 @@ aufgezeichnet.
 Vorbereitungen
 ^^^^^^^^^^^^^^
 
-Zunächst stellte sich aus Efﬁziensgründen die Aufgabe, die Überwachung
-des Prüﬂings und, falls erforderlich, den Neustart des PCs zu
+Zunächst stellte sich aus Effiziensgründen die Aufgabe, die Überwachung
+des Prüflings und, falls erforderlich, den Neustart des PCs zu
 automatisieren und in den Messablauf zu integrieren. Hierzu wurde
 zunächst die Überwachung des durch das Testprogramm erzeugten
 Ausgangssignals mit Hilfe eines Oszilloskops TDS420 der Firma
@@ -1402,7 +1402,7 @@ Meldung an den Benutzer. Dieser hat dann die Möglichkeit, zu
 oder ob ein Fehler am Board aufgetreten ist und das Testprogramm neu
 aufgespielt werden muss. Weiterhin wurde die RESET-Auslösung über die
 Lichtwellenleiterverbindung automatisiert. Hierzu wurde die Schaltung
-in der Auswertebox etwas modiﬁziert. Es wurde eine identische
+in der Auswertebox etwas modifiziert. Es wurde eine identische
 Laserdiode über einen Vorwiderstand direkt mit dem Parallelport des
 Messplatzrechners verbunden. Zur RESET-Auslösung wird das
 entsprechende Bit des Parallelports kurz auf „high“-Potential
@@ -1414,9 +1414,9 @@ Programmbibliothek wurde dann ebenfalls als Teil eines Programms in
 die Softwareumgebung eingebunden. Wie bereits angesprochen, ist es
 günstiger, für jede Messung einen gesonderten Ordner zu benutzen, um
 in diesem alle Daten zu speichern. In dieses Ordner gehören jeweils
-die Konﬁgurationsdatei, das aufrufende Messprogramm und evtl. die
+die Konfigurationsdatei, das aufrufende Messprogramm und evtl. die
 entsprechende .dot-Datei. In Abbildung 3.3 ist ein Beispiel für den
-Inhalt eines Messordners zu sehen. Zusätzlich beﬁndet sich im Ordner
+Inhalt eines Messordners zu sehen. Zusätzlich befindet sich im Ordner
 noch eine Textdatei mit dem Namen info.txt, in der Anmerkungen,
 Besonderheiten und anderes Wissenswertes zur jeweiligen Messungen
 notiert werden können sowie 2 `...eval.py` Dateien, die zur weiteren
@@ -1528,10 +1528,10 @@ Der daraus resultierende Aufbau sieht wie folgt aus:
 
 
 
-Konﬁgurationsdatei
+Konfigurationsdatei
 """"""""""""""""""""""""
 
-Kommen wir nun zur Konﬁgurationsdatei `conf_pcboad1.py`, welche im folgenden Listing zu sehen ist:: 
+Kommen wir nun zur Konfigurationsdatei `conf_pcboad1.py`, welche im folgenden Listing zu sehen ist:: 
 
    import os
    import umdutil
@@ -1608,7 +1608,7 @@ Entwicklerteam der Universität Magdeburg bereitgestellt und betreut,
 daher auch der Name `uni md utillities`. 
 
 Mit Hilfe des Moduls :mod:`scipy`
-(Scientiﬁc Tools for Python) kann man :program:`Python` sehr gut für numerische
+(Scientific Tools for Python) kann man :program:`Python` sehr gut für numerische
 Rechnungen einsetzen. 
 
 Das Modul :mod:`ImmunityThreshold` schließlich enthält
@@ -1620,7 +1620,7 @@ eine Umgebungsvariable abgefragt und der Variable *umdpath*
 zugeordnet. Diese Umgebungvarable muss unter dem Namen *UMDPATH* auf dem
 benutzten Arbeitsplatzrechner eingerichtet werden und enthält alle
 Pfade, in denen das Messprogramm nach benötigten Dateien suchern soll,
-wenn sich selbige nicht im Messordner beﬁnden oder mit Verweis auf den
+wenn sich selbige nicht im Messordner befinden oder mit Verweis auf den
 vollständigen Pfad übergeben werden. Eine dieser Dateien wäre zum
 Beispiel die `.dot` Datei. 
 
@@ -1645,7 +1645,7 @@ In Zeile 8 erfolgt Befehl, zur
 Kontrolle noch einmal auszugeben, welche `dot` Datei nun für die Messung
 verwendet wird. 
 
-In Zeile 10 und 12 erfolgt die Deﬁnition, bei welchen
+In Zeile 10 und 12 erfolgt die Definition, bei welchen
 Frequenzen und Feldstärken die Messungen durchgeführt werden
 sollen. In diesem Fall soll also der Frequenzbereich von 3,3 GHz bis
 3,85 GHz in Schritten von 50 MHz durchfahren werden und die Feldstärke
@@ -1653,11 +1653,11 @@ jeweils in 10 V/mSchritten von 100 V/m bis 1000 V/m erhöht
 werden. 
 
 Wird die Kammer im tuned mode betrieben, könnte hier auch
-deﬁniert werden, bei welchen Tunerpositionen gemessen werden soll. Da
+definiert werden, bei welchen Tunerpositionen gemessen werden soll. Da
 in diesem Beispiel die Messung im stirred mode erfolgte, ist das hier
 jedoch nicht nötig. 
 
-In Zeile 14 wirde deﬁniert, welcher Kernel für die
+In Zeile 14 wirde definiert, welcher Kernel für die
 Messung genutzt werden soll. Anschließend erfolgt die Angabe der
 Parameter für den Kernel. 
 
@@ -1665,28 +1665,28 @@ Zeile 15 ist auskommentiert und spielt daher
 keine Rolle, die Parameter werden ab Zeile 16 übergeben:
 
    - *tp* bezeichnet die Tunerpositionen, bei denen gemessen werden soll. Hier
-      würde die im vohergehenden Schritt deﬁnierte Liste oder das dictionary
+      würde die im vohergehenden Schritt definierte Liste oder das dictionary
       mit den Tunerpositionen übergeben werden. Wird nichts übergeben,
       werden die Tunerpositionen benutzt, die auch während der Kalibrierung
       Verwendung fanden. Wird ein *None* übergeben, wird davon ausgegangen,
       dass die Messung im stirred mode erfolgt, der Tuner wird vom
       Messprogramm nicht angesprochen und muss eigenhändig in Bewegung
       gebracht werden. 
-   - *ﬁeld* erhält die Liste der Testfeldstärken. 
+   - *field* erhält die Liste der Testfeldstärken. 
    - *testfreqs* bekommt die Liste der zu untersuchenden Frequenzen. 
-   - *dwell* bezeichnet die Zeit, die der Prüﬂing jeweils bei entsprechender
+   - *dwell* bezeichnet die Zeit, die der Prüfling jeweils bei entsprechender
       Tunerposition und Frequenz der Testfeldstärke ausgesetzt ist. Hierbei
-      ist es wichtig, das Zeitverhalten des Prüﬂing einschätzen zu
+      ist es wichtig, das Zeitverhalten des Prüfling einschätzen zu
       können. Sollten die Messungen im stirred mode durchgeführt werden,
       sollte dwell mindest der Zeit für einen Tunerumlauf entsprechen. 
-   - *what* enthält hier die Parameter für die Prüﬂingsüberwachung. Da in
+   - *what* enthält hier die Parameter für die Prüflingsüberwachung. Da in
       diesem Beispiel das Rechtecksignal auf Pulsdauer, High-Pegel und
       Low-Pegel überwacht wurde, werden hier jeweils die Minimalwerte und
       Maximalwerte der Parameter übergeben, also das Wertefenster, innerhalb
-      dessen das Signal noch als gültiges Signal gewertet wird, der Prüﬂing
+      dessen das Signal noch als gültiges Signal gewertet wird, der Prüfling
       also fehlerfrei arbeitet. 
    - *PMfreq* gibt die Pulswiederholrate an, da
-      in diesem Beispiel der Prüﬂing mit pulsmodulierten Signalen
+      in diesem Beispiel der Prüfling mit pulsmodulierten Signalen
       beaufschlagt wurde. 
    - *PMduty* bezeichnet das Tastverhältnis der
       Pulsmodulation in Prozent. 
@@ -1701,28 +1701,28 @@ verwendet, die nicht mit den übergebenen oder auszugebenen Varialblen
 oder Dateien übereinstimmen muss, ist es notwendig diese vorher noch
 anzugeben. 
 
-Abschließend wird noch ein Konﬁgurationsblock *cdict* erzeugt,
+Abschließend wird noch ein Konfigurationsblock *cdict* erzeugt,
 dass alle festgelegten Parameter, Dateien und Namen enthält und dann
 vom aufrufenden Messprogramm ausgewertet bzw. der Instanz der
-MSC-Klasse übergeben wird. Hierbei beﬁnden sich jeweils an erster
+MSC-Klasse übergeben wird. Hierbei befinden sich jeweils an erster
 Stelle die Namen, die von der Software intern benutzt werden, gefolgt
 von den Bezeichnungen, die der Anwender wünscht oder bereits verwendet
 hat.
 
 Die Punkte bedeuten im Einzelnen: 
 
-   - *autosave_ﬁlename* ist der Name
+   - *autosave_filename* ist der Name
       der Autosave-Datei. 
-   - *pickle_output_ﬁlename* ist der Name der
+   - *pickle_output_filename* ist der Name der
       auszugebenen pickle-Datei. 
-   - *pickle_input_ﬁlename* ist der Name einer
+   - *pickle_input_filename* ist der Name einer
       schon vorhandenen pickle-Datei, die vor Beginn der Messungen
       eingelesen werden soll. 
-   - *rawdata_output_ﬁlename* ist der Name der
+   - *rawdata_output_filename* ist der Name der
       Ausgabedatei für die unbehandelten Messdaten. 
-   - *processeddata_output_ﬁlename* ist Name der Ausgabedatei für die
+   - *processeddata_output_filename* ist Name der Ausgabedatei für die
       Ergebnisdaten. 
-   - *log_logﬁlename* ist der Name der Datei, die alle
+   - *log_logfilename* ist der Name der Datei, die alle
       Vorgänge während der Messung mitprotokolliert. 
    - *logger* legt die
       Routine zum Führen der Protokolldatei fest. 
@@ -1735,29 +1735,29 @@ Anschließend erfolgt die
 Übergabe der Messparameter für die Instanz der MSC-Klasse. Dabei
 werden folgende Werte übergeben: 
 
-   - *dotﬁle* ist der Name der, den Aufbau
-      charakterisierenden, dot-Datei, welche weiter oben bereits deﬁniert
+   - *dotfile* ist der Name der, den Aufbau
+      charakterisierenden, dot-Datei, welche weiter oben bereits definiert
       wurde. 
    - *calibration* bezeichnet den Namen der Kalibrierung, dessen
       Werte bei der Rechnung verwendet werden sollen. 
    - *kernel* verweist auf
       den zu benutzenden Kernel samt seiner Parameter, die weiter oben
-      deﬁniert wurden. 
+      definiert wurden. 
    - *freqs* sind die zu untersuchenden Frequenzen, die
       auch als Kernelparameter schon übergeben wurden. 
    - *names* sind die
       Bezeichnungen der Elemente der Messkette. Hierbei sind die Namen, die
       der Anwender für die Elemente in der `dot` Datei benutzt, zu
       übergeben. Letztlich werden noch die Namen angegeben, unter denen die
-      Kalibrierungen im pickle-ﬁle abgelegt sind. Diese Informationen werden
+      Kalibrierungen im pickle-file abgelegt sind. Diese Informationen werden
       von der Auswerteroutine benötigt.
 
 Messung
 ^^^^^^^
 
-Zum Start der Messung muss man sich im Konsolenmodus beﬁnden. Dazu ruft man über :menuselection:`Start -> Ausführen...`
+Zum Start der Messung muss man sich im Konsolenmodus befinden. Dazu ruft man über :menuselection:`Start -> Ausführen...`
 die Eingabeaufforderung auf und gibt das Kommando `cmd` :kbd:`ENTER` ein. 
-Anschließend wechselt man in der sich öffnenden Konsole in das Verzeichnis des aktuellen Messordners. Dort ruft man zum Start in der Umgebung :program:`python` das Messprogramm, gefolgt vom Konﬁgurationsﬁle, auf. Dies ist in der folgenden Abbildung zu sehen.
+Anschließend wechselt man in der sich öffnenden Konsole in das Verzeichnis des aktuellen Messordners. Dort ruft man zum Start in der Umgebung :program:`python` das Messprogramm, gefolgt vom Konfigurationsfile, auf. Dies ist in der folgenden Abbildung zu sehen.
 
 
 
@@ -1773,8 +1773,8 @@ den zu benutzenden Messkernel sowie dessen Parameter übergeben.
 Anders als bei Kalibrier- und Emissionsmessungen in denen die :class:`MSC` Klasse die Informationen über 
 den Ablauf der Messungen enthält, sind diese Informationen bei Störfestigkeitsmessungen in diesem 
 Messkernel enthalten. Dieses ist aus Flexibilitätsgründen erforderlich, da sich bei 
-Störfestigkeitsmessungen der Ablauf der Messungen häuﬁg ändern kann, beispielsweise könnte die 
-Testfeldstärke langsam erhöht werden oder der Prüﬂing auch gleich mit einer Grenzfeldstärke 
+Störfestigkeitsmessungen der Ablauf der Messungen häufig ändern kann, beispielsweise könnte die 
+Testfeldstärke langsam erhöht werden oder der Prüfling auch gleich mit einer Grenzfeldstärke 
 beaufschlagt werden. Außerdem muss die EUT-Überwachung während der
 Messungen realisiert werden. 
 
@@ -2013,13 +2013,13 @@ Der Aufbau des Messkernels ist im folgenden Listing zu sehen::
 
 
 Zunächst werden wieder einige Module geladen, das Modul :mod:`TDSClass` regelt die Kommunikation mit 
-dem Oszilloskop TDS 420, mit dem die Überwachung des Ausgangsimpulses des PC-Boards erfolgte. Anschließend wird die Klasse ImmunityKernel_Thres mit einigen Parametern erzeugt und einige Variablen festgelegt. Hier ﬁnden sich unter anderem die Parameter wieder, die in der Konﬁgurationsdatei festgelegt wurden. In Zeile 45 und 50 werden Instanzen der Klassen ParPort und TDS420_EUT_Handler aus dem Modul TDSClass erzeugt, die für die Resetauslösung beim EUT sowie für die Überwachung des selbigen verantwortlich sind. Anschließend wird der Messablauf festgelegt, also die Schleifen, in denen Tunerpositionen, Frequenzen und Feldstärken während der Messung verändert werden. Im Beispielkernel liegt die Frequenzschleife außen und die Tunerschleife ganz innen, es wird also zunächst eine Frequenz eingestellt, dann ein Feldstärkelevel gewählt und anschließend der Tuner im stirred oder tuned mode eine Umdrehung bewegt. Sollte kein EUT-Ausfall detektiert worden sein, wird das Feldstärkelevel erhöht und wieder der Tuner gedreht. Dies erfolgt so lange, bis ein Ausfall des EUT detektiert wurde oder der Prüﬂing mit der maximalen zu untersuchenden Feldstärke beaufschlagt wurde. Dann wird die nächste Frequenz angefahren und die Untersuchung weitergeführt. Die Wahl, in welcher Schleife welche Größe geändert wird, liegt beim Anwender, wobei die Bestrebungen dahin gehen sollten, die Messung möglichst effektiv zu gestalten. Achtung: Im stirred mode der MVK, also bei den Messungen mit durchlaufendem Tuner, wird der Tuner nicht über die Software gesteuert, sondern muss vom Anwender in Bewegung gebracht werden. Eine weitere erforderliche Routine ist die Funktion test. Hier wird die Funktion des EUT überprüft. Es werden, wie beschrieben, die Ein- und Ausschaltlevel sowie die Periodendauer des vom PC-Board ausgegebenen Signals überprüft. Die jeweilige Ober- und Untergrenzen der entsprechenden Werte werden der Funktion TestEUT übergeben und von dieser mit den vom Oszilloskop ausgebenen Werten verglichen. Diese Überprüfung der Oszilloskopdaten erfolgt bis zu fünf mal hintereinander, daher auch die Verschachtelung im Quellcode. Die mehrfache Überprüfung machte sich erforderlich, da das vom EUT erhaltene Signal nicht immer sauber erfasst wurde und dadurch angebliche EUT-Ausfälle gemeldet wurden, die nicht stattfanden. Wenn nach der fünften Überprüfung immer noch nicht das richtige Signal detektiert wird (Zeile 153) wartete die Testroutine 25 Sekunden auf ein evtl. selbstständiges Reset des EUT (Zeile 159). Wurde nach Ablauf der Zeitspanne das Signal immer noch nicht detektiert, wird in Zeile 166 mit Hilfe der Funtion doReset ein externes Reset des PCBoards über den Parallelport des Messrechners ausgelöst und abermals 25 Sekunden gewartet. Ist das Signal des EUT dann immer noch nicht da, hält das Programm mit einer Meldung an den Anwender an und wartet auf weitere Befehle(Zeile 175). Nach Überprüfung oder Instandsetzung des EUT kann die Messung mit Continue fortgesetzt werden. Wird nun oder auch schon während der vorherigen Prüfung festgestellt, das das EUT ein korrektes Ausgangssignal liefert, wird die Messung normal fortgesetzt. Es benötigt also etwas Zeit und Aufwand, um die automatische EUT-Überwachung ins Messprogramm zu integrieren, dafür vereinfacht es natürlich später den eigentlichen Messablauf erheblich. Es ist offensichtlich, dass bei gewünschten Änderungen im Messablauf oder bei der Überwachung anderer EUT die Kerneldatei editiert, also geändert werden muss. Anschließend muss sie, möglichst unter einem anderen aussagekräftigen Namen, im Messordner oder unter einem der in der Umgebungsvariable UMDPATH, die weiter oben beschrieben wurde, angegebenen Pfade, gespeichert werden. Die Zuweisung des aktuellen Messkernels erfolgt dann, wie beschrieben in der Konﬁgurationsdatei 3.2 in Zeile 4.
+dem Oszilloskop TDS 420, mit dem die Überwachung des Ausgangsimpulses des PC-Boards erfolgte. Anschließend wird die Klasse ImmunityKernel_Thres mit einigen Parametern erzeugt und einige Variablen festgelegt. Hier finden sich unter anderem die Parameter wieder, die in der Konfigurationsdatei festgelegt wurden. In Zeile 45 und 50 werden Instanzen der Klassen ParPort und TDS420_EUT_Handler aus dem Modul TDSClass erzeugt, die für die Resetauslösung beim EUT sowie für die Überwachung des selbigen verantwortlich sind. Anschließend wird der Messablauf festgelegt, also die Schleifen, in denen Tunerpositionen, Frequenzen und Feldstärken während der Messung verändert werden. Im Beispielkernel liegt die Frequenzschleife außen und die Tunerschleife ganz innen, es wird also zunächst eine Frequenz eingestellt, dann ein Feldstärkelevel gewählt und anschließend der Tuner im stirred oder tuned mode eine Umdrehung bewegt. Sollte kein EUT-Ausfall detektiert worden sein, wird das Feldstärkelevel erhöht und wieder der Tuner gedreht. Dies erfolgt so lange, bis ein Ausfall des EUT detektiert wurde oder der Prüfling mit der maximalen zu untersuchenden Feldstärke beaufschlagt wurde. Dann wird die nächste Frequenz angefahren und die Untersuchung weitergeführt. Die Wahl, in welcher Schleife welche Größe geändert wird, liegt beim Anwender, wobei die Bestrebungen dahin gehen sollten, die Messung möglichst effektiv zu gestalten. Achtung: Im stirred mode der MVK, also bei den Messungen mit durchlaufendem Tuner, wird der Tuner nicht über die Software gesteuert, sondern muss vom Anwender in Bewegung gebracht werden. Eine weitere erforderliche Routine ist die Funktion test. Hier wird die Funktion des EUT überprüft. Es werden, wie beschrieben, die Ein- und Ausschaltlevel sowie die Periodendauer des vom PC-Board ausgegebenen Signals überprüft. Die jeweilige Ober- und Untergrenzen der entsprechenden Werte werden der Funktion TestEUT übergeben und von dieser mit den vom Oszilloskop ausgebenen Werten verglichen. Diese Überprüfung der Oszilloskopdaten erfolgt bis zu fünf mal hintereinander, daher auch die Verschachtelung im Quellcode. Die mehrfache Überprüfung machte sich erforderlich, da das vom EUT erhaltene Signal nicht immer sauber erfasst wurde und dadurch angebliche EUT-Ausfälle gemeldet wurden, die nicht stattfanden. Wenn nach der fünften Überprüfung immer noch nicht das richtige Signal detektiert wird (Zeile 153) wartete die Testroutine 25 Sekunden auf ein evtl. selbstständiges Reset des EUT (Zeile 159). Wurde nach Ablauf der Zeitspanne das Signal immer noch nicht detektiert, wird in Zeile 166 mit Hilfe der Funtion doReset ein externes Reset des PCBoards über den Parallelport des Messrechners ausgelöst und abermals 25 Sekunden gewartet. Ist das Signal des EUT dann immer noch nicht da, hält das Programm mit einer Meldung an den Anwender an und wartet auf weitere Befehle(Zeile 175). Nach Überprüfung oder Instandsetzung des EUT kann die Messung mit Continue fortgesetzt werden. Wird nun oder auch schon während der vorherigen Prüfung festgestellt, das das EUT ein korrektes Ausgangssignal liefert, wird die Messung normal fortgesetzt. Es benötigt also etwas Zeit und Aufwand, um die automatische EUT-Überwachung ins Messprogramm zu integrieren, dafür vereinfacht es natürlich später den eigentlichen Messablauf erheblich. Es ist offensichtlich, dass bei gewünschten Änderungen im Messablauf oder bei der Überwachung anderer EUT die Kerneldatei editiert, also geändert werden muss. Anschließend muss sie, möglichst unter einem anderen aussagekräftigen Namen, im Messordner oder unter einem der in der Umgebungsvariable UMDPATH, die weiter oben beschrieben wurde, angegebenen Pfade, gespeichert werden. Die Zuweisung des aktuellen Messkernels erfolgt dann, wie beschrieben in der Konfigurationsdatei 3.2 in Zeile 4.
 
 Das Messprogramm `msc-immunity.py`
 """"""""""""""""""""""""""""""""""
 
 Die im Messordner enthaltene Datei `msc-immunity.py` ist das eigentliche Messprogramm. Sie ist im folgenden Listing zu sehen. 
-Diese Datei muss in der Regel nicht geändert werden, da Veränderungen am Messaufbau oder der Messparameter, wie z.B. der zu untersuchende Frequenzbereich durch Änderungen in der `dot` Datei bzw. in der Konﬁgurationsdatei dem Messprogramm mitgeteilt werden. 
+Diese Datei muss in der Regel nicht geändert werden, da Veränderungen am Messaufbau oder der Messparameter, wie z.B. der zu untersuchende Frequenzbereich durch Änderungen in der `dot` Datei bzw. in der Konfigurationsdatei dem Messprogramm mitgeteilt werden. 
 
 ::
 
@@ -2257,10 +2257,10 @@ Diese Datei muss in der Regel nicht geändert werden, da Veränderungen am Messa
 	       pass
 
 
-Zunächst werden wieder einige Module und plug-ins importiert. pickle ist zur Erzeugung der pickle-Dateien erforderlich. MSC und umddevice sind an der Universität Magdeburg programmierte Module zur Durchführung der einzelnen Messroutinen bzw. zur Kommunikation mit den Messgeräten. Danach erfolgt die Vorbelegung der Variablen des dictionaries mit defaultWerten. Diese werden dann später ggf. beim Einladen des Konﬁgurationsﬁles aktualisiert. Anschließend werden einige Routinen deﬁniert. Die Routine myopen liefert bei Aufruf die in der Variable name geforderte Datei zurück, sollte sie gepackt sein, wird sie vorher noch entpackt. Durch update_conf wird ein Update des Koﬁgurationsdictionaries durchgeführt, die bisherigen Einträge in dict also gegebenfalls durch neue Einträge ersetzt, die, in Abhängigkeit von der aufrufenden Routine, aus einer Autosavedatei, einer geladen pickle-Datei oder auch aus der mit dem Messprogramm aufgerufenen Konﬁgurationsdatei stammen können. Durch die Routine load_from_autosave wird eine Autosavedatei geladen. make_logger_list stellt eine Liste von für Protokolldateien zuständigen Routinen zur Verfügung. Dann beginnt in Zeile 133 das eigentliche Programm. In Zeile 133 beginnt dann das eigentliche Programm. Zunächst wird ein Update der Messvariablen durchgeführt und diese dann anschließend ausgegeben. Dann versucht das Messprogramm, eine Instanz der Klasse MSC zu erstellen. Hierzu wird zunächst mit Hilfe der Routine load_from_autosave überprüft, ob bereits eine Autosavedatei unter dem im Koﬁgurationsblockcdict angegebenen Namen existiert. Gibt es diese Autosavedatei, wird abgefragt, ob sie eingelesen werden soll und bei Bestätigung in Zeile 140 nach dem Einlesen der Daten der Autosavedatei die gespeicherte Instanz der Klasse MSC wieder erstellt. Der zweite zurückgelieferte Wert cmd liefert das Kommando zurück, das die Routine aufrief, in der die Autosavedatei erstellt wurde, also die Routine, die bei Speicherung der Daten gerade lief. Anschließend wird in Zeile 204 abgefragt, welche der unter verschiedenen Descriptions abgespeicherten Messungen man verwenden möchte. Anschließend werden die aktuellen Messparameter mp übergeben und in Zeile 216 die gespeicherte begonnene Messung mit dem erneuten Aufruf der in cmd gespeicherten letzten aufgerufenen Routine an der gesicherten Stelle weitergeführt. Gibt es keine Autosavedatei unter dem angegebenen Namen oder soll diese nicht benutzt werden, wird der Messordner nach dem im cdict angegebenen pickle-ﬁle durchsucht und dieses geladen. In diesem Fall würde dann aus den in der pickle-Datei enthaltenen Daten die Instanz der Klasse MSC wieder erzeugt werden. Anschließend werden ab Zeile 151 dieser Instanz die Konﬁgurationen, measurement_parameters und evaluation_parameters aus dem cdict übergeben. Nun wird untersucht, ob in dieser Instanz bereits Messungen unter der description abgelegt sind, die für die aktuelle Messung laut Konﬁgurationsdatei benutzt werden sollen. Dies kann natürlich nur beim Laden eines alten pickle-ﬁles der Fall sein. Wird eine Messung gefunden, wird diese mit der entsprechenden description ausgegeben und in Zeile 176 abgefragt, wie weiter zu verfahren ist. Es besteht die Möglichkeit, die aktuelle Messung weiterzuführen (Continue). Weiterhin kann die aktuelle Messung abgebrochen und mit der Auswertung der vorhandenen Daten fortgefahren werden (Skip). Es ist es ebenfalls möglich, sowohl die aktuelle Messung als auch die Auswertung abzubrechen (Break) oder das Messprogramm komplett zu beenden (Exit). Wird ein Fortsetzen der Messungen gewählt, würde der alte Datensatz aus dem pickleﬁle überschrieben werden und die Routine msc.Measure_Immunity führt die Messung mit den in mp übergebenen Messparametern vom Zeitpunkt der erfolgten Sicherung an fort. Anschließend, bzw. wenn nur die Auswertung der Daten ausgewählt wurde, erfolgt in den Zeilen 201203 erst durch die Routine msc.OutputRawData_Immunity die Ausgabe der Rohdaten in die im Konﬁgurationsblock cdict unter rawdata_output_ﬁlename angegebene Datei, anschließend durch die Routine msc.Evaluate_Immunity mit den in ep übergebenen Parametern die Auswertung der Daten und schließlich durch durch die Routine msc.OutputProzessedData_Immunity die Ausgabe der ausgewerteten und geordneten Daten in die im Konﬁgurationsblock cdict unter prozesseddata_output_ﬁlename angegebene Datei. Sollten keine Sicherungsdateien vorhanden oder gewünscht werden, wird die eine neue Instanz der Klasse MSC erstellt und eine neue Messung mit den eben angesprochenen Routinen der Klasse MSC begonnen und anschließend ausgewertet. Diese Messung erhält dann als Bezeichnung den ersten Eintrag der Liste descriptions aus dem Konﬁgurationsblock. Die Messung wird dann für alle weiteren in description eingetragenen Bezeichnungen wiederholt. Nachdem mit der Ausgabe der Daten die Auswertung abgeschlossen ist, wird eine abschließende pickle-Datei angelegt, die alle bisherigen Messungen dieser Instanz der Klasse enthält, also die soeben beendete Messung samt Auswertung, sowie die, die in einer evtl. zuvor eingelesen Sicherungsdatei (Input-pickle-Datei oder autosavedatei) gespeichert waren. Der Name dieser Output-pickle-Datei wurde ebenfalls in der Konﬁgurationsdatei festgelegt. Zunächst wird in Zeile 218 geprüft, ob es bereits eine Datei unter diesem Namen gibt. Falls das der Fall ist, wird abgefragt, ob diese evtl. überschrieben werden soll, oder ob die neue pickle-Datei einfach an die vorhandene Datei angehängt werden soll. Nachdem die komplette Messung als Outputpickle-Datei gesichert wurde, wird letzlich noch die evtl. vorhanden Autosavedatei gelöscht, da sie ja durch die beendete Messung und Auswertung nicht benötig wird. Achtung: Wird die Messung aus einer Autosavedatei gestartet, wird nach Abschluss der Messung keine Auswertung ausgeführt, sondern nur das Output-pickle-ﬁle erstellt. In diesem Fall muss die Messung mit diesem Output-pickle-ﬁle als Input-pickle-ﬁle nocheinmal gestartet werden. Dann würde, wie oben beschrieben, die Meldung, dass im eingelesenen pickle-ﬁle bereits eine Messung mit der aktuellen description vorhanden ist und die Abfrage, was geschehen soll, erscheinen. Durch Auswahl von Skip wird dann die aktuelle Messung abgebrochen und es werden nur die vorhandenen Daten aus der gespeicherten Messung ausgewertet und man erhält so die Roh- und Ergebnisdaten. Das Messprogramm kann während der Messung jederzeit durch Drücken einer Taste gestoppt werden. Dies wird auch akustisch signalisiert. Der Ausgangssignal des Signalgenerators wird abgeschaltet, die Kammer kann also geöffnet und auch betreten werden. Gleichzeitig erfolgt eine Abfrage, wie weiter zu verfahren ist. Mit Continue kann die Messung fortgesetzt werden. Mit Suspend werden die Geräte vom Bus abgemeldet, die Instanz bleibt jedoch aktiv, da das Messprogramm auf weitere Eingaben wartet. Die Geräte können ausgeschaltet und auch aus dem Aufbau entfernt werden. Dies kann zum Beispiel genutzt werden, um die Akkus der Sonden zu laden oder Geräte kurzzeitig für andere Messungen zu benutzen, ohne dafür das Messprogramm unterbrechen zu müssen. Der Rechner darf jedoch während dieser Zeit nicht ausgeschaltet werden, da das Messprogramm ja noch läuft. Nachdem alle Geräte wieder angeschlossen und eingeschaltet sind, kann die Messung fortgesetzt werden. Hierzu werden alle Geräte neu initialisiert und die Messung läuft weiter. Mit Quit kann die Messung auch beendet werden. Die folgende Abbildung zeigt den Inhalt des Messordners nach Abschluss der Messung:
+Zunächst werden wieder einige Module und plug-ins importiert. pickle ist zur Erzeugung der pickle-Dateien erforderlich. MSC und umddevice sind an der Universität Magdeburg programmierte Module zur Durchführung der einzelnen Messroutinen bzw. zur Kommunikation mit den Messgeräten. Danach erfolgt die Vorbelegung der Variablen des dictionaries mit defaultWerten. Diese werden dann später ggf. beim Einladen des Konfigurationsfiles aktualisiert. Anschließend werden einige Routinen definiert. Die Routine myopen liefert bei Aufruf die in der Variable name geforderte Datei zurück, sollte sie gepackt sein, wird sie vorher noch entpackt. Durch update_conf wird ein Update des Kofigurationsdictionaries durchgeführt, die bisherigen Einträge in dict also gegebenfalls durch neue Einträge ersetzt, die, in Abhängigkeit von der aufrufenden Routine, aus einer Autosavedatei, einer geladen pickle-Datei oder auch aus der mit dem Messprogramm aufgerufenen Konfigurationsdatei stammen können. Durch die Routine load_from_autosave wird eine Autosavedatei geladen. make_logger_list stellt eine Liste von für Protokolldateien zuständigen Routinen zur Verfügung. Dann beginnt in Zeile 133 das eigentliche Programm. In Zeile 133 beginnt dann das eigentliche Programm. Zunächst wird ein Update der Messvariablen durchgeführt und diese dann anschließend ausgegeben. Dann versucht das Messprogramm, eine Instanz der Klasse MSC zu erstellen. Hierzu wird zunächst mit Hilfe der Routine load_from_autosave überprüft, ob bereits eine Autosavedatei unter dem im Kofigurationsblockcdict angegebenen Namen existiert. Gibt es diese Autosavedatei, wird abgefragt, ob sie eingelesen werden soll und bei Bestätigung in Zeile 140 nach dem Einlesen der Daten der Autosavedatei die gespeicherte Instanz der Klasse MSC wieder erstellt. Der zweite zurückgelieferte Wert cmd liefert das Kommando zurück, das die Routine aufrief, in der die Autosavedatei erstellt wurde, also die Routine, die bei Speicherung der Daten gerade lief. Anschließend wird in Zeile 204 abgefragt, welche der unter verschiedenen Descriptions abgespeicherten Messungen man verwenden möchte. Anschließend werden die aktuellen Messparameter mp übergeben und in Zeile 216 die gespeicherte begonnene Messung mit dem erneuten Aufruf der in cmd gespeicherten letzten aufgerufenen Routine an der gesicherten Stelle weitergeführt. Gibt es keine Autosavedatei unter dem angegebenen Namen oder soll diese nicht benutzt werden, wird der Messordner nach dem im cdict angegebenen pickle-file durchsucht und dieses geladen. In diesem Fall würde dann aus den in der pickle-Datei enthaltenen Daten die Instanz der Klasse MSC wieder erzeugt werden. Anschließend werden ab Zeile 151 dieser Instanz die Konfigurationen, measurement_parameters und evaluation_parameters aus dem cdict übergeben. Nun wird untersucht, ob in dieser Instanz bereits Messungen unter der description abgelegt sind, die für die aktuelle Messung laut Konfigurationsdatei benutzt werden sollen. Dies kann natürlich nur beim Laden eines alten pickle-files der Fall sein. Wird eine Messung gefunden, wird diese mit der entsprechenden description ausgegeben und in Zeile 176 abgefragt, wie weiter zu verfahren ist. Es besteht die Möglichkeit, die aktuelle Messung weiterzuführen (Continue). Weiterhin kann die aktuelle Messung abgebrochen und mit der Auswertung der vorhandenen Daten fortgefahren werden (Skip). Es ist es ebenfalls möglich, sowohl die aktuelle Messung als auch die Auswertung abzubrechen (Break) oder das Messprogramm komplett zu beenden (Exit). Wird ein Fortsetzen der Messungen gewählt, würde der alte Datensatz aus dem picklefile überschrieben werden und die Routine msc.Measure_Immunity führt die Messung mit den in mp übergebenen Messparametern vom Zeitpunkt der erfolgten Sicherung an fort. Anschließend, bzw. wenn nur die Auswertung der Daten ausgewählt wurde, erfolgt in den Zeilen 201203 erst durch die Routine msc.OutputRawData_Immunity die Ausgabe der Rohdaten in die im Konfigurationsblock cdict unter rawdata_output_filename angegebene Datei, anschließend durch die Routine msc.Evaluate_Immunity mit den in ep übergebenen Parametern die Auswertung der Daten und schließlich durch durch die Routine msc.OutputProzessedData_Immunity die Ausgabe der ausgewerteten und geordneten Daten in die im Konfigurationsblock cdict unter prozesseddata_output_filename angegebene Datei. Sollten keine Sicherungsdateien vorhanden oder gewünscht werden, wird die eine neue Instanz der Klasse MSC erstellt und eine neue Messung mit den eben angesprochenen Routinen der Klasse MSC begonnen und anschließend ausgewertet. Diese Messung erhält dann als Bezeichnung den ersten Eintrag der Liste descriptions aus dem Konfigurationsblock. Die Messung wird dann für alle weiteren in description eingetragenen Bezeichnungen wiederholt. Nachdem mit der Ausgabe der Daten die Auswertung abgeschlossen ist, wird eine abschließende pickle-Datei angelegt, die alle bisherigen Messungen dieser Instanz der Klasse enthält, also die soeben beendete Messung samt Auswertung, sowie die, die in einer evtl. zuvor eingelesen Sicherungsdatei (Input-pickle-Datei oder autosavedatei) gespeichert waren. Der Name dieser Output-pickle-Datei wurde ebenfalls in der Konfigurationsdatei festgelegt. Zunächst wird in Zeile 218 geprüft, ob es bereits eine Datei unter diesem Namen gibt. Falls das der Fall ist, wird abgefragt, ob diese evtl. überschrieben werden soll, oder ob die neue pickle-Datei einfach an die vorhandene Datei angehängt werden soll. Nachdem die komplette Messung als Outputpickle-Datei gesichert wurde, wird letzlich noch die evtl. vorhanden Autosavedatei gelöscht, da sie ja durch die beendete Messung und Auswertung nicht benötig wird. Achtung: Wird die Messung aus einer Autosavedatei gestartet, wird nach Abschluss der Messung keine Auswertung ausgeführt, sondern nur das Output-pickle-file erstellt. In diesem Fall muss die Messung mit diesem Output-pickle-file als Input-pickle-file nocheinmal gestartet werden. Dann würde, wie oben beschrieben, die Meldung, dass im eingelesenen pickle-file bereits eine Messung mit der aktuellen description vorhanden ist und die Abfrage, was geschehen soll, erscheinen. Durch Auswahl von Skip wird dann die aktuelle Messung abgebrochen und es werden nur die vorhandenen Daten aus der gespeicherten Messung ausgewertet und man erhält so die Roh- und Ergebnisdaten. Das Messprogramm kann während der Messung jederzeit durch Drücken einer Taste gestoppt werden. Dies wird auch akustisch signalisiert. Der Ausgangssignal des Signalgenerators wird abgeschaltet, die Kammer kann also geöffnet und auch betreten werden. Gleichzeitig erfolgt eine Abfrage, wie weiter zu verfahren ist. Mit Continue kann die Messung fortgesetzt werden. Mit Suspend werden die Geräte vom Bus abgemeldet, die Instanz bleibt jedoch aktiv, da das Messprogramm auf weitere Eingaben wartet. Die Geräte können ausgeschaltet und auch aus dem Aufbau entfernt werden. Dies kann zum Beispiel genutzt werden, um die Akkus der Sonden zu laden oder Geräte kurzzeitig für andere Messungen zu benutzen, ohne dafür das Messprogramm unterbrechen zu müssen. Der Rechner darf jedoch während dieser Zeit nicht ausgeschaltet werden, da das Messprogramm ja noch läuft. Nachdem alle Geräte wieder angeschlossen und eingeschaltet sind, kann die Messung fortgesetzt werden. Hierzu werden alle Geräte neu initialisiert und die Messung läuft weiter. Mit Quit kann die Messung auch beendet werden. Die folgende Abbildung zeigt den Inhalt des Messordners nach Abschluss der Messung:
 
 .. figure:: messordner-after.png
 
    Messordnerinhalt nach Abschluss der Messungen 
 
-Man sieht also zusätzlich die beiden Ausgabedateien out_raw_immunity-PCBoard1.dat und out_processed_immunity-PCBoard1.dat, sowie aus Output-pickle-ﬁle msc-immunity.p und die Protokolldatei msc.log.
+Man sieht also zusätzlich die beiden Ausgabedateien out_raw_immunity-PCBoard1.dat und out_processed_immunity-PCBoard1.dat, sowie aus Output-pickle-file msc-immunity.p und die Protokolldatei msc.log.
