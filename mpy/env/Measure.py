@@ -1,7 +1,10 @@
-# -*- coding: iso-8859-1 -*-
-"""Measure: Base class for other measure classes
-Author: Prof. Dr. Hans Georg Krauthaeuser, hgk@ieee.org
-Copyright (c) 2001-2009: All rights reserved
+# -*- coding: utf-8 -*-
+"""This is :mod:`mpy.env.Measure` with :class:`mpy.env.Measure.Mearure` being the base class for e.g. :class:`mpy.env.msc.MSC.MSC`
+
+   :author: Hans Georg Krauthäuser (main author)
+   :copyright: All rights reserved
+   :license: no licence yet
+
 """
 
 import sys
@@ -28,6 +31,7 @@ class Measure(object):
     """Base class for measurements.
     """
     def __init__(self):
+        """constructor"""
         self.asname=None
         self.ascmd=None
         self.autosave = False
@@ -42,6 +46,7 @@ class Measure(object):
         self.post_user_event=self.std_post_user_event        
 
     def __setstate__(self, dct):
+        """used instead of __init__ when instance is created from pickle file""" 
         if dct['logfilename'] is None:
             logfile = None
         else:
@@ -55,6 +60,7 @@ class Measure(object):
         self.post_user_event=self.std_post_user_event        
 
     def __getstate__(self):
+        """prepare a dict for pickling"""
         odict = self.__dict__.copy()
         del odict['logfile']
         del odict['logger']
@@ -65,19 +71,18 @@ class Measure(object):
         return odict
 
     def wait(self, delay, dct, uihandler, intervall=0.1):
-        """
-        A wait function that can de interrupted.
+        """A wait function that can de interrupted.
 
-        @type delay: number
-        @param delay: seconds to wait
-        @type dct: namespace
-        @param dct: namespace used by uihandler (L{self.stdUserInterruptHandler})
-        @type uihandler: callable
-        @param uihandler: User-Interupt Handler
-        @type intervall: number
-        @param intervall: seconds to sllep between uihandler calls
-        @rtype: None
-        @return: None
+           @type delay: number
+           @param delay: seconds to wait
+           @type dct: namespace
+           @param dct: namespace used by uihandler (L{self.stdUserInterruptHandler})
+           @type uihandler: callable
+           @param uihandler: User-Interupt Handler
+           @type intervall: number
+           @param intervall: seconds to sllep between uihandler calls
+           @rtype: None
+           @return: None
         """
         start = time.time()
         delay = abs(delay)
@@ -87,20 +92,18 @@ class Measure(object):
             time.sleep(intervall)
 
     def out(self, item):
-        """
-        Helper function for all output functions.
-        Prints item recursively all in one line.
-        item can be:
-            - a dict of items
-            - a list of items
-            - a vector of items
-            - SCUQ objects
-            - or anything else (will be printed by 'print item,')
+        """Helper function for all output functions.
+           
+           Prints *item* recursively all in one line.
+           
+           The parameter *item* can be:
 
-        @type item: object
-        @param item: the opject to print
-        @rtype: None
-        @return: None
+              - a :class:`dict` of items (`hasattr(item, 'keys')==True`)
+              - a :class:`list` of items (`hasattr(item, 'index')==True`)
+              - a sequence of items (using :meth:`mpy.tools.util.issequence`)
+              - or anything else (will be printed via `print item,`)
+
+           The return value is `None`.
         """
         if hasattr(item, 'keys'):  # a dict like object
             print "{",
@@ -122,32 +125,28 @@ class Measure(object):
             print item,
             
     def set_autosave_interval (self, interval):
-        """
-        Set the intervall between auto save.
+        """Set the intervall between auto save.
 
-        @type intervall: number
-        @param intervall: seconds between auto save
-        @rtype: None
-        @return: None
+           *intervall*: seconds between auto save
+
+           This method returns `None`.
         """
         self.autosave_interval = interval
         
     def std_logger(self, block):
-        """
-        The standard logger.
-        Print block to self.logfile or to stdout (if self.logfile is None).
-        if 'block' has attribute 'keys' (i.e. is a dict), the elements are
-        processed with the local function L{out_block}. Else, the block is printed
-        directly.
+        """The standard method to write messages to log file.
 
-        @type block: object
-        @param block: object to log
-        @rtype: None
-        @return: None
+           Print *block* to `self.logfile` or to `stdout` (if `self.logfile` is `None`).
+           If *block* has attribute `keys` (i.e. is a :class:`dict`), the elements are
+           processed with the local function :meth:`out_block`. Else, the block is printed
+           directly.
+
+           Parameter *block*: object to log
+
+           Return value: `None`
         """
         def out_block(b):
-            """
-            Helper function to log something.
+            """Helper function to log something.
             """
             assert hasattr(b, 'keys'), "Argument b has to be a dict."
             try:
@@ -184,32 +183,25 @@ class Measure(object):
 
 
     def std_user_messenger(self, msg="Are you ready?", but=["Ok","Quit"], level='', dct={}):
-        """
-        The standard (default) method to present messages to the user.
-        The behaviour depends on the value of the parameter 'but'.
-        If C{len(but)} (buttons are given) the funttions waits for a user answer.
-        Else, the msg is presented only.
+        """The standard (default) method to present messages to the user.
 
-        the function also calls all additional logger functions given in C{self.logger} with 'msg'
-        as argument.
+           The behaviour depends on the value of the parameter *but*.
+           If `len(but)` (buttons are given) the funttions waits for a user answer.
+           Else, the *msg* is presented only.
 
-        @type msg: string
-        @param msg: message to display
-        @type but: sequence of strings
-        @param but: list of 'button' text
-        @type level: string
-        @param level: Mainly for future use.
-        If level is 'email', msg is send by email using fields from dct (L{util.send_email}).
+           The function also calls all additional logger functions given in `self.logger` with the same arguments.
+
+           Parameters:
+              - *msg*: message to display
+              - *but*: sequence with the text strings of the buttons
+              - *level*: to indicate something (not used in the standard logger)
+              - *dct*: a :class`dict` with further parameters (not used in the standard logger)
         
-        @type dct: dict
-        @param dct: used for level == 'email': fields 'to', 'from', 'subject'
-        @rtype: integer
-        @return: with buttons: index of the selected button
-                without buttons: -1
+           Return value: the index of the selected button (starting from `0`), or `-1` if `len(but)` is `False`.
         """
         print msg
         for l in self.logger:
-            l(msg)                
+            l(msg,but,level,dct)                
         if level in ('email',):
             try:
                 send_email(to=dct['to'], fr=dct['from'], subj=dct['subject'], msg=msg)
@@ -231,24 +223,19 @@ class Measure(object):
             return -1
     
     def std_user_interrupt_tester(self):
-        """
-        The standard (default) user interrupt tester.
-        Returns L{util.anykeyevent()}
+        """The standard (default) user interrupt tester.
 
-        rtype: integer
-        return: return value of L{util.anykeyevent()}
+           Returns return value of :meth:`mpy.util.anykeyevent()`
         """
         return util.anykeyevent()
         
     def set_logfile (self, name):
-        """
-        Tries to open a file with the given name with mode 'a+'
-        If that fails, nothing will happen, else stdloogger will log to that file.
+        """Tries to open a file with the given name with mode `'a+'`.
+           If this fails, nothing will happen, else :meth:`stdloogger` will log to this file.
 
-        @type name: string
-        @param name: full name of the file to be used as logfile
-        @rtype: None
-        @return: None
+           Parameter *name*: full qualified name of the file to be used as logfile
+
+           Return: `None`
         """
         log = None
         try:
@@ -266,14 +253,13 @@ class Measure(object):
             self.logfile=log
 
     def set_logger(self, logger=None):
-        """
-        Setup the list of logger fuctions (C{self.logger})
-        If C{logger is None}, C{self.std_logger} is used.
+        """Set up the list of logger fuctions (`self.logger`).
 
-        @type logger: None, callable, or sequence of callables
-        @param logger: functions to log
-        @rtype: None
-        @return: None
+           If `logger is None`, :meth:`std_logger` is used.
+
+           Parameter *logger*: list of functions called to log events
+        
+           Return: *None*
         """
         if logger is None:
             logger = [self.std_logger]
@@ -281,25 +267,21 @@ class Measure(object):
         self.logger = [l for l in logger if callable(l)]
 
     def set_messenger(self, messenger):
-        """
-        Set function to present messages.
+        """Set function to present messages.
 
-        @type messenger: callable
-        @param messenger: the messenger (see L{self.std_user_messenger})
-        @rtype: None
-        @return: None
+           Parameter *messenger*: the messenger (see :meth:`std_user_messenger`)
+
+           Return: *None*
         """
         if callable(messenger):
             self.messenger=messenger
 
     def set_user_interrupt_tester(self, tester):
-        """
-        Set function to test for user interrupt.
+        """Set function to test for user interrupt.
 
-        @type tester: callable
-        @param tester: the tester (see L{self.std_user_interrupt_tester})
-        @rtype: None
-        @return: None
+           Parameter *tester*: the user interrupt tester (see :meth:`std_user_interrupt_tester`)
+
+           Return: *None*
         """
         if callable(tester):
             self.user_interrupt_tester=tester

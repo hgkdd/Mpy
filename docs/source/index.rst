@@ -18,6 +18,7 @@ Contents:
    intro-driver-de
    dat-file-grammar
    FAQ-de
+   messanleitung
    mpy
 
 Indices and tables

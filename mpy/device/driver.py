@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 """This is the :mod:`mpy.device.driver` module.
+
+   :copyright: Hans Georg Krauthäuser
+   :license: All rights reserved
+
 """
 
 import re
