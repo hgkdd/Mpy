@@ -3,15 +3,16 @@
 import sys
 import StringIO
 from scuq import *
-from signalgenerator import SIGNALGENERATOR
+from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
+
 #
 #
 # Für den Signalgnerator SMB100A mit dem Softwarepaket SMB-B106 zur Verwendung bis 6GHz wird die Klasse 'SMB100A' definiert.
 # Diese greift auf die Unterklasse SIGNALGENERATOR (signalgenerator.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
-class SMB100A(SIGNALGENERATOR):
+class SIGNALGENERATOR(SGNLGNRTR):
     def __init__(self):
-        SIGNALGENERATOR.__init__(self)
+        SGNLGNRTR.__init__(self)
         self._internal_unit='dBm'
         #
         # Im Wörterbuch '._cmds' werden die Befehle zum Steuern des speziellen Signalgenerators definiert, z.B. SetFreq() zum Setzen
@@ -51,7 +52,7 @@ class SMB100A(SIGNALGENERATOR):
     def Init(self, ini=None, channel=None):
         if channel is None:
             channel=1
-        self.error=SIGNALGENERATOR.Init(self, ini, channel)
+        self.error=SGNLGNRTR.Init(self, ini, channel)
         sec='channel_%d'%channel
         try:
             self.levelunit=self.conf[sec]['unit']
@@ -137,7 +138,7 @@ def main():
                         fstart: 100e6
                         fstop: 6e9
                         fstep: 1
-                        gpib: 15
+                        gpib: 28
                         virtual: 1
 
                         [Channel_1]
@@ -154,7 +155,16 @@ def main():
     #
     lv=quantities.Quantity(si.WATT, 1e-4)
     fr=300e6
-    sg=SMB100A()
+    sg=SIGNALGENERATOR()
+    try:
+        from mpy.device.signalgenerator_ui import UI as UI
+    except ImportError:
+        pass
+    else:
+        ui=UI(sg,ini=ini)
+        ui.configure_traits()
+        sys.exit(0)	
+	
     err=sg.Init(ini)
     assert err==0, 'Init() fails with error %d'%(err)
     err,freq=sg.SetFreq(fr)
