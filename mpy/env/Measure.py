@@ -4,7 +4,6 @@
    :author: Hans Georg Krauthäuser (main author)
    :copyright: All rights reserved
    :license: no licence yet
-
 """
 
 import sys
@@ -21,11 +20,10 @@ import scuq as uq
 
 try:
     import pyTTS
-    __tts=pyTTS.Create()
-    __tts.SetVoiceByName('MSMary')
-except:
-    __tts=None
-    pass
+    _tts=pyTTS.Create()
+    _tts.SetVoiceByName('MSMary')
+except ImportError:
+    _tts=None
 
 class Measure(object):
     """Base class for measurements.
@@ -73,16 +71,12 @@ class Measure(object):
     def wait(self, delay, dct, uihandler, intervall=0.1):
         """A wait function that can de interrupted.
 
-           @type delay: number
-           @param delay: seconds to wait
-           @type dct: namespace
-           @param dct: namespace used by uihandler (L{self.stdUserInterruptHandler})
-           @type uihandler: callable
-           @param uihandler: User-Interupt Handler
-           @type intervall: number
-           @param intervall: seconds to sllep between uihandler calls
-           @rtype: None
-           @return: None
+           - *delay*: seconds to wait
+           - *dct*: namespace used by uihandler (:meth:`Measure.stdUserInterruptHandler`)
+           - *uihandler*: User-Interupt Handler
+           - *intervall*: seconds to sllep between uihandler calls
+
+           Return: *None*
         """
         start = time.time()
         delay = abs(delay)
@@ -133,7 +127,7 @@ class Measure(object):
         """
         self.autosave_interval = interval
         
-    def std_logger(self, block):
+    def std_logger(self, block, *args):
         """The standard method to write messages to log file.
 
            Print *block* to `self.logfile` or to `stdout` (if `self.logfile` is `None`).
@@ -192,10 +186,11 @@ class Measure(object):
            The function also calls all additional logger functions given in `self.logger` with the same arguments.
 
            Parameters:
+
               - *msg*: message to display
               - *but*: sequence with the text strings of the buttons
               - *level*: to indicate something (not used in the standard logger)
-              - *dct*: a :class`dict` with further parameters (not used in the standard logger)
+              - *dct*: a :class:`dict` with further parameters (not used in the standard logger)
         
            Return value: the index of the selected button (starting from `0`), or `-1` if `len(but)` is `False`.
         """
@@ -209,15 +204,15 @@ class Measure(object):
                 util.LogError(self.messenger)
 
         if len(but): # button(s) are given -> wait
-            if __tts:
-                __tts.Speak(msg, pyTTS.tts_async)
+            if _tts:
+                _tts.Speak(msg, pyTTS.tts_async)
             while True:
                 key=chr(util.keypress())
                 key=key.lower()
                 for s in but:
                     if s.startswith(key):
-                        if __tts:
-                            __tts.Speak(s, pyTTS.tts_purge_before_speak)
+                        if _tts:
+                            _tts.Speak(s, pyTTS.tts_purge_before_speak)
                         return but.index(s)
         else:
             return -1
@@ -287,32 +282,29 @@ class Measure(object):
             self.user_interrupt_tester=tester
 
     def set_autosave(self, name):
-        """
-        Setter for the class attribute C{asname} (name of the auto save file).
+        """Setter for the class attribute *asname* (name of the auto save file).
         
-        @type name: string
-        @param name: file name oif the auto save file
-        @rtype: None
-        @return: None
+           Parameter *name*: file name oif the auto save file
+
+           Return: *None*
         """
         self.asname = name
 
     def do_autosave(self, name_or_obj=None, depth=None, prefixes=None):
-        """
-        Serialize 'self' using cPickle.
+        """Serialize *self* using :mod:`cPickle`.
 
-        Assuming a calling sequence like so:
+           Assuming a calling sequence like so::
         
-        script -> method of measurement class -> do_autosave
+              script -> method of measurement class -> do_autosave
 
-        depth = 1 (default) will set C{self.ascmd} to the command issued in the script.
-        If depth is to large, the outermost command is used.
+           `depth = 1` (default) will set *self.ascmd* to the command issued in the script.
+           
+           If depth is too large, the outermost command is used.
 
-        Thus, the issued command in 'script' is extracted and saved in C{self.ascmd}.
-        This can be used to redo the command after a crash.
+           Thus, the issued command in *script* is extracted and saved in *self.ascmd*.
+           This can be used to redo the command after a crash.
 
-        @rtype: None
-        @return: None
+           Return: *None*
         """
         if depth is None:
             depth=1
@@ -369,45 +361,38 @@ class Measure(object):
         #print self.ascmd
                 
     def std_pre_user_event(self):
-        """
-        Just calls L{util.unbuffer_stdin()}.
-        See there...
+        """Just calls :meth:`mpy.tools.util.unbuffer_stdin()`.
+           See there...
         """
         util.unbuffer_stdin()
 
     def std_post_user_event(self):
-        """
-        Just calls L{util.restore_stdin()}
-        See there...
+        """Just calls :meth:`mpy.tools.util.restore_stdin()`
+           See there...
         """
         util.restore_stdin()
         
     def do_leveling(self, leveling, mg, names, dct):
-        """
-        Perform leveling on the measurement graph.
+        """Perform leveling on the measurement graph.
         
-        @type leveling: sequence
-        @param leveling: sequence of dicts with leveling records. Each recors is a dict with keys 
-        'conditions', 'actor', 'watch', 'nominal', 'reader', 'path', 'actor_min', and 'actor_max'.
+           - *leveling*: sequence of dicts with leveling records. Each record is a dict with keys 
+             'conditions', 'actor', 'watch', 'nominal', 'reader', 'path', 'actor_min', and 'actor_max'.
         
-        The meaning is:
+             The meaning is:
 
-            - condition: has to be True in order that this lewveling takes place. The condition is evaluated in the global namespace and in C{dct}.
-            - actor: at the moment, this can only be a signalgenerator 'sg'
-            - watch: the point in the graph to be monitored (e.g. antena input)
-            - nominal: the desired value at watch
-            - reader: the device reading the value for watch (e.g. forward poer meter)
-            - path: Path between reader and watch
-            - actor_min, actor_max: valid range for actor values
+               - condition: has to be True in order that this lewveling takes place. The condition is evaluated in the global namespace and in C{dct}.
+               - actor: at the moment, this can only be a signalgenerator 'sg'
+               - watch: the point in the graph to be monitored (e.g. antena input)
+               - nominal: the desired value at watch
+               - reader: the device reading the value for watch (e.g. forward poer meter)
+               - path: Path between reader and watch
+               - actor_min, actor_max: valid range for actor values
 
-        @type mg: instance of L{device.mgraph}
-        @partam mg: the measurement graph
-        @type names: dict
-        @param names: mapping between symbolic names and real names in the dot file
-        @type dct: dict
-        @param dct: namespace used for the evaluation of C{condition}  
-        @rtype: L{SCUQ}
-        @return: the level set at the actor 
+           - *mg*: the measurement graph
+           - *names*: mapping between symbolic names and real names in the dot file
+           - *dct*: namespace used for the evaluation of *condition*  
+
+           Return: the level set at the actor 
         """
         for l in leveling:
             if eval(l['condition'], globals(), dct):
@@ -520,8 +505,7 @@ class Measure(object):
         return status in ['ok', 'OK']
 
 class Error(Exception):
-    """
-    Base class for all exceptions of this module
+    """Base class for all exceptions of this module
     """
     pass
 
