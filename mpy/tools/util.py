@@ -1,11 +1,11 @@
 # -*- coding: iso-8859-1 -*-
-"""
-util: all sort of utilities.
+"""This is :mod:`mpy.tools.util`: all sort of utilities. 
 
-Author: Prof. Dr. Hans Georg Krauthaeuser, hgk@ieee.org
-
-Copyright (c) 2001-2008 All rights reserved
+   :author: Hans Georg Krauthäuser (main author)
+   :copyright: All rights reserved
+   :license: no licence yet
 """
+
 from __future__ import division
 import math, cmath, re, inspect
 import types
@@ -26,21 +26,25 @@ for p in scipy_pkgs:
     except AttributeError:
         scipy.pkgload(p)
 
-try:
-    import msvcrt
-    getch = msvcrt.getch
-    kbhit = msvcrt.kbhit
-    def unbuffer_stdin(): pass
-    def restore_stdin(): pass
-except ImportError:
-    try:
-        import unixcrt
-        getch = unixcrt.getch
-        kbhit = unixcrt.kbhit
-        unbuffer_stdin = unixcrt.unbuffer_stdin
-        restore_stdin = unixcrt.restore_stdin 
-    except ImportError:
-        raise AttributeError, "cannot find kbhit/getch support"
+
+from mpy.tools.getch import getch
+from mpy.tools.kbhit import kbhit
+
+# try:
+#     import msvcrt
+#     getch = msvcrt.getch
+#     kbhit = msvcrt.kbhit
+#     def unbuffer_stdin(): pass
+#     def restore_stdin(): pass
+# except ImportError:
+#     try:
+#         import mpy.tools.unixcrt as unixcrt
+#         getch = unixcrt.getch
+#         kbhit = unixcrt.kbhit
+#         unbuffer_stdin = unixcrt.unbuffer_stdin
+#         restore_stdin = unixcrt.restore_stdin 
+#     except ImportError:
+#         raise AttributeError, "cannot find kbhit/getch support"
 
 c=2.99792458e8
 mu0=4*math.pi*1e-7
@@ -48,74 +52,75 @@ eps0=1.0/(mu0*c*c)
 pi=math.pi
 
 
-class _Getch:
-    """Gets a single character from standard input.  Does not echo to the
-screen."""
-    def __init__(self):
-        try:
-            self.impl = _GetchWindows()
-        except ImportError:
-            try:
-                self.impl = _GetchUnix()
-            except ImportError:
-                self.impl = _GetchMacCarbon()
+# class _Getch:
+#     """Gets a single character from standard input.  
+#        Does not echo to screen.
+#     """
+#     def __init__(self):
+#         try:
+#             self.impl = _GetchWindows()
+#         except ImportError:
+#             try:
+#                 self.impl = _GetchUnix()
+#             except ImportError:
+#                 self.impl = _GetchMacCarbon()
 
-    def __call__(self): return self.impl()
-
-
-class _GetchUnix:
-    def __init__(self):
-        import tty, sys, termios # import termios now or else you'll get the Unix version on the Mac
-
-    def __call__(self):
-        import sys, tty, termios
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
-
-class _GetchWindows:
-    def __init__(self):
-        import msvcrt
-
-    def __call__(self):
-        import msvcrt
-        return getch()
+#     def __call__(self): return self.impl()
 
 
-class _GetchMacCarbon:
-    """
-    A function which returns the current ASCII key that is down;
-    if no ASCII key is down, the null string is returned.  The
-    page http://www.mactech.com/macintosh-c/chap02-1.html was
-    very helpful in figuring out how to do this.  
-    """
-    def __init__(self):
-        import Carbon
+# class _GetchUnix:
+#     def __init__(self):
+#         import tty, sys, termios # import termios now or else you'll get the Unix version on the Mac
+
+#     def __call__(self):
+#         import sys, tty, termios
+#         fd = sys.stdin.fileno()
+#         old_settings = termios.tcgetattr(fd)
+#         try:
+#             tty.setraw(sys.stdin.fileno())
+#             ch = sys.stdin.read(1)
+#         finally:
+#             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+#         return ch
+
+# class _GetchWindows:
+#     def __init__(self):
+#         import msvcrt
+
+#     def __call__(self):
+#         import msvcrt
+#         return getch()
+
+
+# class _GetchMacCarbon:
+#     """
+#     A function which returns the current ASCII key that is down;
+#     if no ASCII key is down, the null string is returned.  The
+#     page http://www.mactech.com/macintosh-c/chap02-1.html was
+#     very helpful in figuring out how to do this.  
+#     """
+#     def __init__(self):
+#         import Carbon
         
-    def __call__(self):
-        import Carbon
-        if Carbon.Evt.EventAvail(0x0008)[0]==0: # 0x0008 is the keyDownMask
-            return ''
-        else:
-            #
-            # The event contains the following info:
-            # (what,msg,when,where,mod)=Carbon.Evt.GetNextEvent(0x0008)[1]
-            # 
-            # The message (msg) contains the ASCII char which is
-            # extracted with the 0x000000FF charCodeMask; this
-            # number is converted to an ASCII character with chr() and 
-            # returned
-            #
-            (what,msg,when,where,mod)=Carbon.Evt.GetNextEvent(0x0008)[1]
+#     def __call__(self):
+#         import Carbon
+#         if Carbon.Evt.EventAvail(0x0008)[0]==0: # 0x0008 is the keyDownMask
+#             return ''
+#         else:
+#             #
+#             # The event contains the following info:
+#             # (what,msg,when,where,mod)=Carbon.Evt.GetNextEvent(0x0008)[1]
+#             # 
+#             # The message (msg) contains the ASCII char which is
+#             # extracted with the 0x000000FF charCodeMask; this
+#             # number is converted to an ASCII character with chr() and 
+#             # returned
+#             #
+#             (what,msg,when,where,mod)=Carbon.Evt.GetNextEvent(0x0008)[1]
             
-            return chr(msg & 0x000000FF)
+#             return chr(msg & 0x000000FF)
 
-#getch = _Getch()
+# #getch = _Getch()
 
 class AutoSave:
     def __init__ (self, pname="autosave.p"):
@@ -319,9 +324,8 @@ def anykeyevent():
     return None
 
 def keypress(): 
-    """
-    Waits for the user to press a key. Returns the ascii code 
-    for the key pressed or zero for a function key pressed.
+    """Waits for the user to press a key. Returns the ascii code 
+       for the key pressed or zero for a function key pressed.
     """                             
     while 1:
         a = ord(getch())     # get first byte of keyscan code     
