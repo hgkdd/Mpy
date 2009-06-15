@@ -210,7 +210,7 @@ class Measure(object):
                 key=chr(util.keypress())
                 key=key.lower()
                 for s in but:
-                    if s.startswith(key):
+                    if s.lower().startswith(key):
                         if _tts:
                             _tts.Speak(s, pyTTS.tts_purge_before_speak)
                         return but.index(s)
