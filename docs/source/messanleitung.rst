@@ -773,7 +773,7 @@ Der entsprechende Messgraph sieht wie folgt aus:
 
 
 Konfigurationsdatei
-++++++++++++++++++
++++++++++++++++++++
 
 Die bei der Kalibrierung verwendete Konfigurationsdatei ist im folgenden Listing zu finden:: 
 
