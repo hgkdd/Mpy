@@ -49,11 +49,20 @@ This is the documentation of the API.
    :undoc-members:
 
 :mod:`mpy.env.Measure`
-----------------------
+-----------------------
 
 .. automodule:: mpy.env.Measure
    :members:
    :undoc-members:
+
+:mod:`mpy.env.tem.TEMCell`
+-----------------------------------
+
+.. automodule:: mpy.env.tem.TEMCell
+   :members:
+   :undoc-members:
+
+
 
 :mod:`mpy.tools.aunits`
 -----------------------
@@ -108,5 +117,12 @@ This is the documentation of the API.
 ------------------------
 
 .. automodule:: mpy.tools.mgraph
+   :members:
+   :undoc-members:
+
+:mod:`mpy.tools.spacing`
+------------------------
+
+.. automodule:: mpy.tools.spacing
    :members:
    :undoc-members:

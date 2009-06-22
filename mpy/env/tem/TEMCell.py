@@ -1,20 +1,18 @@
-# -*- coding: ISO-8859-1 -*-
+# -*- coding: iso-8859-1 -*-
+"""This is :mod:`mpy.env.tem.TEMCell`.
+
+   Provides :class:`mpy.env.tem.TEMCell` for EMC measurements in TEM cells
+
+   :author: Hans Georg Krauthäuser (main author)
+   :copyright: All rights reserved
+   :license: no licence yet
 """
-TEMCell: Class for EMC measurements in TEM cells
 
-Author: Dr. Hans Georg Krauthaeuser, hgk@ieee.org
-
-Copyright (c) 2001-2005 All rights reserved
-"""
-
-import UMDMeasure
-import umddevice
-import umdutil
 import math
 import sys
 import time
 import scipy
-import pprint
+#import pprint
 
 scipy_pkgs=('special',)
 for p in scipy_pkgs:
@@ -23,20 +21,25 @@ for p in scipy_pkgs:
     except AttributeError:
         scipy.pkgload(p)
 
+from scuq.quantities import Quantity
+from scuq.si import *
+from scuq.ucomponents import Context
 
+from mpy.device import device
+from mpy.env.Measure import Measure, AmplifierProtectionError
+import mpy.tools.util as util
+import mpy.tools.interpol as interpol
 
-AmplifierProtectionError=UMDMeasure.AmplifierProtectionError
-
-class TEMCell(UMDMeasure.UMDMeasure):
-    """A class for TEM-cell measurements 
+class TEMCell(Measure):
+    """A class for TEM-cell measurements according to IEC 61000-4-20
     """
     eut_positions = (("xx'yy'zz'",       "xz'yx'zy'",       "xy'yz'zx'"),
                      ("xz'yy'z(-x')",    "x(-x')yz'zy'",    "xy'y(-x')zz'"),
                      ("x(-x')yy'z(-z')", "x(-z')y(-x')zy'", "xy'y(-z')z(-x')"),
                      ("x(-z')yy'zx'",    "xx'y(-z')zy'",    "xy'yx'z(-z')"))
 
-    c0=2.99792458e8
-    eta0=120*math.pi
+    c0=Quantity(METER/SECOND, 2.99792458e8)
+    eta0=Quantity(OHM, 120*math.pi)
     
     def __init__(self):
         self.asname=None
@@ -58,7 +61,7 @@ class TEMCell(UMDMeasure.UMDMeasure):
         self.rawData_Emission = {}
         self.processedData_Emission = {}
         self.std_3_positions = TEMCell.eut_positions[0]
-        self.std_12_positions = umdutil.flatten(TEMCell.eut_positions)
+        self.std_12_positions = util.flatten(TEMCell.eut_positions)
 
     def __setstate__(self, dct):
         if dct['logfilename'] is None:
@@ -118,44 +121,44 @@ class TEMCell(UMDMeasure.UMDMeasure):
             except KeyError:
                 nblist=[]
             
-            self.messenger(umdutil.tstamp()+" RF Off...", [])
+            self.messenger(util.tstamp()+" RF Off...", [])
             stat = mg.RFOff_Devices() # switch off after measure
             msg1 = """The measurement has been interrupted by the user.\nHow do you want to proceed?\n\nContinue: go ahead...\nSuspend: Quit devices, go ahead later after reinit...\nInteractive: Go to interactive mode...\nQuit: Quit measurement..."""
             but1 = ['Continue','Suspend','Interactive','Quit']
             answer = self.messenger(msg1, but1)
             #print answer
             if answer == but1.index('Quit'):
-                self.messenger(umdutil.tstamp()+" measurment terminated by user.", [])
+                self.messenger(util.tstamp()+" measurment terminated by user.", [])
                 raise UserWarning      # to reach finally statement
             elif answer == but1.index('Interactive'):
-                umdutil.interactive("Press CTRL-Z plus Return to exit")
+                util.interactive("Press CTRL-Z plus Return to exit")
             elif answer == but1.index('Suspend'):
-                self.messenger(umdutil.tstamp()+" measurment suspended by user.", [])
+                self.messenger(util.tstamp()+" measurment suspended by user.", [])
                 stat = mg.Quit_Devices()                                
                 msg2 = """Measurement is suspended.\n\nResume: Reinit and continue\nQuit: Quit measurement..."""
                 but2 = ['Resume','Quit']
                 answer = self.messenger(msg2, but2)
                 if answer == but2.index('Resume'):
                     # TODO: check if init was successful
-                    self.messenger(umdutil.tstamp()+" Init devices...", [])
+                    self.messenger(util.tstamp()+" Init devices...", [])
                     stat = mg.Init_Devices()
-                    self.messenger(umdutil.tstamp()+" ... Init returned with stat = %d"%stat, [])        
+                    self.messenger(util.tstamp()+" ... Init returned with stat = %d"%stat, [])        
                     stat = mg.RFOff_Devices() # switch off
-                    self.messenger(umdutil.tstamp()+" Zero devices...", [])
+                    self.messenger(util.tstamp()+" Zero devices...", [])
                     stat = mg.Zero_Devices()
                     if hassg:
                         try:
                             level = self.setLevel(mg, names, SGLevel)
                         except AmplifierProtectionError, _e:
-                            self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
+                            self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
 
                     # set frequency for all devices
                     (minf, maxf) = mg.SetFreq_Devices (f)
                     mg.EvaluateConditions()
                 elif answer == but2.index('Quit'):
-                    self.messenger(umdutil.tstamp()+" measurment terminated by user.", [])
+                    self.messenger(util.tstamp()+" measurment terminated by user.", [])
                     raise UserWarning      # to reach finally statement
-            self.messenger(umdutil.tstamp()+" RF On...", [])
+            self.messenger(util.tstamp()+" RF On...", [])
             stat = mg.RFOn_Devices()   # switch on just before measure
             if hassg:
                 level2 = self.doLeveling(leveling, mg, names, locals())
@@ -163,9 +166,9 @@ class TEMCell(UMDMeasure.UMDMeasure):
                     level=level2
             try:
                 # wait delay seconds
-                self.messenger(umdutil.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
+                self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
                 self.wait(delay, dct,self.__HandleUserInterrupt)
-                self.messenger(umdutil.tstamp()+" ... back.", [])
+                self.messenger(util.tstamp()+" ... back.", [])
             except:
                 pass
             mg.NBTrigger(nblist)
@@ -183,7 +186,34 @@ class TEMCell(UMDMeasure.UMDMeasure):
                           is_oats=None,
                           component='y',
                           evaluate3pos=None):
-        self.messenger(umdutil.tstamp()+" Starting evaluation of emission measurement for description '%s' ..."%(description), [])
+        """Calculate the maximum radiated e field from a TEM-cell emission measurement.
+
+           Parameters:
+           
+              - *description*: String to identify the emission measurement.
+              - *e0y_description*: Strind to identify the data for e0y factor.
+              - *use_e0y_GTEManalytical*: if `True`, use the analytical formula, see :meth:`e0y_GTEM_analytical`
+              - *EUTPos*: Dictionary with keys
+                 
+                 - 'cell_width'
+                 - 'sep_height'
+                 - 'gap'
+                 - 'ypos'
+                 - 'xpos'
+                 
+                that are passed to :meth:`e0y_GTEM_analytical`
+              - *Zc*: characteristic impedance in Ohms
+              - *Dmax*: the maximum of the direktivity of the EUT.
+              - *s*: Distance from the EUT in meters
+              - *hg*: height over ground plane in meters
+              - *RH*: range of the hight scan in meters
+              - *is_oats*: if `True`, a ground plane is assumed, else free space
+              - *component*: the field component that represents the y direction (probe orientation could have been diffeent)
+              - *evaluate3pos*: evaluate only with respect to the first 3 standard position even if more (12) are available
+
+           The function simply calls :meth:`Calculate_Prad` and :meth:`Calculate_Emax` with the appropriate arguments.
+        """
+        self.messenger(util.tstamp()+" Starting evaluation of emission measurement for description '%s' ..."%(description), [])
         if is_oats is None:
             is_oats=True
         self.Calculate_Prad(description=description,
@@ -202,7 +232,7 @@ class TEMCell(UMDMeasure.UMDMeasure):
                             is_oats=is_oats)
         #import pprint
         #pprint.pprint(self.processedData_Emission)
-        self.messenger(umdutil.tstamp()+" End of evaluation of emission measurement for description '%s'."%(description), [])
+        self.messenger(util.tstamp()+" End of evaluation of emission measurement for description '%s'."%(description), [])
                           
 
     def Calculate_Prad (self,
@@ -213,7 +243,31 @@ class TEMCell(UMDMeasure.UMDMeasure):
                         Zc=50,
                         component='y',
                         evaluate3pos=None):
-        self.messenger(umdutil.tstamp()+" Starting calulation of radiated power for description '%s' ..."%(description), [])
+        """Calculate the total radiated power from a TEM-cell emission measurement.
+
+           Parameters:
+           
+              - *description*: String to identify the emission measurement.
+              - *e0y_description*: Strind to identify the data for e0y factor.
+              - *use_e0y_GTEManalytical*: if `True`, use the analytical formula, see :meth:`e0y_GTEM_analytical`
+              - *EUTPos*: Dictionary with keys
+                 
+                 - 'cell_width'
+                 - 'sep_height'
+                 - 'gap'
+                 - 'ypos'
+                 - 'xpos'
+                 
+                that are passed to :meth:`e0y_GTEM_analytical`
+              - *Zc*: characteristic impedance
+              - *component*: the field component that represents the y direction (probe orientation could have been diffeent)
+              - *evaluate3pos*: evaluate only with respect to the first 3 standard position even if more (12) are available
+
+           The reslults are appended to *self.processedData_Emission[description]['Prad'][f][port]* (radiated power) and
+           *self.processedData_Emission[description]['Prad_noise'][f][port]* (radiated noise).
+        """
+        self.messenger(util.tstamp()+" Starting calulation of radiated power for description '%s' ..."%(description), [])
+        Zc=Quantity(OHM, Zc)
         comp_dct={'x': 0, 'y': 1, 'z': 2}
         component=component.lower()
         comp_index=comp_dct[component]
@@ -235,12 +289,12 @@ class TEMCell(UMDMeasure.UMDMeasure):
             e0yfreqs.sort()
             for e0yf in e0yfreqs:
                 e0y_xydict[e0yf]=e0ydata[e0yf][0][0][comp_index]
-            e0y = umdutil.MResult_Interpol(e0y_xydict)
+            e0y = interpol.UQ_interpol(e0y_xydict)
         if not callable(e0y):
-            self.messenger(umdutil.tstamp()+" ERROR: e0y is not callable. Abording evaluation.", [])
+            self.messenger(util.tstamp()+" ERROR: e0y is not callable. Abording evaluation.", [])
             return None
         if not self.rawData_Emission.has_key(description):
-            self.messenger(umdutil.tstamp()+" ERROR: description '%s' not found. Abording evaluation."%description, [])
+            self.messenger(util.tstamp()+" ERROR: description '%s' not found. Abording evaluation."%description, [])
             return None
 
             
@@ -271,57 +325,50 @@ class TEMCell(UMDMeasure.UMDMeasure):
                 positions=data.keys()
                 #print positions
                 for k in range(len(data[positions[0]])):
-                    maxv = umddevice.UMDMResult(-1, umddevice.UMD_V)
+                    #maxv = umddevice.UMDMResult(-1, umddevice.UMD_V)
+                    maxv = Quantity(VOLT, -1)
                     # find the max of all voltages
                     for p in positions:
-                        if evaluate3pos and p not in self.std_3_positions:
+                        if evaluate3pos and p not in self.std_3_positions:  # only the 3 first positions should be evaluated and this pos is different
                             continue
                         d=data[p][k]
-                        vp=d['value'].convert(umddevice.UMD_V)
-                        vp=vp.mag()
-                        if vp.get_v() > maxv.get_v():
+                        vp=d['value']
+                        op=vp._unit.get_operator_to(VOLT)
+                        vp=op.convert(vp)
+                        vp=abs(vp)
+                        if vp > maxv:
                             maxv = vp
-                            maxp = p
+                            maxp = p   # maxp holt the indey of the position where the mx was
                     for triple in TEMCell.eut_positions:
                         if maxp in triple:
-                            orth_v = [data[p][k] for p in triple]
+                            # orth_v = [data[p][k] for p in triple] # the orthogonal positions to be used
                             break
-                    self.messenger(umdutil.tstamp()+"f=%e, Using positions '%r'"%(f,triple), [])
-                    s2 = umddevice.UMDMResult(0,umddevice.UMD_dimensionless)
-                    nd=ndata[0][k]['value'].mag().convert(umddevice.UMD_V)  # convert to common unit
-                    nddl=nd.convert(umddevice.UMD_dimensionless)
-                    ns2 = 3*nddl*nddl
-                    ns2.unit=umddevice.UMD_dimensionless
-                    #print nd,
-                    for p in triple:
+                    self.messenger(util.tstamp()+"f=%e, Using positions '%r'"%(f,triple), [])
+
+                    ctx=Context()  # context for the evaluation of uncertainties
+                    s2 = Quantity(VOLT*VOLT, 0) # S^2
+                    nd=abs(ndata[0][k]['value']) # noise data
+                    ns2 = 3*nddl*nddl # V1^2+v2^2+v3^2=3*V1^2
+                    for p in triple:  # loop over positions orth to position with the max value
                         #print p, k, data[p][k]
-                        d=data[p][k]['value'].mag().convert(umddevice.UMD_V)  # convert to common unit
-                        #print d,
-                        d.unit=umddevice.UMD_dimensionless  # yes, dirty, I know...
+                        d=abs(data[p][k]['value'])
                         s2 += (d*d)
-        ##            deltas = abs(0.5*(s.u+s.l)/2.0/s.v)
-        ##            s.u=s.v+deltas
-        ##            s.l=s.v-deltas
-        ##            s.unit = umddevice.UMD_V
                     #print ns2, s2
-                    k2 = (2*math.pi*f/TEMCell.c0)**2
-                    e0y2=e0y(f)
-                    e0y2.unit=umddevice.UMD_dimensionless
-                    e0y2 *= e0y2
-                    P0 = umddevice.UMDMResult(TEMCell.eta0/(3*math.pi*Zc)*k2, umddevice.UMD_dimensionless)
-                    P0 = P0*s2/e0y2
-                    P0.unit = umddevice.UMD_W
-                    nP0 = umddevice.UMDMResult(TEMCell.eta0/(3*math.pi*Zc)*k2, umddevice.UMD_dimensionless)
-                    nP0 = nP0*ns2/e0y2
-                    nP0.unit = umddevice.UMD_W
-                    self.messenger(umdutil.tstamp()+"f=%e, Prad: %s, Prad_noise: %s"%(f,str(P0),str(nP0)), [])
+                    k2 = (2*math.pi*f/TEMCell.c0)**2  #k^2
+                    e0y2=e0y(f)**2   # e_0y^2
+
+                    fac= TEMCell.eta0/(3*math.pi*Zc)*k2/e0y2
+                    P0 =  fac*s2  # Prad
+                    nP0 = fac*ns2 # Pnoise
+
+                    self.messenger(util.tstamp()+"f=%e, Prad: %s, Prad_noise: %s"%(f,str(P0),str(nP0)), [])
                     self.processedData_Emission[description]['Prad'][f][port].append(P0)
                     self.processedData_Emission[description]['Prad_noise'][f][port].append(nP0)
-        self.messenger(umdutil.tstamp()+" Calulation of radiated power done.", [])
+        self.messenger(util.tstamp()+" Calulation of radiated power done.", [])
 
     
     def Calculate_Emax (self, description='EUT', Dmax=3.0, s=10, hg=0.8, RH=(1,4), rstep=None, Zc=50, is_oats=None):
-        self.messenger(umdutil.tstamp()+" Starting calulation of maximum radiated E field for description '%s' ..."%(description), [])
+        self.messenger(util.tstamp()+" Starting calulation of maximum radiated E field for description '%s' ..."%(description), [])
         if is_oats is None:
             is_oats=True
         print self.processedData_Emission.keys()
@@ -372,12 +419,31 @@ class TEMCell(UMDMeasure.UMDMeasure):
                         for _k, _val in gmax.items():
                             dct[_k]=t*_val
                             dct[_k].unit=umddevice.UMD_Voverm
-                        dct['total'] = umdutil.MRmax(dct['v'],dct['h'])
+                        dct['total'] = util.MRmax(dct['v'],dct['h'])
                         Emax[f][port].append(dct)
-                        self.messenger(umdutil.tstamp()+" f=%e, Emax%s=%r"%(f, ex, dct), [])
-        self.messenger(umdutil.tstamp()+" Calculation of maximum radiated E field done.", [])
+                        self.messenger(util.tstamp()+" f=%e, Emax%s=%r"%(f, ex, dct), [])
+        self.messenger(util.tstamp()+" Calculation of maximum radiated E field done.", [])
     
     def e0y_GTEM_analytical(self, a, h, g, y, x=0, Zc=50, max_m=10):
+        """Calculate the factor $e_{0y}$ from the analytical formula given in 
+           IEC 61000-4-20 (actually, it is from the PhD thesis of Michael Koch).
+           
+           Parameters:
+           
+              - *a*: cell width in meter
+              - *h*: septum height in meter
+              - *g*: gap width in meter
+              - *y*: position of the EUT center from the floor in meter
+              - *x*: position of the EUT center from the middle in meter
+              - *Zc*: characteristic impedance of the waveguide in ohms
+              - *max_m*: upper index of the series expansion
+           
+           
+           .. figure:: gtem_e0y.png
+           
+           Cross section of a GTEM-cell.
+           
+        """
         sum=0.0
         for m in xrange(1,max_m+1,2):
             M=m*math.pi/a
@@ -389,7 +455,7 @@ class TEMCell(UMDMeasure.UMDMeasure):
             sum += ch*c*s*j0/sh
             #print "m: %d, ch: %e, c: %e, s: %s, j0: %e, sh: %e, sum: %e"%(m, ch, c, s, j0, sh, sum)
         sum*=4.0*math.sqrt(Zc)/a
-        return umddevice.UMDMResult(sum, umddevice.UMD_VovermoversqrtW)
+        return Quantity(VOLT/METER/WATT.sqrt(), sum)
 
     def Measure_Emission (self,
                            description="EUT",
@@ -408,9 +474,9 @@ class TEMCell(UMDMeasure.UMDMeasure):
 
         self.PreUserEvent()
         if self.autosave:
-            self.messenger(umdutil.tstamp()+" Resume TEM cell emission measurement from autosave...", [])
+            self.messenger(util.tstamp()+" Resume TEM cell emission measurement from autosave...", [])
         else:
-            self.messenger(umdutil.tstamp()+" Start new TEM cell emission measurement...", [])
+            self.messenger(util.tstamp()+" Start new TEM cell emission measurement...", [])
 
         self.rawData_Emission.setdefault(description, {})
 
@@ -422,13 +488,13 @@ class TEMCell(UMDMeasure.UMDMeasure):
         #for k,v in ddict.items():
         #    globals()[k] = v
 
-        self.messenger(umdutil.tstamp()+" Init devices...", [])
+        self.messenger(util.tstamp()+" Init devices...", [])
         err = mg.Init_Devices()
         if err: 
-            self.messenger(umdutil.tstamp()+" ...faild with err %d"%(err), [])
+            self.messenger(util.tstamp()+" ...faild with err %d"%(err), [])
             return err
         try:  
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
             if freqs is None:
                 freqs = []
 
@@ -468,11 +534,11 @@ Quit: quit measurement.
             but = ["Start", "Quit"]
             answer = self.messenger(msg, but)
             if answer == but.index('Quit'):
-                self.messenger(umdutil.tstamp()+" measurement terminated by user.", [])
+                self.messenger(util.tstamp()+" measurement terminated by user.", [])
                 raise UserWarning      # to reach finally statement
             # loop freqs
             for f in freqs:
-                self.messenger(umdutil.tstamp()+" Frequency %e Hz"%(f), [])
+                self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
                 mg.EvaluateConditions()
                 # set frequency for all devices
                 (minf, maxf) = mg.SetFreq_Devices (f)
@@ -485,7 +551,7 @@ Quit: quit measurement.
                 except:
                     conf = {}
                 rconf = mg.ConfReceivers(conf)
-                self.messenger(umdutil.tstamp()+" Receiver configuration: %s"%str(rconf), [])
+                self.messenger(util.tstamp()+" Receiver configuration: %s"%str(rconf), [])
                     
                 # cable corrections
                 c_port_receiver = []
@@ -501,7 +567,7 @@ Quit: quit measurement.
                     receiverlist.append(names['receiver'][i])
 
                 # noise floor measurement..
-                self.messenger(umdutil.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
+                self.messenger(util.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
                 mg.NBTrigger(receiverlist)
                 # serial poll all devices in list
                 olddevs = []
@@ -511,7 +577,7 @@ Quit: quit measurement.
                     new_devs=[i for i in nbresult.keys() if i not in olddevs]
                     olddevs = nbresult.keys()[:]
                     if len(new_devs):
-                        self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                        self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                     if len(nbresult)==len(receiverlist):
                         break
                 for i in range(nports):
@@ -529,7 +595,7 @@ Quit: quit measurement.
                         self.__addLoggerBlock(block, nn+'_corrected', 'Noise: PPort/c_refant_receiver', PPort, {})
                         self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         noise = self.__insert_it (noise, PPort, None, None, f, i, 0)
-                self.messenger(umdutil.tstamp()+" Noise floor measurement done.", [])
+                self.messenger(util.tstamp()+" Noise floor measurement done.", [])
 
                 for log in self.logger:
                     log(block)
@@ -538,13 +604,13 @@ Quit: quit measurement.
                 # END OF f LOOP
             lowBatList = mg.getBatteryLow_Devices()
             if len(lowBatList):
-                self.messenger(umdutil.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
+                self.messenger(util.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
             self.rawData_Emission[description].update({'noise': noise})
             # autosave class instance
             if self.asname and (time.time()-self.lastautosave > self.autosave_interval):
-                self.messenger(umdutil.tstamp()+" autosave ...", [])
+                self.messenger(util.tstamp()+" autosave ...", [])
                 self.do_autosave()
-                self.messenger(umdutil.tstamp()+" ... done", [])
+                self.messenger(util.tstamp()+" ... done", [])
 
             # NOISE MEASUREMENT finished
 
@@ -562,20 +628,20 @@ Select EUT position.
 """
                 but=[]
                 for _i, _r in enumerate(remain_eut_pos):
-                    msg += "%s: %s\n"%(umdutil.map2singlechar(_i),str(_r))
+                    msg += "%s: %s\n"%(util.map2singlechar(_i),str(_r))
                     but.append(str(_i))
                 msg += "Quit: quit measurement."
                 but.append("Quit")
                 answer = self.messenger(msg, but)
                 if answer == but.index('Quit'):
-                    self.messenger(umdutil.tstamp()+" measurement terminated by user.", [])
+                    self.messenger(util.tstamp()+" measurement terminated by user.", [])
                     raise UserWarning      # to reach finally statement
                 p = remain_eut_pos[answer]
 
-                self.messenger(umdutil.tstamp()+" EUT position %r"%(p), [])
+                self.messenger(util.tstamp()+" EUT position %r"%(p), [])
                 # loop freqs
                 for f in freqs:
-                    self.messenger(umdutil.tstamp()+" Frequency %e Hz"%(f), [])
+                    self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
                     # switch if necessary
                     mg.EvaluateConditions()
                     # set frequency for all devices
@@ -589,7 +655,7 @@ Select EUT position.
                     except:
                         conf = {}
                     rconf = mg.ConfReceivers(conf)
-                    self.messenger(umdutil.tstamp()+" Receiver configuration: %s"%str(rconf), [])
+                    self.messenger(util.tstamp()+" Receiver configuration: %s"%str(rconf), [])
                         
                     # cable corrections
                     c_port_receiver = []
@@ -606,9 +672,9 @@ Select EUT position.
 
                     # wait delay seconds
                     time.sleep(0.5)   # minimum delay according -4-21
-                    self.messenger(umdutil.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
+                    self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
                     self.wait(delay,locals(),self.__HandleUserInterrupt)
-                    self.messenger(umdutil.tstamp()+" ... back.", [])
+                    self.messenger(util.tstamp()+" ... back.", [])
 
                         
                     # Trigger all devices in list
@@ -621,7 +687,7 @@ Select EUT position.
                         new_devs=[i for i in nbresult.keys() if i not in olddevs]
                         olddevs = nbresult.keys()[:]
                         if len(new_devs):
-                            self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                            self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(nblist):
                             break
                     # print nbresult
@@ -651,22 +717,22 @@ Select EUT position.
                     # END OF f LOOP
                 lowBatList = mg.getBatteryLow_Devices()
                 if len(lowBatList):
-                    self.messenger(umdutil.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
+                    self.messenger(util.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
                 self.rawData_Emission[description].update({'voltage': voltage, 'mg': mg})
                 # autosave class instance
                 if self.asname and (time.time()-self.lastautosave > self.autosave_interval):
-                    self.messenger(umdutil.tstamp()+" autosave ...", [])
+                    self.messenger(util.tstamp()+" autosave ...", [])
                     self.do_autosave()
-                    self.messenger(umdutil.tstamp()+" ... done", [])
+                    self.messenger(util.tstamp()+" ... done", [])
                 measured_eut_pos.append(p)
                 remain_eut_pos.remove(p)
             #END OF p LOOP
                 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(umdutil.tstamp()+" Quit...", [])
+            self.messenger(util.tstamp()+" Quit...", [])
             stat = mg.Quit_Devices()
-        self.messenger(umdutil.tstamp()+" End of Emission mesurement. Status: %d"%stat, [])
+        self.messenger(util.tstamp()+" End of Emission mesurement. Status: %d"%stat, [])
         self.PostUserEvent()
         return stat
 
@@ -690,9 +756,9 @@ Select EUT position.
         self.PreUserEvent()
 
         if self.autosave:
-            self.messenger(umdutil.tstamp()+" Resume e0y calibration measurement from autosave...", [])
+            self.messenger(util.tstamp()+" Resume e0y calibration measurement from autosave...", [])
         else:
-            self.messenger(umdutil.tstamp()+" Start new e0y calibration measurement...", [])
+            self.messenger(util.tstamp()+" Start new e0y calibration measurement...", [])
 
         if description is None:
             description="None"
@@ -717,22 +783,22 @@ Select EUT position.
         for k,v in ddict.items():
             globals()[k] = v
             
-        self.messenger(umdutil.tstamp()+" Init devices...", [])
+        self.messenger(util.tstamp()+" Init devices...", [])
         err = mg.Init_Devices()
         if err: 
-            self.messenger(umdutil.tstamp()+" ...faild with err %d"%(err), [])
+            self.messenger(util.tstamp()+" ...faild with err %d"%(err), [])
             return err
         try:  
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
             stat = mg.RFOff_Devices()
-            self.messenger(umdutil.tstamp()+" Zero devices...", [])
+            self.messenger(util.tstamp()+" Zero devices...", [])
             stat = mg.Zero_Devices()
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
 
             try:
                 level = self.setLevel(mg, names, SGLevel)
             except AmplifierProtectionError, _e:
-                self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
+                self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                 raise  # re raise to reach finaly clause
                 
             # set up efields, ...
@@ -754,13 +820,13 @@ Select EUT position.
             but = ["Start", "Quit"]
             answer = self.messenger(msg, but)
             if answer == but.index('Quit'):
-                self.messenger(umdutil.tstamp()+" measurement terminated by user.", [])
+                self.messenger(util.tstamp()+" measurement terminated by user.", [])
                 raise UserWarning      # to reach finally statement
-            self.messenger(umdutil.tstamp()+" RF On...", [])
+            self.messenger(util.tstamp()+" RF On...", [])
             stat = mg.RFOn_Devices()
             # loop freqs
             for f in freqs:
-                self.messenger(umdutil.tstamp()+" Frequency %e Hz"%(f), [])
+                self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
                 # switch if necessary
                 #print f
                 mg.EvaluateConditions()
@@ -782,7 +848,7 @@ Select EUT position.
                 if mg.nodes[names['pmfwd']]['inst']:
                     NoPmFwd = False  # ok
                 else:  # no fwd pm
-                    msg = umdutil.tstamp()+" WARNING: No fwd power meter. Signal generator output is used instead!"
+                    msg = util.tstamp()+" WARNING: No fwd power meter. Signal generator output is used instead!"
                     answer = self.messenger(msg,[])
                     NoPmFwd = True
 
@@ -795,9 +861,9 @@ Select EUT position.
                     level=level2
 
                 # wait delay seconds
-                self.messenger(umdutil.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
+                self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
                 self.wait(delay,locals(),self.__HandleUserInterrupt)
-                self.messenger(umdutil.tstamp()+" ... back.", [])
+                self.messenger(util.tstamp()+" ... back.", [])
 
                 # Trigger all devices in list
                 mg.NBTrigger(nblist)
@@ -812,7 +878,7 @@ Select EUT position.
                     new_devs=[i for i in nbresult.keys() if i not in olddevs]
                     olddevs = nbresult.keys()[:]
                     if len(new_devs):
-                        self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])
+                        self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])
                     if len(nbresult)==len(nblist):
                         break
                 # print nbresult
@@ -858,23 +924,23 @@ Select EUT position.
                 # test for low battery
                 lowBatList = mg.getBatteryLow_Devices()
                 if len(lowBatList):
-                    self.messenger(umdutil.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
+                    self.messenger(util.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
                 # autosave class instance
                 if self.asname and (time.time()-self.lastautosave > self.autosave_interval):
-                    self.messenger(umdutil.tstamp()+" autosave ...", [])
+                    self.messenger(util.tstamp()+" autosave ...", [])
                     self.do_autosave()
-                    self.messenger(umdutil.tstamp()+" ... done", [])
+                    self.messenger(util.tstamp()+" ... done", [])
                 # END OF f LOOP
-            self.messenger(umdutil.tstamp()+" RF Off...", [])
+            self.messenger(util.tstamp()+" RF Off...", [])
             stat = mg.RFOff_Devices() # switch off after measure
             self.rawData_e0y[description].update({'efield': efields, 'mg': mg})
                 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(umdutil.tstamp()+" RF Off and Quit...", [])
+            self.messenger(util.tstamp()+" RF Off and Quit...", [])
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
-        self.messenger(umdutil.tstamp()+" End of e0y calibration. Status: %d"%stat, [])
+        self.messenger(util.tstamp()+" End of e0y calibration. Status: %d"%stat, [])
         self.PostUserEvent()
         return stat
 
@@ -918,7 +984,7 @@ Select EUT position.
             try:
                 fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
     def OutputRawData_Emission (self, description=None, what=None, fname=None):
@@ -933,7 +999,7 @@ Select EUT position.
             try:
                 fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
         
     def __OutputRawData(self, thedata, description, what):
@@ -975,7 +1041,7 @@ Select EUT position.
             try:
                 fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
     def OutputProcessedData_Emission (self, description=None, what=None, fname=None):
@@ -990,7 +1056,7 @@ Select EUT position.
             try:
                 fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
 
@@ -1017,9 +1083,9 @@ Select EUT position.
                         print
 
     def Evaluate_e0y(self, description=None):
-            self.messenger(umdutil.tstamp()+" Start of evaluation of e0y calibration with description %s"%description, [])
+            self.messenger(util.tstamp()+" Start of evaluation of e0y calibration with description %s"%description, [])
             if not self.rawData_e0y.has_key(description):
-                self.messenger(umdutil.tstamp()+" Description %s not found."%description, [])
+                self.messenger(util.tstamp()+" Description %s not found."%description, [])
                 return -1
                 
             efields = self.rawData_e0y[description]['efield']
@@ -1052,5 +1118,5 @@ Select EUT position.
                             en.append(ef[k]/sqrtPInput)
                             print k, ef[k], pin, sqrtPInput, en[-1]
                         self.processedData_e0y[description]['e0y'][f][port].append(en)
-            self.messenger(umdutil.tstamp()+" End of evaluation of e0y calibration", [])
+            self.messenger(util.tstamp()+" End of evaluation of e0y calibration", [])
             return 0

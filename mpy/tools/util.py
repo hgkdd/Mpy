@@ -7,44 +7,15 @@
 """
 
 from __future__ import division
-import math, cmath, re, inspect
+import math, re, inspect
 import types
-import scipy
-import ConfigParser, os
 import time
 import sys
-import csv
-import cPickle
 import traceback
-import pprint
-import tempfile
-
-scipy_pkgs=('interpolate','integrate','special','stats')
-for p in scipy_pkgs:
-    try:
-        getattr(scipy,p)
-    except AttributeError:
-        scipy.pkgload(p)
-
 
 from mpy.tools.getch import getch
 from mpy.tools.kbhit import kbhit
 
-# try:
-#     import msvcrt
-#     getch = msvcrt.getch
-#     kbhit = msvcrt.kbhit
-#     def unbuffer_stdin(): pass
-#     def restore_stdin(): pass
-# except ImportError:
-#     try:
-#         import mpy.tools.unixcrt as unixcrt
-#         getch = unixcrt.getch
-#         kbhit = unixcrt.kbhit
-#         unbuffer_stdin = unixcrt.unbuffer_stdin
-#         restore_stdin = unixcrt.restore_stdin 
-#     except ImportError:
-#         raise AttributeError, "cannot find kbhit/getch support"
 
 c=2.99792458e8
 mu0=4*math.pi*1e-7
@@ -52,260 +23,6 @@ eps0=1.0/(mu0*c*c)
 pi=math.pi
 
 
-# class _Getch:
-#     """Gets a single character from standard input.  
-#        Does not echo to screen.
-#     """
-#     def __init__(self):
-#         try:
-#             self.impl = _GetchWindows()
-#         except ImportError:
-#             try:
-#                 self.impl = _GetchUnix()
-#             except ImportError:
-#                 self.impl = _GetchMacCarbon()
-
-#     def __call__(self): return self.impl()
-
-
-# class _GetchUnix:
-#     def __init__(self):
-#         import tty, sys, termios # import termios now or else you'll get the Unix version on the Mac
-
-#     def __call__(self):
-#         import sys, tty, termios
-#         fd = sys.stdin.fileno()
-#         old_settings = termios.tcgetattr(fd)
-#         try:
-#             tty.setraw(sys.stdin.fileno())
-#             ch = sys.stdin.read(1)
-#         finally:
-#             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-#         return ch
-
-# class _GetchWindows:
-#     def __init__(self):
-#         import msvcrt
-
-#     def __call__(self):
-#         import msvcrt
-#         return getch()
-
-
-# class _GetchMacCarbon:
-#     """
-#     A function which returns the current ASCII key that is down;
-#     if no ASCII key is down, the null string is returned.  The
-#     page http://www.mactech.com/macintosh-c/chap02-1.html was
-#     very helpful in figuring out how to do this.  
-#     """
-#     def __init__(self):
-#         import Carbon
-        
-#     def __call__(self):
-#         import Carbon
-#         if Carbon.Evt.EventAvail(0x0008)[0]==0: # 0x0008 is the keyDownMask
-#             return ''
-#         else:
-#             #
-#             # The event contains the following info:
-#             # (what,msg,when,where,mod)=Carbon.Evt.GetNextEvent(0x0008)[1]
-#             # 
-#             # The message (msg) contains the ASCII char which is
-#             # extracted with the 0x000000FF charCodeMask; this
-#             # number is converted to an ASCII character with chr() and 
-#             # returned
-#             #
-#             (what,msg,when,where,mod)=Carbon.Evt.GetNextEvent(0x0008)[1]
-            
-#             return chr(msg & 0x000000FF)
-
-# #getch = _Getch()
-
-class AutoSave:
-    def __init__ (self, pname="autosave.p"):
-        self.pname = pname
-
-    def autosave(self, obj):
-        if not (hasattr(obj,"notify_autosave") and hasattr(obj,"update_asdict")):
-            return
-        
-        frame = inspect.currentframe()
-        outerframes = inspect.getouterframes(frame)
-        caller = outerframes[1][0]
-        try:
-            obj.notify_autosave(True)
-##            args, varargs, varkw, loc = inspect.getargvalues(caller)
-##            allargs = args
-##            allargs.pop(0) # self
-##            if not varargs is None:
-##                allargs += varargs
-##            if not varkw is None:
-##                allargs += varkw
-##            sdict={}
-##            for arg in allargs:
-##                sdict[arg]=caller.f_locals[arg]
-###            sdict = caller.f_locals
-###            sdict.update(caller.f_globals)
-            ccframe = outerframes[2][0]
-            ccmodule = inspect.getmodule(ccframe)
-            try:
-                slines, start = inspect.getsourcelines(ccmodule)
-            except:
-                clen = 100
-            else:
-                clen = len(slines)
-            finfo = inspect.getframeinfo(ccframe, clen)
-            theindex = finfo[4]
-            lines = finfo[3]
-            theline = lines[theindex]
-            cmd = theline
-            for i in range(theindex-1, 0, -1):
-                line = lines[i]
-                try:
-                    compile (cmd.lstrip(), '<string>', 'exec')
-                except SyntaxError:
-                    cmd = line + cmd
-                else:
-                    break
-##            for key, val in sdict.items():
-##                try:
-##                    cPickle.dumps(val)
-##                except:
-##                    del sdict[key]
-##                    
-##            obj.update_asdict(sdict)
-            try:
-                pfile = file(self.pname,"w")
-                cPickle.dump(obj, pfile)
-                cPickle.dump(cmd, pfile)
-                pfile.close()
-            except:
-#                raise
-                t, v, tr = sys.exc_info()
-                print t, v, tr
-            obj.notify_autosave(False)
-        finally:        
-            del frame
-            del outerframes
-            del caller
-            del ccframe
-
-    def recover (self):
-        try:
-            try:
-                pfile = file(self.pname, "r")
-                obj=cPickle.load(pfile)
-                cmd=cPickle.load(pfile)
-                cmd = cmd.lstrip()
-            except:
-                obj = None
-                cmd = None
-        finally:
-            try:
-                pfile.close()
-            except:
-                pass
-        return obj, cmd
-
-
-def logspace(start,stop,factor=1.01,endpoint=0,precision=2):
-    """ Evenly spaced samples on a logarithmic scale.
-
-        Return num evenly spaced samples from start to stop.  If
-        endpoint=1 then last sample is stop and factor is adjusted.
-    """
-    if factor < 1 and stop > start:
-        return []
-    try:
-        nf = math.log(stop/start)/math.log(factor)
-    except ArithmeticError:
-        return []
-    if endpoint:
-        nf = math.ceil(nf)
-        try:
-            factor = math.pow((stop/start),1/(nf))
-        except ArithmeticError:
-            return []
-    lst = [round(start*factor**i,precision) for i in range(int(math.floor(nf))+1)]
-    return lst
-
-def logspaceN(start,stop,number,endpoint=0,precision=2):
-    """ Evenly spaced samples on a logarithmic scale.
-
-        Return num evenly spaced samples from start to stop.  If
-        endpoint=1 then last sample is stop and factor is adjusted.
-    """
-    if number < 1 and stop > start:
-        return []
-    if endpoint:
-        nf = number
-    else:
-        nf = number+1
-    try:
-        factor = math.pow(stop/start, 1.0/(nf-1))
-    except ArithmeticError:
-        return []
-    lst = [round(start*factor**i,precision) for i in range(number)]
-    return lst
-
-def linspace(start,stop,step,endpoint=0,precision=2):
-    """ Evenly spaced samples on a linear scale.
-
-        Return num evenly spaced samples from start to stop.  If
-        endpoint=1 then last sample is stop and step is adjusted.
-    """
-    if step < 0 and stop > start:
-        return []
-    try:
-        nf = (stop-start)/step + 1
-    except ArithmeticError:
-        return []
-    if endpoint:
-        nf = math.floor(nf)
-        try:
-            step = (stop-start)/float(nf-1)
-        except ArithmeticError:
-            return []
-    lst = [round(start+step*i,precision) for i in range(int(math.floor(nf)))]
-    return lst
-
-def linspaceN(start,stop,number,endpoint=0,precision=2):
-    """ Evenly spaced samples on a linear scale.
-
-        Return num evenly spaced samples from start to stop.  If
-        endpoint=1 then last sample is stop and step is adjusted.
-    """
-    if number < 1 and stop > start:
-        return []
-    if endpoint:
-        nf = number
-    else:
-        nf = number+1
-    try:
-        step = (stop-start)/float(nf-1)
-    except ArithmeticError:
-        return []
-    lst = [round(start+step*i,precision) for i in range(number)]
-    return lst
-
-def logspaceTab (start, end, ftab=[3,6,10,100,1000], nftab=[20,15,10,20,20], endpoint=True):
-    freqs = []
-    s = start
-    finished = False
-    for i in range(len(ftab)):
-        e = start*ftab[i]
-        f = logspaceN(s,e,nftab[i],endpoint=False)
-        while len(f) and f[-1]>end:  # More points as we need
-            f.pop()
-            finished = True
-        freqs = freqs + f
-        if finished:
-            break
-        s = e
-    if endpoint and end not in freqs:
-        freqs.append(end)
-    return freqs
 
 def anykeyevent():
     """
@@ -437,26 +154,6 @@ def interactive(banner=None):
 def tstamp():
     return time.strftime('%c')        
 
-def frange(start, end=None, inc=None):
-    "A range function, that does accept float increments..."
-
-    if end == None:
-        end = start + 0.0
-        start = 0.0
-
-    if inc == None:
-        inc = 1.0
-
-    L = []
-    while 1:
-        next = start + len(L) * inc
-        if inc > 0 and next >= end:
-            break
-        elif inc < 0 and next <= end:
-            break
-        L.append(next)
-        
-    return L
 
 class OutputError:
     def __init__(self):
@@ -490,19 +187,6 @@ def LogError(Messenger):
     err_msg = "%s ***Error: %s"%(tstamp(), ''.join(error))
     Messenger (msg = err_msg, but = [])
 
-def idxset(n, m):
-    """
-    returns a list of length n with equidistant elem of range(m)
-    """
-    if n==0:
-        return []
-    if n>=m:
-        return range(m)
-    step=1.0*m/n
-    lst = []
-    for i in range(n):
-        lst.append(int(round(i*step)))
-    return lst[:]
 
 def removefrom (obj, pat):
     if re.search(pat, str(type(obj))) is not None:

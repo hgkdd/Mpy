@@ -1,5 +1,7 @@
+from ez_setup import use_setuptools
+use_setuptools()
 import os
-from distutils.core import setup
+from setuptools import setup, find_packages
 import version
 
 ver=''
@@ -12,9 +14,12 @@ setup(name='mpy',
       description='instrument control framework',
       license='All rights reserved',
       url='http://tu-dresden.de/et/tet',
-      packages=['mpy', 
-                'mpy.device', 
-                'mpy.env', 
-                'mpy.tools'],
-      data_files=[('mpy', ['mpy/LICENSE'])],
+      install_requires=['numpy',
+                        'scipy',
+                        'pydot',
+                        'pyvisa',
+                        'ply'],
+      packages=find_packages(),
+      #package_dir = {'':'mpy'},
+      #data_files=[('mpy', ['mpy/LICENSE'])],
       )

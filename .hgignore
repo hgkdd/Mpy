@@ -6,6 +6,7 @@ syntax: glob
 .DS_Store
 parser_DatFile_parsetab.py
 MANIFEST
+mpy.egg-info/*
 build/*
 dist/*
 docs/html/*

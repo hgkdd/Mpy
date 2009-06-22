@@ -1,0 +1,139 @@
+# -*- coding: iso-8859-1 -*-
+"""This is :mod:`mpy.tools.spacing`: routines returnung sequences aka `range` 
+
+   :author: Hans Georg Krauthäuser (main author)
+   :copyright: All rights reserved
+   :license: no licence yet
+"""
+
+from math import log, ceil, floor, pow
+
+def logspace(start,stop,factor=1.01,endpoint=0,precision=2):
+    """Evenly spaced samples on a logarithmic scale.
+
+       Returns evenly spaced samples from *start* to *stop*.  If
+       *endpoint=1* then last sample is *stop* and *factor* is adjusted.
+    """
+    if factor < 1 and stop > start:
+        return []
+    try:
+        nf = log(stop/start) / log(factor)
+    except ArithmeticError:
+        return []
+    if endpoint:
+        nf = ceil(nf)
+        try:
+            factor = pow((stop/start),1/(nf))
+        except ArithmeticError:
+            return []
+    lst = [round(start*factor**i, precision) for i in xrange(int(floor(nf))+1)]
+    return lst
+
+def logspaceN(start,stop,number,endpoint=0,precision=2):
+    """Evenly spaced samples on a logarithmic scale.
+
+       Return *number* evenly spaced samples from start to stop.  If
+       *endpoint=1* then last sample is *stop* and *factor* is adjusted.
+    """
+    if number < 1 and stop > start:
+        return []
+    if endpoint:
+        nf = number
+    else:
+        nf = number+1
+    try:
+        factor = pow(stop/start, 1.0/(nf-1))
+    except ArithmeticError:
+        return []
+    lst = [round(start*factor**i,precision) for i in xrange(number)]
+    return lst
+
+def linspace(start,stop,step,endpoint=0,precision=2):
+    """Evenly spaced samples on a linear scale.
+
+       Return evenly spaced samples from *start* to *stop*.  If
+       *endpoint=1* then last sample is *stop* and *step* is adjusted.
+    """
+    if step < 0 and stop > start:
+        return []
+    try:
+        nf = (stop-start)/step + 1
+    except ArithmeticError:
+        return []
+    if endpoint:
+        nf = floor(nf)
+        try:
+            step = (stop-start)/float(nf-1)
+        except ArithmeticError:
+            return []
+    lst = [round(start+step*i,precision) for i in xrange(int(floor(nf)))]
+    return lst
+
+def linspaceN(start,stop,number,endpoint=0,precision=2):
+    """Evenly spaced samples on a linear scale.
+
+       Return *number* evenly spaced samples from *start* to *stop*.  If
+       *endpoint=1* then last sample is *stop* and *number* is adjusted.
+    """
+    if number < 1 and stop > start:
+        return []
+    if endpoint:
+        nf = number
+    else:
+        nf = number+1
+    try:
+        step = (stop-start)/float(nf-1)
+    except ArithmeticError:
+        return []
+    lst = [round(start+step*i,precision) for i in xrange(number)]
+    return lst
+
+def logspaceTab(start, end, ftab=[3,6,10,100,1000], nftab=[20,15,10,20,20], endpoint=True):
+    freqs = []
+    s = start
+    finished = False
+    for i,ft in ftab:
+        e = start*ft
+        f = logspaceN(s,e,nftab[i],endpoint=False)
+        while len(f) and f[-1]>end:  # More points as we need
+            f.pop()
+            finished = True
+        freqs = freqs + f
+        if finished:
+            break
+        s = e
+    if endpoint and end not in freqs:
+        freqs.append(end)
+    return freqs
+
+
+def frange(limit1, limit2=None, increment=1.):
+    """Range function that accepts floats (and integers).
+    
+       Usage::
+
+           frange(-2, 2, 0.1)
+           frange(10)
+           frange(10, increment = 0.5)
+
+       The returned value is a generator.  Use list(frange) for a list.
+    """
+    if limit2 is None:
+        limit2, limit1 = limit1, 0.
+    else:
+        limit1 = float(limit1)
+    count = int(ceil(limit2 - limit1)/increment)
+    return (limit1 + n*increment for n in range(count))
+
+def idxset(n, m):
+    """returns a list of length *n* with equidistant elem of `range(m)`
+    """
+    if n==0:
+        return []
+    if n>=m:
+        return range(m)
+    step=1.0*m/n
+    lst = []
+    for i in range(n):
+        lst.append(int(round(i*step)))
+    return lst[:]
