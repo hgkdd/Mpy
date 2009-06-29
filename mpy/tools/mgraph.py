@@ -10,6 +10,18 @@ from mpy.tools.aunits import *
 from mpy.tools.Configuration import fstrcmp
 
 class Graph(object):
+    """Graph class based on :mod:`pydot`.
+
+       The graph is created using the methods (called in this order)
+
+         - :meth:`pydot.graph_from_dot_file`
+         - :meth:`pydot.graph_from_dot_data`
+         - :meth:`pydot.graph_from_edges`
+         - :meth:`pydot.graph_from_adjacency_matrix`
+         - :meth:`pydot.graph_from_incidence_matrix`
+
+       with the argument of the :meth:`__init__` method.
+    """
     def __init__(self, fname_or_data=None):
         methods=('graph_from_dot_file','graph_from_dot_data','graph_from_edges',
                  'graph_from_adjacency_matrix','graph_from_incidence_matrix')             
@@ -32,9 +44,8 @@ class Graph(object):
         return self.graph.to_string()
 
     def find_path(self, start, end, path=[]):
-        """
-        Returns a path from start to end.
-        Ignores edges with attribute active==False.
+        """Returns a path from *start* to *end*.
+           Ignores edges with attribute `active==False`.
         """
         try:
             return self.find_all_paths(start, end, path)[0]
@@ -42,9 +53,8 @@ class Graph(object):
             return None
 
     def find_all_paths(self, start, end, path=[], edge=None):
-        """
-        Find all paths in graph from start to end (without circles)
-        Ignores edges with attribute active==False.
+        """Find all paths in graph from *start* to *end* (without circles).
+           Ignores edges with attribute `active==False`.
         """
         #print 'enter:', start, end, path 
         #path = path + [start]
@@ -70,9 +80,8 @@ class Graph(object):
         return paths
 
     def find_shortest_path(self, start, end, path=[]):
-        """
-        returns the shortest path from start to end
-        Ignores edges with attribute active==False.
+        """Returns the shortest path from *start* to *end*.
+           Ignores edges with attribute `active==False`.
         """
         allpaths=self.find_all_paths(start, end, path)
         if allpaths:
@@ -81,6 +90,8 @@ class Graph(object):
             return None
 
 class MGraph(Graph):
+    """Measurement grapg class based of :class:`Graph`. See there for the argument of the :meth:`__init__` method.
+    """
     def __init__(self, fname_or_data=None):
         super(MGraph, self).__init__(fname_or_data)
         self.gnodes=self.graph.get_nodes()
@@ -92,11 +103,16 @@ class MGraph(Graph):
         self.activenodes=self.nodes.keys()
     
     def get_path_correction (self, start, end, unit=None):
+        """Returns a dict with the corrections for all edges from *start* to *end*. *unit* can be 
+           :data:`mpy.tools.aunits.AMPLITUDERATIO` or :data:`mpy.tools.aunits.POWERRATIO`. If *unit* is `None`, 
+           :data:`mpy.tools.aunits.AMPLITUDERATIO` is used. 
+
+           The key 'total' gives the total correction.
+        
+           All corrections are :class:`scuq.quantities.Quantity` objects.
         """
-        Returns a dict with the corrections for all edges
-        key 'total' gives the total correction.
-        All corrections are SCUQ objects.
-        """
+        if unit is None:
+            unit=AMPLITUDERATIO
         assert unit in (AMPLITUDERATIO, POWERRATIO)
         result = {}
         all_paths = self.find_all_paths(start, end) # returs a list of (list of edges)
@@ -144,8 +160,12 @@ class MGraph(Graph):
         return result
 
     def EvaluateConditions (self, doAction=True):
-        """
-        Set key isActice in nodes argument depending on the condition given in the graph
+        """Set key *isActice* in nodes argument depending on the condition given in the graph.
+
+           If *doAction* is `True` an action *act* defined in the edge attributed is executed using `exec str(act)` if the 
+           condition evaluates to `True`.
+
+           The condition may refer to variables in the callers namespace, e.g. 'f'.
         """
         __frame = inspect.currentframe()
         __outerframes = inspect.getouterframes(__frame)
@@ -177,7 +197,7 @@ class MGraph(Graph):
 
     def CreateDevices (self):
         """
-        Should be called once after creating the instance.
+        Create instances of the devices found in the graph. Should be called once after creating the graph instance.
 
         - Sets attribute `active = True` for all nodes and edges
         - Reads the ini-file (if ini atrib is present)
@@ -244,7 +264,8 @@ class MGraph(Graph):
     def NBTrigger (self, list):
         """
         Trigers all devices in list if possible 
-        (node exists, has dev instance, is active, and has Trigger method)
+        (node exists, has dev instance, is active, and has Trigger method).
+
         Returns dict: keys->list items, vals->None or return val from Trigger method
         """
         devices=[l for l in list if l in self.activenodes]  # intersept of list and activenodes
@@ -260,12 +281,13 @@ class MGraph(Graph):
                 continue
         return result   
 
-    def __Read (self, list, result=None):
+    def _Read (self, list, result=None):
         """
-        Read the measurement results from devices in list
-        Mode is blocking if result is None and NonBlocking else
-        A dict is returned with keys from list and values from the device reading or None
-        Non blocking is finished when len(result) = len(list)
+        Read the measurement results from devices in list.
+
+        Mode is blocking if result is None and NonBlocking else. Non blocking is finished when `len(result) = len(list)`.
+
+        A dict is returned with keys from list and values from the device reading or `None`.
         """
         if result is None:  #blocking
             cmds = ('GetData', 'getData', 'ReadData')
@@ -301,23 +323,27 @@ class MGraph(Graph):
 
     def NBRead (self, list, result):
         """
-        Non Blocking read
-        see __Read
+        Non Blocking read.
+        See :meth:`_Read`.
         """
-        return self.__Read (list, result) 
+        return self._Read (list, result) 
 
     def Read (self, list):
         """
-        Blocking read
-        see __Read
+        Blocking read.
+        See :meth:`_Read`.
         """
-        return self.__Read (list) 
+        return self._Read (list) 
 
     def CmdDevices (self, IgnoreInactive, cmd, *args):
         """
-        Tries to send `cmd(*arg)` to all devices in graph
-        if `IgnoreInactice` is `True`, only active devices are used
+        Tries to send `cmd(*arg)` to all devices in graph.
+
+        If *IgnoreInactice* is `True`, only active devices are used.
          
+        Returns the sum of all status codes returned from the called methods, i.e. a return value of zero indicates success.
+
+        Return error codes for all devices are stored in `self.nodes[str(n)]['ret']` and `self.nodes[str(n)]['err']`. 
         """
         devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept of list and activenodes
         cmd = str(cmd)
@@ -346,10 +372,12 @@ class MGraph(Graph):
     
     def Init_Devices (self, IgnoreInactive=False):
         """
-        Initialize all device
-        raises UserWarning if a device fails to initialize
-        If IgnoreInactive = False (default), all devices are initialized, 
-        else only active devices are initialized
+        Initialize all device.
+
+        Raises :exc:`UserWarning` if a device fails to initialize.
+
+        If `IgnoreInactive = False` (default), all devices are initialized, 
+        else only active devices are initialized.
         """
         devices=[name for name in self.nodes if IgnoreInactive or name in self.activenodes]  # intersept        
         serr=0
@@ -384,9 +412,11 @@ class MGraph(Graph):
 
     def Quit_Devices (self, IgnoreInactive=False):
         """
-        Quit all devices using CmdDevices
-        Input: IgnoreInactive=False
-        Return: return val of CmdDevices
+        Quit all devices using :meth:`CmdDevices`.
+
+        Input: `IgnoreInactive=False`
+
+        Return: return val of :meth:`CmdDevices`
         """
         return self.CmdDevices (IgnoreInactive, "Quit")
 
@@ -410,17 +440,25 @@ class MGraph(Graph):
 
     def ConfReceivers(self, conf, IgnoreInactive=True):
         """
-        Configures all SA/Receivers in Graph
-        Input: `conf`: a dict with keys from 
-                     `('rbw', 'vbw', 'att', 'preamp', 'reflevel', 'detector', 'tracemode', 'sweeptime', 'sweepcount', 'span')`
-                      and values for these parameters
+        Configures all SA/Receivers in Graph.
 
-                If a key, val pair exists in conf, we try to set this parameter
-                If the a key is not in `conf`, or if the value is missing (`None`),
+        Input: 
 
-                we try to read the val from the instrument
+           - *conf*: a dict with keys from 
+                
+                `('rbw', 'vbw', 'att', 'preamp', 'reflevel', 'detector', 'tracemode', 'sweeptime', 'sweepcount', 'span')`
+                      
+             and values for these parameters.
 
-        Return: `rdict`: a dict of dicts with `rdict[node][key] = val` mapping
+             If a key, val pair exists in *conf*, we try to set this parameter.
+             If the a key is not in *conf*, or if the value is missing (`None`),
+             we try to read the val from the instrument.
+           - *IgnoreInactive*: flag to ignore devices marked as inactive
+
+        Return:
+ 
+           - `rdict`: a dict of dicts with `rdict[node][key] = val` mapping
+
         """
         parlist = ('rbw',
                    'vbw',

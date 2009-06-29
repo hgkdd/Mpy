@@ -120,6 +120,13 @@ This is the documentation of the API.
    :members:
    :undoc-members:
 
+:mod:`mpy.tools.util`
+------------------------
+
+.. automodule:: mpy.tools.util
+   :members:
+   :undoc-members:
+
 :mod:`mpy.tools.spacing`
 ------------------------
 

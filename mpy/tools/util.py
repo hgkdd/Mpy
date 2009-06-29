@@ -298,3 +298,59 @@ def format_block(block,nlspaces=0):
     flines = ['%s%s' % (' '*nlspaces,line) for line in lines]
 
     return '\n'.join(flines)+'\n'
+
+def gmax_oats (f, rstep=None, s=10, hg=0.8, RH=(1,4)):
+    """Compute the geometry factor g_max for horizontal and vertical polarization for a dipole over a plane, 
+       perfectly conducting ground (OATS) according to equation A.7 of IEC 61000-4-20.
+
+       Parameters:
+       
+          - *f*: frequency in meters
+          - *rstep*: the step width of the hight scan used to calculate the max. If *rstep* is `None`, a value 
+            of a tenth of the wavelength ist used.
+          - *s*: Distance from the EUT in meters
+          - *hg*: height over ground plane in meters
+          - *RH*: range of the hight scan in meters
+
+       The function returns dictionary with keys 'h' and 'v' containing the g_max factors (as floats, unit is 1/m).
+    """
+    s2=s*s
+    c0=2.99792458e8
+    k0=(2*math.pi*f/c0)
+    if rstep==None:
+        rstep = c0/f*0.1  # lambda/10
+    rh=RH[0]
+    gmaxh=0.0
+    gmaxv=0.0
+    while rh<=RH[1]:
+        r1=math.sqrt(s2+(rh-hg)**2)
+        r2=math.sqrt(s2+(rh+hg)**2)
+        r12=r1*r1
+        r22=r2*r2
+        r13=r12*r1
+        r23=r22*r2
+        r16=r13*r13
+        r26=r23*r23
+        gh=1.0/(r1*r2)*math.sqrt(r12+r22+2*r1*r2*math.cos(k0*(r2-r1)))
+        gv=s2/(r13*r23)*math.sqrt(r16+r26+2*r13*r23*math.cos(k0*(r2-r1)))
+        gmaxh=max(gmaxh,gh)
+        gmaxv=max(gmaxv,gv)
+        rh+=rstep
+    return {'h': gmaxh, 'v': gmaxv}
+
+def gmax_fs (f, rstep=None, s=10, hg=0.8, RH=(0.8,0.8)):
+    """Compute the geometry factor g_max for horizontal and vertical polarization for a dipole in free space (FAR).
+
+       Parameters:
+       
+          - *f*: frequency in meters (not used in the function)
+          - *rstep*: the step width of the hight scan used to calculate the max. (not used in the function) 
+          - *s*: Distance from the EUT in meters
+          - *hg*: height over ground plane in meters
+          - *RH*: range of the hight scan in meters. The source is assumed to be at the lower end of this range.
+
+       The function returns dictionary with keys 'h' and 'v' containing the g_max factors (as floats, unit is 1/m).
+    """
+    r = math.sqrt(s*s+(RH[0]-hg)**2)
+    ret=1.0/r
+    return {'h': ret, 'v': ret}

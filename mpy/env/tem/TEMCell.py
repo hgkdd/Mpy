@@ -29,6 +29,8 @@ from mpy.device import device
 from mpy.env.Measure import Measure, AmplifierProtectionError
 import mpy.tools.util as util
 import mpy.tools.interpol as interpol
+import mpy.tools.mgraph as mgraph
+from mpy.tools.aunits import *
 
 class TEMCell(Measure):
     """A class for TEM-cell measurements according to IEC 61000-4-20
@@ -94,7 +96,7 @@ class TEMCell(Measure):
         del odict['PostUserEvent']        
         return odict
 
-    def __HandleUserInterrupt(self, dct, ignorelist=''):
+    def _HandleUserInterrupt(self, dct, ignorelist=''):
         key = self.UserInterruptTester() 
         if key and not chr(key) in ignorelist:
             # empty key buffer
@@ -167,7 +169,7 @@ class TEMCell(Measure):
             try:
                 # wait delay seconds
                 self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
-                self.wait(delay, dct,self.__HandleUserInterrupt)
+                self.wait(delay, dct,self._HandleUserInterrupt)
                 self.messenger(util.tstamp()+" ... back.", [])
             except:
                 pass
@@ -325,11 +327,11 @@ class TEMCell(Measure):
                 positions=data.keys()
                 #print positions
                 for k in range(len(data[positions[0]])):
-                    #maxv = umddevice.UMDMResult(-1, umddevice.UMD_V)
                     maxv = Quantity(VOLT, -1)
                     # find the max of all voltages
                     for p in positions:
-                        if evaluate3pos and p not in self.std_3_positions:  # only the 3 first positions should be evaluated and this pos is different
+                        # only the 3 first positions should be evaluated and this pos is different
+                        if evaluate3pos and p not in self.std_3_positions:  
                             continue
                         d=data[p][k]
                         vp=d['value']
@@ -361,31 +363,47 @@ class TEMCell(Measure):
                     P0 =  fac*s2  # Prad
                     nP0 = fac*ns2 # Pnoise
 
-                    self.messenger(util.tstamp()+"f=%e, Prad: %s, Prad_noise: %s"%(f,str(P0),str(nP0)), [])
+                    self.messenger(util.tstamp()+"f=%e, Prad: %s, Prad_noise: %s"%(f,P0,nP0), [])
                     self.processedData_Emission[description]['Prad'][f][port].append(P0)
                     self.processedData_Emission[description]['Prad_noise'][f][port].append(nP0)
         self.messenger(util.tstamp()+" Calulation of radiated power done.", [])
 
     
-    def Calculate_Emax (self, description='EUT', Dmax=3.0, s=10, hg=0.8, RH=(1,4), rstep=None, Zc=50, is_oats=None):
+    def Calculate_Emax (self, description='EUT', Dmax=3.0, s=10, hg=0.8, RH=(1,4), rstep=None, Zc=50, is_oats=True):
+        """This function estimates the maximum E field strength, as it would be expected from a OATS/FAR measurement, 
+           from the total radiated power determined by :meth:`Calculate_Prad`. 
+
+           Parameters:
+
+              - *description*: String to identify the emission measurement.
+              - *Dmax*: the maximum of the direktivity of the EUT.
+              - *s*: Distance from the EUT in meters
+              - *hg*: height over ground plane in meters
+              - *RH*: range of the hight scan in meters
+              - *rstep*: the step width of the hight scan used to calculate the max. Used in :meth:`mpy.tools.util.gmax_oats`
+              - *Zc*: characteristic impedance of the TEM cell in Ohms (forwarded to :meth:`Calculate_Prad`)
+              - *is_oats*: if `True`, a ground plane is assumed, else free space
+
+        """
         self.messenger(util.tstamp()+" Starting calulation of maximum radiated E field for description '%s' ..."%(description), [])
         if is_oats is None:
             is_oats=True
-        print self.processedData_Emission.keys()
-        if not self.processedData_Emission[description].has_key('Prad'):
+        #print self.processedData_Emission.keys()
+        if 'Prad' not in self.processedData_Emission[description]:
             self.Calculate_Prad (description=description, Zc=Zc)
 
         if not is_oats:
-            gmax_f = umdutil.gmax_fs
+            gmax_f = util.gmax_fs
             gmax_model="FAR"
         else:
-            gmax_f = umdutil.gmax_oats
+            gmax_f = util.gmax_oats
             gmax_model="OATS"
-        self.processedData_Emission[description]['Assumed_Distance']=s
+
+        self.processedData_Emission[description]['Assumed_Distance']=Quantity(si.METER,s)
         self.processedData_Emission[description]['Gmax_Model']=gmax_model
-        self.processedData_Emission[description]['Assumed_hg']=hg
-        self.processedData_Emission[description]['Assumed_RH']=RH
-        self.processedData_Emission[description]['Assumed_Zc']=Zc
+        self.processedData_Emission[description]['Assumed_hg']=Quantity(si.METER, hg)
+        self.processedData_Emission[description]['Assumed_RH']=tuple((Quantity(si.METER, r) for r in RH))
+        self.processedData_Emission[description]['Assumed_Zc']=Quantity(si.Ohm, Zc)
         self.processedData_Emission[description]['Assumed_Directivity']={}
             
         dmax_f=Dmax
@@ -394,34 +412,26 @@ class TEMCell(Measure):
             self.processedData_Emission[description]['Emax%s'%ex]={}
             Emax=self.processedData_Emission[description]['Emax%s'%ex]
             prad=self.processedData_Emission[description]['Prad%s'%ex]
-            freqs=prad.keys()
-            freqs.sort()
+            freqs=sorted(prad)  # sorted keys of dict prad
             for f in freqs:
                 if callable(Dmax):
                     dmax_f=Dmax(f)
                 self.processedData_Emission[description]['Assumed_Directivity'].setdefault(f,dmax_f)
-                ports = prad[f].keys()
-                ports.sort()
+                gmf=gmax_f(f,rstep=rstep,s=s,hg=hg,RH=RH)
+                gmax = {'h': Quantity(1/si.METER, gmf['h']),
+                        'v': Quantity(1/si.METER, gmf['v'])} 
+                ports = sorted(prad[f])
                 for port in ports:
                     Emax[f]={}
-                    for pr in prad[f][port]:
-                        p0 = umddevice.UMDMResult(pr.convert(umddevice.UMD_W))
-                        p0.unit=umddevice.UMD_dimensionless
-                        gmax = gmax_f(f,rstep=rstep,s=s,hg=hg,RH=RH)
-                        cc = dmax_f*TEMCell.eta0/(4*math.pi)
-                        deltap0=0.5*(p0.get_u()+p0.get_l())
-                        vv = math.sqrt(cc*p0.v)
-                        ll = vv - abs(0.5/math.sqrt(cc/p0.v)*deltap0)
-                        uu = vv + abs(0.5/math.sqrt(cc/p0.v)*deltap0)
-                        t=umddevice.UMDMResult(vv, ll , uu, umddevice.UMD_dimensionless) 
+                    for pr in prad[f][port]:   # pr is a Quantity in si.Watt
+                        cc = math.sqrt(dmax_f*TEMCell.eta0/(4*math.pi)*pr)
                         Emax[f][port]=[]
                         dct={}
                         for _k, _val in gmax.items():
-                            dct[_k]=t*_val
-                            dct[_k].unit=umddevice.UMD_Voverm
-                        dct['total'] = util.MRmax(dct['v'],dct['h'])
+                            dct[_k]=cc*_val
+                        dct['total'] = max(dct['v'],dct['h'])
                         Emax[f][port].append(dct)
-                        self.messenger(util.tstamp()+" f=%e, Emax%s=%r"%(f, ex, dct), [])
+                        self.messenger(util.tstamp()+" f=%e, Emax%s=%s (horiz.) %s (vert.) %s (total)"%(f, ex, dct['h'], dct['v'], dct['total']), [])
         self.messenger(util.tstamp()+" Calculation of maximum radiated E field done.", [])
     
     def e0y_GTEM_analytical(self, a, h, g, y, x=0, Zc=50, max_m=10):
@@ -461,13 +471,59 @@ class TEMCell(Measure):
                            description="EUT",
                            positions=None,
                            dotfile='gtem-emission.dot',
-                           delay=1.0,
+                           delay=0.0,
                            freqs=None,
                            receiverconf = None,
                            names={'port': ['port'],
                                   'receiver': ['analyzer']}):
         """
-        Performs a emission measurement according to IEC 61000-4-20
+        Performs a emission measurement according to IEC 61000-4-20.
+
+        Parameter:
+     
+           - *description*: key to identify the measurement in the result dictionary
+           - *positions*: a sequence of EUT positions to be measured. Each position is a string characterizing the orientation
+             of the cell corrdinate system (without prime) relative to the EUT corrdinate system. 
+             A standard choice is to align the z-axis in the 
+             direction of wave propagation, the y-axis parallel to the E-field (vertical) and the x-axis parallel to 
+             the H-field. The centre of the EUT is placed at (x = 0,y,z) with x = 0 in the middle of the 
+             septum. A local "primed" coordinate system (x', y', z') is assigned to the EUT. Position `xx'yy'zz'` 
+             aligns x' with x, y' with y, and z' with z. Position `xz'yx'zy'` is obtained by 
+             simply permuting the primed EUT axes: x' to y, y' to z, and z' to x. This is equivalent to two 
+             90° rotations of the EUT. Position `xy'yz'zx'` is obtained by a further permutation: x' to z, y' to x, z' to y.
+             IEC 61000-4-21 defines two standard setups: with the 3 positions `("xx'yy'zz'", "xz'yx'zy'", "xy'yz'zx'")`, or with 12
+             positions (see below).
+
+              3 standart positions (:attr:`std_3_positions`)::
+
+                     ("xx'yy'zz'",       "xz'yx'zy'",       "xy'yz'zx'")
+
+              .. figure:: pos3.png
+
+              First three standard orientations. 
+
+              12 standart positions (:attr:`std_12_positions`)::
+
+                       ("xx'yy'zz'",       "xz'yx'zy'",       "xy'yz'zx'",
+                        "xz'yy'z(-x')",    "x(-x')yz'zy'",    "xy'y(-x')zz'",
+                        "x(-x')yy'z(-z')", "x(-z')y(-x')zy'", "xy'y(-z')z(-x')",
+                        "x(-z')yy'zx'",    "xx'y(-z')zy'",    "xy'yx'z(-z')")
+
+
+              .. figure:: pos12.png
+
+              12 standard orientations. 
+
+           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurment graph.
+           - *delay*: time in seconds to wait after setting the frequencie before pulling date from the instruments
+           - *freqs*: sequence of frequencies in Hz to use for the measurements.
+           - *receiverconf*: forwarded to :meth:`mpy.tools.mgraph.MGraph.ConfReceivers`
+           - *names*: dict with the mapping from internal names to dot-file names.
+
+               The dict has to have keys 'port' and 'receivers'. The corresponding values are sequences of equal length giving the 
+               names of the ports and of the receivers in the dot-file. For a GTEM the length of this lists is one. 
+               For a Crawford cell it would be two.
+
         """
         if positions is None:
             positions=self.std_3_positions
@@ -483,7 +539,7 @@ class TEMCell(Measure):
         # number of ports
         nports = min(len(names['port']),len(names['receiver']))
 
-        mg=umdutil.UMDMGraph(dotfile)
+        mg=mgraph.MGraph(dotfile)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
@@ -541,22 +597,22 @@ Quit: quit measurement.
                 self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
                 mg.EvaluateConditions()
                 # set frequency for all devices
-                (minf, maxf) = mg.SetFreq_Devices (f)
+                (minf, maxf) = mg.SetFreq_Devices(f)
                 # configure receiver(s)
-                for rf in rcfreqs:
+                for rf in rcfreqs:   # rcfreqs are the keys of the conf dict in reverse order 
                     if f >= rf:
                         break
                 try:
                     conf = receiverconf[rf]
-                except:
+                except IndexError:
                     conf = {}
                 rconf = mg.ConfReceivers(conf)
-                self.messenger(util.tstamp()+" Receiver configuration: %s"%str(rconf), [])
+                self.messenger(util.tstamp()+" Receiver configuration: %s"%rconf, [])
                     
                 # cable corrections
                 c_port_receiver = []
                 for i in range(nports):
-                    c_port_receiver.append(mg.get_path_correction(names['port'][i], names['receiver'][i], umddevice.UMD_dB))
+                    c_port_receiver.append(mg.get_path_correction(names['port'][i], names['receiver'][i], POWERRATIO))
 
                 # ALL measurement start here
                 block = {}
@@ -572,7 +628,7 @@ Quit: quit measurement.
                 # serial poll all devices in list
                 olddevs = []
                 while 1:
-                    self.__HandleUserInterrupt(locals())    
+                    self._HandleUserInterrupt(locals())    
                     nbresult = mg.NBRead(receiverlist, nbresult)
                     new_devs=[i for i in nbresult.keys() if i not in olddevs]
                     olddevs = nbresult.keys()[:]
@@ -584,8 +640,8 @@ Quit: quit measurement.
                     n = names['receiver'][i]
                     if nbresult.has_key(n):
                         # add path correction here
-                        print n, nbresult[n]
-                        PPort = umddevice.UMDCMResult(nbresult[n])
+                        # print n, nbresult[n]
+                        PPort = nbresult[n]
                         nn = 'Noise '+n
                         self.__addLoggerBlock(block, nn, 'Noise reading of the receiver for position %d'%i, nbresult[n], {})
                         self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -600,7 +656,7 @@ Quit: quit measurement.
                 for log in self.logger:
                     log(block)
 
-                self.__HandleUserInterrupt(locals())    
+                self._HandleUserInterrupt(locals())    
                 # END OF f LOOP
             lowBatList = mg.getBatteryLow_Devices()
             if len(lowBatList):
@@ -660,7 +716,7 @@ Select EUT position.
                     # cable corrections
                     c_port_receiver = []
                     for i in range(nports):
-                        c_port_receiver.append(mg.get_path_correction(names['port'][i], names['receiver'][i], umddevice.UMD_dB))
+                        c_port_receiver.append(mg.get_path_correction(names['port'][i], names['receiver'][i], POWERRATIO))
 
                     # ALL measurement start here
                     block = {}
@@ -671,9 +727,9 @@ Select EUT position.
                         nblist.append(names['receiver'][i])
 
                     # wait delay seconds
-                    time.sleep(0.5)   # minimum delay according -4-21
+                    #time.sleep(0.5)   # minimum delay according -4-21
                     self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
-                    self.wait(delay,locals(),self.__HandleUserInterrupt)
+                    self.wait(delay,locals(),self._HandleUserInterrupt)
                     self.messenger(util.tstamp()+" ... back.", [])
 
                         
@@ -682,7 +738,7 @@ Select EUT position.
                     # serial poll all devices in list
                     olddevs = []
                     while 1:
-                        self.__HandleUserInterrupt(locals())    
+                        self._HandleUserInterrupt(locals())    
                         nbresult = mg.NBRead(nblist, nbresult)
                         new_devs=[i for i in nbresult.keys() if i not in olddevs]
                         olddevs = nbresult.keys()[:]
@@ -697,7 +753,7 @@ Select EUT position.
                         n = names['receiver'][i]
                         if nbresult.has_key(n):
                             # add path correction here
-                            PPort = umddevice.UMDCMResult(nbresult[n])
+                            PPort = nbresult[n]
                             self.__addLoggerBlock(block, n, 'Reading of the receiver for position %d'%i, nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'eutpos', 'EUT position', p, {}) 
@@ -713,7 +769,7 @@ Select EUT position.
                     for log in self.logger:
                         log(block)
 
-                    self.__HandleUserInterrupt(locals())    
+                    self._HandleUserInterrupt(locals())    
                     # END OF f LOOP
                 lowBatList = mg.getBatteryLow_Devices()
                 if len(lowBatList):
@@ -751,7 +807,41 @@ Select EUT position.
                           'pmbwd': 'pm2',
                           'fp': ['fp1']}):
         """
-        Performs determination of e0y according to IEC 61000-4-20
+        Performs determination of e0y according to IEC 61000-4-20.
+
+        Parameters:
+
+           - *description*: key to identify the measurement in the result dictionary
+           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurment graph.
+           - *delay*: time in seconds to wait after setting the frequency before pulling date from the instruments
+           - *freqs*: sequence of frequencies in Hz to use for the measurements.
+           - *SGLevel*: signal generator power level in dBm.
+           - *leveling*: If leveling is `None` it is initialized with::
+
+                leveling = [{'condition': 'False',
+                             'actor': None,
+                             'actor_min': None,
+                             'actor_max': None,
+                             'watch': None,
+                             'nominal': None,
+                             'reader': None,
+                             'path': None}]
+
+           - *names*: dict with the mapping from internal names to dot-file names.
+
+               The dict has to have keys 
+               
+                 - 'sg': signalgenerator
+                 - 'a1': amplifier input port
+                 - 'a2': amplifier output port
+                 - 'port': TEM cell feeding
+                 - 'pmfwd': forward power meter
+                 - 'pmbwd': backward power meter
+                 - 'fp': list of field probes
+               
+               The corresponding values give the 
+               names in the dot-file.
+ 
         """
         self.PreUserEvent()
 
@@ -778,7 +868,7 @@ Select EUT position.
         # number of probes
         nprb = len(names['fp'])
 
-        mg=umdutil.UMDMGraph(dotfile)
+        mg=mgraph.MGraph(dotfile)
         ddict=mg.CreateDevices()
         for k,v in ddict.items():
             globals()[k] = v
@@ -833,11 +923,11 @@ Select EUT position.
                 # set frequency for all devices
                 (minf, maxf) = mg.SetFreq_Devices (f)
                 # cable corrections
-                c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], umddevice.UMD_dB)
-                c_sg_port = mg.get_path_correction(names['sg'], names['port'], umddevice.UMD_dB)
-                c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], umddevice.UMD_dB)
-                c_a2_port = mg.get_path_correction(names['a2'], names['port'], umddevice.UMD_dB)
-                c_port_pm2 = mg.get_path_correction(names['port'], names['pmbwd'], umddevice.UMD_dB)
+                c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], POWERRATIO)
+                c_sg_port = mg.get_path_correction(names['sg'], names['port'], POWERRATIO)
+                c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], POWERRATIO)
+                c_a2_port = mg.get_path_correction(names['a2'], names['port'], POWERRATIO)
+                c_port_pm2 = mg.get_path_correction(names['port'], names['pmbwd'], POWERRATIO)
                 c_fp = 1.0
 
                 # ALL measurement start here
@@ -862,7 +952,7 @@ Select EUT position.
 
                 # wait delay seconds
                 self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
-                self.wait(delay,locals(),self.__HandleUserInterrupt)
+                self.wait(delay,locals(),self._HandleUserInterrupt)
                 self.messenger(util.tstamp()+" ... back.", [])
 
                 # Trigger all devices in list
@@ -870,10 +960,10 @@ Select EUT position.
                 # serial poll all devices in list
                 if NoPmFwd:
                     nbresult[names['pmfwd']] = level
-                    nbresult[names['pmbwd']] = umddevice.UMDMResult(mg.zero(level.unit), level.get_unit())
+                    nbresult[names['pmbwd']] = Quantity(level._unit, 0)
                 olddevs = []
                 while 1:
-                    self.__HandleUserInterrupt(locals())    
+                    self._HandleUserInterrupt(locals())    
                     nbresult = mg.NBRead(nblist, nbresult)
                     new_devs=[i for i in nbresult.keys() if i not in olddevs]
                     olddevs = nbresult.keys()[:]
@@ -886,7 +976,7 @@ Select EUT position.
                 # pfwd
                 n = names['pmfwd']
                 if nbresult.has_key(n):
-                    PFwd = umddevice.UMDCMResult(nbresult[n])
+                    PFwd = nbresult[n]
                     self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                     self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                     PFwd *= c_a2_port['total']
@@ -900,7 +990,7 @@ Select EUT position.
                 # pbwd
                 n = names['pmbwd']
                 if nbresult.has_key(n):
-                    PBwd = umddevice.UMDCMResult(nbresult[n])
+                    PBwd = nbresult[n]
                     self.__addLoggerBlock(block, n, 'Reading of the bwd power meter', nbresult[n], {})
                     self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                     self.__addLoggerBlock(block, 'c_port_pm2', 'Correction from port to bwd power meter', c_port_pm2, {})
@@ -920,7 +1010,7 @@ Select EUT position.
                 for log in self.logger:
                     log(block)
 
-                self.__HandleUserInterrupt(locals())    
+                self._HandleUserInterrupt(locals())    
                 # test for low battery
                 lowBatList = mg.getBatteryLow_Devices()
                 if len(lowBatList):
@@ -948,7 +1038,7 @@ Select EUT position.
         """
         Inserts a value in a field.
         field: '3D' dictionary of a list of dicts ;-)
-        e.g.: efield[f][port][pos] is a list [{'value': vector of MResults, 'pfwd': CMResult, 'pwwd': CMResult}, ...]
+        e.g.: efield[f][port][pos] is a list [{'value': vector of Quantities, 'pfwd': Quantity, 'pwwd': Quantity}, ...]
         f: frequency (float)
         """
         field.setdefault(f, {})
@@ -956,7 +1046,7 @@ Select EUT position.
         field[f][port].setdefault(pos, [])
         field[f][port][pos].append({'value': value, 'pfwd': pf, 'pbwd': pb})
         if not dct is None:
-            field[f][port][pos][-1].update(dct)        
+            field[f][port][pos][-1].update(dct)
         return field
 
     def __addLoggerBlock (self, parent, key, comment, val, parameter):
@@ -1083,40 +1173,38 @@ Select EUT position.
                         print
 
     def Evaluate_e0y(self, description=None):
-            self.messenger(util.tstamp()+" Start of evaluation of e0y calibration with description %s"%description, [])
-            if not self.rawData_e0y.has_key(description):
-                self.messenger(util.tstamp()+" Description %s not found."%description, [])
-                return -1
-                
-            efields = self.rawData_e0y[description]['efield']
-            #pprint.pprint(efields)
-            freqs = efields.keys()
-            freqs.sort()
-            print 'Freqs:', freqs
+        """
+        """
+        self.messenger(util.tstamp()+" Start of evaluation of e0y calibration with description %s"%description, [])
+        if not self.rawData_e0y.has_key(description):
+            self.messenger(util.tstamp()+" Description %s not found."%description, [])
+            return -1
 
-            self.processedData_e0y.setdefault(description,{})        
-            self.processedData_e0y[description]['e0y']={}
-            for f in freqs:
-                self.processedData_e0y[description]['e0y'][f]={}
-                e0yf=self.processedData_e0y[description]['e0y'][f]
-                ports =efields[f].keys()
-                ports.sort()
-                print 'Ports:', ports
-                for port in ports:
-                    e0yf[port]=[]
-                    for i in range(len(efields[f][port][0])):
-                        ef = efields[f][port][0][i]['value']
-                        pin = efields[f][port][0][i]['pfwd']
-                        pin = pin.mag().convert(umddevice.UMD_W)
-                        v = pin.get_v()
-                        sqrtv=math.sqrt(v)
-                        u = pin.get_u()
-                        l = pin.get_l()
-                        sqrtPInput = umddevice.UMDMResult(sqrtv, sqrtv+(u+l)/(2.0*sqrtv), sqrtv-(u+l)/(2.0*sqrtv), umddevice.UMD_sqrtW)
-                        en = umddevice.stdVectorUMDMResult()
-                        for k in range(len(ef)):
-                            en.append(ef[k]/sqrtPInput)
-                            print k, ef[k], pin, sqrtPInput, en[-1]
-                        self.processedData_e0y[description]['e0y'][f][port].append(en)
-            self.messenger(util.tstamp()+" End of evaluation of e0y calibration", [])
-            return 0
+        efields = self.rawData_e0y[description]['efield']
+        #pprint.pprint(efields)
+        freqs = efields.keys()
+        freqs.sort()
+        #print 'Freqs:', freqs
+
+        self.processedData_e0y.setdefault(description,{})        
+        self.processedData_e0y[description]['e0y']={}
+        for f in freqs:
+            self.processedData_e0y[description]['e0y'][f]={}
+            e0yf=self.processedData_e0y[description]['e0y'][f]
+            ports =efields[f].keys()
+            ports.sort()
+            #print 'Ports:', ports
+            for port in ports:
+                e0yf[port]=[]
+                for i in range(len(efields[f][port][0])):
+                    ef = efields[f][port][0][i]['value']
+                    pin = efields[f][port][0][i]['pfwd']
+                    pin = abs(pin) #pin.mag().convert(umddevice.UMD_W)
+                    sqrtPInput = math.sqrt(pin)
+                    en = []
+                    for k in range(len(ef)):
+                        en.append(ef[k]/sqrtPInput)
+                        #print k, ef[k], pin, sqrtPInput, en[-1]
+                    self.processedData_e0y[description]['e0y'][f][port].append(en)
+        self.messenger(util.tstamp()+" End of evaluation of e0y calibration", [])
+        return 0
