@@ -18,7 +18,8 @@ from scuq import *
 
 
 class Device(object):
-    """Wrapper class to use either py-drivers or DLL-drivers.
+    """
+    Wrapper class to use either py-drivers or DLL-drivers.
     """
     # Err Strings of the CVI drivers
     _ErrorNames=("No Error",

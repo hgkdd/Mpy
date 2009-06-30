@@ -8,8 +8,9 @@ from mpy.device.driver import DRIVER
 
 class POWERMETER(DRIVER):
     """
-    Child class for all py-drivers for power meters
-	The parent class is DRIVER
+    Child class for all py-drivers for power meters.
+    
+    The parent class is :class:`mpy.device.driver.DRIVER`.
     """
     ZeroCorrection=('OFF', 'ON')
     RANGE=('MANUAL', 'AUTO', 'AUTOONCE')

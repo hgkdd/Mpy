@@ -350,7 +350,7 @@ class TEMCell(Measure):
                     ctx=Context()  # context for the evaluation of uncertainties
                     s2 = Quantity(VOLT*VOLT, 0) # S^2
                     nd=abs(ndata[0][k]['value']) # noise data
-                    ns2 = 3*nddl*nddl # V1^2+v2^2+v3^2=3*V1^2
+                    ns2 = 3*nd**2 # V1^2+v2^2+v3^2=3*V1^2
                     for p in triple:  # loop over positions orth to position with the max value
                         #print p, k, data[p][k]
                         d=abs(data[p][k]['value'])
