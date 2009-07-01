@@ -48,6 +48,13 @@ This is the documentation of the API.
    :members:
    :undoc-members:
 
+:mod:`mpy.device.spectrumanalyzer`
+-----------------------------------
+
+.. automodule:: mpy.device.spectrumanalyzer
+   :members:
+   :undoc-members:
+
 :mod:`mpy.env.Measure`
 -----------------------
 
