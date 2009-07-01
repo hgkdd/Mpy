@@ -14,6 +14,11 @@ class SPECTRUMANALYZER(DRIVER):
     The parent class is :class:`mpy.device.driver.DRIVER`.
     """
     
+    TRACEMODES=('WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD')
+    ATTMODES=('NORMAL', 'LOWNOISE', 'LOWDIST')
+    DETECTORS=('AUTOSELECT', 'AUTOPEAK', 'MAXPEAK', 'MINPEAK', 'SAMPLE', 'RMS', 'QUASIPEAK')
+    TRIGGERMODES=('FREE', 'VIDEO', 'EXTERNAL')
+
     conftmpl={'description': 
                  {'description': str,
                   'type': str,
@@ -29,14 +34,19 @@ class SPECTRUMANALYZER(DRIVER):
                      'virtual': strbool,
                      'nr_of_channels': int},
                 'channel_%d':
-                    {'name': str,
-                     'filter': int,
-                     'unit': str,
-                     'resolution': int,
-                     'rangemode': int,
-                     'manrange': float,
-                     'swr': float,
-                     'sensor': str}}
+                    {'unit': str,
+                     'attenuation': float,
+                     'reflevel': float,
+                     'rbw': float,
+                     'vbw': float,
+                     'span': float,
+                     'trace': int,
+                     'tracemode': str,
+                     'detector': str,
+                     'sweepcount': int,
+                     'triggermode': str,
+                     'attmode': str,
+                     'sweeptime': float}}
 
     _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
         
@@ -56,15 +66,15 @@ class SPECTRUMANALYZER(DRIVER):
                     'GetVBW':  [('VBW?', r'VBW (?P<vbw>%s) HZ'%self._FP)],
                     'SetRefLevel':  [("'REFLEVEL %s DBM'%level", None)],
                     'GetRefLevel':  [('REFLEVEL?', r'REFLEVEL (?P<level>%s) DBM'%self._FP)],
-                    'SetAtt':  [("'ATT %s DB'%freq", None)],
+                    'SetAtt':  [("'ATT %s DB'%att", None)],
                     'GetAtt':  [('ATT?', r'ATT (?P<att>%s) DB'%self._FP)],
                     'SetAttAuto':  [("ATT -1", None)],
                     'SetPreAmp':  [("'PREAMP %s DB'%freq", None)],
                     'GetPreAmp':  [('PREAMP?', r'PREAMP (?P<preamp>%s) DB'%self._FP)],
                     'SetDetector':  [("'DET %s'%det", None)],
-                    'GetDetector':  [('DET?', r'DET (?P<det>%s)'%self._FP)],
+                    'GetDetector':  [('DET?', r'DET (?P<det>.*)')],
                     'SetTraceMode':  [("'TMODE %s'%tmode", None)],
-                    'GetTraceMode':  [('TMODE?', r'TMODE (?P<tmode>%s)'%self._FP)],
+                    'GetTraceMode':  [('TMODE?', r'TMODE (?P<tmode>.*)')],
                     'SetTrace':  [("'TRACE %d'%trace", None)],
                     'GetTrace':  [('TRACE?', r'TRACE (?P<trace>\d+)')],
                     'SetSweepCount':  [("'SWEEPCOUNT %d'%scount", None)],
@@ -79,32 +89,37 @@ class SPECTRUMANALYZER(DRIVER):
                     'Quit':     [('QUIT', None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
-        _setgetlist=[("SetCenterFreq", "GetCenterFreq", "cfreq", float),
-                     ("SetSpan", "GetSpan", "span", float),
-                     ("SetStartFreq", "GetStartFreq", "stfreq", float),
-                     ("SetStopFreq", "GetStopFreq", "spfreq", float),
-                     ("SetRBW", "GetRBW", "rbw", float),
-                     ("SetVBW", "GetVBW", "vbw", float),
-                     ("SetRefLevel", "GetRefLevel", "reflevel", float),
-                     ("SetAtt", "GetAtt", "att", float),
-                     ("SetPreAmp", "GetPreAmp", "preamp", float),
-                     ("SetDetector", "GetDetector", "det", int),
-                     ("SetTraceMode", "GetTraceMode", "tmode", int),
-                     ("SetTrace", "GetTrace", "trace", int),
-                     ("SetSweepCount", "GetSweepCount", "scount", int),
-                     ("SetSweepTime", "GetSweepTime", "stime", float)]
+        _setgetlist=[("SetCenterFreq", "GetCenterFreq", "cfreq", float, None),
+                     ("SetSpan", "GetSpan", "span", float, None),
+                     ("SetStartFreq", "GetStartFreq", "stfreq", float, None),
+                     ("SetStopFreq", "GetStopFreq", "spfreq", float, None),
+                     ("SetRBW", "GetRBW", "rbw", float, None),
+                     ("SetVBW", "GetVBW", "vbw", float, None),
+                     ("SetRefLevel", "GetRefLevel", "reflevel", float, None),
+                     ("SetAtt", "GetAtt", "att", float, None),
+                     ("SetPreAmp", "GetPreAmp", "preamp", float, None),
+                     ("SetDetector", "GetDetector", "det", str, DETECTORS),
+                     ("SetTraceMode", "GetTraceMode", "tmode", str, TRACEMODES),
+                     ("SetTrace", "GetTrace", "trace", int, None),
+                     ("SetSweepCount", "GetSweepCount", "scount", int, None),
+                     ("SetSweepTime", "GetSweepTime", "stime", float, None)]
 
-        for setter, getter, what, type_ in _setgetlist:
+        for setter, getter, what, type_, possibilities in _setgetlist:
             setattr(self, what, None)
             # closure...
-            setattr(self, setter, functools.partial(self._SetGetSomething, setter=setter, getter=getter, type_=type_))
+            setattr(self, setter, 
+                          functools.partial(self._SetGetSomething, 
+                                            setter=setter, 
+                                            getter=getter, 
+                                            type_=type_, 
+                                            possibilities=possibilities))
 
-        self.power=None
-        self.unit=None
         self._internal_unit='dBm'
 
-    def _SetGetSomething(self, setter, getter, something, type_):
+    def _SetGetSomething(self, setter, getter, something, type_, possibilities):
         self.error=0
+        if possibilities:
+            something=fstrcmp(something, possibilities, n=1,cutoff=0,ignorecase=True)[0]
         dct=self._do_cmds(setter, locals())
         self._update(dct)
         dct=self._do_cmds(getter, locals())

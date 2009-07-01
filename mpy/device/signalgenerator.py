@@ -8,8 +8,9 @@ from mpy.device.driver import DRIVER
 
 class SIGNALGENERATOR(DRIVER):
     """
-    Child class for all py-drivers for signal generators
-	The parent class is DRIVER
+    Parent class for all py-drivers for signal generators.
+
+    The parent class is :class:`mpy.device.driver.DRIVER`.
     """
     AM_sources=('INT1', 'INT2','EXT1','EXT2','EXT_AC','EXT_DC','TWOTONE_AC','TWOTONE_DC','OFF')
     AM_waveforms=('SINE', 'SQUARE', 'TRIANGLE', 'NOISE', 'SAWTOOTH')
