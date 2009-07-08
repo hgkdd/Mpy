@@ -110,6 +110,7 @@ def main():
                         """)
         ini=StringIO.StringIO(ini)
 
+	sg=SIGNALGENERATOR()	
     ui=UI(sg,ini=ini)
     ui.configure_traits()
             
