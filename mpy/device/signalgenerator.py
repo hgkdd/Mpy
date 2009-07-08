@@ -2,7 +2,7 @@
 
 import re
 from mpy.tools.Configuration import Configuration,strbool,fstrcmp
-from scuq import *
+from scuq import quantities
 from mpy.device.device import CONVERT, Device
 from mpy.device.driver import DRIVER
 
@@ -92,8 +92,8 @@ class SIGNALGENERATOR(DRIVER):
     
     def SetLevel(self, lv):
         self.error=0
-        level=lv.get_value(lv.__unit__)
-        unit=lv.__unit__
+        level=lv.get_value(lv._unit)
+        unit=lv._unit
         
         dct=self._do_cmds('SetLevel', locals()) # conversion to self._internal_unit is done inside _do_cmd
         self._update(dct)

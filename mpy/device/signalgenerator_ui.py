@@ -6,7 +6,7 @@ import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
 import enthought.traits.ui.menu as tuim
 
-import scuq
+from scuq.quantities import Quantity
 from mpy.tools.util import format_block
 from mpy.device.device import CONVERT
 
@@ -78,7 +78,7 @@ class UI(tapi.HasTraits):
     def _LEVEL_changed(self):
         self.level=self.LEVEL
         lv,unit=conv.c2scuq(self.int_unit, self.level)
-        self.sg.SetLevel(scuq.quantities.Quantity(unit,lv))
+        self.sg.SetLevel(Quantity(unit,lv))
             
     def update_rf(self):
         if self.RF_is_on:
