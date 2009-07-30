@@ -71,6 +71,7 @@ class POWERMETER(PWRMTR):
 
 def main():
     from mpy.tools.util import format_block
+    from mpy.device.powermeter_ui import UI as UI
 
     try:
         ini=sys.argv[1]
@@ -102,22 +103,9 @@ def main():
                         """)
         
 
-    fr=300e6
-
-    pm1=POWERMETER()
-    pm2=POWERMETER()
-    err=pm1.Init(StringIO.StringIO(ini), 1)
-    err=pm2.Init(StringIO.StringIO(ini), 2)
-
-    err,freq=pm1.SetFreq(fr)
-    err,freq=pm2.SetFreq(fr)
-
-    while(True):
-        err,lv1=pm1.GetData()
-        err,lv2=pm2.GetData()
-        print lv1, lv2
-    err=pm1.Quit()
-    err=pm2.Quit()
+    pm=POWERMETER()	
+    ui=UI(pm,ini=ini)
+    ui.configure_traits()
     
 if __name__ == '__main__':
     main()
