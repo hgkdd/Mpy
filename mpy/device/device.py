@@ -1444,10 +1444,10 @@ class Switch(Device):
                 method.restype=ct.c_int
                 retval = method(ct.byref(c_channel), ct.byref(c_val), c_instance, ct.byref(c_error))
                 self.error=c_error.value
-                obj=None
                 if not self.error and retval==0:
-                    obj={c_channel.value: c_val.value}
-                return self.error, obj
+                    return self.error, c_channel.value, c_val.value
+                else:
+                    return self.error, None, None    
         else:
             m=method
         return m    
