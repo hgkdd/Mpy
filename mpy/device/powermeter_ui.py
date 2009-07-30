@@ -81,4 +81,4 @@ class UI(tapi.HasTraits):
     
     traits_view=tuiapi.View(tuiapi.Group(
                                 tuiapi.Group(INI_grp, FREQ_grp, LEVEL_grp,layout='tabbed'),  
-                                RF_grp, layout='normal'), title="Signalgenerator", buttons=[tuim.CancelButton])
+                                RF_grp, layout='normal'), title="Powermeter", buttons=[tuim.CancelButton])

@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 import re
 from mpy.tools.Configuration import Configuration,strbool,fstrcmp
