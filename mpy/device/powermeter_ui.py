@@ -6,6 +6,7 @@ import enthought.traits.ui.api as tuiapi
 import enthought.traits.ui.menu as tuim
 
 from scuq.quantities import Quantity
+from scuq.ucomponents import Context
 from mpy.tools.util import format_block
 from mpy.device.device import CONVERT
 
@@ -45,6 +46,7 @@ class UI(tapi.HasTraits):
     INI=tapi.Str()
     TRIGGER=tapi.Button('Trigger')
     FREQ=tapi.Float(1e6)
+    POWER=tapi.Str()
     
     def __init__(self, instance, ini=None):
         self.pm=instance
@@ -62,6 +64,9 @@ class UI(tapi.HasTraits):
 
     def _TRIGGER_fired(self):
         self.pm.Trigger()
+        err,data=self.pm.GetData()
+        ctx=Context()
+        self.POWER=str(data)
             
     def _FREQ_changed(self):
         self.pm.SetFreq(self.FREQ)
@@ -69,16 +74,17 @@ class UI(tapi.HasTraits):
     def _CHANNEL_changed(self):
         self.pm.Quit()
         self._Init_fired()
+        
+    POWER_grp=tuiapi.Group(tuiapi.Item('POWER'),label='Power')
                         
-    RF_grp=tuiapi.Group(tuiapi.Item('RF_on', show_label=False,style='readonly'), 
-                        tuiapi.Item('RF', show_label=False),
-                        label='RF')
     INI_grp=tuiapi.Group(tuiapi.Item('INI', style='custom',springy=True,width=500,height=200,show_label=False),
+                         tuiapi.Item('CHANNEL'),
                          tuiapi.Item('Init', show_label=False),
                          label='Ini')
     FREQ_grp=tuiapi.Group(tuiapi.Item('FREQ'),label='Freq')
-    LEVEL_grp=tuiapi.Group(tuiapi.Item('LEVEL'), label='Level')
+    #LEVEL_grp=tuiapi.Group(tuiapi.Item('LEVEL'), label='Level')
     
     traits_view=tuiapi.View(tuiapi.Group(
-                                tuiapi.Group(INI_grp, FREQ_grp, LEVEL_grp,layout='tabbed'),  
-                                RF_grp, layout='normal'), title="Powermeter", buttons=[tuim.CancelButton])
+                                tuiapi.Group(INI_grp, FREQ_grp,layout='tabbed'),
+                                tuiapi.Item('TRIGGER'),
+                                POWER_grp, layout='normal'), title="Powermeter", buttons=[tuim.CancelButton])

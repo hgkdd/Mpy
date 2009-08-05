@@ -58,18 +58,20 @@ class POWERMETER(PWRMTR):
                 pass
         dct=self._do_cmds('Preset', locals())
         self._update(dct)
+        self.update_internal_unit()        
+        #pprint.pprint(self._cmds)
+        return self.error 
+
+    def update_internal_unit(self):
         #get internal unit
         if self.dev:
             tup=('W','dBm','%','dB')
             ans=self.dev.ask('%sP SM'%self.ch_tup[self.channel])
             ans=int(ans[-1])
-            self._internal_unit = tup[ans]
-        
-        #pprint.pprint(self._cmds)
-        return self.error 
-    
+            self._internal_unit=tup[ans]
 
 def main():
+    import StringIO
     from mpy.tools.util import format_block
     from mpy.device.powermeter_ui import UI as UI
 
@@ -101,7 +103,7 @@ def main():
                         name: B
                         unit: 'W'
                         """)
-        
+        ini=StringIO.StringIO(ini)
 
     pm=POWERMETER()	
     ui=UI(pm,ini=ini)

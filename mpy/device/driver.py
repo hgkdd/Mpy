@@ -12,7 +12,45 @@ from mpy.device.device import CONVERT, Device
 
 class DRIVER(object):
     """
-    Parent class for all py-drivers
+    Parent class for all py-drivers.
+    
+    Beside the common API methoth for all drivers (see below) this class 
+    also implements the following low level methods:
+
+       .. method:: write(cmd)
+    
+          Write a command to the instrument.
+    
+          :param cmd: the command
+          :type cmd: string
+          :rtype: status code of the native write operation
+    
+       .. method:: read(tmpl)
+    
+          Read an answer from the instrument instrument.
+    
+          :param tmpl: a template string
+          :type tmpl: valid regular expression string
+          :rtype: the groupdict of the match
+          
+          Example: 
+          
+             If a device (signal generator in this case) returns
+             ``:MODULATION:AM:INTERNAL 80 PCT`` to indicate a AM modulation depth 
+             of 80%, a template string of ``:MODULATION:AM:INTERNAL (?P<depth>\d+) PCT`` will 
+             results in a return dict of ``{"depth": 80}``.
+    
+       .. method:: query(cmd, tmpl)
+    
+          Write a command to the instrument and read the answer.
+    
+          :param cmd: the command
+          :type cmd: string
+          :param tmpl: a template string
+          :type tmpl: valid regular expression string
+          :rtype: the groupdict of the match
+    
+    For other low level operation you may use the device stored in ``self.dev`` directly.
     """
     def __init__(self):
         self.error=0
@@ -111,6 +149,20 @@ class DRIVER(object):
         return self.read(tmpl)
 
     def Init(self, ininame=None, channel=None):
+        """
+        Init the instrument.
+        
+        Parameters:
+            
+           - *ininame*: filename or file-like object with the initialization
+             parameters for the device. This parameter is handled by 
+             :meth:`mpy.tools.Configuration.Configuration` which takes also 
+             a configuration template stored in ``self.conftmpl``.
+           - *channel*: an integer specifiing the channel number of multi channel devices.
+             Numbering is starting with 1.
+             
+        Return: 0 if sucessful. 
+        """
         self.error=0
         if not ininame:
             self.conf['init_value']['virtual']=True
@@ -149,7 +201,7 @@ class DRIVER(object):
         return self.conf[sectok][keytok]
     
     def _do_cmds(self, key, callerdict=None):
-		#print self
+        #print self
         dct={} # preset returned dictionary
         if not hasattr(self, '_cmds'): 
             return dct
@@ -163,7 +215,7 @@ class DRIVER(object):
                 if not tmpl: # no mask, no read
                     self.write(expr)
                 elif not cmd: # no cmd, no write
-                    dct=self.read(tmpl)					
+                    dct=self.read(tmpl)
                 else: # both -> write and read
                     dct=self.query(expr, tmpl)
                 #print "key=",key,"cmd=",cmd,"tmpl=",tmpl,'expr=',expr,'dct=',dct
@@ -184,21 +236,35 @@ class DRIVER(object):
             self.__dict__.update(dct)
 
     def Quit(self):
+        """
+        Quit the instrument.
+        """
         self.error=0
         dct=self._do_cmds('Quit', locals())
         self._update(dct)
         return self.error
 
     def SetVirtual(self, virtual):
+        """
+        Sets ``self.conf['init_value']['virtual']`` to ``virtual``.
+        """
         self.error=0
         self.conf['init_value']['virtual']=virtual
         return self.error
 
     def GetVirtual(self):
+        """
+        Returns ``(0, self.conf['init_value']['virtual'])``
+        """
         self.error=0
         return self.error, self.conf['init_value']['virtual']
 
     def GetDescription(self):
+        """
+        Returns ``(0, desc)`` with ``desc`` is the concatination of ``self.conf['description']``
+        and ``self.IDN``. The former comes from the ini file, the latter may be set by the driver during
+        initialization.
+        """
         self.error=0
         dct=self._do_cmds('GetDescription', locals())
         self._update(dct)

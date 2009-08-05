@@ -11,6 +11,61 @@ class POWERMETER(DRIVER):
     Child class for all py-drivers for power meters.
     
     The parent class is :class:`mpy.device.driver.DRIVER`.
+    
+    The configuration template for this device class is::
+    
+        conftmpl={'description': 
+                     {'description': str,
+                      'type': str,
+                      'vendor': str,
+                      'serialnr': str,
+                      'deviceid': str,
+                      'driver': str},
+                    'init_value':
+                        {'fstart': float,
+                         'fstop': float,
+                         'fstep': float,
+                         'gpib': int,
+                         'virtual': strbool,
+                         'nr_of_channels': int},
+                    'channel_%d':
+                        {'name': str,
+                         'filter': int,
+                         'unit': str,
+                         'resolution': int,
+                         'rangemode': str,
+                         'manrange': float,
+                         'swr': float,
+                         'sensor': str}}
+       
+    The meaning is:
+        
+    - Section *description*
+        - description: string describing the instrument
+        - type: string with the instrument type (here: POWERMETER)
+        - vendor: string ddescribing the vendor/manufactor
+        - serialnr: string with a unique identification
+        - deviceid: string with an internal id
+        - driver: filename of the instrument driver (.py, .pyc, .pyd, .dll)
+    - Section *init_value*
+        - *fstart*: lowest possible frequency in Hz of the device
+        - *fstop*: highest possible frequency in Hz of the device
+        - *fstep*: smallest frequency step in Hz of the device
+        - *gpib*: GPIB address of the device
+        - *virtual*: 0, false or 1, true. Virtual device are usefull for testing and debugging.
+        - *nr_of_channels*: indicates how many channel sections follow
+    - Section *channel_%d* (*%d* may be 1, 2, ...)
+        - *name*: a string identifying the channel.
+        - *filter*: device specific integer specifying the filter used
+        - *unit*: a string containing the unit of the returned power readings. 
+          However, :mod:`scuq` will ignore dB-settings, and the returned power will contain 
+          the unit anyway.
+        - *resolution*: device specific integer giving the resolutuion of the returned power
+        - *rangemode*: 'auto', 'autoonce', or 'manual'
+        - *manrange*: fload specifiing the range in manual range mode
+        - *swr*: VSWR of the measured two port. May be used in uncertainty calculations
+        - *sensor*: string specifying the used power sensor. May be used in uncertainty calculations.
+
     """
     ZeroCorrection=('OFF', 'ON')
     RANGE=('MANUAL', 'AUTO', 'AUTOONCE')
@@ -34,7 +89,7 @@ class POWERMETER(DRIVER):
                      'filter': int,
                      'unit': str,
                      'resolution': int,
-                     'rangemode': int,
+                     'rangemode': str,
                      'manrange': float,
                      'swr': float,
                      'sensor': str}}
@@ -58,6 +113,14 @@ class POWERMETER(DRIVER):
         self._internal_unit='dBm'
 
     def SetFreq(self, freq):
+        """
+        Set the frequency to *freq* (in Hz). This is importend to use the correct correction from
+        the sensor EEPROM.
+        
+        After setting, the freq is read back from the device.
+        
+        ``(self.error, self.freq)`` is returned.
+        """
         self.error=0
         dct=self._do_cmds('SetFreq', locals())
         self._update(dct)
@@ -72,6 +135,11 @@ class POWERMETER(DRIVER):
         return self.error, self.freq
 
     def Trigger(self):
+        """
+        Trigger a single measurement.
+        
+        ``self.error`` is returned.
+        """
         self.error=0
         dct=self._do_cmds('Trigger', locals())
         self._update(dct)
@@ -79,7 +147,12 @@ class POWERMETER(DRIVER):
         #    print "Device triggered."
         return self.error
 
-    def Zero(self, state):        
+    def Zero(self, state):
+        """
+        If *state* is 'on', zero correction is tuned on.
+
+        (self.error, 0) is returned.
+        """
         self.error=0
         if state.lower() == 'on':
             dct=self._do_cmds('ZeroOn', locals())
@@ -90,11 +163,18 @@ class POWERMETER(DRIVER):
         return self.error, 0
 
     def GetData(self):
+        """
+        Read a power measurement from the instrument.
+        
+        ``(self.error, obj)`` is returned where ``obj`` is a instance of 
+        :class:`scuq.quantities.Quantity`.
+        """
         self.error=0
         dct=self._do_cmds('GetData', locals()) 
         self._update(dct)
 
         if self.error==0 and self.power:
+            self.update_internal_unit()
             self.power=float(self.power)
             try:
                 obj=quantities.Quantity(eval(self._internal_unit), self.power)
@@ -107,6 +187,9 @@ class POWERMETER(DRIVER):
 
     def GetDataNB(self, retrigger):
         return self.GetData()
+
+    def update_internal_unit():
+        pass
 
 if __name__ == '__main__':
     import sys
