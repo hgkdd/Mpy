@@ -16,3 +16,5 @@ mpy/__version__.py
 
 syntax: regexp
 .*\#.*\#$
+syntax: regexp
+^mpy/device/plyparser_DatFile_parsetab\.py$
