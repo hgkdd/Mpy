@@ -186,7 +186,21 @@ class POWERMETER(DRIVER):
         return self.error, obj
 
     def GetDataNB(self, retrigger):
-        return self.GetData()
+        """
+        Non-blocking version of :meth:`GetData`.
+        
+        If implemented, this function will return ``(-1, None)`` until the answer from the device is available.
+        Then, it will return ``self.error, obj)``.
+        
+        If *retrigger* is ``True`` or ``'on'``, the device will be triggered for a new measurment after the measurement has been 
+        red.
+        
+        If not implemented, the method will return :meth:`GetData`.
+        """
+        self.error, obj = self.GetData()
+        if retrigger in (True, 'ON', 'On', 'on'):
+            self.Trigger()
+        return self.error, obj
 
     def update_internal_unit():
         pass
