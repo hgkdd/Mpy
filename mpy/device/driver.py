@@ -204,16 +204,23 @@ class DRIVER(object):
         #print self
         dct={} # preset returned dictionary
         if not hasattr(self, '_cmds'): 
+            # if self._cmds is not defined we return a empty dict
             return dct
-        if key in self._cmds: 
+        if key in self._cmds: # in key is the name of the command to excecute, e.g. 'SetFreq'
             for cmd,tmpl in self._cmds[key]: # loop all command, template pairs for key 'key'
                 try:
-                    expr=eval(cmd,callerdict) # try to eval cmd as a python expression in callerdict and assign result to expr
+                    # try to eval cmd as a python expression in callerdict and assign result to expr
+                    # This will insert the value of variables (e.g. freq) into the command 
+                    expr=eval(cmd,callerdict) 
                 except (SyntaxError, NameError):
                     expr=cmd # else, expr is set to cmd
                 # tmpl is the mask for the string to read
                 if not tmpl: # no mask, no read
-                    self.write(expr)
+                    # expr may be a function call. Let's try..
+                    try:
+                        exec expr in callerdict
+                    except SyntaxError:
+                        self.write(expr)
                 elif not cmd: # no cmd, no write
                     dct=self.read(tmpl)
                 else: # both -> write and read
