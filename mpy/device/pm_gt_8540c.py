@@ -16,14 +16,28 @@ class POWERMETER(PWRMTR):
         self.ch_tup=('','A','B')
         self._cmds={'SetFreq':  [("'%sE FR %s HZ'%(self.ch_tup[self.channel], freq)", None)],
                     'GetFreq':  [],
-                    'GetData':  [("'%sP'%self.ch_tup[self.channel]", r'(?P<power>%s)'%self._FP)],
-                    'GetDataNB':  [("'%sP'%self.ch_tup[self.channel]", r'(?P<power>%s)'%self._FP)],
+                    'GetData':  [("'%sP TR2'%self.ch_tup[self.channel]", r'(?P<power>%s)'%self._FP)],
+                    'GetDataNB':  [("'%sP TR2'%self.ch_tup[self.channel]", r'(?P<power>%s)'%self._FP)],
                     'Trigger': [],
                     'ZeroOn':  [("'%sE ZE'%self.ch_tup[self.channel]", None)],
                     'ZeroOff':  [],
                     'Quit':     [],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
+    def GetData(self):
+        self.error, power=super(POWERMETER, self).GetData()
+        power=quantities.Quantity(power._unit, ucomponents.UncertainInput(power._value, power._value*0.01))
+        return self.error, power
+
+    def Zero(self, state='on'):
+        self.error, stat=super(POWERMETER, self).Zero(state)
+        complete=False
+        while not complete:
+            ans=self.dev.ask('*STB?')
+            #print ans
+            complete=int(ans) & 0b10
+        return self.error, stat
+        
     def Init(self, ini=None, channel=None):
         #self.term_chars=visa.LF
         if channel is None:
@@ -37,9 +51,11 @@ class POWERMETER(PWRMTR):
         except KeyError:
             self.levelunit=self._internal_unit
             
-        self._cmds['Preset']=[]
+        self._cmds['Preset']=[('PR', None),
+                              ('TR3', None),
+                              ('self.Zero()', None)]
         # key, vals, actions
-        presets=[]
+        presets=[('filter', [], [])]
 
         for k, vals, actions in presets:
             #print k, vals, actions
@@ -97,7 +113,13 @@ def main():
 
                         [Channel_1]
                         name: A
-                        unit: 'W'
+                        unit: 
+                        filter: -1
+                        resolution: 
+                        rangemode: auto
+                        manrange: 
+                        swr: 1.1
+                        sensor: 80301A
 
                         [Channel_2]
                         name: B

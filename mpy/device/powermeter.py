@@ -147,7 +147,7 @@ class POWERMETER(DRIVER):
         #    print "Device triggered."
         return self.error
 
-    def Zero(self, state):
+    def Zero(self, state='on'):
         """
         If *state* is 'on', zero correction is tuned on.
 

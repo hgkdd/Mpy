@@ -102,9 +102,9 @@ class DRIVER(object):
             return self.dev
         
     def _gpib_write(self, cmd):
-        #print "In write", cmd 
-        stat=-1
-        if self.dev:
+        #print "In write", cmd
+        stat=0
+        if self.dev and isinstance(cmd, basestring):
             stat=self.dev.write(cmd)
         return stat
     
@@ -121,7 +121,7 @@ class DRIVER(object):
     def _gpib_query(self, cmd, tmpl):
         #print "In query", cmd, tmpl
         dct=None
-        if self.dev:
+        if self.dev and isinstance(cmd, basestring):
             ans=self.dev.ask(cmd)
             #print "ans=",ans
             m=re.match(tmpl, ans)
@@ -211,7 +211,9 @@ class DRIVER(object):
                 try:
                     # try to eval cmd as a python expression in callerdict and assign result to expr
                     # This will insert the value of variables (e.g. freq) into the command 
-                    expr=eval(cmd,callerdict) 
+                    expr=eval(cmd,callerdict)
+                    if expr is None:  # no substitution -> None is reutned
+                        expr = cmd
                 except (SyntaxError, NameError):
                     expr=cmd # else, expr is set to cmd
                 # tmpl is the mask for the string to read
@@ -219,12 +221,12 @@ class DRIVER(object):
                     # expr may be a function call. Let's try..
                     try:
                         exec expr in callerdict
-                    except SyntaxError:
+                    except (SyntaxError, NameError, TypeError):
                         self.write(expr)
                 elif not cmd: # no cmd, no write
-                    dct=self.read(tmpl)
+                    dct.update(self.read(tmpl))
                 else: # both -> write and read
-                    dct=self.query(expr, tmpl)
+                    dct.update(self.query(expr, tmpl))
                 #print "key=",key,"cmd=",cmd,"tmpl=",tmpl,'expr=',expr,'dct=',dct
         return dct
 
