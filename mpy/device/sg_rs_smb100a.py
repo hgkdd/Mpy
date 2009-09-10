@@ -117,6 +117,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
 #
 def main():
     from mpy.tools.util import format_block
+    from mpy.device.signalgenerator_ui import UI as UI
     #
     # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
@@ -148,35 +149,38 @@ def main():
                         outpoutstate: 0
                         """)
         ini=StringIO.StringIO(ini)
-    #
-    # Zum Test des Treibers werden sogenannte Konsistenzabfragen ('assert' Bedingungen) verwendet, welche einen 'AssertationError' liefern,
-    # falls die Bedingung 'false' ist. Zuvor wird eine Testfrequenz und ein Level festgelegt, ein Objekt der Klasse SMB100A erzeugt und der
-    # Signalgenerator initialisiert.
-    #
-    lv=quantities.Quantity(si.WATT, 1e-4)
-    fr=300e6
     sg=SIGNALGENERATOR()
-    try:
-        from mpy.device.signalgenerator_ui import UI as UI
-    except ImportError:
-        pass
-    else:
-        ui=UI(sg,ini=ini)
-        ui.configure_traits()
-        sys.exit(0)	
-	
-    err=sg.Init(ini)
-    assert err==0, 'Init() fails with error %d'%(err)
-    err,freq=sg.SetFreq(fr)
-    assert err==0, 'SetFreq() fails with error %d'%(err)
-    assert freq==fr, 'SetFreq() returns freq=%e instead of %e'%(freq, fr)
-    err, _ =sg.RFOn()
-    assert err==0, 'RFOn() fails with error %d'%(err)
-    err,level=sg.SetLevel(lv)
-    assert err==0, 'SetLevel() fails with error %d'%(err)
-    assert level==lv, 'SetLevel() returns level=%s instead of %s'%(level, lv)
-    err=sg.Quit()
-    assert err==0, 'Quit() fails with error %d'%(err)
+    ui=UI(sg,ini=ini)
+    ui.configure_traits()
+    # #
+    # # Zum Test des Treibers werden sogenannte Konsistenzabfragen ('assert' Bedingungen) verwendet, welche einen 'AssertationError' liefern,
+    # # falls die Bedingung 'false' ist. Zuvor wird eine Testfrequenz und ein Level festgelegt, ein Objekt der Klasse SMB100A erzeugt und der
+    # # Signalgenerator initialisiert.
+    # #
+    # lv=quantities.Quantity(si.WATT, 1e-4)
+    # fr=300e6
+    # sg=SIGNALGENERATOR()
+    # try:
+        # from mpy.device.signalgenerator_ui import UI as UI
+    # except ImportError:
+        # pass
+    # else:
+        # ui=UI(sg,ini=ini)
+        # ui.configure_traits()
+        # sys.exit(0)	
+    
+    # err=sg.Init(ini)
+    # assert err==0, 'Init() fails with error %d'%(err)
+    # err,freq=sg.SetFreq(fr)
+    # assert err==0, 'SetFreq() fails with error %d'%(err)
+    # assert freq==fr, 'SetFreq() returns freq=%e instead of %e'%(freq, fr)
+    # err, _ =sg.RFOn()
+    # assert err==0, 'RFOn() fails with error %d'%(err)
+    # err,level=sg.SetLevel(lv)
+    # assert err==0, 'SetLevel() fails with error %d'%(err)
+    # assert level==lv, 'SetLevel() returns level=%s instead of %s'%(level, lv)
+    # err=sg.Quit()
+    # assert err==0, 'Quit() fails with error %d'%(err)
 #
 #          
 #  ------------ Hauptprogramm ---------------------------
@@ -187,7 +191,4 @@ def main():
 #
 if __name__ == '__main__':
     main()
-
-
-
 
