@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import math
 from mpy.tools.Configuration import Configuration,strbool,fstrcmp
 from scuq import *
 from mpy.device.device import CONVERT, Device
@@ -204,6 +205,27 @@ class POWERMETER(DRIVER):
 
     def update_internal_unit():
         pass
+    
+def get_standard_missmatch_uncertainty (vswr1, vswr2):
+    """
+    Returns the standard uncertainty due to the missmatch between generator and load.
+    
+    *vswr1* and *vswr2* are the voltage standing wave ratio of generator and load.
+    
+    The uncertainty is returned on a linear scale (dB = 10 * log10 (1+a)).
+    
+    The expaned uncertainty is optained by multipling with the correct coverage factor. 
+    Here, this is 0.997*sqrt(2) approx 1.4 (U-shaped distribution) for 95% coverage.
+    """
+    # calculate reflection coefficients from vswr
+    G1=(vswr1-1.)/(vswr1+1.)
+    G2=(vswr2-1.)/(vswr2+1.)
+    umax=(1.+G1*G2)**2
+    umin=(1.-G1*G2)**2
+    #print G1, G2, umax, umin
+    width=umax-umin
+    sigma=width/(2.*math.sqrt(2.))
+    return sigma
 
 if __name__ == '__main__':
     import sys
