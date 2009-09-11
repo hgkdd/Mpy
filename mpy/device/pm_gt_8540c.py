@@ -26,6 +26,7 @@ class POWERMETER(PWRMTR):
 
     def GetData(self):
         self.error, power=super(POWERMETER, self).GetData()
+        relerr=self._calc_rel_err(power)
         power=quantities.Quantity(power._unit, ucomponents.UncertainInput(power._value, power._value*0.01))
         return self.error, power
 
@@ -37,6 +38,15 @@ class POWERMETER(PWRMTR):
             #print ans
             complete=int(ans) & 0b10
         return self.error, stat
+        
+    def _get_sensor_type(self):
+        """
+        return the type of the attached sensor as a string.
+        """
+        cmd="TEST EEPROM %s TYPE?"%self.ch_tup[self.channel]
+        tmpl='(?P<SENSOR>\\d+)'
+        dct=self.gpib_query(cmd, tmpl)
+        return dct['SENSOR']
         
     def Init(self, ini=None, channel=None):
         #self.term_chars=visa.LF
@@ -50,7 +60,9 @@ class POWERMETER(PWRMTR):
             self.levelunit=self.conf[sec]['unit']
         except KeyError:
             self.levelunit=self._internal_unit
-            
+        
+        self._sensor=self._get_sensor_type()
+        
         self._cmds['Preset']=[('PR', None),
                               ('TR3', None),
                               ('self.Zero()', None)]
@@ -119,7 +131,6 @@ def main():
                         rangemode: auto
                         manrange: 
                         swr: 1.1
-                        sensor: 80301A
 
                         [Channel_2]
                         name: B
