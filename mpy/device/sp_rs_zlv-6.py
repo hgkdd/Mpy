@@ -117,7 +117,7 @@ class SPECTRUMANALYZER(SPECTRUMANALYZER):
                  ('detector',
                       None,
                       ("'SENSe:DETector%s %s'%(self.trace,v)", None)),
-                 ('sweepcount'
+                 ('sweepcount',
                       None,
                       ("'SENSe:SWEep:COUNt %d'%v", None)),
                  ('triggermode',
