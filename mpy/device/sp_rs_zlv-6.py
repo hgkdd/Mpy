@@ -10,7 +10,7 @@ from mpy.device.spectrumanalyzer import SPECTRUMANALYZER as SPECTRUMAN
 # Für den Spectrumanalyzer R&S ZVL wird die Klasse 'zlv-6' definiert.
 # Diese greift auf die Unterklasse SPECTRUMANALYZER (spectrumanalyzer.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
-class SPECTRUMANALYZER(SPECTRUMANALYZER):
+class SPECTRUMANALYZER(SPECTRUMAN):
     def __init__(self):
         SPECTRUMAN.__init__(self)
         #???
@@ -66,8 +66,8 @@ class SPECTRUMANALYZER(SPECTRUMANALYZER):
                     #Später:
                     #'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
                     #???? Trigger Befehle richtig?
-                    'SetTriggerMode': [('TRIGger:SOURce %d'%tmode, None)],
-                    'SetTriggerDelay':  [('TRIGge:TIME:RINTerval %s us'%tdelay, None)],
+                    'SetTriggerMode': [("'TRIGger:SOURce %d'%tmode", None)],
+                    'SetTriggerDelay':  [("'TRIGge:TIME:RINTerval %s us'%tdelay", None)],
                     #'SetWindow':  [('WINDOW %d'%window, None)],
                     #'Quit':     [('QUIT', None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
@@ -77,7 +77,7 @@ class SPECTRUMANALYZER(SPECTRUMANALYZER):
         
         if channel is None:
             channel=1
-        self.error=SGNLGNRTR.Init(self, ini, channel)
+        self.error=SPECTRUMAN.Init(self, ini, channel)
         sec='channel_%d'%channel
         try:
             self.levelunit=self.conf[sec]['unit']
@@ -122,7 +122,7 @@ class SPECTRUMANALYZER(SPECTRUMANALYZER):
                       ("'SENSe:SWEep:COUNt %d'%v", None)),
                  ('triggermode',
                       None,
-                      ("'TRIGger:SOURce %d'%v", None)),
+                      ("'TRIGger:SOURce %s'%v", None)),
                  ('attmode',
                       [('0','auto'), ('1','manual')],
                       [('INPut:ATTenuation::AUTO ON', None),('INPut:ATTenuation::AUTO OFF', None)]),
@@ -137,7 +137,7 @@ class SPECTRUMANALYZER(SPECTRUMANALYZER):
         # In 'sec' ist gespeicher welcher Channel bearbeitet wird, somit erhält man über '.conf[sec]' zugriff auf die
         # Einstellungen für den aktuellen channel.
         # -> If / else Anweisung zur Behandlung von Initialisierungsschritten ohne Optionen (if) und mit Optionen (else).
-        # -> Wurden in 'presets' Optionen angegeben, dann werden diese einzeln durch eine for-Schleife abgerufen.
+        # -> Wurden in 'presets' Optionen angegeben, dann werden diese einzeln durch eine for-Schleife abgearbeitet.
         #    Durch eine if-Anweiseung wird überprüft, welcher der möglichen Optionen in der ini-Datei angegeben wurden.
         #    Wird eine Übereinstimmung gefunden, wird der Befehl in 'self._cmds['Preset']' übertragen.
         # 
@@ -165,7 +165,7 @@ class SPECTRUMANALYZER(SPECTRUMANALYZER):
         return 0, trace
     
     def GetTrace(self):
-        retrun 0,self.trace
+        return 0,self.trace
         
         
         
@@ -197,7 +197,7 @@ def main():
                         fstop: 6e9
                         fstep: 1
                         gpib: 20
-                        virtual: 1
+                        virtual: 0
 
                         [Channel_1]
                         #??? braucht es die unit?
@@ -223,13 +223,13 @@ def main():
     # # falls die Bedingung 'false' ist. Zuvor wird eine Testfrequenz und ein Level festgelegt, ein Objekt der Klasse SMB100A erzeugt und der
     # # Signalgenerator initialisiert.
     # #
-    sg=SIGNALGENERATOR()
+    sp=SPECTRUMANALYZER()
     try:
         from mpy.device.signalgenerator_ui import UI as UI
     except ImportError:
         pass
     else:
-        ui=UI(sg,ini=ini)
+        ui=UI(sp,ini=ini)
         ui.configure_traits()
         sys.exit(0)	
     
@@ -251,80 +251,80 @@ def main():
     triggerDelay=10
     
     
-    err=sg.Init(ini)
+    err=sp.Init(ini)
     assert err==0, 'Init() fails with error %d'%(err)
     
-    err,freq=sg.SetCenterFreq(centerFreq)
+    err,freq=sp.SetCenterFreq(centerFreq)
     assert err==0, 'SetCenterFreq() fails with error %d'%(err)
     assert freq==centerFreq, 'SetCenterFreq() returns freq=%e instead of %e'%(freq, centerFreq)
     
-    err,freq=sg.SetSpan(span)
+    err,freq=sp.SetSpan(span)
     assert err==0, 'SetSpan() fails with error %d'%(err)
     assert freq==span, 'SetSpan() returns freq=%e instead of %e'%(freq, span)
     
-    err,freq=sg.SetStartFreq(startFreq)
+    err,freq=sp.SetStartFreq(startFreq)
     assert err==0, 'SetStartFreq() fails with error %d'%(err)
     assert freq==startFreq, 'SetStartFreq() returns freq=%e instead of %e'%(freq, startFreq)
     
-    err,freq=sg.SetStopFreq(stopFreq)
+    err,freq=sp.SetStopFreq(stopFreq)
     assert err==0, 'SetStopFreq() fails with error %d'%(err)
     assert freq==stopFreq, 'SetStopFreq() returns freq=%e instead of %e'%(freq, stopFreq)
     
-    err,freq=sg.SetRBW(rbw)
+    err,freq=sp.SetRBW(rbw)
     assert err==0, 'SetRBW() fails with error %d'%(err)
     assert freq==rbw, 'SetRBW() returns freq=%e instead of %e'%(freq, rbw)
     
-    err,freq=sg.SetVBW(vbw)
+    err,freq=sp.SetVBW(vbw)
     assert err==0, 'SetVBW() fails with error %d'%(err)
     assert freq==vbw, 'SetVBW() returns freq=%e instead of %e'%(freq, vbw)
     
-    err,freq=sg.SetRefLevel(att)
+    err,freq=sp.SetRefLevel(att)
     assert err==0, 'SetRefLevel() fails with error %d'%(err)
     assert freq==att, 'SetRefLevel() returns freq=%e instead of %e'%(freq, att)
     
-    err,freq=sg.SetAtt(att)
+    err,freq=sp.SetAtt(att)
     assert err==0, 'SetAtt() fails with error %d'%(err)
     assert freq==att, 'SetAtt() returns freq=%e instead of %e'%(freq, att)
     
-    err,freq=sg.SetAttAuto()
+    err,freq=sp.SetAttAuto()
     assert err==0, 'SetAttAuto() fails with error %d'%(err)
     
-    err,freq=sg.SetPreAmp(preAmp)
+    err,freq=sp.SetPreAmp(preAmp)
     assert err==0, 'SetPreAmp() fails with error %d'%(err)
     assert freq==preAmp, 'SetPreAmp() returns freq=%e instead of %e'%(freq, preAmp)
     
-    err,freq=sg.SetDetector(detector)
+    err,freq=sp.SetDetector(detector)
     assert err==0, 'SetDetector() fails with error %d'%(err)
     assert freq==detector, 'SetDetector() returns freq=%e instead of %e'%(freq, detector)
     
-    err,freq=sg.SetTraceMode(traceMode)
+    err,freq=sp.SetTraceMode(traceMode)
     assert err==0, 'SetTraceMode() fails with error %d'%(err)
     assert freq==traceMode, 'SetTraceMode() returns freq=%e instead of %e'%(freq, traceMode)
     
-    err,freq=sg.SetTrace(trace)
+    err,freq=sp.SetTrace(trace)
     assert err==0, 'SetTrace() fails with error %d'%(err)
     assert freq==trace, 'SetTrace() returns freq=%e instead of %e'%(freq, trace)
     
-    err,freq=sg.SetSweepCount(sweepCount)
+    err,freq=sp.SetSweepCount(sweepCount)
     assert err==0, 'SetSweepCount() fails with error %d'%(err)
     assert freq==sweepCount, 'SetSweepCount() returns freq=%e instead of %e'%(freq, sweepCount)
     
-    err,freq=sg.SetSweepTime(sweepTime)
+    err,freq=sp.SetSweepTime(sweepTime)
     assert err==0, 'SetSweepTime() fails with error %d'%(err)
     assert freq==sweepTime, 'SetSweepTime() returns freq=%e instead of %e'%(freq, sweepTime)
     
-    err,spectrum=sg.GetSpectrum()
+    err,spectrum=sp.GetSpectrum()
     assert err==0, 'GetSpectrum() fails with error %d'%(err)
     print spectrum
     
-    err,_=sg.SetTriggerMode(triggerMode)
+    err,_=sp.SetTriggerMode(triggerMode)
     assert err==0, 'SetTriggerMode() fails with error %d'%(err)
     
-    err,_=sg.SetTriggerDelay(triggerDelay)
+    err,_=sp.SetTriggerDelay(triggerDelay)
     assert err==0, 'SetTriggerDelay() fails with error %d'%(err)
     
     
-    #err=sg.Quit()
+    #err=sp.Quit()
     #assert err==0, 'Quit() fails with error %d'%(err)
 #
 #          
