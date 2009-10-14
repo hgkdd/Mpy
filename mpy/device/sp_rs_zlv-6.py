@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+import re
 import sys
 import StringIO
 from scuq import *
@@ -32,14 +33,14 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                     'GetStartFreq':  [('FREQuency:STARt?', r'(?P<stfreq>%s) HZ'%self._FP)],
                     'SetStopFreq':  [("'FREQuency:STOP %s HZ'%spfreq", None)],
                     'GetStopFreq':  [('FREQuency:STOP?', r'(?P<spfreq>%s) HZ'%self._FP)],
-                    #??? SetRBW Auto?
-                    'SetRBW':  [("'BANDwidth:RESolution %s HZ'%rbw", None)],
-                    'GetRBW':  [('BANDwidth:RESolution?', r'(?P<rbw>%s) HZ'%self._FP)],
-                    #??? SetVBW Auto?
+                    'SetRBWAuto':   [("SENSe:BANDwidth:RESolution:Auto On", None)],
+                    'SetRBW':  [("'SENSe:BANDwidth:RESolution %s HZ'%rbw", None)],
+                    'GetRBW':  [('SENSe:BANDwidth:RESolution?', r'(?P<rbw>%s) HZ'%self._FP)],
                     #VBW kann nur bestimmt Werte annehmen
                     #The command is not available if FFT filtering is switched on and the set bandwidth is <= 30 kHz or if the quasi–peak detector is switched on.
-                    'SetVBW':  [("'BANDwidth:VIDeo %s HZ'%vbw", None)],
-                    'GetVBW':  [('BANDwidth:VIDeo?', r'(?P<vbw>%s) HZ'%self._FP)],
+                    'SetVBWAuto':   [("SENSe:BANDwidth:VIDeo:Auto On", None)],
+                    'SetVBW':  [("'SENSe:BANDwidth:VIDeo %s HZ'%vbw", None)],
+                    'GetVBW':  [('SENSe:BANDwidth:VIDeo?', r'(?P<vbw>%s) HZ'%self._FP)],
                     'SetRefLevel':  [("'DISP:WIND:TRAC:Y:RLEV %s DBM'%level", None)],
                     'GetRefLevel':  [('DISP:WIND:TRAC:Y:RLEV?', r'(?P<level>%s) DBM'%self._FP)],
                     'SetAtt':  [("'INPut:ATTenuation %s DB'%att", None)],
@@ -71,8 +72,159 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                     #'SetWindow':  [('WINDOW %d'%window, None)],
                     #'Quit':     [('QUIT', None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
-        # 
-        #
+        
+        # Die nachfolgende List stellt im Prinzip eine Tabelle mit drei Spalten dar.
+        # In der ersten Spalte steht der Name der Funktion auf welche die entprechende Zeile der Tabelle
+        # zutrifft.
+        # In der zweiten Spalte stehen mögliche Werte die der Funktion übergeben werden können. Die
+        # möglichen Werte sind wiederum in Listen gespeichert. So ist es mölich einem Befehl
+        # mehrer Werte zuzuordnen. Ebenfalls sind reguläre Expression erlaubt. 
+        # In der dritten Spalte sind die Befehl vermerkt, welche den möglichen Werten in der vorhergehenden
+        # Spalte, zugeordnent werden. 
+        complex=[
+                 ('SetRBW',
+                      [('auto'),        ('*')],
+                      ['SetRBWAuto',  'SetRBW']),
+                 ('SetVBW',
+                      [('auto'),        ('*')],
+                      ['SetVBWAuto',  'SetVBW']),
+                 ('SetCenterFreq',
+                      None,
+                      'SetCenterFreq')
+                 ]
+        
+        self._cmds['Complex']=complex
+        
+        _setgetlist=[#("SetCenterFreq", "GetCenterFreq", "cfreq", float, None),
+                     #("SetSpan", "GetSpan", "span", float, None),
+                     #("SetStartFreq", "GetStartFreq", "stfreq", float, None),
+                     #("SetStopFreq", "GetStopFreq", "spfreq", float, None),
+                     ("SetRBW", "GetRBW", "rbw", float, None),
+                     ("SetVBW", "GetVBW", "vbw", float, None),
+                     #("SetRefLevel", "GetRefLevel", "reflevel", float, None),
+                     #("SetAtt", "GetAtt", "att", float, None),
+                     #("SetPreAmp", "GetPreAmp", "preamp", float, None),
+                     #("SetDetector", "GetDetector", "det", str, self.DETECTORS),
+                     #("SetTraceMode", "GetTraceMode", "tmode", str, self.TRACEMODES),
+                     #("SetTrace", "GetTrace", "trace", int, None),
+                     #("SetSweepCount", "GetSweepCount", "scount", int, None),
+                     #("SetSweepTime", "GetSweepTime", "stime", float, None)
+                     ]
+
+        # Die folgende for-Schleife arbeitet die _setgetlist ab und erzeugt dabei die Funktionen
+        # über die das Gerät angesprochen werden kann.
+        for setter, getter, what, type_, possibilities in _setgetlist:
+            # Zuerst wird eine Klassen-Variable angelegt.
+            # Dazu wird die Python-Built-in Funktion setattr verwendet. Mit ihr ist es möglich Variablen
+            # anzulegen, deren Namen in einer String Variable gespeicher ist.
+            # Der Aufruf setattr(self, "stfreq", 100) würde also self.stfreq=100 entprechen.
+            
+            # ??? warum muss die Variable angelegt werden?
+            setattr(self, what, None)
+            # closure...
+            
+            # Hier werden nun die Funktionen erzeugt.
+            # Dazu wird die Python-Built-in Funktion setattr verwendet. Mit ihr ist es möglich Variablen
+            # anzulegen, deren Namen in einer String Variable gespeicher ist.
+            # Der Aufruf setattr(self, "stfreq", 100) würde also self.stfreq=100 entprechen.
+            # Anstatt einer float Zahl oder eines Strings wird nun aber ein partial-Objekt übergeben, 
+            # welches über die Funktion fuctools.partial() erzeugt wird.
+            # Ein partial-Objekt verhält sich beinahe wie eine normale Funktion. Die Unterschiede
+            # spielen hier keine Rolle.
+            # Mit setattr(self, "SetCenterFreq", partial-Objekt) wird also eine Funktion erzeugt
+            # die sich wie gewohnt ansprechen lässt. z.B. self.SetCenterFreq(100). 
+            # 
+            # Die Grundlage für das partial-Objekt ist eine schon bestehende Funktion, in diesem Fall
+            # "self.SetGetSomething". Die zu Grunde gelegte Funktion muss functools.partial() als erstes
+            # Argument übergeben werde. Die folgenden Argumente die partial() übergeben werden, werden
+            # der Grund-Funktion wiederum selbst übergebe. Die übergebenen Argumente werden im
+            # partial-Objekt gespeicher und jedes mal wenn ein partial-Objekt mit self.XXX() aufgerufen wird,
+            # wird die Grund-Funktion mit den selben gespeicherten Argumenten aufgerufen.
+            # Werden partial() nicht so viele Argumente übergeben wie die Grund-Funktion selbst hat, 
+            # müssen die fehlenden Argumente beim Aufrufs des partial-Objets übergeben werden. z.B. 
+            # self.XXX(100).
+            # In unserem konkreten Fall bleibt beim erzeugen des partial-Objekts das Argument
+            # "something" von ._SetGetSomething unberührt. something ist der Wert, der mit Hilfe
+            # des VISA Befehls, gesetzt werden soll. Dieser muss dann beim Aufrufs des partial-Objetes
+            # mit übergeben werden z.B. self.SetCenterFreq(100) (Die CenterFreq soll auf 100 Hz gesetzt werden)    
+            setattr(self, setter, 
+                          functools.partial(self._SetGetSomething, 
+                                            setter=setter, 
+                                            getter=getter, 
+                                            type_=type_, 
+                                            possibilities=possibilities))
+
+  
+  
+  
+
+
+    # _SetGetSomething ist eine Funktion die nacheinander einen Visa-Write Befehl ausführt und danach
+    # einen Vias-Query Befehl.
+    #
+    # Was ausgeführt wird, wird über die Argumente "setter" und "getter" bestimmt. Es müssen Strings
+    # übergeben werden, die keys in ._cmds entsprechen.
+    # 
+    # Das Argument "something" bestimmt welcher Wert am Gerät eingestellt werden soll, z.B. 100 entspricht
+    # einer Frequenz von 100 Hz, falls "setter" eine Frequenz verändert.
+    #
+    # "_type" bestimmt den Type des Rügabewerts z.B. float oder string
+    #
+    # "possibilities" ist eine Liste in der verschiedene Parameter für die VISA-Befehle stehen können.
+    # z.B. TRACEMODES (siehe oben). Ist "possibilites" angegeben, dann wird "something" mit "possibilities 
+    # über eine fuzzyStringCompare abgeglichen und die wahrscheinlichste Übereinstimmung als 
+    # VISA Parameter verwendet.
+    def _SetGetSomething(self, setter, getter, something, type_, possibilities):
+        
+        
+        # Das dict complex wird zeilenweiße ausgelesen und die einzelnen Spalten in die Variablen
+        # k, vals und action geschrieben
+        for k, vals, actions in self._cmds['Complex']:
+            print k, vals, actions
+            
+            # Test ob die erste Spalten dem Namen der Funktion (die in setter vermerkt ist) entspricht 
+            if k is setter:
+                try:
+                    # Wenn keine alternativen Werte angegeben wurden, wird 
+                    # sofort der setter auf action gesetzt. In setter 
+                    # steht der Befehl der entgültig ausgeführt wird.
+                    if (vals is None):  
+                        setter = actions
+                    else:
+                        # Die möglichen Werte werden nacheinander druchlaufen.
+                        for idx,vi in enumerate(vals):
+                            # Die einzelnen möglichen Werte sind wiederum in Listen
+                            # gespeichert. Diese werden hier durchloffen. 
+                            for vii in vi:
+                                #Die Einträge werden mit something verglichen.
+                                #In something steht was der Funktion übergeben wurden.
+                                if re.search(something, vii, re.I) != None:
+                                    setter = actions[idx]
+                except KeyError:
+                    pass
+        
+        self.error=0
+        if possibilities:
+            something=fstrcmp(something, possibilities, n=1,cutoff=0,ignorecase=True)[0]
+        dct=self._do_cmds(setter, locals())
+        self._update(dct)
+        dct=self._do_cmds(getter, locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                setattr(self, something, eval(something))
+            else:
+                setattr(self, something, type_(getattr(self, something)))
+        return self.error, getattr(self, something)
+        
+        
+        
+        
+        
+        
+        
+        
+        
     def Init(self, ini=None, channel=None):
         
         if channel is None:
