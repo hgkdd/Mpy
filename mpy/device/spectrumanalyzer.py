@@ -53,39 +53,41 @@ class SPECTRUMANALYZER(DRIVER):
         
     def __init__(self):
         DRIVER.__init__(self)
-        self._cmds={'SetCenterFreq':  [("'CENTERFREQ %s HZ'%cfreq", None)],
+        self._cmds={'SetCenterFreq':  [("'CENTERFREQ %s HZ'%something", None)],
                     'GetCenterFreq':  [('CENTERFREQ?', r'CENTERFREQ (?P<cfreq>%s) HZ'%self._FP)],
-                    'SetSpan':  [("'SPAN %s HZ'%span", None)],
+                    'SetSpan':  [("'SPAN %s HZ'%something", None)],
                     'GetSpan':  [('SPAN?', r'SPAN (?P<span>%s) HZ'%self._FP)],
-                    'SetStartFreq':  [("'STARTFREQ %s HZ'%stfreq", None)],
+                    'SetStartFreq':  [("'STARTFREQ %s HZ'%something", None)],
                     'GetStartFreq':  [('STARTFREQ?', r'STARTFREQ (?P<stfreq>%s) HZ'%self._FP)],
-                    'SetStopFreq':  [("'STOPFREQ %s HZ'%spfreq", None)],
+                    'SetStopFreq':  [("'STOPFREQ %s HZ'%something", None)],
                     'GetStopFreq':  [('STOPFREQ?', r'STOPFREQ (?P<spfreq>%s) HZ'%self._FP)],
-                    'SetRBW':  [("'RBW %s HZ'%rbw", None)],
+                    'SetRBW':  [("'RBW %s HZ'%something", None)],
                     'GetRBW':  [('RBW?', r'RBW (?P<rbw>%s) HZ'%self._FP)],
-                    'SetVBW':  [("'VBW %s HZ'%vbw", None)],
+                    'SetVBW':  [("'VBW %s HZ'%something", None)],
                     'GetVBW':  [('VBW?', r'VBW (?P<vbw>%s) HZ'%self._FP)],
-                    'SetRefLevel':  [("'REFLEVEL %s DBM'%level", None)],
-                    'GetRefLevel':  [('REFLEVEL?', r'REFLEVEL (?P<level>%s) DBM'%self._FP)],
-                    'SetAtt':  [("'ATT %s DB'%att", None)],
+                    'SetRefLevel':  [("'REFLEVEL %s DBM'%something", None)],
+                    'GetRefLevel':  [('REFLEVEL?', r'REFLEVEL (?P<reflevel>%s) DBM'%self._FP)],
+                    'SetAtt':  [("'ATT %s DB'%something", None)],
                     'GetAtt':  [('ATT?', r'ATT (?P<att>%s) DB'%self._FP)],
                     'SetAttAuto':  [("ATT -1", None)],
-                    'SetPreAmp':  [("'PREAMP %s DB'%freq", None)],
+                    'SetPreAmp':  [("'PREAMP %s DB'%something", None)],
                     'GetPreAmp':  [('PREAMP?', r'PREAMP (?P<preamp>%s) DB'%self._FP)],
-                    'SetDetector':  [("'DET %s'%det", None)],
+                    'SetDetector':  [("'DET %s'%something", None)],
                     'GetDetector':  [('DET?', r'DET (?P<det>.*)')],
-                    'SetTraceMode':  [("'TMODE %s'%tmode", None)],
+                    'SetTraceMode':  [("'TMODE %s'%something", None)],
                     'GetTraceMode':  [('TMODE?', r'TMODE (?P<tmode>.*)')],
                     'SetTrace':  [("'TRACE %d'%trace", None)],
                     'GetTrace':  [('TRACE?', r'TRACE (?P<trace>\d+)')],
-                    'SetSweepCount':  [("'SWEEPCOUNT %d'%scount", None)],
+                    'SetSweepCount':  [("'SWEEPCOUNT %d'%something", None)],
                     'GetSweepCount':  [('SWEEPCOUNT?', r'SWEEPCOUNT (?P<scount>\d+)')],
-                    'SetSweepTime':  [("'SWEEPTIME %s us'%stime", None)],
+                    'SetSweepTime':  [("'SWEEPTIME %s us'%something", None)],
                     'GetSweepTime':  [('SWEEPTIME?', r'SWEEPTIME (?P<stime>%s) us'%self._FP)],
                     'GetSpectrum':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
                     'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
-                    'SetTriggerMode': [("'TRGMODE %d'%tmode", None)],
-                    'SetTriggerDelay':  [("'TRGDELAY %s us'%tdelay", None)],
+                    'SetTriggerMode': [("'TRGMODE %d'%something", None)],
+                    'GetTriggerMode':  [('TRGMODE?', r'TRGMODE (?P<trgmode>.*)')],
+                    'SetTriggerDelay':  [("'TRGDELAY %s us'%something", None)],
+                    'GetTriggerDelay':  [('TRGDELAY?', r'TRGDELAY (?P<tdelay>%s) us'%self._FP)],
                     'SetWindow':  [("'WINDOW %d'%window", None)],
                     'Quit':     [('QUIT', None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
@@ -103,7 +105,9 @@ class SPECTRUMANALYZER(DRIVER):
                      ("SetTraceMode", "GetTraceMode", "tmode", str, self.TRACEMODES),
                      ("SetTrace", "GetTrace", "trace", int, None),
                      ("SetSweepCount", "GetSweepCount", "scount", int, None),
-                     ("SetSweepTime", "GetSweepTime", "stime", float, None)]
+                     ("SetSweepTime", "GetSweepTime", "stime", float, None),
+                     ("SetTriggerMode", "GetTriggerMode", "trgmode", str, self.TRIGGERMODES),
+                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None),]
 
         # Die folgende for-Schleife arbeitet die _setgetlist ab und erzeugt dabei die Funktionen
         # über die das Gerät angesprochen werden kann.
@@ -146,7 +150,8 @@ class SPECTRUMANALYZER(DRIVER):
                                             setter=setter, 
                                             getter=getter, 
                                             type_=type_, 
-                                            possibilities=possibilities))
+                                            possibilities=possibilities,
+                                            what=what))
 
         self._internal_unit='dBm'
 
@@ -166,7 +171,7 @@ class SPECTRUMANALYZER(DRIVER):
     # z.B. TRACEMODES (siehe oben). Ist "possibilites" angegeben, dann wird "something" mit "possibilities 
     # über eine fuzzyStringCompare abgeglichen und die wahrscheinlichste Übereinstimmung als 
     # VISA Parameter verwendet.
-    def _SetGetSomething(self, setter, getter, something, type_, possibilities):
+    def _SetGetSomething(self, something, setter, getter, type_, possibilities, what):
         self.error=0
         if possibilities:
             something=fstrcmp(something, possibilities, n=1,cutoff=0,ignorecase=True)[0]
@@ -176,10 +181,10 @@ class SPECTRUMANALYZER(DRIVER):
         self._update(dct)
         if self.error == 0:
             if not dct:
-                setattr(self, something, eval(something))
+                setattr(self, what, eval(what))
             else:
-                setattr(self, something, type_(getattr(self, something)))
-        return self.error, getattr(self, something)
+                setattr(self, what, type_(getattr(self, what)))
+        return self.error, getattr(self, what)
 
 
 #     def SetCenterFreq(self, cfreq):

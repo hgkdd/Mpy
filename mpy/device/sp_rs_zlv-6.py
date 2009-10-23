@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 #
+import functools
 import re
 import sys
 import StringIO
 from scuq import *
 from mpy.device.spectrumanalyzer import SPECTRUMANALYZER as SPECTRUMAN
+from mpy.tools.Configuration import fstrcmp
 
 #
 #
@@ -12,10 +14,21 @@ from mpy.device.spectrumanalyzer import SPECTRUMANALYZER as SPECTRUMAN
 # Diese greift auf die Unterklasse SPECTRUMANALYZER (spectrumanalyzer.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
 class SPECTRUMANALYZER(SPECTRUMAN):
+    
+    
+    TRACEMODES=('WRITe', 'VIEW', 'AVERage', 'MAXHold', 'MINHold', 'RMS')
+    DETECTORS=('APEak', 'NEGative', 'POSitive', 'SAMPle', 'RMS', 'AVERage', 'QPEak')
+    TRIGGERMODES=('TIME', 'IMMediate', 'EXTern', 'IFPower', 'VIDeo')
+    
+    
     def __init__(self):
         SPECTRUMAN.__init__(self)
-        #???
+        self.trace=1
         self._internal_unit='dBm'
+        
+
+        
+        
         #
         # Im Wörterbuch '._cmds' werden die Befehle zum Steuern des speziellen Spektrumanalysator definiert, z.B. SetFreq() zum Setzen
         # der Frequenz. Diese können in der Dokumentation des entsprechenden Spektrumanalysator nachgeschlagen werden.
@@ -25,139 +38,114 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         # Schlüsselwort wird eine Liste zugeordnet, wobei jeder Listeneintrag ein Tupel ist und jeder Tupel einen Befehl und eine Vorlage
         # für die darauffolgende Antwort des Signalgenerators enthaelt.
         #
-        self._cmds={'SetCenterFreq':  [("'FREQuency:CENTer %s HZ'%cfreq", None)],
-                    'GetCenterFreq':  [('FREQuency:CENTer?', r'(?P<cfreq>%s) HZ'%self._FP)],
-                    'SetSpan':  [("'FREQuency:SPAN %s HZ'%span", None)],
-                    'GetSpan':  [('FREQuency:SPAN?', r'(?P<span>%s) HZ'%self._FP)],
-                    'SetStartFreq':  [("'FREQuency:STARt %s HZ'%stfreq", None)],
-                    'GetStartFreq':  [('FREQuency:STARt?', r'(?P<stfreq>%s) HZ'%self._FP)],
-                    'SetStopFreq':  [("'FREQuency:STOP %s HZ'%spfreq", None)],
-                    'GetStopFreq':  [('FREQuency:STOP?', r'(?P<spfreq>%s) HZ'%self._FP)],
+        self._cmds={'SetCenterFreq':  [("'FREQuency:CENTer %s HZ'%something", None)],
+                    'GetCenterFreq':  [('FREQuency:CENTer?', r'(?P<cfreq>%s)'%self._FP)],
+                    'SetSpan':  [("'FREQuency:SPAN %s HZ'%something", None)],
+                    'GetSpan':  [('FREQuency:SPAN?', r'(?P<span>%s)'%self._FP)],
+                    'SetStartFreq':  [("'FREQuency:STARt %s HZ'%something", None)],
+                    'GetStartFreq':  [('FREQuency:STARt?', r'(?P<stfreq>%s)'%self._FP)],
+                    'SetStopFreq':  [("'FREQuency:STOP %s HZ'%something", None)],
+                    'GetStopFreq':  [('FREQuency:STOP?', r'(?P<spfreq>%s)'%self._FP)],
                     'SetRBWAuto':   [("SENSe:BANDwidth:RESolution:Auto On", None)],
-                    'SetRBW':  [("'SENSe:BANDwidth:RESolution %s HZ'%rbw", None)],
-                    'GetRBW':  [('SENSe:BANDwidth:RESolution?', r'(?P<rbw>%s) HZ'%self._FP)],
+                    'SetRBW':  [("'SENSe:BANDwidth:RESolution %s HZ'%something", None)],
+                    'GetRBW':  [('SENSe:BANDwidth:RESolution?', r'(?P<rbw>%s)'%self._FP)],
                     #VBW kann nur bestimmt Werte annehmen
                     #The command is not available if FFT filtering is switched on and the set bandwidth is <= 30 kHz or if the quasi–peak detector is switched on.
                     'SetVBWAuto':   [("SENSe:BANDwidth:VIDeo:Auto On", None)],
-                    'SetVBW':  [("'SENSe:BANDwidth:VIDeo %s HZ'%vbw", None)],
-                    'GetVBW':  [('SENSe:BANDwidth:VIDeo?', r'(?P<vbw>%s) HZ'%self._FP)],
-                    'SetRefLevel':  [("'DISP:WIND:TRAC:Y:RLEV %s DBM'%level", None)],
-                    'GetRefLevel':  [('DISP:WIND:TRAC:Y:RLEV?', r'(?P<level>%s) DBM'%self._FP)],
-                    'SetAtt':  [("'INPut:ATTenuation %s DB'%att", None)],
-                    'GetAtt':  [('INPut:ATTenuation?', r'(?P<att>%s) DB'%self._FP)],
+                    'SetVBW':  [("'SENSe:BANDwidth:VIDeo %s HZ'%something", None)],
+                    'GetVBW':  [('SENSe:BANDwidth:VIDeo?', r'(?P<vbw>%s)'%self._FP)],
+                    'SetRefLevel':  [("'DISP:WIND:TRAC%s:Y:RLEV %s DBM'%(self.trace,something)", None)],
+                    'GetRefLevel':  [("'DISP:WIND:TRAC%s:Y:RLEV?'%self.trace", r'(?P<reflevel>%s)'%self._FP)],
+                    'SetAtt':  [("'INPut:ATTenuation %s DB'%something", None)],
+                    'GetAtt':  [('INPut:ATTenuation?', r'(?P<att>%s)'%self._FP)],
                     'SetAttAuto':  [("INPut:ATTenuation:AUTO ON", None)],
                     #??? PreAmp Nur on/off Seite: 663 Manual?
                     #'SetPreAmp':  [("'PREAMP %s DB'%freq", None)],
                     #'GetPreAmp':  [('PREAMP?', r'PREAMP (?P<preamp>%s) DB'%self._FP)],
-                    #??? SetDetector Auto?
-                    'SetDetector':  [("'SENSe:DETector%s %s'%(self.trace,det)", None)],
+                    'SetDetectorAuto':   [("'SENSe:DETector%s:Auto On'%self.trace", None)],
+                    'SetDetector':  [("'SENSe:DETector%s %s'%(self.trace,something)", None)],
                     'GetDetector':  [("'SENSe:DETector%s?'%self.trace", r'(?P<det>.*)')],
-                    'SetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE %s'%(self.trace,tmode)", None)],
+                    'SetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE %s'%(self.trace,something)", None)],
                     'GetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE?'%self.trace", r'(?P<tmode>.*)')],
                     #SetTrace wird über eine Funktion realisiert, siehe weiter unten
                     #'SetTrace':  [("'TRACE %d'%trace", None)],
                     #'GetTrace':  [('TRACE?', r'TRACE (?P<trace>\d+)')],
-                    'SetSweepCount':  [("'SENSe:SWEep:COUNt %d'%scount", None)],
+                    'SetSweepCount':  [("'SENSe:SWEep:COUNt %d'%something", None)],
                     'GetSweepCount':  [('SENSe:SWEep:COUNt?', r'(?P<scount>\d+)')],
-                    #??? SetSweepTime Auto?
-                    'SetSweepTime':  [("'SENSe:SWEep:TIME %s us'%stime", None)],
-                    'GetSweepTime':  [('SENSe:SWEep:TIME?', r'(?P<stime>%s) us'%self._FP)],
-                    #??? Was ist mit SweepTime Auto? Als eigene Funktion?
-                    'GetSpectrum':  [("'TRACe:DATA? TRACE%s?'%self.trace", r'DATA (?P<power>%s)'%self._FP)],
+                    'SetSweepTimeAuto':   [("SENSe:SWEep:TIME:Auto On", None)],
+                    'SetSweepTime':  [("'SENSe:SWEep:TIME %s s'%something", None)],
+                    'GetSweepTime':  [('SENSe:SWEep:TIME?', r'(?P<stime>%s)'%self._FP)],
+                    'GetSpectrum':  [("'TRACe:DATA? TRACE%s'%self.trace", r'(?P<power>([-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?,?)+)')],
                     #Später:
                     #'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
                     #???? Trigger Befehle richtig?
-                    'SetTriggerMode': [("'TRIGger:SOURce %d'%tmode", None)],
-                    'SetTriggerDelay':  [("'TRIGge:TIME:RINTerval %s us'%tdelay", None)],
+                    'SetTriggerMode': [("'TRIGger:SOURce %s'%something", None)],
+                    'GetTriggerMode':  [('TRIGger:SOURce?', r'(?P<trgmode>.*)')],
+                    'SetTriggerDelay':  [("'TRIGger:TIME:RINTerval %s s'%something", None)],
+                    'GetTriggerDelay':  [('TRIGger:TIME:RINTerval?', r'(?P<tdelay>%s)'%self._FP)],
                     #'SetWindow':  [('WINDOW %d'%window, None)],
                     #'Quit':     [('QUIT', None)],
+                    'SetSANMode': [("INSTrument:SELect SAN", None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         
         # Die nachfolgende List stellt im Prinzip eine Tabelle mit drei Spalten dar.
         # In der ersten Spalte steht der Name der Funktion auf welche die entprechende Zeile der Tabelle
         # zutrifft.
         # In der zweiten Spalte stehen mögliche Werte die der Funktion übergeben werden können. Die
-        # möglichen Werte sind wiederum in Listen gespeichert. So ist es mölich einem Befehl
-        # mehrer Werte zuzuordnen. Ebenfalls sind reguläre Expression erlaubt. 
+        # möglichen Werte können wiederum in Listen gespeichert werden. So ist es mölich einem Befehl
+        # mehrer Werte zuzuordnen. Achtung!!! Die Werte werden als reguläre Expression interpretiert!!
         # In der dritten Spalte sind die Befehl vermerkt, welche den möglichen Werten in der vorhergehenden
         # Spalte, zugeordnent werden. 
         complex=[
                  ('SetRBW',
-                      [('auto'),        ('*')],
+                      [('auto','a'),        ('.+')],
                       ['SetRBWAuto',  'SetRBW']),
                  ('SetVBW',
-                      [('auto'),        ('*')],
+                      ['auto',        '.+'],
                       ['SetVBWAuto',  'SetVBW']),
-                 ('SetCenterFreq',
-                      None,
-                      'SetCenterFreq')
+                 #('SetCenterFreq',
+                 #     None,
+                 #     'SetCenterFreq')
+                 ('SetAtt',
+                      ['auto',        '.+'],
+                      ['SetAttAuto',  'SetAtt']),
+                 ('SetDetector',
+                      ['auto',        '.+'],
+                      ['SetDetectorAuto',  'SetDetector']),
+                 ('SetSweepTime',
+                      ['auto',        '.+'],
+                      ['SetSweepTimeAuto',  'SetSweepTime']),
                  ]
         
         self._cmds['Complex']=complex
+          
+        setattr(self, "SetTrace", 
+                          functools.partial(self._SetTraceIntern))
+        setattr(self, "GetTrace", 
+                          functools.partial(self._GetTraceIntern))
+
+
         
-        _setgetlist=[#("SetCenterFreq", "GetCenterFreq", "cfreq", float, None),
-                     #("SetSpan", "GetSpan", "span", float, None),
-                     #("SetStartFreq", "GetStartFreq", "stfreq", float, None),
-                     #("SetStopFreq", "GetStopFreq", "spfreq", float, None),
-                     ("SetRBW", "GetRBW", "rbw", float, None),
-                     ("SetVBW", "GetVBW", "vbw", float, None),
-                     #("SetRefLevel", "GetRefLevel", "reflevel", float, None),
-                     #("SetAtt", "GetAtt", "att", float, None),
-                     #("SetPreAmp", "GetPreAmp", "preamp", float, None),
-                     #("SetDetector", "GetDetector", "det", str, self.DETECTORS),
-                     #("SetTraceMode", "GetTraceMode", "tmode", str, self.TRACEMODES),
-                     #("SetTrace", "GetTrace", "trace", int, None),
-                     #("SetSweepCount", "GetSweepCount", "scount", int, None),
-                     #("SetSweepTime", "GetSweepTime", "stime", float, None)
-                     ]
 
-        # Die folgende for-Schleife arbeitet die _setgetlist ab und erzeugt dabei die Funktionen
-        # über die das Gerät angesprochen werden kann.
-        for setter, getter, what, type_, possibilities in _setgetlist:
-            # Zuerst wird eine Klassen-Variable angelegt.
-            # Dazu wird die Python-Built-in Funktion setattr verwendet. Mit ihr ist es möglich Variablen
-            # anzulegen, deren Namen in einer String Variable gespeicher ist.
-            # Der Aufruf setattr(self, "stfreq", 100) würde also self.stfreq=100 entprechen.
-            
-            # ??? warum muss die Variable angelegt werden?
-            setattr(self, what, None)
-            # closure...
-            
-            # Hier werden nun die Funktionen erzeugt.
-            # Dazu wird die Python-Built-in Funktion setattr verwendet. Mit ihr ist es möglich Variablen
-            # anzulegen, deren Namen in einer String Variable gespeicher ist.
-            # Der Aufruf setattr(self, "stfreq", 100) würde also self.stfreq=100 entprechen.
-            # Anstatt einer float Zahl oder eines Strings wird nun aber ein partial-Objekt übergeben, 
-            # welches über die Funktion fuctools.partial() erzeugt wird.
-            # Ein partial-Objekt verhält sich beinahe wie eine normale Funktion. Die Unterschiede
-            # spielen hier keine Rolle.
-            # Mit setattr(self, "SetCenterFreq", partial-Objekt) wird also eine Funktion erzeugt
-            # die sich wie gewohnt ansprechen lässt. z.B. self.SetCenterFreq(100). 
-            # 
-            # Die Grundlage für das partial-Objekt ist eine schon bestehende Funktion, in diesem Fall
-            # "self.SetGetSomething". Die zu Grunde gelegte Funktion muss functools.partial() als erstes
-            # Argument übergeben werde. Die folgenden Argumente die partial() übergeben werden, werden
-            # der Grund-Funktion wiederum selbst übergebe. Die übergebenen Argumente werden im
-            # partial-Objekt gespeicher und jedes mal wenn ein partial-Objekt mit self.XXX() aufgerufen wird,
-            # wird die Grund-Funktion mit den selben gespeicherten Argumenten aufgerufen.
-            # Werden partial() nicht so viele Argumente übergeben wie die Grund-Funktion selbst hat, 
-            # müssen die fehlenden Argumente beim Aufrufs des partial-Objets übergeben werden. z.B. 
-            # self.XXX(100).
-            # In unserem konkreten Fall bleibt beim erzeugen des partial-Objekts das Argument
-            # "something" von ._SetGetSomething unberührt. something ist der Wert, der mit Hilfe
-            # des VISA Befehls, gesetzt werden soll. Dieser muss dann beim Aufrufs des partial-Objetes
-            # mit übergeben werden z.B. self.SetCenterFreq(100) (Die CenterFreq soll auf 100 Hz gesetzt werden)    
-            setattr(self, setter, 
-                          functools.partial(self._SetGetSomething, 
-                                            setter=setter, 
-                                            getter=getter, 
-                                            type_=type_, 
-                                            possibilities=possibilities))
-
-  
-  
-  
-
+    def GetSpectrum(self):
+        self.error=0
+        dct=self._do_cmds('GetSpectrum', locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+             self.power=0
+        else:
+             self.power=float(self.power)
+        
+        self.power=re.split(',', self.power) 
+        return self.error, self.power
+    
+    def SetSANMode(self):
+        self.error=0
+        dct=self._do_cmds('SetSANMode', locals())
+        self._update(dct)
+        return self.error,0
+    
 
     # _SetGetSomething ist eine Funktion die nacheinander einen Visa-Write Befehl ausführt und danach
     # einen Vias-Query Befehl.
@@ -174,13 +162,13 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     # z.B. TRACEMODES (siehe oben). Ist "possibilites" angegeben, dann wird "something" mit "possibilities 
     # über eine fuzzyStringCompare abgeglichen und die wahrscheinlichste Übereinstimmung als 
     # VISA Parameter verwendet.
-    def _SetGetSomething(self, setter, getter, something, type_, possibilities):
+    def _SetGetSomething(self, something, setter, getter, type_, possibilities, what):
         
         
         # Das dict complex wird zeilenweiße ausgelesen und die einzelnen Spalten in die Variablen
         # k, vals und action geschrieben
         for k, vals, actions in self._cmds['Complex']:
-            print k, vals, actions
+            #print k, vals, actions
             
             # Test ob die erste Spalten dem Namen der Funktion (die in setter vermerkt ist) entspricht 
             if k is setter:
@@ -192,14 +180,29 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                         setter = actions
                     else:
                         # Die möglichen Werte werden nacheinander druchlaufen.
+                        breakfor=False
                         for idx,vi in enumerate(vals):
-                            # Die einzelnen möglichen Werte sind wiederum in Listen
-                            # gespeichert. Diese werden hier durchloffen. 
-                            for vii in vi:
+                            
+                            #Prüft ob Werte in einem Tupel gespechert sind
+                            if type(vi).__name__=='tuple':
+                                # Falls die einzelnen möglichen Werte wiederum in einem Tuple
+                                # gespeichert sind, werden hier durchloffen. 
+                                for vii in vi:
+                                    #Die Einträge werden mit something verglichen.
+                                    #In something steht was der Funktion übergeben wurden.
+                                    if re.search(vii, str(something), re.I) != None:
+                                        setter = actions[idx]
+                                        breakfor=True
+                            else:
                                 #Die Einträge werden mit something verglichen.
                                 #In something steht was der Funktion übergeben wurden.
-                                if re.search(something, vii, re.I) != None:
+                                if re.search(vi, str(something), re.I) != None:
                                     setter = actions[idx]
+                                    breakfor=True
+                            
+                            if breakfor:
+                                break
+                                    
                 except KeyError:
                     pass
         
@@ -212,14 +215,20 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         self._update(dct)
         if self.error == 0:
             if not dct:
-                setattr(self, something, eval(something))
+                setattr(self, what, eval(what))
             else:
-                setattr(self, something, type_(getattr(self, something)))
-        return self.error, getattr(self, something)
+                setattr(self, what, type_(getattr(self, what)))
+        return self.error, getattr(self, what)
         
         
         
         
+    def _SetTraceIntern(self,trace):
+        self.trace=trace
+        return 0, trace
+    
+    def _GetTraceIntern(self):
+        return 0,self.trace
         
         
         
@@ -235,6 +244,9 @@ class SPECTRUMANALYZER(SPECTRUMAN):
             self.levelunit=self.conf[sec]['unit']
         except KeyError:
             self.levelunit=self._internal_unit
+        
+        #Schaltet das ZVL in in den SAN - Spectrum analyzer Mode
+        self.SetSANMode()
         #   
         # Die Befehlsliste (dictionary) 'self._cmds'  wird mit einem Eintag namens 'Preset' erweitert und bekommt als Wert zunächst eine leere Liste zugewiesen.
         # Als Wert wurde eine Liste gewählt, da zur Initilisierung mehrere Befehle notwendig sein können. Jedem Listeneintrag bzw.
@@ -262,7 +274,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                       ("'FREQuency:SPAN %s HZ'%v", None)),
                  ('trace',
                       None,
-                      ("'self.SetTrace(%d)'%v",None)),
+                      ("'self.SetTrace(%s)'%v",None)),
                  ('tracemode',
                       None,
                       ("'DISPlay:WINDow:TRACe%s:MODE %s'%(self.trace,v)", None)),
@@ -271,7 +283,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                       ("'SENSe:DETector%s %s'%(self.trace,v)", None)),
                  ('sweepcount',
                       None,
-                      ("'SENSe:SWEep:COUNt %d'%v", None)),
+                      ("'SENSe:SWEep:COUNt %s'%v", None)),
                  ('triggermode',
                       None,
                       ("'TRIGger:SOURce %s'%v", None)),
@@ -280,7 +292,11 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                       [('INPut:ATTenuation::AUTO ON', None),('INPut:ATTenuation::AUTO OFF', None)]),
                  ('sweeptime',
                       None,
-                      ("'SENSe:SWEep:TIME %s us'%v", None))]
+                      ("'SENSe:SWEep:TIME %s s'%v", None))]
+        
+        
+        #self.SetTrace(self.conf[sec]['trace'])
+        
         #
         # Die zur Initialisierung des Signalgenerators notwendigen Schritte werden durch zeilenweise Betrachtung der Liste 'presets'
         # herausgefiltert und in die Befehlsliste (dictionary) 'self._cmds['Preset']' übertragen und stehen damit stehen auch in 'sg._cmds' zur
@@ -294,7 +310,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         #    Wird eine Übereinstimmung gefunden, wird der Befehl in 'self._cmds['Preset']' übertragen.
         # 
         for k, vals, actions in presets:
-            print k, vals, actions
+            #print k, vals, actions
             try:
                 v=self.conf[sec][k] 
                 if (vals is None):  
@@ -311,13 +327,6 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         dct=self._do_cmds('Preset', locals())
         self._update(dct)                
         return self.error
-
-    def SetTrace(self,trace):
-        self.trace=trace
-        return 0, trace
-    
-    def GetTrace(self):
-        return 0,self.trace
         
         
         
@@ -385,22 +394,25 @@ def main():
         ui.configure_traits()
         sys.exit(0)	
     
-    centerFreq=300e6
+    centerFreq=200e6
     span=6e9
     startFreq=6e3
     stopFreq=6e9
-    rbw=100e3
-    vbw=10e3
+    rbw="auto" #200e3
+    vbw="auto" #10e3
     refLevel=-20
-    att=10
+    att="auto" #20
     preAmp=0
-    detector=''
-    traceMode=''
+    #'APEak', 'NEGative', 'POSitive', 'SAMPle', 'RMS', 'AVERage', 'QPEak'
+    detector="auto" #'AVER'
+    #'WRITe', 'VIEW', 'AVERage', 'MAXHold', 'MINHold', 'RMS'
+    traceMode='WRIT'
     trace=1
     sweepCount=100
-    sweepTime=100
-    triggerMode=''
-    triggerDelay=10
+    sweepTime="auto"
+    #'IMMediate', 'EXTern', 'IFPower', 'VIDeo', 'TIME'
+    triggerMode='IMMediate'
+    triggerDelay=20
     
     
     err=sp.Init(ini)
@@ -423,35 +435,35 @@ def main():
     assert freq==stopFreq, 'SetStopFreq() returns freq=%e instead of %e'%(freq, stopFreq)
     
     err,freq=sp.SetRBW(rbw)
+    rbw=str(rbw)
     assert err==0, 'SetRBW() fails with error %d'%(err)
-    assert freq==rbw, 'SetRBW() returns freq=%e instead of %e'%(freq, rbw)
+    #assert freq==rbw, 'SetRBW() returns freq=%e instead of %s'%(freq, rbw) #Da "auto" gesetzt wird, aber eine Zahl zurückgegeben wird macht Test Probleme
     
     err,freq=sp.SetVBW(vbw)
+    vbw=str(vbw)
     assert err==0, 'SetVBW() fails with error %d'%(err)
-    assert freq==vbw, 'SetVBW() returns freq=%e instead of %e'%(freq, vbw)
+    #assert freq==vbw, 'SetVBW() returns freq=%e instead of %s'%(freq, vbw) #Da "auto" gesetzt wird, aber eine Zahl zurückgegeben wird macht Test Probleme
     
-    err,freq=sp.SetRefLevel(att)
+    err,freq=sp.SetRefLevel(refLevel)
     assert err==0, 'SetRefLevel() fails with error %d'%(err)
-    assert freq==att, 'SetRefLevel() returns freq=%e instead of %e'%(freq, att)
+    assert freq==refLevel, 'SetRefLevel() returns freq=%e instead of %e'%(freq, refLevel)
     
     err,freq=sp.SetAtt(att)
+    att=str(att)
     assert err==0, 'SetAtt() fails with error %d'%(err)
-    assert freq==att, 'SetAtt() returns freq=%e instead of %e'%(freq, att)
+    #assert freq==att, 'SetAtt() returns freq=%e instead of %s'%(freq, att)  #Da "auto" gesetzt wird, aber eine Zahl zurückgegeben wird macht Test Probleme
     
-    err,freq=sp.SetAttAuto()
-    assert err==0, 'SetAttAuto() fails with error %d'%(err)
-    
-    err,freq=sp.SetPreAmp(preAmp)
-    assert err==0, 'SetPreAmp() fails with error %d'%(err)
-    assert freq==preAmp, 'SetPreAmp() returns freq=%e instead of %e'%(freq, preAmp)
+    #err,freq=sp.SetPreAmp(preAmp)
+    #assert err==0, 'SetPreAmp() fails with error %d'%(err)
+    #assert freq==preAmp, 'SetPreAmp() returns freq=%e instead of %e'%(freq, preAmp)
     
     err,freq=sp.SetDetector(detector)
     assert err==0, 'SetDetector() fails with error %d'%(err)
-    assert freq==detector, 'SetDetector() returns freq=%e instead of %e'%(freq, detector)
+    #assert freq==detector, 'SetDetector() returns freq=%s instead of %s'%(freq, detector) #Da "auto" gesetzt wird, aber der automatisch gewählte Detector zurück gegeben wird, macht der Test Probleme. 
     
     err,freq=sp.SetTraceMode(traceMode)
     assert err==0, 'SetTraceMode() fails with error %d'%(err)
-    assert freq==traceMode, 'SetTraceMode() returns freq=%e instead of %e'%(freq, traceMode)
+    assert freq==traceMode, 'SetTraceMode() returns freq=%s instead of %s'%(freq, traceMode)
     
     err,freq=sp.SetTrace(trace)
     assert err==0, 'SetTrace() fails with error %d'%(err)
@@ -462,24 +474,27 @@ def main():
     assert freq==sweepCount, 'SetSweepCount() returns freq=%e instead of %e'%(freq, sweepCount)
     
     err,freq=sp.SetSweepTime(sweepTime)
+    sweepTime=str(sweepTime)
     assert err==0, 'SetSweepTime() fails with error %d'%(err)
-    assert freq==sweepTime, 'SetSweepTime() returns freq=%e instead of %e'%(freq, sweepTime)
+    #assert freq==sweepTime, 'SetSweepTime() returns freq=%e instead of %s'%(freq, sweepTime) #Da "auto" gesetzt wird, aber eine Zahl zurückgegeben wird macht Test Probleme
     
+    err,freq=sp.SetTriggerMode(triggerMode)
+    print freq
+    assert err==0, 'SetTriggerMode() fails with error %d'%(err)
+    #assert freq==triggerMode, 'SetTriggerMode() returns freq=%s instead of %s'%(freq, triggerMode)
+    
+    err,freq=sp.SetTriggerDelay(triggerDelay)
+    assert err==0, 'SetTriggerDelay() fails with error %d'%(err)
+    assert freq==triggerDelay, 'SetTriggerDelay() returns freq=%e instead of %s'%(freq, triggerDelay)
+
     err,spectrum=sp.GetSpectrum()
     assert err==0, 'GetSpectrum() fails with error %d'%(err)
     print spectrum
     
-    err,_=sp.SetTriggerMode(triggerMode)
-    assert err==0, 'SetTriggerMode() fails with error %d'%(err)
-    
-    err,_=sp.SetTriggerDelay(triggerDelay)
-    assert err==0, 'SetTriggerDelay() fails with error %d'%(err)
-    
-    
     #err=sp.Quit()
     #assert err==0, 'Quit() fails with error %d'%(err)
 #
-#          
+#      
 #  ------------ Hauptprogramm ---------------------------
 #
 # Die Treiberdatei selbst und damit das Hauptprogramm wird nur gestartet, um den Treibercode zu testen. In diesem Fall springt
