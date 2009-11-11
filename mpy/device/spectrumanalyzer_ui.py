@@ -1,0 +1,322 @@
+# -*- coding: utf-8 -*-
+
+import StringIO
+#from mpy.device.signalgenerator import SIGNALGENERATOR
+import enthought.traits.api as tapi
+import enthought.traits.ui.api as tuiapi
+import enthought.traits.ui.menu as tuim
+#from enthought.chaco.api import Plot, ArrayPlotData
+#from enthought.enable.component_editor import ComponentEditor
+
+from scuq.quantities import Quantity
+from mpy.tools.util import format_block
+from mpy.device.device import CONVERT
+
+import functools
+from numpy import array, linspace
+
+conv=CONVERT()
+
+std_ini=format_block("""
+                [DESCRIPTION]
+                description: sp template
+                type:        SIGNALGENERATOR
+                vendor:      some company
+                serialnr:    SN12345
+                deviceid:    internal ID
+                driver:      dummy.py
+    
+                [Init_Value]
+                fstart: 100e6
+                fstop: 6e9
+                fstep: 1
+                gpib: 20
+                virtual: 0
+
+                [Channel_1]
+                unit: 'dBm'
+                attenuation: auto
+                reflevel: -20
+                rbw: auto
+                vbw: 10e6
+                span: 6e9
+                trace: 1
+                tracemode: 'WRITe'
+                detector: 'APEak'
+                sweepcount: 0
+                triggermode: 'IMMediate'
+                attmode: 'auto'
+                sweeptime: 10e-3
+                """)
+std_ini=StringIO.StringIO(std_ini)
+
+
+
+class UI(tapi.HasTraits):
+    Init=tapi.Button()
+    INI=tapi.Str()    
+    int_unit='dBm'
+    
+    
+    SetCenterFreq=tapi.Button("SetCenterFreq")
+    GetCenterFreq=tapi.Button("GetCenterFreq")
+    CENTERFREQ=tapi.Float()
+    newCENTERFREQ=tapi.Float()
+    SetSpan=tapi.Button("SetSpan")
+    GetSpan=tapi.Button("GetSpan") 
+    SPAN=tapi.Float()
+    newSPAN=tapi.Float()
+    SetStartFreq=tapi.Button("SetStartFreq")
+    GetStartFreq=tapi.Button("GetStartFreq") 
+    STARTFREQ=tapi.Float()
+    newSTARTFREQ=tapi.Float()
+    SetStopFreq=tapi.Button("SetStopFreq")
+    GetStopFreq=tapi.Button("GetStopFreq") 
+    STOPFREQ=tapi.Float()
+    newSTOPFREQ=tapi.Float()
+    SetRBW=tapi.Button("SetRBW")
+    GetRBW=tapi.Button("GetRBW")
+    RBW=tapi.Float()
+    newRBW=tapi.Float()
+    SetVBW=tapi.Button("SetVBW")
+    GetVBW=tapi.Button("GetVBW")
+    VBW=tapi.Float()
+    newVBW=tapi.Float()
+    SetRefLevel=tapi.Button("SetRefLevel")
+    GetRefLevel=tapi.Button("GetRefLevel") 
+    REFLEVEL=tapi.Float()
+    newREFLEVEL=tapi.Float()
+    SetAtt=tapi.Button("SetAtt")
+    GetAtt=tapi.Button("GetAtt")
+    ATT=tapi.Float()
+    newATT=tapi.Float()
+    #Eingefügt???
+    SetAttMode=tapi.Button("SetAttMode")
+    GetAttMode=tapi.Button("GetAttMode")
+    ATTMODE=tapi.Str()
+    newATTMODE=tapi.Str()
+    SetPreAmp=tapi.Button("SetPreAmp")
+    GetPreAmp=tapi.Button("GetPreAmp")
+    PREAMP=tapi.Float()
+    newPREAMP=tapi.Float()
+    SetDetector=tapi.Button("SetDetector")
+    GetDetector=tapi.Button("GetDetector")
+    DETECTOR=tapi.Str()
+    newDETECTOR=tapi.Str()
+    SetTraceMode=tapi.Button("SetTraceMode")
+    GetTraceMode=tapi.Button("GetTraceMode")
+    TRACEMODE=tapi.Str()
+    newTRACEMODE=tapi.Str()
+    SetTrace=tapi.Button("SetTrace")
+    GetTrace=tapi.Button("GetTrace")
+    TRACE=tapi.Int()
+    newTRACE=tapi.Int()
+    SetSweepCount=tapi.Button("SetSweepCount")
+    GetSweepCount=tapi.Button("GetSweepCount")
+    SWEEPCOUNT=tapi.Int()
+    newSWEEPCOUNT=tapi.Int()
+    SetSweepTime=tapi.Button("SetSweepTime")
+    GetSweepTime=tapi.Button("GetSweepTime")
+    SWEEPTIME=tapi.Float()
+    newSWEEPTIME=tapi.Float()
+    SetTriggerMode=tapi.Button("SetTriggerMode")
+    GetTriggerMode=tapi.Button("GetTriggerMode")
+    TRIGGERMODE=tapi.Str()
+    newTRIGGERMODE=tapi.Str()
+    SetTriggerDelay=tapi.Button("SetTriggerDelay")
+    GetTriggerDelay=tapi.Button("GetTriggerDelay")
+    TRIGGERDELAY=tapi.Float()
+    newTRIGGERDELAY=tapi.Float()
+
+    mainTab=('CenterFreq','Span','StartFreq','StopFreq','RBW','VBW',
+          'RefLevel','Att','AttMode','PreAmp','Detector','TraceMode',
+          'Trace','SweepCount','SweepTime','TriggerMode','TriggerDelay')
+    
+    GetSpectrum=tapi.Button("GetSpectrum")
+    SPECTRUM=tapi.Str()
+    power=()
+    
+    def __init__(self, instance, ini=None):
+        self.sp=instance
+        if not ini:
+            ini=std_ini
+        self.ini=ini
+        self.INI=ini.read()
+        
+#        for item in self.mainTab:
+            #getattr(self,"_Get%s_fired"%item)()
+            
+    
+ 
+
+
+
+    def _GetSpectrum_fired(self):
+        self.power=(1,2,3,4,5,6)
+        #self.power=self.sp.GetSpectrum()[1]
+                     #StartFreq,#StopFreq
+        #x = linspace(0,20,len(self.power))
+        #x = array([1,2,3,4])
+        #y = array([1,2,3,4])
+        #plotdata = ArrayPlotData(x=x, y=y)
+        #plot = Plot(plotdata)
+        #plot.plot(("x", "y"), type="line", color="blue")
+        #plot.title = "Spectrum"
+        #self.plot = plot
+        self.SPECTRUM=''
+        for i in self.power:
+            self.SPECTRUM='%s %s,'%(self.SPECTRUM,str(i))
+                               
+    def _Init_fired(self):
+        ini=StringIO.StringIO(self.INI)
+        self.sp.Init(ini)
+    
+    def _SetCenterFreq_fired(self):
+        err,value=self.sp.SetCenterFreq(self.newCENTERFREQ)
+        self.CENTERFREQ=value
+        
+    def _GetCenterFreq_fired(self):
+        self.CENTERFREQ=self.sp.GetCenterFreq()[1]
+        
+    def _SetSpan_fired(self):
+        err,value=self.sp.SetSpan(self.newSPAN)
+        self.SPAN=value
+        
+    def _GetSpan_fired(self):
+        self.SPAN=self.sp.GetSpan()[1]
+        
+    def _SetStartFreq_fired(self):
+        err,value=self.sp.SetStartFreq(self.newSTARTFREQ)
+        self.STARTFREQ=value
+        
+    def _GetStartFreq_fired(self):
+        self.STARTFREQ=self.sp.GetStartFreq()[1]
+        
+    def _SetStopFreq_fired(self):
+        err,value=self.sp.SetStopFreq(self.newSTOPFREQ)
+        self.STOPFREQ=value
+        
+    def _GetStopFreq_fired(self):
+        self.STOPFREQ=self.sp.GetStopFreq()[1]
+        
+    def _SetRBW_fired(self):
+        err,value=self.sp.SetRBW(self.newRBW)
+        self.RBW=value
+        
+    def _GetRBW_fired(self):
+        self.RBW=self.sp.GetRBW()[1]
+        
+    def _SetVBW_fired(self):
+        err,value=self.sp.SetVBW(self.newVBW)
+        self.VBW=value
+        
+    def _GetVBW_fired(self):
+        self.VBW=self.sp.GetVBW()[1]
+        
+    def _SetRefLevel_fired(self):
+        err,value=self.sp.SetRefLevel(self.newREFLEVEL)
+        self.REFLEVEL=value
+        
+    def _GetRefLevel_fired(self):
+        self.REFLEVEL=self.sp.GetRefLevel()[1]
+        
+    def _SetAtt_fired(self):
+        err,value=self.sp.SetAtt(self.newATT)
+        self.ATT=value
+        
+    def _GetAtt_fired(self):
+        self.ATT=self.sp.GetAtt()[1]
+        
+    def _SetAttMode_fired(self):
+        err,value=self.sp.SetAttMode(self.newATTMODE)
+        self.ATTMODE=value
+        
+    def _GetAttMode_fired(self):
+        self.ATTMODE=self.sp.GetAttMode()[1]
+        
+    def _SetPreAmp_fired(self):
+        err,value=self.sp.SetPreAmp(self.newPREAMP)
+        self.PREAMP=value
+        
+    def _GetPreAmp_fired(self):
+        self.PREAMP=self.sp.GetPreAmp()[1]
+        
+    def _SetDetector_fired(self):
+        err,value=self.sp.SetDetector(self.newDETECTOR)
+        self.DETECTOR=value
+        
+    def _GetDetector_fired(self):
+        self.DETECTOR=self.sp.GetDetector()[1]
+        
+    def _SetTraceMode_fired(self):
+        err,value=self.sp.SetTraceMode(self.newTRACEMODE)
+        self.TRACEMODE=value
+        
+    def _GetTraceMode_fired(self):
+        self.TRACEMODE=self.sp.GetTraceMode()[1]
+        
+    def _SetTrace_fired(self):
+        err,value=self.sp.SetTrace(self.newTRACE)
+        self.TRACE=value
+        
+    def _GetTrace_fired(self):
+        self.TRACE=self.sp.GetTrace()[1]
+        
+    def _SetSweepCount_fired(self):
+        err,value=self.sp.SetSweepCount(self.newSWEEPCOUNT)
+        self.SWEEPCOUNT=value
+        
+    def _GetSweepCount_fired(self):
+        self.SWEEPCOUNT=self.sp.GetSweepCount()[1]
+
+    def _SetSweepTime_fired(self):
+        err,value=self.sp.SetSweepTime(self.newSWEEPTIME)
+        self.SWEEPTIME=value
+        
+    def _GetSweepTime_fired(self):
+        self.SWEEPTIME=self.sp.GetSweepTime()[1]
+        
+    def _SetTriggerMode_fired(self):
+        err,value=self.sp.SetTriggerMode(self.newTRIGGERMODE)
+        self.TRIGGERMODE=value
+        
+    def _GetTriggerMode_fired(self):
+        self.TRIGGERMODE=self.sp.GetTriggerMode()[1]
+        
+    def _SetTriggerDelay_fired(self):
+        err,value=self.sp.SetTriggerDelay(self.newTRIGGERDELAY)
+        self.TRIGGERDELAY=value
+        
+    def _GetTriggerDelay_fired(self):
+        self.TRIGGERDELAY=self.sp.GetTriggerDelay()[1]
+        
+          
+
+    items=""
+    for i in mainTab:
+        items="%s tuiapi.Group("%(items)
+        items="%s tuiapi.Item('%s',label='Wert',style='readonly'),"%(items, i.upper())
+        items="%s tuiapi.Item('new%s',label='Neu'),"%(items,i.upper())
+        items="%s tuiapi.Item('Set%s',show_label=False),"%(items,i)
+        items="%s tuiapi.Item('Get%s',show_label=False),"%(items,i)
+        items="%s orientation='horizontal'),"%(items)
+    items[:-1]
+
+            
+    MAIN_grp=tuiapi.Group(eval(items),                        
+                          label='Main')
+    
+    INI_grp=tuiapi.Group(tuiapi.Item('INI', style='custom',springy=True,width=500,height=200,show_label=False),
+                         tuiapi.Item('Init', show_label=False),
+                         label='Ini')
+    
+    SPEC_grp=tuiapi.Group(tuiapi.Item('SPECTRUM', style='custom',springy=True,width=500,height=200,show_label=False),
+                         tuiapi.Item('GetSpectrum', show_label=False),
+                         #Item('plot',editor=ComponentEditor(), show_label=False),
+                         label='Spectrum')
+
+    
+    traits_view=tuiapi.View(tuiapi.Group(INI_grp, MAIN_grp,SPEC_grp,layout='tabbed'),
+                            title="Spectrumanalyer", buttons=[tuim.CancelButton])
+    
+    

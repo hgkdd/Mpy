@@ -14,11 +14,31 @@ from mpy.tools.Configuration import fstrcmp
 # Diese greift auf die Unterklasse SPECTRUMANALYZER (spectrumanalyzer.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
 class SPECTRUMANALYZER(SPECTRUMAN):
+
+    #TRACEMODES=('WRITe', 'VIEW', 'AVERage', 'MAXHold', 'MINHold', 'RMS')
+    #DETECTORS=('APEak', 'NEGative', 'POSitive', 'SAMPle', 'RMS', 'AVERage', 'QPEak')
+    #TRIGGERMODES=('TIME', 'IMMediate', 'EXTern', 'IFPower', 'VIDeo')
     
-    
-    TRACEMODES=('WRITe', 'VIEW', 'AVERage', 'MAXHold', 'MINHold', 'RMS')
-    DETECTORS=('APEak', 'NEGative', 'POSitive', 'SAMPle', 'RMS', 'AVERage', 'QPEak')
-    TRIGGERMODES=('TIME', 'IMMediate', 'EXTern', 'IFPower', 'VIDeo')
+    #Map: {Allgemein gültige Bezeichnung:Bezeichnung Gerät} 
+    MapTRACEMODES={'WRITE':         'WRITe',
+                   'VIEW':          'VIEW',
+                   'AVERAGE':       'AVERage',
+                   'BLANK':         None,       #RMS??
+                   'MAXHOLD':       'MAXHold',
+                   'MINHOLD':       'MINHold'   
+                   }
+    MapDETECTORS={'AUTOSELECT':     'auto',     #Auto richtig?
+                  'AUTOPEAK':       'APEak',
+                  'MAXPEAK':        'POSitive',
+                  'MINPEAK':        'NEGative',
+                  'SAMPLE':         'SAMPle',
+                  'RMS':            'RMS',
+                  'QUASIPEAK':      'QPEak'
+                  }
+    MapTRIGGERMODES={'FREE':        'IMMediate',
+                    'VIDEO':        'VIDeo',
+                    'EXTERNAL':     'EXTern'
+                    }
     
     
     def __init__(self):
@@ -59,9 +79,13 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                     'SetAtt':  [("'INPut:ATTenuation %s DB'%something", None)],
                     'GetAtt':  [('INPut:ATTenuation?', r'(?P<att>%s)'%self._FP)],
                     'SetAttAuto':  [("INPut:ATTenuation:AUTO ON", None)],
-                    #??? PreAmp Nur on/off Seite: 663 Manual?
-                    #'SetPreAmp':  [("'PREAMP %s DB'%freq", None)],
-                    #'GetPreAmp':  [('PREAMP?', r'PREAMP (?P<preamp>%s) DB'%self._FP)],
+                    #????Hat das ZVL nicht
+                    #'SetAttMode': [("'ATTMode %s'%something", None)],
+                    #'GetAttMode':  [('ATTMode?', r'ATTMODE (?P<attmode>.*)')],
+                    #SetPreAmp wird nicht über die standart SetGetSomething Funktion zur verfügung gestellt,
+                    #sondern es wurde ein spezielle definiert, siehe weiter unten.
+                    'SetPreAmp':  [("'INPut:GAIN:STATe %s'%something", None)],
+                    'GetPreAmp':  [('INPut:GAIN:STATe?', r'(?P<preamp>%s)'%self._FP)],
                     'SetDetectorAuto':   [("'SENSe:DETector%s:Auto On'%self.trace", None)],
                     'SetDetector':  [("'SENSe:DETector%s %s'%(self.trace,something)", None)],
                     'GetDetector':  [("'SENSe:DETector%s?'%self.trace", r'(?P<det>.*)')],
@@ -78,7 +102,6 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                     'GetSpectrum':  [("'TRACe:DATA? TRACE%s'%self.trace", r'(?P<power>([-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?,?)+)')],
                     #Später:
                     #'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
-                    #???? Trigger Befehle richtig?
                     'SetTriggerMode': [("'TRIGger:SOURce %s'%something", None)],
                     'GetTriggerMode':  [('TRIGger:SOURce?', r'(?P<trgmode>.*)')],
                     'SetTriggerDelay':  [("'TRIGger:TIME:RINTerval %s s'%something", None)],
@@ -103,9 +126,6 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                  ('SetVBW',
                       ['auto',        '.+'],
                       ['SetVBWAuto',  'SetVBW']),
-                 #('SetCenterFreq',
-                 #     None,
-                 #     'SetCenterFreq')
                  ('SetAtt',
                       ['auto',        '.+'],
                       ['SetAttAuto',  'SetAtt']),
@@ -123,6 +143,10 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                           functools.partial(self._SetTraceIntern))
         setattr(self, "GetTrace", 
                           functools.partial(self._GetTraceIntern))
+        setattr(self, "SetPreAmp", 
+                          functools.partial(self._SetPreAmpIntern))
+        setattr(self, "GetPreAmp", 
+                          functools.partial(self._GetPreAmpIntern))
 
 
         
@@ -146,6 +170,64 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         self._update(dct)
         return self.error,0
     
+    def _SetPreAmpIntern(self, something):
+        
+        #PreAmp kann bei ZVL nur ON oder OFF sein. Also wird on gesetzt sobald ein Abschwächung
+        #gestezt wird, egal wie groß. 
+        if something == 0:
+            something = "OFF"
+        else:
+            something = "ON"
+        
+        self.error=0
+        dct=self._do_cmds("SetPreAmp", locals())
+        self._update(dct)
+        dct=self._do_cmds("GetPreAmp", locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                self.preamp=0
+            else:
+                self.preamp=float(self.preamp)
+        #Die Abfrage nach PreAmp? ergibt nur eins oder Null
+        #Wenn eins, dann ist PreAmp auf 20dB gesetzt
+        #Wenn Null, dann ist PreAmp Off bzw. auf 0dB gesetzt
+        if self.preamp == 1:
+            self.preamp=20
+        elif self.preamp == 0:
+            self.preamp=0
+        else:
+            self.error=1
+        return self.error, self.preamp
+    
+    def _GetPreAmpIntern(self):
+        self.error=0
+        dct=self._do_cmds("GetPreAmp", locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                self.preamp=0
+            else:
+                self.preamp=float(self.preamp)
+        #Die Abfrage nach PreAmp? ergibt nur eins oder Null
+        #Wenn eins, dann ist PreAmp auf 20dB gesetzt
+        #Wenn Null, dann ist PreAmp Off bzw. auf 0dB gesetzt
+        if self.preamp == 1:
+            self.preamp=20
+        elif self.preamp == 0:
+            self.preamp=0
+        else:
+            self.error=1
+        return self.error, self.preamp
+    
+    def _SetTraceIntern(self,trace):
+        self.trace=trace
+        return 0, trace
+    
+    def _GetTraceIntern(self):
+        return 0,self.trace
+    
+    
 
     # _SetGetSomething ist eine Funktion die nacheinander einen Visa-Write Befehl ausführt und danach
     # einen Vias-Query Befehl.
@@ -164,7 +246,22 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     # VISA Parameter verwendet.
     def _SetGetSomething(self, something, setter, getter, type_, possibilities, what):
         
-        
+        ###Maping
+        if possibilities:
+            something=fstrcmp(something, getattr(self,possibilities), n=1,cutoff=0,ignorecase=True)[0]
+            
+            #Ist Map Vorhanden?
+            if getattr(self,"Map%s"%possibilities):
+                #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+                #sonst setzen von something auf Wert in Map           
+                if getattr(self,"Map%s"%possibilities)[something] == None:
+                    self.error=1
+                    return self.error,0
+                else:
+                    something=getattr(self,"Map%s"%possibilities)[something]
+            
+
+        ###Complex abarbeiten
         # Das dict complex wird zeilenweiße ausgelesen und die einzelnen Spalten in die Variablen
         # k, vals und action geschrieben
         for k, vals, actions in self._cmds['Complex']:
@@ -207,8 +304,6 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                     pass
         
         self.error=0
-        if possibilities:
-            something=fstrcmp(something, possibilities, n=1,cutoff=0,ignorecase=True)[0]
         dct=self._do_cmds(setter, locals())
         self._update(dct)
         dct=self._do_cmds(getter, locals())
@@ -223,17 +318,12 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         
         
         
-    def _SetTraceIntern(self,trace):
-        self.trace=trace
-        return 0, trace
-    
-    def _GetTraceIntern(self):
-        return 0,self.trace
+
+
+
+
         
-        
-        
-        
-        
+
     def Init(self, ini=None, channel=None):
         
         if channel is None:
@@ -257,42 +347,42 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         # Optionen inhaltet. 
         #
         self._cmds['Preset']=[]
-        presets=[('attenuation',
+        presets=[('trace',
                       None,
-                      ("'INPut:ATTenuation %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
+                      'SetTrace'),
+                 ('attenuation',
+                      None,
+                      'SetAtt'),
                  ('reflevel',
                       None,
-                      ("'DISP:WIND:TRAC:Y:RLEV %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
+                      'SetRefLevel'),
                  ('rbw',
                       None,
-                      ("'BANDwidth:RESolution %s HZ'%v", None)),
+                      'SetRBW'),
                  ('vbw',
                       None,
-                      ("'BANDwidth:VIDeo %s HZ'%v", None)),
+                      'SetVBW'),
                  ('span',
                       None,
-                      ("'FREQuency:SPAN %s HZ'%v", None)),
-                 ('trace',
-                      None,
-                      ("'self.SetTrace(%s)'%v",None)),
+                      'SetSpan'),
                  ('tracemode',
                       None,
-                      ("'DISPlay:WINDow:TRACe%s:MODE %s'%(self.trace,v)", None)),
+                      'SetTraceMode'),
                  ('detector',
                       None,
-                      ("'SENSe:DETector%s %s'%(self.trace,v)", None)),
+                      'SetDetector'),
                  ('sweepcount',
                       None,
-                      ("'SENSe:SWEep:COUNt %s'%v", None)),
+                      'SetSweepCount'),
                  ('triggermode',
                       None,
-                      ("'TRIGger:SOURce %s'%v", None)),
-                 ('attmode',
-                      [('0','auto'), ('1','manual')],
-                      [('INPut:ATTenuation::AUTO ON', None),('INPut:ATTenuation::AUTO OFF', None)]),
+                      'SetTriggerMode'),
+                 #('attmode', ###??????
+                 #     [('0','auto'), ('1','manual')],
+                 #     [('INPut:ATTenuation::AUTO ON', None),('INPut:ATTenuation::AUTO OFF', None)]),
                  ('sweeptime',
                       None,
-                      ("'SENSe:SWEep:TIME %s s'%v", None))]
+                      'SetSweepTime')]
         
         
         #self.SetTrace(self.conf[sec]['trace'])
@@ -304,6 +394,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         # Die Klassenvariable '.conf' (dictionary) wurde in der (Unter-)Klasse DRIVER definert, sie enthält die Daten der ini-Datei.
         # In 'sec' ist gespeicher welcher Channel bearbeitet wird, somit erhält man über '.conf[sec]' zugriff auf die
         # Einstellungen für den aktuellen channel.
+        #
         # -> If / else Anweisung zur Behandlung von Initialisierungsschritten ohne Optionen (if) und mit Optionen (else).
         # -> Wurden in 'presets' Optionen angegeben, dann werden diese einzeln durch eine for-Schleife abgearbeitet.
         #    Durch eine if-Anweiseung wird überprüft, welcher der möglichen Optionen in der ini-Datei angegeben wurden.
@@ -313,14 +404,23 @@ class SPECTRUMANALYZER(SPECTRUMAN):
             #print k, vals, actions
             try:
                 v=self.conf[sec][k] 
-                if (vals is None):  
-                    self._cmds['Preset'].append((eval(actions[0]),actions[1]))
+        
+                if (vals is None):
+                    try:
+                        err,ret=getattr(self,actions)(v)
+                        if err != 0:
+                            self.error=err
+                            return self.error
+                    except (AttributeError):
+                        self._cmds['Preset'].append((eval(actions[0]),actions[1])) 
                 else:
                     for idx,vi in enumerate(vals):
                         if v.lower() in vi:
                             self._cmds['Preset'].append(actions[idx])
             except KeyError:
                 pass
+            
+            
         #
         # Initialisierung des Signalgenerators über die Methode '._do_cmds' der Klasse DRIVER (driver.py)
         #
@@ -358,14 +458,13 @@ def main():
                         fstop: 6e9
                         fstep: 1
                         gpib: 20
-                        virtual: 0
+                        virtual: 1
 
                         [Channel_1]
-                        #??? braucht es die unit?
                         unit: 'dBm'
-                        attenuation: 10
+                        attenuation: auto
                         reflevel: -20
-                        rbw: 3e6
+                        rbw: auto
                         vbw: 10e6
                         span: 6e9
                         trace: 1
@@ -376,7 +475,7 @@ def main():
                         attmode: 'auto'
                         sweeptime: 10e-3
                         """)
-                        
+                        # rbw: 3e6
         ini=StringIO.StringIO(ini)
         
     # #
@@ -384,110 +483,55 @@ def main():
     # # falls die Bedingung 'false' ist. Zuvor wird eine Testfrequenz und ein Level festgelegt, ein Objekt der Klasse SMB100A erzeugt und der
     # # Signalgenerator initialisiert.
     # #
+    #from mpy.device.spectrumanalyzer_ui import UI as UI
     sp=SPECTRUMANALYZER()
     try:
-        from mpy.device.signalgenerator_ui import UI as UI
+        from mpy.device.spectrumanalyzer_ui import UI as UI
     except ImportError:
+        print "test"
         pass
     else:
         ui=UI(sp,ini=ini)
         ui.configure_traits()
         sys.exit(0)	
     
-    centerFreq=200e6
-    span=6e9
-    startFreq=6e3
-    stopFreq=6e9
-    rbw="auto" #200e3
-    vbw="auto" #10e3
-    refLevel=-20
-    att="auto" #20
-    preAmp=0
-    #'APEak', 'NEGative', 'POSitive', 'SAMPle', 'RMS', 'AVERage', 'QPEak'
-    detector="auto" #'AVER'
-    #'WRITe', 'VIEW', 'AVERage', 'MAXHold', 'MINHold', 'RMS'
-    traceMode='WRIT'
-    trace=1
-    sweepCount=100
-    sweepTime="auto"
-    #'IMMediate', 'EXTern', 'IFPower', 'VIDeo', 'TIME'
-    triggerMode='IMMediate'
-    triggerDelay=20
-    
-    
     err=sp.Init(ini)
     assert err==0, 'Init() fails with error %d'%(err)
     
-    err,freq=sp.SetCenterFreq(centerFreq)
-    assert err==0, 'SetCenterFreq() fails with error %d'%(err)
-    assert freq==centerFreq, 'SetCenterFreq() returns freq=%e instead of %e'%(freq, centerFreq)
-    
-    err,freq=sp.SetSpan(span)
-    assert err==0, 'SetSpan() fails with error %d'%(err)
-    assert freq==span, 'SetSpan() returns freq=%e instead of %e'%(freq, span)
-    
-    err,freq=sp.SetStartFreq(startFreq)
-    assert err==0, 'SetStartFreq() fails with error %d'%(err)
-    assert freq==startFreq, 'SetStartFreq() returns freq=%e instead of %e'%(freq, startFreq)
-    
-    err,freq=sp.SetStopFreq(stopFreq)
-    assert err==0, 'SetStopFreq() fails with error %d'%(err)
-    assert freq==stopFreq, 'SetStopFreq() returns freq=%e instead of %e'%(freq, stopFreq)
-    
-    err,freq=sp.SetRBW(rbw)
-    rbw=str(rbw)
-    assert err==0, 'SetRBW() fails with error %d'%(err)
-    #assert freq==rbw, 'SetRBW() returns freq=%e instead of %s'%(freq, rbw) #Da "auto" gesetzt wird, aber eine Zahl zurückgegeben wird macht Test Probleme
-    
-    err,freq=sp.SetVBW(vbw)
-    vbw=str(vbw)
-    assert err==0, 'SetVBW() fails with error %d'%(err)
-    #assert freq==vbw, 'SetVBW() returns freq=%e instead of %s'%(freq, vbw) #Da "auto" gesetzt wird, aber eine Zahl zurückgegeben wird macht Test Probleme
-    
-    err,freq=sp.SetRefLevel(refLevel)
-    assert err==0, 'SetRefLevel() fails with error %d'%(err)
-    assert freq==refLevel, 'SetRefLevel() returns freq=%e instead of %e'%(freq, refLevel)
-    
-    err,freq=sp.SetAtt(att)
-    att=str(att)
-    assert err==0, 'SetAtt() fails with error %d'%(err)
-    #assert freq==att, 'SetAtt() returns freq=%e instead of %s'%(freq, att)  #Da "auto" gesetzt wird, aber eine Zahl zurückgegeben wird macht Test Probleme
-    
-    #err,freq=sp.SetPreAmp(preAmp)
-    #assert err==0, 'SetPreAmp() fails with error %d'%(err)
-    #assert freq==preAmp, 'SetPreAmp() returns freq=%e instead of %e'%(freq, preAmp)
-    
-    err,freq=sp.SetDetector(detector)
-    assert err==0, 'SetDetector() fails with error %d'%(err)
-    #assert freq==detector, 'SetDetector() returns freq=%s instead of %s'%(freq, detector) #Da "auto" gesetzt wird, aber der automatisch gewählte Detector zurück gegeben wird, macht der Test Probleme. 
-    
-    err,freq=sp.SetTraceMode(traceMode)
-    assert err==0, 'SetTraceMode() fails with error %d'%(err)
-    assert freq==traceMode, 'SetTraceMode() returns freq=%s instead of %s'%(freq, traceMode)
-    
-    err,freq=sp.SetTrace(trace)
-    assert err==0, 'SetTrace() fails with error %d'%(err)
-    assert freq==trace, 'SetTrace() returns freq=%e instead of %e'%(freq, trace)
-    
-    err,freq=sp.SetSweepCount(sweepCount)
-    assert err==0, 'SetSweepCount() fails with error %d'%(err)
-    assert freq==sweepCount, 'SetSweepCount() returns freq=%e instead of %e'%(freq, sweepCount)
-    
-    err,freq=sp.SetSweepTime(sweepTime)
-    sweepTime=str(sweepTime)
-    assert err==0, 'SetSweepTime() fails with error %d'%(err)
-    #assert freq==sweepTime, 'SetSweepTime() returns freq=%e instead of %s'%(freq, sweepTime) #Da "auto" gesetzt wird, aber eine Zahl zurückgegeben wird macht Test Probleme
-    
-    err,freq=sp.SetTriggerMode(triggerMode)
-    print freq
-    assert err==0, 'SetTriggerMode() fails with error %d'%(err)
-    #assert freq==triggerMode, 'SetTriggerMode() returns freq=%s instead of %s'%(freq, triggerMode)
-    
-    err,freq=sp.SetTriggerDelay(triggerDelay)
-    assert err==0, 'SetTriggerDelay() fails with error %d'%(err)
-    assert freq==triggerDelay, 'SetTriggerDelay() returns freq=%e instead of %s'%(freq, triggerDelay)
+    _assertlist=[("SetTrace", 1, "assert"),
+                 ("SetCenterFreq", 200e6,"assert"),
+                 ("SetSpan", 6e9, "assert"),
+                 ("SetStartFreq", 6e3, "assert"),
+                 ("SetStopFreq", 6e9, "assert"),
+                 ("SetRBW", "auto", "print"), #200e3
+                 ("SetVBW", "auto", "print"), #10e3
+                 ("SetRefLevel", -20, "assert"), 
+                 ("SetAtt", "auto", "print"), #20 
+                 ("SetPreAmp", 0, "assert"),
+                 ("SetDetector", "auto", "print"),  #'AUTOSELECT', 'AUTOPEAK', 'MAXPEAK', 'MINPEAK', 'SAMPLE', 'RMS', 'QUASIPEAK'
+                 ("SetTraceMode", "WRIT", "print"), #'WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD
+                 ("SetSweepCount", 100, "assert"),
+                 ("SetSweepTime", "auto", "print"),
+                 ("SetTriggerMode", "IMM", "print"), #'FREE', 'VIDEO', 'EXTERNAL' 
+                 ("SetTriggerDelay", 0, "print"),
+                 ]
+ 
+    for funk,value,test in _assertlist:
+        err,ret = getattr(sp,funk)(value)
+        assert err==0,  '%s() fails with error %d'%(funk,err)
+        if value != None:
+            if test == "assert":
+                assert ret==value, '%s() returns freq=%s instead of %s'%(funk,ret,value)
+            else:
+                print '%s(): Rückgabewert: %s   Sollwert: %s'%(funk,ret,value)
+        else:
+            print '%s(): Rückgabewert: %s'%(funk,ret)
 
     err,spectrum=sp.GetSpectrum()
+    assert err==0, 'GetSpectrum() fails with error %d'%(err)
+    print spectrum
+    
+    err,spectrum=sp.GetRBW
     assert err==0, 'GetSpectrum() fails with error %d'%(err)
     print spectrum
     

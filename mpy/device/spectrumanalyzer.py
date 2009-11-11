@@ -16,6 +16,7 @@ class SPECTRUMANALYZER(DRIVER):
     
     TRACEMODES=('WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD')
     ATTMODES=('NORMAL', 'LOWNOISE', 'LOWDIST')
+    #DETEC???: ['AUTOSELECT','AUTOPEAK','MAXPEAK','MINPEAK','SAMPLE','RMS', 'AVERAGE','DET_QPEAK']
     DETECTORS=('AUTOSELECT', 'AUTOPEAK', 'MAXPEAK', 'MINPEAK', 'SAMPLE', 'RMS', 'QUASIPEAK')
     TRIGGERMODES=('FREE', 'VIDEO', 'EXTERNAL')
     
@@ -36,9 +37,9 @@ class SPECTRUMANALYZER(DRIVER):
                      'nr_of_channels': int},
                 'channel_%d':
                     {'unit': str,
-                     'attenuation': float,
+                     'attenuation': str,
                      'reflevel': float,
-                     'rbw': float,
+                     'rbw': str,
                      'vbw': float,
                      'span': float,
                      'trace': int,
@@ -69,7 +70,11 @@ class SPECTRUMANALYZER(DRIVER):
                     'GetRefLevel':  [('REFLEVEL?', r'REFLEVEL (?P<reflevel>%s) DBM'%self._FP)],
                     'SetAtt':  [("'ATT %s DB'%something", None)],
                     'GetAtt':  [('ATT?', r'ATT (?P<att>%s) DB'%self._FP)],
+                    #Was hat das Auto zu bedeuten???
                     'SetAttAuto':  [("ATT -1", None)],
+                    #Eingefügt???:
+                    'SetAttMode': [("'ATTMode %s'%something", None)],
+                    'GetAttMode':  [('ATTMode?', r'ATTMODE (?P<attmode>.*)')],
                     'SetPreAmp':  [("'PREAMP %s DB'%something", None)],
                     'GetPreAmp':  [('PREAMP?', r'PREAMP (?P<preamp>%s) DB'%self._FP)],
                     'SetDetector':  [("'DET %s'%something", None)],
@@ -100,14 +105,16 @@ class SPECTRUMANALYZER(DRIVER):
                      ("SetVBW", "GetVBW", "vbw", float, None),
                      ("SetRefLevel", "GetRefLevel", "reflevel", float, None),
                      ("SetAtt", "GetAtt", "att", float, None),
+                     #Eingefügt???
+                     ("SetAttMode", "GetAttMode", "attmode", str, "ATTMODES"),
                      ("SetPreAmp", "GetPreAmp", "preamp", float, None),
-                     ("SetDetector", "GetDetector", "det", str, self.DETECTORS),
-                     ("SetTraceMode", "GetTraceMode", "tmode", str, self.TRACEMODES),
+                     ("SetDetector", "GetDetector", "det", str, "DETECTORS"),
+                     ("SetTraceMode", "GetTraceMode", "tmode", str, "TRACEMODES"),
                      ("SetTrace", "GetTrace", "trace", int, None),
                      ("SetSweepCount", "GetSweepCount", "scount", int, None),
                      ("SetSweepTime", "GetSweepTime", "stime", float, None),
-                     ("SetTriggerMode", "GetTriggerMode", "trgmode", str, self.TRIGGERMODES),
-                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None),]
+                     ("SetTriggerMode", "GetTriggerMode", "trgmode", str, "TRIGGERMODES"),
+                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None)]
 
         # Die folgende for-Schleife arbeitet die _setgetlist ab und erzeugt dabei die Funktionen
         # über die das Gerät angesprochen werden kann.
@@ -152,6 +159,11 @@ class SPECTRUMANALYZER(DRIVER):
                                             type_=type_, 
                                             possibilities=possibilities,
                                             what=what))
+            setattr(self, getter, 
+                          functools.partial(self._GetSomething,
+                                            getter=getter,
+                                            type_=type_,
+                                            what=what))
 
         self._internal_unit='dBm'
 
@@ -173,8 +185,8 @@ class SPECTRUMANALYZER(DRIVER):
     # VISA Parameter verwendet.
     def _SetGetSomething(self, something, setter, getter, type_, possibilities, what):
         self.error=0
-        if possibilities:
-            something=fstrcmp(something, possibilities, n=1,cutoff=0,ignorecase=True)[0]
+        if getattr(self,possibilities):
+            something=fstrcmp(something, getattr(self,possibilities), n=1,cutoff=0,ignorecase=True)[0]
         dct=self._do_cmds(setter, locals())
         self._update(dct)
         dct=self._do_cmds(getter, locals())
@@ -185,6 +197,24 @@ class SPECTRUMANALYZER(DRIVER):
             else:
                 setattr(self, what, type_(getattr(self, what)))
         return self.error, getattr(self, what)
+
+
+
+    def _GetSomething(self, getter, type_, what):
+        self.error=0
+        dct=self._do_cmds(getter, locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                setattr(self, what, eval(what))
+            else:
+                setattr(self, what, type_(getattr(self, what)))
+        return self.error, getattr(self, what)
+
+
+
+
+
 
 
 #     def SetCenterFreq(self, cfreq):
