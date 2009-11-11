@@ -16,8 +16,7 @@ class SPECTRUMANALYZER(DRIVER):
     
     TRACEMODES=('WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD')
     ATTMODES=('NORMAL', 'LOWNOISE', 'LOWDIST')
-    #DETEC???: ['AUTOSELECT','AUTOPEAK','MAXPEAK','MINPEAK','SAMPLE','RMS', 'AVERAGE','DET_QPEAK']
-    DETECTORS=('AUTOSELECT', 'AUTOPEAK', 'MAXPEAK', 'MINPEAK', 'SAMPLE', 'RMS', 'QUASIPEAK')
+    DETECTORS=('AUTOSELECT','AUTOPEAK','MAXPEAK','MINPEAK','SAMPLE','RMS', 'AVERAGE','DET_QPEAK')
     TRIGGERMODES=('FREE', 'VIDEO', 'EXTERNAL')
     
 
@@ -72,7 +71,6 @@ class SPECTRUMANALYZER(DRIVER):
                     'GetAtt':  [('ATT?', r'ATT (?P<att>%s) DB'%self._FP)],
                     #Was hat das Auto zu bedeuten???
                     'SetAttAuto':  [("ATT -1", None)],
-                    #Eingefügt???:
                     'SetAttMode': [("'ATTMode %s'%something", None)],
                     'GetAttMode':  [('ATTMode?', r'ATTMODE (?P<attmode>.*)')],
                     'SetPreAmp':  [("'PREAMP %s DB'%something", None)],
@@ -105,7 +103,6 @@ class SPECTRUMANALYZER(DRIVER):
                      ("SetVBW", "GetVBW", "vbw", float, None),
                      ("SetRefLevel", "GetRefLevel", "reflevel", float, None),
                      ("SetAtt", "GetAtt", "att", float, None),
-                     #Eingefügt???
                      ("SetAttMode", "GetAttMode", "attmode", str, "ATTMODES"),
                      ("SetPreAmp", "GetPreAmp", "preamp", float, None),
                      ("SetDetector", "GetDetector", "det", str, "DETECTORS"),

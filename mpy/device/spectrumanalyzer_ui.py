@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 
+#Es wird benötigt enthought.chaco und enthought.enable
+
 import StringIO
-#from mpy.device.signalgenerator import SIGNALGENERATOR
 import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
 import enthought.traits.ui.menu as tuim
-#from enthought.chaco.api import Plot, ArrayPlotData
-#from enthought.enable.component_editor import ComponentEditor
+from enthought.chaco.api import Plot, ArrayPlotData
+from enthought.enable.component_editor import ComponentEditor
 
 from scuq.quantities import Quantity
 from mpy.tools.util import format_block
 from mpy.device.device import CONVERT
 
 import functools
-from numpy import array, linspace
+from numpy import array, linspace, add
 
 conv=CONVERT()
 
@@ -77,11 +78,11 @@ class UI(tapi.HasTraits):
     SetRBW=tapi.Button("SetRBW")
     GetRBW=tapi.Button("GetRBW")
     RBW=tapi.Float()
-    newRBW=tapi.Float()
+    newRBW=tapi.Str()
     SetVBW=tapi.Button("SetVBW")
     GetVBW=tapi.Button("GetVBW")
     VBW=tapi.Float()
-    newVBW=tapi.Float()
+    newVBW=tapi.Str()
     SetRefLevel=tapi.Button("SetRefLevel")
     GetRefLevel=tapi.Button("GetRefLevel") 
     REFLEVEL=tapi.Float()
@@ -89,8 +90,7 @@ class UI(tapi.HasTraits):
     SetAtt=tapi.Button("SetAtt")
     GetAtt=tapi.Button("GetAtt")
     ATT=tapi.Float()
-    newATT=tapi.Float()
-    #Eingefügt???
+    newATT=tapi.Str()
     SetAttMode=tapi.Button("SetAttMode")
     GetAttMode=tapi.Button("GetAttMode")
     ATTMODE=tapi.Str()
@@ -118,7 +118,7 @@ class UI(tapi.HasTraits):
     SetSweepTime=tapi.Button("SetSweepTime")
     GetSweepTime=tapi.Button("GetSweepTime")
     SWEEPTIME=tapi.Float()
-    newSWEEPTIME=tapi.Float()
+    newSWEEPTIME=tapi.Str()
     SetTriggerMode=tapi.Button("SetTriggerMode")
     GetTriggerMode=tapi.Button("GetTriggerMode")
     TRIGGERMODE=tapi.Str()
@@ -135,6 +135,8 @@ class UI(tapi.HasTraits):
     GetSpectrum=tapi.Button("GetSpectrum")
     SPECTRUM=tapi.Str()
     power=()
+    x=array([1,2,3,4])
+    
     
     def __init__(self, instance, ini=None):
         self.sp=instance
@@ -143,11 +145,18 @@ class UI(tapi.HasTraits):
         self.ini=ini
         self.INI=ini.read()
         
+        x = array([])
+        y = array([])
+        self.plotdata = ArrayPlotData(x=x, y=y)
+        plot = Plot(self.plotdata)
+        plot.plot(("x", "y"), type="line", color="blue")
+        plot.title = "Spectrum"
+        plot.index_axis.title='Frequenz in Hz'
+        plot.value_axis.title='Amplitude in dBm'
+        self.plot = plot
+        
 #        for item in self.mainTab:
             #getattr(self,"_Get%s_fired"%item)()
-            
-    
- 
 
 
 
@@ -156,16 +165,14 @@ class UI(tapi.HasTraits):
         #self.power=self.sp.GetSpectrum()[1]
                      #StartFreq,#StopFreq
         #x = linspace(0,20,len(self.power))
-        #x = array([1,2,3,4])
-        #y = array([1,2,3,4])
-        #plotdata = ArrayPlotData(x=x, y=y)
-        #plot = Plot(plotdata)
-        #plot.plot(("x", "y"), type="line", color="blue")
-        #plot.title = "Spectrum"
-        #self.plot = plot
-        self.SPECTRUM=''
-        for i in self.power:
-            self.SPECTRUM='%s %s,'%(self.SPECTRUM,str(i))
+        x=self.x
+        y=add(x,1)
+        self.plotdata.set_data('x', x)
+        self.plotdata.set_data('y', y)
+        self.plot.request_redraw()
+        #self.SPECTRUM=str(self.power)
+        self.SPECTRUM=str(x)
+        self.x=y
                                
     def _Init_fired(self):
         ini=StringIO.StringIO(self.INI)
@@ -310,13 +317,17 @@ class UI(tapi.HasTraits):
                          tuiapi.Item('Init', show_label=False),
                          label='Ini')
     
+    plot = tapi.Instance(Plot)
     SPEC_grp=tuiapi.Group(tuiapi.Item('SPECTRUM', style='custom',springy=True,width=500,height=200,show_label=False),
                          tuiapi.Item('GetSpectrum', show_label=False),
-                         #Item('plot',editor=ComponentEditor(), show_label=False),
                          label='Spectrum')
+    
+    PLOT_grp=tuiapi.Group(tuiapi.Item('plot',editor=ComponentEditor(), show_label=False),
+                         tuiapi.Item('GetSpectrum', show_label=False),
+                         label='Plot')
 
     
-    traits_view=tuiapi.View(tuiapi.Group(INI_grp, MAIN_grp,SPEC_grp,layout='tabbed'),
+    traits_view=tuiapi.View(tuiapi.Group(INI_grp, MAIN_grp,SPEC_grp,PLOT_grp,layout='tabbed'),
                             title="Spectrumanalyer", buttons=[tuim.CancelButton])
     
     

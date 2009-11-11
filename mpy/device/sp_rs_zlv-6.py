@@ -23,17 +23,19 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     MapTRACEMODES={'WRITE':         'WRITe',
                    'VIEW':          'VIEW',
                    'AVERAGE':       'AVERage',
-                   'BLANK':         None,       #RMS??
+                   'BLANK':         'OFF',       #Off umsetzen!!!!!  #RMS??
                    'MAXHOLD':       'MAXHold',
-                   'MINHOLD':       'MINHold'   
+                   'MINHOLD':       'MINHold'
                    }
-    MapDETECTORS={'AUTOSELECT':     'auto',     #Auto richtig?
+    
+    MapDETECTORS={'AUTOSELECT':     'auto',     #auto umsetzen!!!! #Auto richtig?
                   'AUTOPEAK':       'APEak',
                   'MAXPEAK':        'POSitive',
                   'MINPEAK':        'NEGative',
                   'SAMPLE':         'SAMPle',
                   'RMS':            'RMS',
-                  'QUASIPEAK':      'QPEak'
+                  'AVERAGE':        'AVERage',
+                  'DET_QPEAK':      'QPEak'
                   }
     MapTRIGGERMODES={'FREE':        'IMMediate',
                     'VIDEO':        'VIDeo',
@@ -130,7 +132,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                       ['auto',        '.+'],
                       ['SetAttAuto',  'SetAtt']),
                  ('SetDetector',
-                      ['auto',        '.+'],
+                      [('auto','AUTOSELECT'),        '.+'],
                       ['SetDetectorAuto',  'SetDetector']),
                  ('SetSweepTime',
                       ['auto',        '.+'],
