@@ -81,7 +81,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                     'SetAtt':  [("'INPut:ATTenuation %s DB'%something", None)],
                     'GetAtt':  [('INPut:ATTenuation?', r'(?P<att>%s)'%self._FP)],
                     'SetAttAuto':  [("INPut:ATTenuation:AUTO ON", None)],
-                    #????Hat das ZVL nicht
+                    #SetAttMode wird über dei standart SetGetSomething Funktion realisiert, siehe weiter unten
                     #'SetAttMode': [("'ATTMode %s'%something", None)],
                     #'GetAttMode':  [('ATTMode?', r'ATTMODE (?P<attmode>.*)')],
                     #SetPreAmp wird nicht über die standart SetGetSomething Funktion zur verfügung gestellt,
@@ -92,8 +92,11 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                     'SetDetector':  [("'SENSe:DETector%s %s'%(self.trace,something)", None)],
                     'GetDetector':  [("'SENSe:DETector%s?'%self.trace", r'(?P<det>.*)')],
                     'SetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE %s'%(self.trace,something)", None)],
+                    'SetTraceModeBlank':  [("'DISPlay:WINDow:TRACe%s:STATe OFF'%(self.trace)", None)],
+                    #GetTraceMode wird über dei standart SetGetSomething Funktion realisiert, siehe weiter unten       
                     'GetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE?'%self.trace", r'(?P<tmode>.*)')],
-                    #SetTrace wird über eine Funktion realisiert, siehe weiter unten
+                    'GetTraceModeBlank':  [("'DISPlay:WINDow:TRACe%s:STATe?'%(self.trace)", r'(?P<tmodeblank>\d+)')],
+                    #SetTrace wird über dei standart SetGetSomething Funktion realisiert, siehe weiter unten
                     #'SetTrace':  [("'TRACE %d'%trace", None)],
                     #'GetTrace':  [('TRACE?', r'TRACE (?P<trace>\d+)')],
                     'SetSweepCount':  [("'SENSe:SWEep:COUNt %d'%something", None)],
@@ -137,10 +140,17 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                  ('SetSweepTime',
                       ['auto',        '.+'],
                       ['SetSweepTimeAuto',  'SetSweepTime']),
+                 ('SetTraceMode',
+                      [('off','BLANK'),        '.+'],
+                      ['SetTraceModeBlank',  'SetTraceMode'])
                  ]
         
         self._cmds['Complex']=complex
           
+        setattr(self, "SetAttMode", 
+                          functools.partial(self._SetAttModeIntern))
+        setattr(self, "GetAttMode", 
+                          functools.partial(self._GetAttModeIntern))
         setattr(self, "SetTrace", 
                           functools.partial(self._SetTraceIntern))
         setattr(self, "GetTrace", 
@@ -149,6 +159,13 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                           functools.partial(self._SetPreAmpIntern))
         setattr(self, "GetPreAmp", 
                           functools.partial(self._GetPreAmpIntern))
+        
+        self.GetTraceModeSuper=self.GetTraceMode
+        setattr(self, "GetTraceMode", 
+                          functools.partial(self._GetTraceModeIntern))
+        self.SetTraceModeSuper=self.SetTraceMode
+        setattr(self, "SetTraceMode", 
+                          functools.partial(self._SetTraceModeIntern))
 
 
         
@@ -163,7 +180,11 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         else:
              self.power=float(self.power)
         
-        self.power=re.split(',', self.power) 
+        self.power=re.split(',', self.power)
+        pow=[]
+        for i in self.power:
+            pow.append(float(i))
+        self.power = tuple(pow)
         return self.error, self.power
     
     def SetSANMode(self):
@@ -171,6 +192,23 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         dct=self._do_cmds('SetSANMode', locals())
         self._update(dct)
         return self.error,0
+    
+    def _GetTraceModeIntern(self):
+        dct=self._do_cmds('GetTraceModeBlank', locals())
+        self._update(dct)
+        if int(self.tmodeblank) == 0:
+            return self.error,'BLANK'
+        else:
+            return self.GetTraceModeSuper()
+    
+    def _SetTraceModeIntern(self,something):
+        err,ret=self.SetTraceModeSuper(something)
+        dct=self._do_cmds('GetTraceModeBlank', locals())
+        self._update(dct)
+        if int(self.tmodeblank) == 0:
+            return err,'BLANK'
+        else:
+            return err,ret
     
     def _SetPreAmpIntern(self, something):
         
@@ -228,6 +266,12 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     
     def _GetTraceIntern(self):
         return 0,self.trace
+    
+    def _SetAttModeIntern(self,trace):
+        return 0, 'LOWNOISE'
+    
+    def _GetAttModeIntern(self):
+        return 0, 'LOWNOISE'
     
     
 
@@ -460,7 +504,7 @@ def main():
                         fstop: 6e9
                         fstep: 1
                         gpib: 20
-                        virtual: 1
+                        virtual: 0
 
                         [Channel_1]
                         unit: 'dBm'
@@ -474,7 +518,7 @@ def main():
                         detector: 'APEak'
                         sweepcount: 0
                         triggermode: 'IMMediate'
-                        attmode: 'auto'
+                        attmode: auto
                         sweeptime: 10e-3
                         """)
                         # rbw: 3e6

@@ -135,7 +135,6 @@ class UI(tapi.HasTraits):
     GetSpectrum=tapi.Button("GetSpectrum")
     SPECTRUM=tapi.Str()
     power=()
-    x=array([1,2,3,4])
     
     
     def __init__(self, instance, ini=None):
@@ -154,29 +153,25 @@ class UI(tapi.HasTraits):
         plot.index_axis.title='Frequenz in Hz'
         plot.value_axis.title='Amplitude in dBm'
         self.plot = plot
-        
-#        for item in self.mainTab:
-            #getattr(self,"_Get%s_fired"%item)()
+
 
 
 
     def _GetSpectrum_fired(self):
-        self.power=(1,2,3,4,5,6)
-        #self.power=self.sp.GetSpectrum()[1]
-                     #StartFreq,#StopFreq
-        #x = linspace(0,20,len(self.power))
-        x=self.x
-        y=add(x,1)
+        self.power=self.sp.GetSpectrum()[1]
+                                   
+        x = linspace(self.sp.GetStartFreq()[1],self.sp.GetStopFreq()[1],len(self.power))
+        y = array(self.power)
         self.plotdata.set_data('x', x)
         self.plotdata.set_data('y', y)
         self.plot.request_redraw()
-        #self.SPECTRUM=str(self.power)
-        self.SPECTRUM=str(x)
-        self.x=y
+        self.SPECTRUM=str(self.power)
                                
     def _Init_fired(self):
         ini=StringIO.StringIO(self.INI)
-        self.sp.Init(ini)
+        self.sp.Init(ini)      
+        for item in self.mainTab:
+            getattr(self,"_Get%s_fired"%item)()
     
     def _SetCenterFreq_fired(self):
         err,value=self.sp.SetCenterFreq(self.newCENTERFREQ)
@@ -302,8 +297,8 @@ class UI(tapi.HasTraits):
     items=""
     for i in mainTab:
         items="%s tuiapi.Group("%(items)
-        items="%s tuiapi.Item('%s',label='Wert',style='readonly'),"%(items, i.upper())
-        items="%s tuiapi.Item('new%s',label='Neu'),"%(items,i.upper())
+        items="%s tuiapi.Item('%s',label='Wert',style='readonly',width=70),"%(items, i.upper())
+        items="%s tuiapi.Item('new%s',label='Neu',width=60),"%(items,i.upper())
         items="%s tuiapi.Item('Set%s',show_label=False),"%(items,i)
         items="%s tuiapi.Item('Get%s',show_label=False),"%(items,i)
         items="%s orientation='horizontal'),"%(items)
