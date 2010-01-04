@@ -19,7 +19,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     #DETECTORS=('APEak', 'NEGative', 'POSitive', 'SAMPle', 'RMS', 'AVERage', 'QPEak')
     #TRIGGERMODES=('TIME', 'IMMediate', 'EXTern', 'IFPower', 'VIDeo')
     
-    #Map: {Allgemein gültige Bezeichnung:Bezeichnung Gerät} 
+    #Map: {Allgemein gültige Bezeichnung : Bezeichnung Gerät} 
     MapTRACEMODES={'WRITE':         'WRITe',
                    'VIEW':          'VIEW',
                    'AVERAGE':       'AVERage',
@@ -27,6 +27,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                    'MAXHOLD':       'MAXHold',
                    'MINHOLD':       'MINHold'
                    }
+    
     
     MapDETECTORS={'AUTOSELECT':     'auto',     #auto umsetzen!!!! #Auto richtig?
                   'AUTOPEAK':       'APEak',
@@ -37,11 +38,37 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                   'AVERAGE':        'AVERage',
                   'DET_QPEAK':      'QPEak'
                   }
+    
+    
     MapTRIGGERMODES={'FREE':        'IMMediate',
-                    'VIDEO':        'VIDeo',
-                    'EXTERNAL':     'EXTern'
+                    'VIDEO':        'VID',
+                    'EXTERNAL':     'EXT'
                     }
     
+
+    #Back Map: {RückgabeWert von Gerät : Allgemein gültige Bezeichnung} 
+    MapTRACEMODES_Back={'WRIT'  :   'WRITE',
+                        'VIEW'  :   'VIEW',
+                        'AVER'  :   'AVERAGE',
+                        'OFF'   :   'BLANK',
+                        'MAXH'  :   'MAXHOLD',
+                        'MINH'  :   'MINHOLD'    
+                        }
+    
+    MapDETECTORS_Back={'auto'   :   'AUTOSELECT',     #auto umsetzen!!!! #Auto richtig?
+                       'APE'    :   'AUTOPEAK',
+                       'POS'    :   'MAXPEAK',
+                       'NEG'    :   'MINPEAK',
+                       'SAMP'   :   'SAMPLE',
+                       'RMS'    :   'RMS',
+                       'AVER'   :   'AVERAGE',
+                       'QPE'    :   'DET_QPEAK'
+                       }
+    
+    MapTRIGGERMODES_Back={'IMM' :   'FREE',
+                          'VID' :   'VIDEO',
+                          'EXT' :   'EXTERNAL'
+                          }
     
     def __init__(self):
         SPECTRUMAN.__init__(self)
@@ -169,7 +196,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
 
 
         
-
+    #Spectrum aus Gerät auslesen
     def GetSpectrum(self):
         self.error=0
         dct=self._do_cmds('GetSpectrum', locals())
@@ -180,19 +207,32 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         else:
              self.power=float(self.power)
         
+        #Spectrum wird als ein String vom Gerät übertragen.
+        #Werte sind durch Komma getrennt, und werden mit Hilfe von
+        #split in eine liste umgewandelt.
         self.power=re.split(',', self.power)
         pow=[]
+        
+        #Die einzelnen Werte der Liste werden hier in float Zahlen
+        #umgewandelt 
         for i in self.power:
             pow.append(float(i))
         self.power = tuple(pow)
+        print (len(self.power))
         return self.error, self.power
     
+    #Diese Funktion schlaten das ZVL in den Spectrum Analyzer Mode
     def SetSANMode(self):
         self.error=0
         dct=self._do_cmds('SetSANMode', locals())
         self._update(dct)
         return self.error,0
     
+    #Blank, also Trace aus, wird nicht druch den Standard TraceMode Befehl
+    #realisiert, deshalb muss erst geprüfft werden, ob der Trace aus ist -
+    #GetTraceModeBlank liefert 0 zurück. Ist er aus lieft die Funktion Blank
+    #zurück, anderfalls wird die uhrsprüngliche GetTraceMode Funktion aufgerufen und deren
+    #Ergebniss zurückgegeben. 
     def _GetTraceModeIntern(self):
         dct=self._do_cmds('GetTraceModeBlank', locals())
         self._update(dct)
@@ -201,6 +241,10 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         else:
             return self.GetTraceModeSuper()
     
+    #Blank, also Trace aus, wird nicht druch den Standard TraceMode Befehl
+    #realisiert. Nach der ersten zeile entspricht die Funktion _GetTraceModeIntern(self) siehe dort.
+    #Die erste Zeile ruft den uhrsprünglichen SetTraceMode Befehl auf, ob jetzt der Set-Befehl
+    #für Blank oder der standard Set-Befehl ausgeführt werden soll, wird über die complex-Liste geregelt.
     def _SetTraceModeIntern(self,something):
         err,ret=self.SetTraceModeSuper(something)
         dct=self._do_cmds('GetTraceModeBlank', locals())
@@ -260,6 +304,10 @@ class SPECTRUMANALYZER(SPECTRUMAN):
             self.error=1
         return self.error, self.preamp
     
+    
+    #Gerät hat keine Funktion um auszwählen, welcher Trace bearbeitet werden soll.
+    #Statt dessen wird die entsprechende Trace Nummer mit den Befehlen übergeben,
+    #um das zu ermöglichen die Trace Nummer in einer Variable gespeichert.
     def _SetTraceIntern(self,trace):
         self.trace=trace
         return 0, trace
@@ -267,6 +315,9 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     def _GetTraceIntern(self):
         return 0,self.trace
     
+    
+    #Att Modes gibt es bei diesem Gerät nicht, deshalb wird immer der standard gestzt,
+    #bzw. zurückgegeben.
     def _SetAttModeIntern(self,trace):
         return 0, 'LOWNOISE'
     
@@ -305,7 +356,6 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                     return self.error,0
                 else:
                     something=getattr(self,"Map%s"%possibilities)[something]
-            
 
         ###Complex abarbeiten
         # Das dict complex wird zeilenweiße ausgelesen und die einzelnen Spalten in die Variablen
@@ -359,10 +409,42 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                 setattr(self, what, eval(what))
             else:
                 setattr(self, what, type_(getattr(self, what)))
+        
+        #Zürück Mapen
+            if possibilities: 
+                if getattr(self,"Map%s_Back"%possibilities):
+                    #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+                    #sonst setzen von something auf Wert in Map           
+                    if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
+                        self.error=1
+                        return self.error,0
+                    else:
+                        setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
         return self.error, getattr(self, what)
         
         
-        
+    def _GetSomething(self, getter, type_, what, possibilities):
+        self.error=0
+        dct=self._do_cmds(getter, locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                setattr(self, what, eval(what))
+            else:
+                setattr(self, what, type_(getattr(self, what)))
+                
+      #Zürück Mapen
+        if possibilities: 
+            if getattr(self,"Map%s_Back"%possibilities):
+                #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+                #sonst setzen von something auf Wert in Map           
+                if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
+                    self.error=1
+                    return self.error,0
+                else:
+                    setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
+          
+        return self.error, getattr(self, what)
         
 
 
@@ -383,6 +465,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         
         #Schaltet das ZVL in in den SAN - Spectrum analyzer Mode
         self.SetSANMode()
+        
         #   
         # Die Befehlsliste (dictionary) 'self._cmds'  wird mit einem Eintag namens 'Preset' erweitert und bekommt als Wert zunächst eine leere Liste zugewiesen.
         # Als Wert wurde eine Liste gewählt, da zur Initilisierung mehrere Befehle notwendig sein können. Jedem Listeneintrag bzw.
@@ -442,6 +525,9 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         # Einstellungen für den aktuellen channel.
         #
         # -> If / else Anweisung zur Behandlung von Initialisierungsschritten ohne Optionen (if) und mit Optionen (else).
+        # -> Wurden keine Optionen Angeben so wird versucht ob action dem Namen einer Funktion entspricht,
+        #    ist dies der Fall, wird die entsprechende Funktion ausgeführt.
+        #    Gibt es keine passende Funktion so der Befehl in 'self._cmds['Preset']' übertragen.
         # -> Wurden in 'presets' Optionen angegeben, dann werden diese einzeln durch eine for-Schleife abgearbeitet.
         #    Durch eine if-Anweiseung wird überprüft, welcher der möglichen Optionen in der ini-Datei angegeben wurden.
         #    Wird eine Übereinstimmung gefunden, wird der Befehl in 'self._cmds['Preset']' übertragen.
@@ -554,11 +640,11 @@ def main():
                  ("SetRefLevel", -20, "assert"), 
                  ("SetAtt", "auto", "print"), #20 
                  ("SetPreAmp", 0, "assert"),
-                 ("SetDetector", "auto", "print"),  #'AUTOSELECT', 'AUTOPEAK', 'MAXPEAK', 'MINPEAK', 'SAMPLE', 'RMS', 'QUASIPEAK'
-                 ("SetTraceMode", "WRIT", "print"), #'WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD
+                 ("SetDetector", "AUTOSELECT", "print"),  #'AUTOSELECT', 'AUTOPEAK', 'MAXPEAK', 'MINPEAK', 'SAMPLE', 'RMS', 'QUASIPEAK'
+                 ("SetTraceMode", "WRITE", "print"), #'WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD
                  ("SetSweepCount", 100, "assert"),
                  ("SetSweepTime", "auto", "print"),
-                 ("SetTriggerMode", "IMM", "print"), #'FREE', 'VIDEO', 'EXTERNAL' 
+                 ("SetTriggerMode", "VIDEO", "print"), #'FREE', 'VIDEO', 'EXTERNAL' 
                  ("SetTriggerDelay", 0, "print"),
                  ]
  
@@ -574,10 +660,6 @@ def main():
             print '%s(): Rückgabewert: %s'%(funk,ret)
 
     err,spectrum=sp.GetSpectrum()
-    assert err==0, 'GetSpectrum() fails with error %d'%(err)
-    print spectrum
-    
-    err,spectrum=sp.GetRBW
     assert err==0, 'GetSpectrum() fails with error %d'%(err)
     print spectrum
     

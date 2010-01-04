@@ -160,7 +160,8 @@ class SPECTRUMANALYZER(DRIVER):
                           functools.partial(self._GetSomething,
                                             getter=getter,
                                             type_=type_,
-                                            what=what))
+                                            what=what,
+                                            possibilities=possibilities))
 
         self._internal_unit='dBm'
 
@@ -197,7 +198,7 @@ class SPECTRUMANALYZER(DRIVER):
 
 
 
-    def _GetSomething(self, getter, type_, what):
+    def _GetSomething(self, getter, type_, what, possibilities):
         self.error=0
         dct=self._do_cmds(getter, locals())
         self._update(dct)

@@ -159,7 +159,6 @@ class UI(tapi.HasTraits):
 
     def _GetSpectrum_fired(self):
         self.power=self.sp.GetSpectrum()[1]
-                                   
         x = linspace(self.sp.GetStartFreq()[1],self.sp.GetStopFreq()[1],len(self.power))
         y = array(self.power)
         self.plotdata.set_data('x', x)
