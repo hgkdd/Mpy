@@ -14,14 +14,14 @@ from mpy.tools.util import format_block
 from mpy.device.device import CONVERT
 
 import functools
-from numpy import array, linspace, add
+import numpy as np
 
 conv=CONVERT()
 
 std_ini=format_block("""
                 [DESCRIPTION]
                 description: sp template
-                type:        SIGNALGENERATOR
+                type:        'SPECTRUMANALYZER'
                 vendor:      some company
                 serialnr:    SN12345
                 deviceid:    internal ID
@@ -48,6 +48,7 @@ std_ini=format_block("""
                 triggermode: 'IMMediate'
                 attmode: 'auto'
                 sweeptime: 10e-3
+                sweeppoints: 500
                 """)
 std_ini=StringIO.StringIO(std_ini)
 
@@ -58,6 +59,17 @@ class UI(tapi.HasTraits):
     INI=tapi.Str()    
     int_unit='dBm'
     
+    
+    # Button und Variablen für Traits anlegen
+    #
+    # Variablen Namen für Button:
+    # SetName
+    # GetName
+    # Variablen für Felder:
+    # NAME
+    # newNAME
+    #
+    # Name muss identisch mit dem Namen in der Liste mainTab sein! (siehe unten)
     
     SetCenterFreq=tapi.Button("SetCenterFreq")
     GetCenterFreq=tapi.Button("GetCenterFreq")
@@ -127,25 +139,36 @@ class UI(tapi.HasTraits):
     GetTriggerDelay=tapi.Button("GetTriggerDelay")
     TRIGGERDELAY=tapi.Float()
     newTRIGGERDELAY=tapi.Float()
+    SetSweepPoints=tapi.Button("SetSweepPoints")
+    GetSweepPoints=tapi.Button("GetSweepPoints")
+    SWEEPPOINTS=tapi.Int()
+    newSWEEPPOINTS=tapi.Int()
 
+    
+    # In mainTab stehen alle Name der Buttons und Felder.
+    # Durch mainTab werden alle Buttons und Felder später automatisch angelegt.  
     mainTab=('CenterFreq','Span','StartFreq','StopFreq','RBW','VBW',
           'RefLevel','Att','AttMode','PreAmp','Detector','TraceMode',
-          'Trace','SweepCount','SweepTime','TriggerMode','TriggerDelay')
+          'Trace','SweepCount','SweepTime','TriggerMode','TriggerDelay','SweepPoints')
+    
+    
     
     GetSpectrum=tapi.Button("GetSpectrum")
     SPECTRUM=tapi.Str()
     power=()
     
-    
     def __init__(self, instance, ini=None):
+        # Wenn keine ini übergeben wurde wird die Standard ini verwendet.
         self.sp=instance
         if not ini:
             ini=std_ini
         self.ini=ini
         self.INI=ini.read()
         
-        x = array([])
-        y = array([])
+        
+        # Plot Fenster erstellen.
+        x = np.array([])
+        y = np.array([])
         self.plotdata = ArrayPlotData(x=x, y=y)
         plot = Plot(self.plotdata)
         plot.plot(("x", "y"), type="line", color="blue")
@@ -156,19 +179,30 @@ class UI(tapi.HasTraits):
 
 
 
-
+    
+      
+      
+    #*************************************************************************
+    #
+    # Funktionen die aufgerufen werden wenn ein Button gedrückt wird. 
+    #**************************************************************************
+    
+    # Spectrum holen und in Fester und Plot schreiben.
     def _GetSpectrum_fired(self):
         self.power=self.sp.GetSpectrum()[1]
-        x = linspace(self.sp.GetStartFreq()[1],self.sp.GetStopFreq()[1],len(self.power))
-        y = array(self.power)
+        x = np.array(self.power[0])
+        y = np.array(self.power[1])
         self.plotdata.set_data('x', x)
         self.plotdata.set_data('y', y)
         self.plot.request_redraw()
-        self.SPECTRUM=str(self.power)
-                               
+        
+        self.SPECTRUM=str(self.power[0])+"\n\n\n"+str(self.power[1])
+                            
     def _Init_fired(self):
         ini=StringIO.StringIO(self.INI)
-        self.sp.Init(ini)      
+        self.sp.Init(ini)
+        
+        #Alle Get Funktionen einmal aufrufen und so die Anzeige mit aktuellen Werten belegen.
         for item in self.mainTab:
             getattr(self,"_Get%s_fired"%item)()
     
@@ -291,8 +325,24 @@ class UI(tapi.HasTraits):
     def _GetTriggerDelay_fired(self):
         self.TRIGGERDELAY=self.sp.GetTriggerDelay()[1]
         
+    def _SetSweepPoints_fired(self):
+        err,value=self.sp.SetSweepPoints(self.newSWEEPPOINTS)
+        self.SWEEPPOINTS=value
+        
+    def _GetSweepPoints_fired(self):
+        self.SWEEPPOINTS=self.sp.GetSweepPoints()[1]
           
-
+    
+    
+    
+    #*********************************************************************
+    #
+    #Fenster erstellen:
+    #**********************************************************************
+    
+    
+    #mainTab in einen String schreiben.
+    #Dieser String wird dann druch eval ausgewertet.    
     items=""
     for i in mainTab:
         items="%s tuiapi.Group("%(items)

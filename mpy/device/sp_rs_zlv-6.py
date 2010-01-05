@@ -8,6 +8,8 @@ from scuq import *
 from mpy.device.spectrumanalyzer import SPECTRUMANALYZER as SPECTRUMAN
 from mpy.tools.Configuration import fstrcmp
 
+from numpy import array, linspace, add
+
 #
 #
 # Für den Spectrumanalyzer R&S ZVL wird die Klasse 'zlv-6' definiert.
@@ -70,14 +72,16 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                           'EXT' :   'EXTERNAL'
                           }
     
+    
+    #*************************************************************************
+    #
+    #                    Init
+    #*************************************************************************
     def __init__(self):
         SPECTRUMAN.__init__(self)
         self.trace=1
         self._internal_unit='dBm'
-        
 
-        
-        
         #
         # Im Wörterbuch '._cmds' werden die Befehle zum Steuern des speziellen Spektrumanalysator definiert, z.B. SetFreq() zum Setzen
         # der Frequenz. Diese können in der Dokumentation des entsprechenden Spektrumanalysator nachgeschlagen werden.
@@ -131,6 +135,8 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                     'SetSweepTimeAuto':   [("SENSe:SWEep:TIME:Auto On", None)],
                     'SetSweepTime':  [("'SENSe:SWEep:TIME %s s'%something", None)],
                     'GetSweepTime':  [('SENSe:SWEep:TIME?', r'(?P<stime>%s)'%self._FP)],
+                    'SetSweepPoints':  [("'SWEep:POINts %s '%something", None)],
+                    'GetSweepPoints':  [('SWEep:POINts?', r'(?P<spoints>\d+)')], 
                     'GetSpectrum':  [("'TRACe:DATA? TRACE%s'%self.trace", r'(?P<power>([-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?,?)+)')],
                     #Später:
                     #'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
@@ -149,7 +155,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         # In der zweiten Spalte stehen mögliche Werte die der Funktion übergeben werden können. Die
         # möglichen Werte können wiederum in Listen gespeichert werden. So ist es mölich einem Befehl
         # mehrer Werte zuzuordnen. Achtung!!! Die Werte werden als reguläre Expression interpretiert!!
-        # In der dritten Spalte sind die Befehl vermerkt, welche den möglichen Werten in der vorhergehenden
+        # In der dritten Spalte sind die Befehle vermerkt, welche den möglichen Werten in der vorhergehenden
         # Spalte, zugeordnent werden. 
         complex=[
                  ('SetRBW',
@@ -172,6 +178,10 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                       ['SetTraceModeBlank',  'SetTraceMode'])
                  ]
         
+        
+        # Dieser Teil ist nötig, weil die meisten Funktionen erst durch setattr in der init der
+        # Main Klasse erstellt werden. Um die so erstellten Funktionen wieder zu überlagern,
+        # muss sie durch setattr wieder überschreiben lassen:
         self._cmds['Complex']=complex
           
         setattr(self, "SetAttMode", 
@@ -195,8 +205,9 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                           functools.partial(self._SetTraceModeIntern))
 
 
-        
-    #Spectrum aus Gerät auslesen
+    #************************************   
+    #  Spectrum aus Gerät auslesen
+    #************************************
     def GetSpectrum(self):
         self.error=0
         dct=self._do_cmds('GetSpectrum', locals())
@@ -211,23 +222,26 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         #Werte sind durch Komma getrennt, und werden mit Hilfe von
         #split in eine liste umgewandelt.
         self.power=re.split(',', self.power)
-        pow=[]
-        
+
+        xValues = linspace(self.GetStartFreq()[1],self.GetStopFreq()[1],len(self.power))
         #Die einzelnen Werte der Liste werden hier in float Zahlen
-        #umgewandelt 
+        #umgewandelt   
+        pow=[]
         for i in self.power:
             pow.append(float(i))
-        self.power = tuple(pow)
-        print (len(self.power))
+
+        #xValues als auch y=pow in einem Tuple speichern
+        self.power = (tuple(xValues),tuple(pow))
         return self.error, self.power
     
-    #Diese Funktion schlaten das ZVL in den Spectrum Analyzer Mode
-    def SetSANMode(self):
-        self.error=0
-        dct=self._do_cmds('SetSANMode', locals())
-        self._update(dct)
-        return self.error,0
+   
     
+    
+    #******************************************************************************
+    #
+    #             Abgeänderte standard SetGet Funktionen
+    #*******************************************************************************
+        
     #Blank, also Trace aus, wird nicht druch den Standard TraceMode Befehl
     #realisiert, deshalb muss erst geprüfft werden, ob der Trace aus ist -
     #GetTraceModeBlank liefert 0 zurück. Ist er aus lieft die Funktion Blank
@@ -325,133 +339,20 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return 0, 'LOWNOISE'
     
     
-
-    # _SetGetSomething ist eine Funktion die nacheinander einen Visa-Write Befehl ausführt und danach
-    # einen Vias-Query Befehl.
-    #
-    # Was ausgeführt wird, wird über die Argumente "setter" und "getter" bestimmt. Es müssen Strings
-    # übergeben werden, die keys in ._cmds entsprechen.
-    # 
-    # Das Argument "something" bestimmt welcher Wert am Gerät eingestellt werden soll, z.B. 100 entspricht
-    # einer Frequenz von 100 Hz, falls "setter" eine Frequenz verändert.
-    #
-    # "_type" bestimmt den Type des Rügabewerts z.B. float oder string
-    #
-    # "possibilities" ist eine Liste in der verschiedene Parameter für die VISA-Befehle stehen können.
-    # z.B. TRACEMODES (siehe oben). Ist "possibilites" angegeben, dann wird "something" mit "possibilities 
-    # über eine fuzzyStringCompare abgeglichen und die wahrscheinlichste Übereinstimmung als 
-    # VISA Parameter verwendet.
-    def _SetGetSomething(self, something, setter, getter, type_, possibilities, what):
-        
-        ###Maping
-        if possibilities:
-            something=fstrcmp(something, getattr(self,possibilities), n=1,cutoff=0,ignorecase=True)[0]
-            
-            #Ist Map Vorhanden?
-            if getattr(self,"Map%s"%possibilities):
-                #Wenn Wert zum Key = None, dann Abbruch mit Fehler
-                #sonst setzen von something auf Wert in Map           
-                if getattr(self,"Map%s"%possibilities)[something] == None:
-                    self.error=1
-                    return self.error,0
-                else:
-                    something=getattr(self,"Map%s"%possibilities)[something]
-
-        ###Complex abarbeiten
-        # Das dict complex wird zeilenweiße ausgelesen und die einzelnen Spalten in die Variablen
-        # k, vals und action geschrieben
-        for k, vals, actions in self._cmds['Complex']:
-            #print k, vals, actions
-            
-            # Test ob die erste Spalten dem Namen der Funktion (die in setter vermerkt ist) entspricht 
-            if k is setter:
-                try:
-                    # Wenn keine alternativen Werte angegeben wurden, wird 
-                    # sofort der setter auf action gesetzt. In setter 
-                    # steht der Befehl der entgültig ausgeführt wird.
-                    if (vals is None):  
-                        setter = actions
-                    else:
-                        # Die möglichen Werte werden nacheinander druchlaufen.
-                        breakfor=False
-                        for idx,vi in enumerate(vals):
-                            
-                            #Prüft ob Werte in einem Tupel gespechert sind
-                            if type(vi).__name__=='tuple':
-                                # Falls die einzelnen möglichen Werte wiederum in einem Tuple
-                                # gespeichert sind, werden hier durchloffen. 
-                                for vii in vi:
-                                    #Die Einträge werden mit something verglichen.
-                                    #In something steht was der Funktion übergeben wurden.
-                                    if re.search(vii, str(something), re.I) != None:
-                                        setter = actions[idx]
-                                        breakfor=True
-                            else:
-                                #Die Einträge werden mit something verglichen.
-                                #In something steht was der Funktion übergeben wurden.
-                                if re.search(vi, str(something), re.I) != None:
-                                    setter = actions[idx]
-                                    breakfor=True
-                            
-                            if breakfor:
-                                break
-                                    
-                except KeyError:
-                    pass
-        
+    
+    #Diese Funktion schlaten das ZVL in den Spectrum Analyzer Mode
+    def SetSANMode(self):
         self.error=0
-        dct=self._do_cmds(setter, locals())
+        dct=self._do_cmds('SetSANMode', locals())
         self._update(dct)
-        dct=self._do_cmds(getter, locals())
-        self._update(dct)
-        if self.error == 0:
-            if not dct:
-                setattr(self, what, eval(what))
-            else:
-                setattr(self, what, type_(getattr(self, what)))
-        
-        #Zürück Mapen
-            if possibilities: 
-                if getattr(self,"Map%s_Back"%possibilities):
-                    #Wenn Wert zum Key = None, dann Abbruch mit Fehler
-                    #sonst setzen von something auf Wert in Map           
-                    if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
-                        self.error=1
-                        return self.error,0
-                    else:
-                        setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
-        return self.error, getattr(self, what)
-        
-        
-    def _GetSomething(self, getter, type_, what, possibilities):
-        self.error=0
-        dct=self._do_cmds(getter, locals())
-        self._update(dct)
-        if self.error == 0:
-            if not dct:
-                setattr(self, what, eval(what))
-            else:
-                setattr(self, what, type_(getattr(self, what)))
-                
-      #Zürück Mapen
-        if possibilities: 
-            if getattr(self,"Map%s_Back"%possibilities):
-                #Wenn Wert zum Key = None, dann Abbruch mit Fehler
-                #sonst setzen von something auf Wert in Map           
-                if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
-                    self.error=1
-                    return self.error,0
-                else:
-                    setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
-          
-        return self.error, getattr(self, what)
-        
+        return self.error,0
+    
 
 
-
-
-        
-
+    #***************************************************************************
+    #
+    #       Die Init Funktion initialisiert das Gerät, sie muss als erstes aufgerufen werden
+    #***************************************************************************
     def Init(self, ini=None, channel=None):
         
         if channel is None:
@@ -511,7 +412,10 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                  #     [('INPut:ATTenuation::AUTO ON', None),('INPut:ATTenuation::AUTO OFF', None)]),
                  ('sweeptime',
                       None,
-                      'SetSweepTime')]
+                      'SetSweepTime'),
+                 ('sweeppoints',
+                      None,
+                      'SetSweepPoints')]
         
         
         #self.SetTrace(self.conf[sec]['trace'])
@@ -561,10 +465,10 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return self.error
         
         
-        
+##########################################################################       
 #
 # Die Funktion main() wird nur zum Test des Treibers verwendet!
-#
+###########################################################################
 def main():
     from mpy.tools.util import format_block
     #from mpy.device.signalgenerator_ui import UI as UI
@@ -606,6 +510,7 @@ def main():
                         triggermode: 'IMMediate'
                         attmode: auto
                         sweeptime: 10e-3
+                        sweeppoints: 500
                         """)
                         # rbw: 3e6
         ini=StringIO.StringIO(ini)
@@ -620,7 +525,6 @@ def main():
     try:
         from mpy.device.spectrumanalyzer_ui import UI as UI
     except ImportError:
-        print "test"
         pass
     else:
         ui=UI(sp,ini=ini)
@@ -646,6 +550,7 @@ def main():
                  ("SetSweepTime", "auto", "print"),
                  ("SetTriggerMode", "VIDEO", "print"), #'FREE', 'VIDEO', 'EXTERNAL' 
                  ("SetTriggerDelay", 0, "print"),
+                 ("SetSweepPoints", 500, "assert")
                  ]
  
     for funk,value,test in _assertlist:

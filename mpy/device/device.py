@@ -834,7 +834,7 @@ class Spectrumanalyzer(Powermeter):
                      "GetDetector", "SetTraceMode", "GetTraceMode", "SetTrace", "GetTrace",
                      "SetSweepCount", "GetSweepCount", "SetSweepTime",
                      "GetSweepTime", "GetSpectrum", "GetSpectrumNB",
-                     "SetTriggerMode", "SetTriggerDelay", "SetWindow")
+                     "SetTriggerMode", "SetTriggerDelay", "SetWindow","SetSweepPoints","GetSweepPoints")
     _postfix = dict(zip(_postfix_list,_postfix_list)) # spelling was OK
 
     def __init__(self):
@@ -1392,6 +1392,20 @@ class Spectrumanalyzer(Powermeter):
                 retval = method(c_window, c_instance, ct.byref(c_error))
                 self.error=c_error.value
                 return self.error, retval
+        else:
+            m=method
+        return m
+    
+    def _SetSweepPoints_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+    
+    def _GetSweepPoints_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
         else:
             m=method
         return m

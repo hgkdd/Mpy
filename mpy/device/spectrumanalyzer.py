@@ -14,6 +14,18 @@ class SPECTRUMANALYZER(DRIVER):
     The parent class is :class:`mpy.device.driver.DRIVER`.
     """
     
+    
+    # Diese Listen enthalten mögliche Bezeichnungen "possibilities" für Tracemodes usw.
+    # Verwendet ein Gerät andere Bezeichnungen für die Modes, dann muss ein maping von den allgemein
+    # gültigen Bezeichnungen hin zu den Bezeichnungen des Geräts stattfinden. 
+    # Die Maps müssen die Namen MapListenname für das hin mapen bzw. MapListenname_Back für das
+    # zurück mapen erhalten, z.B. MapTRACEMODES,MapTRACEMODES_Back
+    # Der Aufbau der Listen ist:
+    # hin Map: {Allgemein gültiger Bezeichnung : Bezeichnung Gerät}
+    # Back Map: {RückgabeWert von Gerät : Allgemein gültige Bezeichnung}
+    # Wird in _setgetlist eine possibilities Liste angegeben, dann werden Maps mit den oben beschriebenen
+    # Namen automatisch ausgewertet.
+    # Beispiel siehe: sp_rs_zlv-6.py
     TRACEMODES=('WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD')
     ATTMODES=('NORMAL', 'LOWNOISE', 'LOWDIST')
     DETECTORS=('AUTOSELECT','AUTOPEAK','MAXPEAK','MINPEAK','SAMPLE','RMS', 'AVERAGE','DET_QPEAK')
@@ -47,7 +59,8 @@ class SPECTRUMANALYZER(DRIVER):
                      'sweepcount': int,
                      'triggermode': str,
                      'attmode': str,
-                     'sweeptime': float}}
+                     'sweeptime': float,
+                     'sweeppoints': int}}
 
     _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
         
@@ -69,7 +82,6 @@ class SPECTRUMANALYZER(DRIVER):
                     'GetRefLevel':  [('REFLEVEL?', r'REFLEVEL (?P<reflevel>%s) DBM'%self._FP)],
                     'SetAtt':  [("'ATT %s DB'%something", None)],
                     'GetAtt':  [('ATT?', r'ATT (?P<att>%s) DB'%self._FP)],
-                    #Was hat das Auto zu bedeuten???
                     'SetAttAuto':  [("ATT -1", None)],
                     'SetAttMode': [("'ATTMode %s'%something", None)],
                     'GetAttMode':  [('ATTMode?', r'ATTMODE (?P<attmode>.*)')],
@@ -85,6 +97,8 @@ class SPECTRUMANALYZER(DRIVER):
                     'GetSweepCount':  [('SWEEPCOUNT?', r'SWEEPCOUNT (?P<scount>\d+)')],
                     'SetSweepTime':  [("'SWEEPTIME %s us'%something", None)],
                     'GetSweepTime':  [('SWEEPTIME?', r'SWEEPTIME (?P<stime>%s) us'%self._FP)],
+                    'SetSweepPoints':  [("'SWEEPPOINTS %s '%something", None)],
+                    'GetSweepPoints':  [('SWEEPPOINTS?', r'SWEEPPOINTS (?P<spoints>%s)'%self._FP)], 
                     'GetSpectrum':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
                     'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
                     'SetTriggerMode': [("'TRGMODE %d'%something", None)],
@@ -94,6 +108,23 @@ class SPECTRUMANALYZER(DRIVER):
                     'SetWindow':  [("'WINDOW %d'%window", None)],
                     'Quit':     [('QUIT', None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+   
+        
+        # Hier wird nur eine leere Complex Liste erstellt. Diese Liste ermöglicht es das eine Funktion
+        # je nach übergebenen Wert eine einen anderen Befehl aufruft.
+        #
+        # Die nachfolgende List stellt im Prinzip eine Tabelle mit drei Spalten dar.
+        # In der ersten Spalte steht der Name der Funktion auf welche die entprechende Zeile der Tabelle
+        # zutrifft.
+        # In der zweiten Spalte stehen mögliche Werte die der Funktion übergeben werden können. Die
+        # möglichen Werte können wiederum in Listen gespeichert werden. So ist es mölich einem Befehl
+        # mehrer Werte zuzuordnen. Achtung!!! Die Werte werden als reguläre Expression interpretiert!!
+        # In der dritten Spalte sind die Befehle vermerkt, welche den möglichen Werten in der vorhergehenden
+        # Spalte, zugeordnent werden.
+        # Beispiel für Benutzung siehe: sp_rs_zlv-6.py
+        self._cmds['Complex']=[]
+        
+        
 
         _setgetlist=[("SetCenterFreq", "GetCenterFreq", "cfreq", float, None),
                      ("SetSpan", "GetSpan", "span", float, None),
@@ -111,7 +142,11 @@ class SPECTRUMANALYZER(DRIVER):
                      ("SetSweepCount", "GetSweepCount", "scount", int, None),
                      ("SetSweepTime", "GetSweepTime", "stime", float, None),
                      ("SetTriggerMode", "GetTriggerMode", "trgmode", str, "TRIGGERMODES"),
-                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None)]
+                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None),
+                     ("SetSweepPoints", "GetSweepPoints", "spoints", int, None)]
+
+
+
 
         # Die folgende for-Schleife arbeitet die _setgetlist ab und erzeugt dabei die Funktionen
         # über die das Gerät angesprochen werden kann.
@@ -166,6 +201,8 @@ class SPECTRUMANALYZER(DRIVER):
         self._internal_unit='dBm'
 
 
+
+
     # _SetGetSomething ist eine Funktion die nacheinander einen Visa-Write Befehl ausführt und danach
     # einen Vias-Query Befehl.
     #
@@ -180,11 +217,70 @@ class SPECTRUMANALYZER(DRIVER):
     # "possibilities" ist eine Liste in der verschiedene Parameter für die VISA-Befehle stehen können.
     # z.B. TRACEMODES (siehe oben). Ist "possibilites" angegeben, dann wird "something" mit "possibilities 
     # über eine fuzzyStringCompare abgeglichen und die wahrscheinlichste Übereinstimmung als 
-    # VISA Parameter verwendet.
+    # VISA Parameter verwendet. Sind weiterhin "possibilites" Maps (siehe oben) vorhanden werden diese 
+    # ausgewerten und die übergebenen Werte, in, für das Gerät, güligen Werte übersetzt, am Ende 
+    # werden die vom Gerät zurückgegebenen Wert, wieder in allgemein gültige Werte übersetzt.
+    #
+    # In "waht" steht der Name der Varible, die am Ende den, vom Gerät gelieferten, Wert enthält.
     def _SetGetSomething(self, something, setter, getter, type_, possibilities, what):
-        self.error=0
-        if getattr(self,possibilities):
+        
+        ###Maping
+        if possibilities:
             something=fstrcmp(something, getattr(self,possibilities), n=1,cutoff=0,ignorecase=True)[0]
+            
+            #Ist Map Vorhanden?
+            if getattr(self,"Map%s"%possibilities):
+                #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+                #sonst setzen von something auf Wert in Map           
+                if getattr(self,"Map%s"%possibilities)[something] == None:
+                    self.error=1
+                    return self.error,0
+                else:
+                    something=getattr(self,"Map%s"%possibilities)[something]
+
+        ###Complex abarbeiten
+        # Das dict complex wird zeilenweiße ausgelesen und die einzelnen Spalten in die Variablen
+        # k, vals und action geschrieben
+        for k, vals, actions in self._cmds['Complex']:
+            #print k, vals, actions
+            
+            # Test ob die erste Spalten dem Namen der Funktion (die in setter vermerkt ist) entspricht 
+            if k is setter:
+                try:
+                    # Wenn keine alternativen Werte angegeben wurden, wird 
+                    # sofort der setter auf action gesetzt. In setter 
+                    # steht der Befehl der entgültig ausgeführt wird.
+                    if (vals is None):  
+                        setter = actions
+                    else:
+                        # Die möglichen Werte werden nacheinander druchlaufen.
+                        breakfor=False
+                        for idx,vi in enumerate(vals):
+                            
+                            #Prüft ob Werte in einem Tupel gespechert sind
+                            if type(vi).__name__=='tuple':
+                                # Falls die einzelnen möglichen Werte wiederum in einem Tuple
+                                # gespeichert sind, werden hier durchloffen. 
+                                for vii in vi:
+                                    #Die Einträge werden mit something verglichen.
+                                    #In something steht was der Funktion übergeben wurden.
+                                    if re.search(vii, str(something), re.I) != None:
+                                        setter = actions[idx]
+                                        breakfor=True
+                            else:
+                                #Die Einträge werden mit something verglichen.
+                                #In something steht was der Funktion übergeben wurden.
+                                if re.search(vi, str(something), re.I) != None:
+                                    setter = actions[idx]
+                                    breakfor=True
+                            
+                            if breakfor:
+                                break
+                                    
+                except KeyError:
+                    pass
+        
+        self.error=0
         dct=self._do_cmds(setter, locals())
         self._update(dct)
         dct=self._do_cmds(getter, locals())
@@ -194,10 +290,41 @@ class SPECTRUMANALYZER(DRIVER):
                 setattr(self, what, eval(what))
             else:
                 setattr(self, what, type_(getattr(self, what)))
+        
+        #Zürück Mapen
+            if possibilities: 
+                if getattr(self,"Map%s_Back"%possibilities):
+                    #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+                    #sonst setzen von something auf Wert in Map           
+                    if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
+                        self.error=1
+                        return self.error,0
+                    else:
+                        setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
         return self.error, getattr(self, what)
 
 
 
+
+
+
+
+
+    # _GetSomething ist eine Funktion die einen Vias-Query Befehl ausführt.
+    #
+    # Was ausgeführt wird, wird über das Argument "getter" bestimmt. Es müssen Strings
+    # übergeben werden, die keys in ._cmds entsprechen.
+    # 
+    #
+    # "_type" bestimmt den Type des Rügabewerts z.B. float oder string
+    #    
+    # "possibilities" ist eine Liste in der verschiedene Parameter für die VISA-Befehle stehen können.
+    # z.B. TRACEMODES (siehe oben). Ist "possibilites" angegeben, dann wird "something" mit "possibilities 
+    # über eine fuzzyStringCompare abgeglichen und die wahrscheinlichste Übereinstimmung als 
+    # VISA Parameter verwendet. Sind weiterhin "possibilites" Back Maps (siehe oben) vorhanden werden diese 
+    # ausgewerten und die vom Gerät zurückgegebenen Wert in allgemein gültige Werte übersetzt.
+    #
+    # In "waht" steht der Name der Varible, die am Ende den, vom Gerät gelieferten, Wert enthält.
     def _GetSomething(self, getter, type_, what, possibilities):
         self.error=0
         dct=self._do_cmds(getter, locals())
@@ -207,8 +334,19 @@ class SPECTRUMANALYZER(DRIVER):
                 setattr(self, what, eval(what))
             else:
                 setattr(self, what, type_(getattr(self, what)))
+                
+      #Zürück Mapen
+        if possibilities: 
+            if getattr(self,"Map%s_Back"%possibilities):
+                #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+                #sonst setzen von something auf Wert in Map           
+                if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
+                    self.error=1
+                    return self.error,0
+                else:
+                    setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
+          
         return self.error, getattr(self, what)
-
 
 
 
