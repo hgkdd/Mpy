@@ -351,7 +351,7 @@ class UI(tapi.HasTraits):
         items="%s tuiapi.Item('Set%s',show_label=False),"%(items,i)
         items="%s tuiapi.Item('Get%s',show_label=False),"%(items,i)
         items="%s orientation='horizontal'),"%(items)
-    items[:-1]
+    items=items[:-1]
 
             
     MAIN_grp=tuiapi.Group(eval(items),                        
@@ -373,5 +373,16 @@ class UI(tapi.HasTraits):
     
     traits_view=tuiapi.View(tuiapi.Group(INI_grp, MAIN_grp,SPEC_grp,PLOT_grp,layout='tabbed'),
                             title="Spectrumanalyer", buttons=[tuim.CancelButton])
-    
+
+
+
+def main():
+    ui=UI("")
+    ui.configure_traits()
+    sys.exit(0)    
+
+
+if __name__ == '__main__':
+    main()
+
     
