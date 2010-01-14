@@ -66,9 +66,10 @@ class UI(tapi.HasTraits):
         from math import log10
         self.pm.Trigger()
         err,data=self.pm.GetData()
-        ctx=Context()
-        v,e,u=ctx.value_uncertainty_unit(data)
-        self.POWER=str(10*log10(v*1000))
+        #ctx=Context()
+        #v,e,u=ctx.value_uncertainty_unit(data)
+        #self.POWER=str(10*log10(v*1000))
+        self.POWER=str(data)
             
     def _FREQ_changed(self):
         self.pm.SetFreq(self.FREQ)

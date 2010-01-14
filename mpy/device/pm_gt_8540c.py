@@ -26,8 +26,8 @@ class POWERMETER(PWRMTR):
 
     def GetData(self):
         self.error, power=super(POWERMETER, self).GetData()
-        relerr=self._calc_rel_err(power)
-        power=quantities.Quantity(power._unit, ucomponents.UncertainInput(power._value, power._value*0.01))
+        #relerr=self._calc_rel_err(power)
+        #power=quantities.Quantity(power._unit, ucomponents.UncertainInput(power._value, power._value*0.01))
         return self.error, power
 
     def Zero(self, state='on'):
@@ -45,7 +45,7 @@ class POWERMETER(PWRMTR):
         """
         cmd="TEST EEPROM %s TYPE?"%self.ch_tup[self.channel]
         tmpl='(?P<SENSOR>\\d+)'
-        dct=self.gpib_query(cmd, tmpl)
+        dct=self.query(cmd, tmpl)
         return dct['SENSOR']
         
     def Init(self, ini=None, channel=None):
@@ -125,11 +125,11 @@ def main():
 
                         [Channel_1]
                         name: A
-                        unit: 
+                        unit: dBm
                         filter: -1
-                        resolution: 
+                        #resolution: 
                         rangemode: auto
-                        manrange: 
+                        #manrange: 
                         swr: 1.1
 
                         [Channel_2]
