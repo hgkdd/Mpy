@@ -176,12 +176,15 @@ class POWERMETER(DRIVER):
 
         if self.error==0 and self.power:
             self.update_internal_unit()
+            swr_err=self.get_standard_mismatch_uncertainty()
             self.power=float(self.power)
             try:
-                obj=quantities.Quantity(eval(self._internal_unit), self.power)
+                obj=quantities.Quantity(eval(self._internal_unit), 
+                                        ucomponents.UncertainInput(self.power, self.power*swr_err))
             except (AssertionError, NameError):
                 self.power,self.unit=self.convert.c2scuq(self._internal_unit, float(self.power))
-                obj=quantities.Quantity(self.unit, self.power)
+                obj=quantities.Quantity(self.unit, 
+                                        ucomponents.UncertainInput(self.power, self.power*swr_err))
         else:
             obj=None
         return self.error, obj
@@ -206,26 +209,28 @@ class POWERMETER(DRIVER):
     def update_internal_unit():
         pass
     
-def get_standard_missmatch_uncertainty (vswr1, vswr2):
-    """
-    Returns the standard uncertainty due to the missmatch between generator and load.
-    
-    *vswr1* and *vswr2* are the voltage standing wave ratio of generator and load.
-    
-    The uncertainty is returned on a linear scale (dB = 10 * log10 (1+a)).
-    
-    The expaned uncertainty is optained by multipling with the correct coverage factor. 
-    Here, this is 0.997*sqrt(2) approx 1.4 (U-shaped distribution) for 95% coverage.
-    """
-    # calculate reflection coefficients from vswr
-    G1=(vswr1-1.)/(vswr1+1.)
-    G2=(vswr2-1.)/(vswr2+1.)
-    umax=(1.+G1*G2)**2
-    umin=(1.-G1*G2)**2
-    #print G1, G2, umax, umin
-    width=umax-umin
-    sigma=width/(2.*math.sqrt(2.))
-    return sigma
+    def get_standard_mismatch_uncertainty (self):
+        """
+        Returns the standard uncertainty (relative error) due to the mismatch between generator and load.
+        
+        *vswr1* and *vswr2* are the voltage standing wave ratio of generator and load.
+        
+        The uncertainty is returned on a linear scale (dB = 10 * log10 (1+a)).
+        
+        The expanded uncertainty is obtained by multiplying with the correct coverage factor. 
+        Here, this is 0.997*sqrt(2) approx 1.4 (U-shaped distribution) for 95% coverage.
+        """
+        vswr1=self.conf.get('swr1', 1.0)
+        vswr2=self.conf.get('swr2', 1.0)
+        # calculate reflection coefficients from vswr
+        G1=(vswr1-1.)/(vswr1+1.)
+        G2=(vswr2-1.)/(vswr2+1.)
+        umax=(1.+G1*G2)**2
+        umin=(1.-G1*G2)**2
+        #print G1, G2, umax, umin
+        width=umax-umin
+        sigma=width/(2.*math.sqrt(2.))
+        return sigma
 
 if __name__ == '__main__':
     import sys

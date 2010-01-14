@@ -51,6 +51,15 @@ def get_k_factor_ushape (coverage=0.95, both_tails=True):
     return stats.beta.ppf(quantile,0.5,0.5)*sqrt2
      
 def get_dB_factors(dB,k,A=10):
+    """
+    Calculate a k-factor on the dB scale.
+    
+    dB: standard uncertainty in dB (dB=A*log10((E+sigma)/sigma)
+    k: linear k-factor
+    A: transformation factor lin<->dB; 10->power, 20->voltage, field strength,...
+    
+    A 2-tuple of k-factors on the dB scale is returned
+    """
     A=float(A)
     lin=10**(dB/A)-1
     if dB <= 1e-16:
