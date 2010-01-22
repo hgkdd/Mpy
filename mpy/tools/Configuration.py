@@ -23,6 +23,7 @@ def fstrcmp(word, possibilities, n=None, cutoff=None, ignorecase=True):
         possdict=dict(zip([p.lower().ljust(longest,'#') for p in possibilities],possibilities))
     else:
         possdict=dict(zip([p.ljust(longest,'#') for p in possibilities],possibilities))
+    print possdict
         
     matches=dl.get_close_matches(word,possdict.keys(),n=n,cutoff=cutoff)
     return [possdict[m] for m in matches]
