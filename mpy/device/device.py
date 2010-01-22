@@ -1971,7 +1971,56 @@ class Step2port(NPort):
           
 #################################################################
 class Vectornetworkanalyser(Device):
-    _postfix = {"Trigger": "Trigger",
+    _postfix = {'GetCenterFreq' :    'GetCenterFreq',     
+                'SetSpan'       :    'SetSpan'       ,
+                'GetSpan'       :    'GetSpan'       ,
+                'SetStartFreq'  :    'SetStartFreq'  ,
+                'GetStartFreq'  :    'GetStartFreq'  ,
+                'SetStopFreq'   :    'SetStopFreq'   ,
+                'GetStopFreq'   :    'GetStopFreq'   ,
+                'SetRBW'        :    'SetRBW'        ,
+                'GetRBW'        :    'GetRBW'        ,
+                'SetVBW'        :    'SetVBW'        ,
+                'GetVBW'        :    'GetVBW'        ,
+                'SetRefLevel'   :    'SetRefLevel'   ,
+                'GetRefLevel'   :    'GetRefLevel'   ,
+                'SetAtt'        :    'SetAtt'        ,
+                'GetAtt'        :    'GetAtt'        ,
+                'SetAttAuto'    :    'SetAttAuto'    ,
+                'SetAttMode'    :    'SetAttMode'    ,
+                'GetAttMode'    :    'GetAttMode'    ,
+               #diese auskommentierten Einträge sind schon als Funktion vorhanden
+               #'SetPreAmp'    :     'SetPreAmp'    ,
+               #'GetPreAmp'    :     'GetPreAmp'    ,
+               #'SetDetector'  :     'SetDetector'  ,
+               #'GetDetector'  :     'GetDetector'  ,
+                'SetTraceMode'  :    'SetTraceMode'  ,
+                'GetTraceMode'  :    'GetTraceMode'  ,
+                'SetTrace'      :    'SetTrace'      ,
+                'GetTrace'      :    'GetTrace'      ,
+                'SetSparameter' :    'SetSparameter' ,
+                'GetSparameter' :    'GetSparameter' ,
+                'SetSweepType'  :    'SetSweepType'  ,
+                'GetSweepType'  :    'GetSweepType'  , 
+               #diese auskommentierten Einträge sind schon als Funktion vorhanden
+                'SetSweepCount':     'SetSweepCount',
+                'GetSweepCount':     'GetSweepCount',
+               #'SetSweepTime' :     'SetSweepTime' ,
+               #'GetSweepTime' :     'GetSweepTime' ,
+                'SetSweepPoints':    'SetSweepPoints',
+                'GetSweepPoints':    'GetSweepPoints',
+                #ist dies gleich "Trigger" weiter unten???
+                ###'SetTriggerMode':    'SetTriggerMode',
+                'GetTriggerMode':    'GetTriggerMode',
+                'SetTriggerDelay':   'SetTriggerDelay',
+                'GetTriggerDelay':   'GetTriggerDelay',
+                'SetWindow'     :    'SetWindow'     ,
+                'SetMeasBandwidth':  'SetMeasBandwidth',
+                'GetMeasBandwidth':  'GetMeasBandwidth',
+                'Quit'          :    'Quit'          ,
+                'GetDescription':    'GetDescription',
+
+                "Trigger": "SetTriggerMode",
                 "getData": "GetTrace",
                 "getDataNB": "GetTraceNB"}
     
@@ -1987,6 +2036,314 @@ class Vectornetworkanalyser(Device):
         self._addAttributes()
         return ret
 
+    def _GetMeasBandwidth_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetTriggerDelay_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetVBW_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetSweepType_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetRBW_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetSweepType_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetAttMode_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetTriggerMode_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetSparameter_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetTriggerDelay_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetMeasBandwidth_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetSweepCount_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetRefLevel_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetAttAuto_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetSweepCount_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetAtt_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetSparameter_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetSweepTime_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _Quit_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetSweepPoints_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetStartFreq_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetStopFreq_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetCenterFreq_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetStopFreq_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetTraceMode_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetSpan_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetAtt_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetDescription_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetVBW_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetDetector_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetPreAmp_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetWindow_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetRefLevel_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetTrace_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetTraceMode_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetStartFreq_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetSweepPoints_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetDetector_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetAttMode_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetPreAmp_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetTrace_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetRBW_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetSweepTime_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetSpan_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
     def _Trigger_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             def m():

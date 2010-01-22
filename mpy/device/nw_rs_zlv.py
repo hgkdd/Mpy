@@ -5,7 +5,7 @@ import re
 import sys
 import StringIO
 from scuq import *
-from mpy.device.spectrumanalyzer import SPECTRUMANALYZER as SPECTRUMAN
+from mpy.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
 from mpy.tools.Configuration import fstrcmp
 
 from numpy import array, linspace, add
@@ -15,62 +15,33 @@ from numpy import array, linspace, add
 # Für den Spectrumanalyzer R&S ZVL wird die Klasse 'zlv-6' definiert.
 # Diese greift auf die Unterklasse SPECTRUMANALYZER (spectrumanalyzer.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
-class SPECTRUMANALYZER(SPECTRUMAN):
+class NETWORKANALYZER(NETWORKAN):
 
     #TRACEMODES=('WRITe', 'VIEW', 'AVERage', 'MAXHold', 'MINHold', 'RMS')
     #DETECTORS=('APEak', 'NEGative', 'POSitive', 'SAMPle', 'RMS', 'AVERage', 'QPEak')
     #TRIGGERMODES=('TIME', 'IMMediate', 'EXTern', 'IFPower', 'VIDeo')
     
     #Map: {Allgemein gültige Bezeichnung : Bezeichnung Gerät} 
-    MapTRACEMODES={'WRITE':         'WRITe',
-                   'VIEW':          'VIEW',
-                   'AVERAGE':       'AVERage',
-                   'BLANK':         'OFF',       #Off umsetzen!!!!!  #RMS??
-                   'MAXHOLD':       'MAXHold',
-                   'MINHOLD':       'MINHold'
-                   }
+#    MapTRACEMODES={'WRITE':         'WRITe',
+#                   'VIEW':          'VIEW',
+#                   'AVERAGE':       'AVERage',
+#                   'BLANK':         'OFF',       #Off umsetzen!!!!!  #RMS??
+#                   'MAXHOLD':       'MAXHold',
+#                   'MINHOLD':       'MINHold'
+#                   }
     
-    
-    MapDETECTORS={'AUTOSELECT':     'auto',     #auto umsetzen!!!! #Auto richtig?
-                  'AUTOPEAK':       'APEak',
-                  'MAXPEAK':        'POSitive',
-                  'MINPEAK':        'NEGative',
-                  'SAMPLE':         'SAMPle',
-                  'RMS':            'RMS',
-                  'AVERAGE':        'AVERage',
-                  'DET_QPEAK':      'QPEak'
-                  }
-    
-    
-    MapTRIGGERMODES={'FREE':        'IMMediate',
-                    'VIDEO':        'VID',
-                    'EXTERNAL':     'EXT'
-                    }
     
 
     #Back Map: {RückgabeWert von Gerät : Allgemein gültige Bezeichnung} 
-    MapTRACEMODES_Back={'WRIT'  :   'WRITE',
-                        'VIEW'  :   'VIEW',
-                        'AVER'  :   'AVERAGE',
-                        'OFF'   :   'BLANK',
-                        'MAXH'  :   'MAXHOLD',
-                        'MINH'  :   'MINHOLD'    
-                        }
+#    MapTRACEMODES_Back={'WRIT'  :   'WRITE',
+#                        'VIEW'  :   'VIEW',
+#                        'AVER'  :   'AVERAGE',
+#                        'OFF'   :   'BLANK',
+#                        'MAXH'  :   'MAXHOLD',
+#                        'MINH'  :   'MINHOLD'    
+#                        }
     
-    MapDETECTORS_Back={'auto'   :   'AUTOSELECT',     #auto umsetzen!!!! #Auto richtig?
-                       'APE'    :   'AUTOPEAK',
-                       'POS'    :   'MAXPEAK',
-                       'NEG'    :   'MINPEAK',
-                       'SAMP'   :   'SAMPLE',
-                       'RMS'    :   'RMS',
-                       'AVER'   :   'AVERAGE',
-                       'QPE'    :   'DET_QPEAK'
-                       }
-    
-    MapTRIGGERMODES_Back={'IMM' :   'FREE',
-                          'VID' :   'VIDEO',
-                          'EXT' :   'EXTERNAL'
-                          }
+
     
     
     #*************************************************************************
@@ -78,14 +49,14 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     #                    Init
     #*************************************************************************
     def __init__(self):
-        SPECTRUMAN.__init__(self)
+        NETWORKAN.__init__(self)
         self.trace=1
         self._internal_unit='dBm'
 
         #
         # Im Wörterbuch '._cmds' werden die Befehle zum Steuern des speziellen Spektrumanalysator definiert, z.B. SetFreq() zum Setzen
         # der Frequenz. Diese können in der Dokumentation des entsprechenden Spektrumanalysator nachgeschlagen werden.
-        # In der Unterklasse SPECTRUMANALYZER wurden bereits Methoden zur Ansteuerung eines allgemeinen Spektrumanalysators definiert,
+        # In der Unterklasse NETWORKANALYZER wurden bereits Methoden zur Ansteuerung eines allgemeinen Spektrumanalysators definiert,
         # welche die Steuerbefehle aus dem hier definierten '.cmds' Wörterbuch abrufen.
         # Das Wörterbuch enthält für jeden Eintrag ein Schlüsselwort mit dem allgemeinen Befehl als String, z.B. SetFreq(). Diesem
         # Schlüsselwort wird eine Liste zugeordnet, wobei jeder Listeneintrag ein Tupel ist und jeder Tupel einen Befehl und eine Vorlage
@@ -184,25 +155,10 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         # muss sie durch setattr wieder überschreiben lassen:
         self._cmds['Complex']=complex
           
-        setattr(self, "SetAttMode", 
-                          functools.partial(self._SetAttModeIntern))
-        setattr(self, "GetAttMode", 
-                          functools.partial(self._GetAttModeIntern))
         setattr(self, "SetTrace", 
                           functools.partial(self._SetTraceIntern))
         setattr(self, "GetTrace", 
                           functools.partial(self._GetTraceIntern))
-        setattr(self, "SetPreAmp", 
-                          functools.partial(self._SetPreAmpIntern))
-        setattr(self, "GetPreAmp", 
-                          functools.partial(self._GetPreAmpIntern))
-        
-        self.GetTraceModeSuper=self.GetTraceMode
-        setattr(self, "GetTraceMode", 
-                          functools.partial(self._GetTraceModeIntern))
-        self.SetTraceModeSuper=self.SetTraceMode
-        setattr(self, "SetTraceMode", 
-                          functools.partial(self._SetTraceModeIntern))
 
 
     #************************************   
@@ -242,83 +198,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     #             Abgeänderte standard SetGet Funktionen
     #*******************************************************************************
         
-    #Blank, also Trace aus, wird nicht druch den Standard TraceMode Befehl
-    #realisiert, deshalb muss erst geprüfft werden, ob der Trace aus ist -
-    #GetTraceModeBlank liefert 0 zurück. Ist er aus lieft die Funktion Blank
-    #zurück, anderfalls wird die uhrsprüngliche GetTraceMode Funktion aufgerufen und deren
-    #Ergebniss zurückgegeben. 
-    def _GetTraceModeIntern(self):
-        dct=self._do_cmds('GetTraceModeBlank', locals())
-        self._update(dct)
-        if int(self.tmodeblank) == 0:
-            return self.error,'BLANK'
-        else:
-            return self.GetTraceModeSuper()
-    
-    #Blank, also Trace aus, wird nicht druch den Standard TraceMode Befehl
-    #realisiert. Nach der ersten zeile entspricht die Funktion _GetTraceModeIntern(self) siehe dort.
-    #Die erste Zeile ruft den uhrsprünglichen SetTraceMode Befehl auf, ob jetzt der Set-Befehl
-    #für Blank oder der standard Set-Befehl ausgeführt werden soll, wird über die complex-Liste geregelt.
-    def _SetTraceModeIntern(self,something):
-        err,ret=self.SetTraceModeSuper(something)
-        dct=self._do_cmds('GetTraceModeBlank', locals())
-        self._update(dct)
-        if int(self.tmodeblank) == 0:
-            return err,'BLANK'
-        else:
-            return err,ret
-    
-    def _SetPreAmpIntern(self, something):
-        
-        #PreAmp kann bei ZVL nur ON oder OFF sein. Also wird on gesetzt sobald ein Abschwächung
-        #gestezt wird, egal wie groß. 
-        if something == 0:
-            something = "OFF"
-        else:
-            something = "ON"
-        
-        self.error=0
-        dct=self._do_cmds("SetPreAmp", locals())
-        self._update(dct)
-        dct=self._do_cmds("GetPreAmp", locals())
-        self._update(dct)
-        if self.error == 0:
-            if not dct:
-                self.preamp=0
-            else:
-                self.preamp=float(self.preamp)
-        #Die Abfrage nach PreAmp? ergibt nur eins oder Null
-        #Wenn eins, dann ist PreAmp auf 20dB gesetzt
-        #Wenn Null, dann ist PreAmp Off bzw. auf 0dB gesetzt
-        if self.preamp == 1:
-            self.preamp=20
-        elif self.preamp == 0:
-            self.preamp=0
-        else:
-            self.error=1
-        return self.error, self.preamp
-    
-    def _GetPreAmpIntern(self):
-        self.error=0
-        dct=self._do_cmds("GetPreAmp", locals())
-        self._update(dct)
-        if self.error == 0:
-            if not dct:
-                self.preamp=0
-            else:
-                self.preamp=float(self.preamp)
-        #Die Abfrage nach PreAmp? ergibt nur eins oder Null
-        #Wenn eins, dann ist PreAmp auf 20dB gesetzt
-        #Wenn Null, dann ist PreAmp Off bzw. auf 0dB gesetzt
-        if self.preamp == 1:
-            self.preamp=20
-        elif self.preamp == 0:
-            self.preamp=0
-        else:
-            self.error=1
-        return self.error, self.preamp
-    
-    
+
     #Gerät hat keine Funktion um auszwählen, welcher Trace bearbeitet werden soll.
     #Statt dessen wird die entsprechende Trace Nummer mit den Befehlen übergeben,
     #um das zu ermöglichen die Trace Nummer in einer Variable gespeichert.
@@ -329,16 +209,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     def _GetTraceIntern(self):
         return 0,self.trace
     
-    
-    #Att Modes gibt es bei diesem Gerät nicht, deshalb wird immer der standard gestzt,
-    #bzw. zurückgegeben.
-    def _SetAttModeIntern(self,trace):
-        return 0, 'LOWNOISE'
-    
-    def _GetAttModeIntern(self):
-        return 0, 'LOWNOISE'
-    
-    
+        
     
     #Diese Funktion schlaten das ZVL in den Spectrum Analyzer Mode
     def SetSANMode(self):
@@ -357,7 +228,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         
         if channel is None:
             channel=1
-        self.error=SPECTRUMAN.Init(self, ini, channel)
+        self.error=NETWORKAN.Init(self, ini, channel)
         sec='channel_%d'%channel
         try:
             self.levelunit=self.conf[sec]['unit']
@@ -483,7 +354,7 @@ def main():
         ini=format_block("""
                         [DESCRIPTION]
                         description: 'ZLV-K1'
-                        type:        'SPECTRUMANALYZER'
+                        type:        'NETWORKANALYZER'
                         vendor:      'Rohde&Schwarz'
                         serialnr:
                         deviceid:
@@ -520,10 +391,10 @@ def main():
     # # falls die Bedingung 'false' ist. Zuvor wird eine Testfrequenz und ein Level festgelegt, ein Objekt der Klasse SMB100A erzeugt und der
     # # Signalgenerator initialisiert.
     # #
-    #from mpy.device.spectrumanalyzer_ui import UI as UI
-    sp=SPECTRUMANALYZER()
+    #from mpy.device.networkanalyzer_ui import UI as UI
+    sp=NETWORKANALYZER()
     try:
-        from mpy.device.spectrumanalyzer_ui import UI as UI
+        from mpy.device.networkanalyzer_ui import UI as UI
     except ImportError:
         pass
     else:
