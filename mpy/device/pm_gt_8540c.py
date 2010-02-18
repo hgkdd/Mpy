@@ -5,7 +5,7 @@ import StringIO
 import visa
 
 from scuq import *
-from mpy.device.powermeter import POWERMETER as PWRMTR
+from mpy.device.powermeter2c import POWERMETER as PWRMTR
 #import pprint
 
 
