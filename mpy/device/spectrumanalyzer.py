@@ -19,7 +19,7 @@ class SPECTRUMANALYZER(DRIVER):
     # Verwendet ein Gerät andere Bezeichnungen für die Modes, dann muss ein maping von den allgemein
     # gültigen Bezeichnungen hin zu den Bezeichnungen des Geräts stattfinden. 
     # Die Maps müssen die Namen MapListenname für das hin mapen bzw. MapListenname_Back für das
-    # zurück mapen erhalten, z.B. MapTRACEMODES,MapTRACEMODES_Back
+    # zurück mapen erhalten, z.B. self.MapTRACEMODES,self.MapTRACEMODES_Back
     # Der Aufbau der Listen ist:
     # hin Map: {Allgemein gültiger Bezeichnung : Bezeichnung Gerät}
     # Back Map: {RückgabeWert von Gerät : Allgemein gültige Bezeichnung}

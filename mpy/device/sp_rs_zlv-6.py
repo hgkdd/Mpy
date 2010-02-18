@@ -21,56 +21,6 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     #DETECTORS=('APEak', 'NEGative', 'POSitive', 'SAMPle', 'RMS', 'AVERage', 'QPEak')
     #TRIGGERMODES=('TIME', 'IMMediate', 'EXTern', 'IFPower', 'VIDeo')
     
-    #Map: {Allgemein gültige Bezeichnung : Bezeichnung Gerät} 
-    MapTRACEMODES={'WRITE':         'WRITe',
-                   'VIEW':          'VIEW',
-                   'AVERAGE':       'AVERage',
-                   'BLANK':         'OFF',       #Off umsetzen!!!!!  #RMS??
-                   'MAXHOLD':       'MAXHold',
-                   'MINHOLD':       'MINHold'
-                   }
-    
-    
-    MapDETECTORS={'AUTOSELECT':     'auto',     #auto umsetzen!!!! #Auto richtig?
-                  'AUTOPEAK':       'APEak',
-                  'MAXPEAK':        'POSitive',
-                  'MINPEAK':        'NEGative',
-                  'SAMPLE':         'SAMPle',
-                  'RMS':            'RMS',
-                  'AVERAGE':        'AVERage',
-                  'DET_QPEAK':      'QPEak'
-                  }
-    
-    
-    MapTRIGGERMODES={'FREE':        'IMMediate',
-                    'VIDEO':        'VID',
-                    'EXTERNAL':     'EXT'
-                    }
-    
-
-    #Back Map: {RückgabeWert von Gerät : Allgemein gültige Bezeichnung} 
-    MapTRACEMODES_Back={'WRIT'  :   'WRITE',
-                        'VIEW'  :   'VIEW',
-                        'AVER'  :   'AVERAGE',
-                        'OFF'   :   'BLANK',
-                        'MAXH'  :   'MAXHOLD',
-                        'MINH'  :   'MINHOLD'    
-                        }
-    
-    MapDETECTORS_Back={'auto'   :   'AUTOSELECT',     #auto umsetzen!!!! #Auto richtig?
-                       'APE'    :   'AUTOPEAK',
-                       'POS'    :   'MAXPEAK',
-                       'NEG'    :   'MINPEAK',
-                       'SAMP'   :   'SAMPLE',
-                       'RMS'    :   'RMS',
-                       'AVER'   :   'AVERAGE',
-                       'QPE'    :   'DET_QPEAK'
-                       }
-    
-    MapTRIGGERMODES_Back={'IMM' :   'FREE',
-                          'VID' :   'VIDEO',
-                          'EXT' :   'EXTERNAL'
-                          }
     
     
     #*************************************************************************
@@ -78,6 +28,61 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     #                    Init
     #*************************************************************************
     def __init__(self):
+        
+        
+        #Map: {Allgemein gültige Bezeichnung : Bezeichnung Gerät} 
+        self.MapTRACEMODES={'WRITE':         'WRITe',
+                            'VIEW':          'VIEW',
+                            'AVERAGE':       'AVERage',
+                            'BLANK':         'OFF',       #Off umsetzen!!!!!  #RMS??
+                            'MAXHOLD':       'MAXHold',
+                            'MINHOLD':       'MINHold'
+                            }
+    
+    
+        self.MapDETECTORS={'AUTOSELECT':     'auto',     #auto umsetzen!!!! #Auto richtig?
+                           'AUTOPEAK':       'APEak',
+                           'MAXPEAK':        'POSitive',
+                           'MINPEAK':        'NEGative',
+                           'SAMPLE':         'SAMPle',
+                           'RMS':            'RMS',
+                           'AVERAGE':        'AVERage',
+                           'DET_QPEAK':      'QPEak'
+                            }
+    
+    
+        self.MapTRIGGERMODES={'FREE':        'IMMediate',
+                              'VIDEO':        'VID',
+                              'EXTERNAL':     'EXT'
+                              }
+    
+
+        #Back Map: {RückgabeWert von Gerät : Allgemein gültige Bezeichnung} 
+        self.MapTRACEMODES_Back={'WRIT'  :   'WRITE',
+                                 'VIEW'  :   'VIEW',
+                                 'AVER'  :   'AVERAGE',
+                                 'OFF'   :   'BLANK',
+                                 'MAXH'  :   'MAXHOLD',
+                                 'MINH'  :   'MINHOLD'    
+                                 }
+    
+        self.MapDETECTORS_Back={'auto'   :   'AUTOSELECT',     #auto umsetzen!!!! #Auto richtig?
+                                'APE'    :   'AUTOPEAK',
+                                'POS'    :   'MAXPEAK',
+                            'NEG'    :   'MINPEAK',
+                            'SAMP'   :   'SAMPLE',
+                            'RMS'    :   'RMS',
+                            'AVER'   :   'AVERAGE',
+                            'QPE'    :   'DET_QPEAK'
+                            }
+    
+        self.MapTRIGGERMODES_Back={'IMM' :   'FREE',
+                                   'VID' :   'VIDEO',
+                                   'EXT' :   'EXTERNAL'
+                                }
+        
+        
+        
         SPECTRUMAN.__init__(self)
         self.trace=1
         self._internal_unit='dBm'

@@ -16,6 +16,7 @@ from numpy import array, linspace, add
 # Diese greift auf die Unterklasse SPECTRUMANALYZER (spectrumanalyzer.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
 class NETWORKANALYZER(NETWORKAN):
+    NETWORKANALYZERS=[]
 
     #TRACEMODES=('WRITe', 'VIEW', 'AVERage', 'MAXHold', 'MINHold', 'RMS')
     #DETECTORS=('APEak', 'NEGative', 'POSitive', 'SAMPle', 'RMS', 'AVERage', 'QPEak')
@@ -62,45 +63,55 @@ class NETWORKANALYZER(NETWORKAN):
         # Schlüsselwort wird eine Liste zugeordnet, wobei jeder Listeneintrag ein Tupel ist und jeder Tupel einen Befehl und eine Vorlage
         # für die darauffolgende Antwort des Signalgenerators enthaelt.
         #
-        self._cmds={'SetCenterFreq':  [("'FREQuency:CENTer %s HZ'%something", None)],
-                    'GetCenterFreq':  [('FREQuency:CENTer?', r'(?P<cfreq>%s)'%self._FP)],
-                    'SetSpan':  [("'FREQuency:SPAN %s HZ'%something", None)],
-                    'GetSpan':  [('FREQuency:SPAN?', r'(?P<span>%s)'%self._FP)],
-                    'SetStartFreq':  [("'FREQuency:STARt %s HZ'%something", None)],
-                    'GetStartFreq':  [('FREQuency:STARt?', r'(?P<stfreq>%s)'%self._FP)],
-                    'SetStopFreq':  [("'FREQuency:STOP %s HZ'%something", None)],
-                    'GetStopFreq':  [('FREQuency:STOP?', r'(?P<spfreq>%s)'%self._FP)],
-                    'SetRBWAuto':   [("SENSe:BANDwidth:RESolution:Auto On", None)],
-                    'SetRBW':  [("'SENSe:BANDwidth:RESolution %s HZ'%something", None)],
-                    'GetRBW':  [('SENSe:BANDwidth:RESolution?', r'(?P<rbw>%s)'%self._FP)],
-                    #VBW kann nur bestimmt Werte annehmen
-                    #The command is not available if FFT filtering is switched on and the set bandwidth is <= 30 kHz or if the quasi–peak detector is switched on.
-                    'SetVBWAuto':   [("SENSe:BANDwidth:VIDeo:Auto On", None)],
-                    'SetVBW':  [("'SENSe:BANDwidth:VIDeo %s HZ'%something", None)],
-                    'GetVBW':  [('SENSe:BANDwidth:VIDeo?', r'(?P<vbw>%s)'%self._FP)],
-                    'SetRefLevel':  [("'DISP:WIND:TRAC%s:Y:RLEV %s DBM'%(self.trace,something)", None)],
+        self._cmds={'SetCenterFreq':  [("'SENSe%d:FREQuency:CENTer %s HZ'%(self.internChannel,something)", None)],            #Manual S. 499
+                    'GetCenterFreq':  [('SENSe<Ch>:FREQuency:CENTer?', r'(?P<cfreq>%s)'%self._FP)],        #Manual S. 499
+                    'SetSpan':  [("'SENSe<Ch>:FREQuency:SPAN %s HZ'%something", None)],                    #Manual S. 500
+                    'GetSpan':  [('SENSe<Ch>:FREQuency:SPAN?', r'(?P<span>%s)'%self._FP)],                 #Manual S. 500
+                    'SetStartFreq':  [("'SENSe<Ch>:FREQuency:STARt %s HZ'%something", None)],              #Manual S. 501
+                    'GetStartFreq':  [('SENSe<Ch>:FREQuency:STARt?', r'(?P<stfreq>%s)'%self._FP)],         #Manual S. 501
+                    'SetStopFreq':  [("'SENSe<Ch>:FREQuency:STOP %s HZ'%something", None)],                #Manual S. 501
+                    'GetStopFreq':  [('SENSe<Ch>:FREQuency:STOP?', r'(?P<spfreq>%s)'%self._FP)],           #Manual S. 501
+                    'SetRBW':  [("'SENSe<Ch>:BANDwidth:RESolution %s HZ'%something", None)],               #Manual S. 473
+                    'GetRBW':  [('SENSe<Ch>:BANDwidth:RESolution?', r'(?P<rbw>%s)'%self._FP)],             #Manual S. 473
+                    ###[SENSe<Ch>:]BANDwidth|BWIDth[:RESolution]:SELect FAST | NORMal???
+                    ###
+                    ###VBW Hat das Gerät nicht, haben es andere???
+                    'SetRefLevel':  [("'DISPlay:WINDow<Wnd>:TRACe<WndTr>:Y:SCALe:RLEVel <numeric_value> [,'<trace_name>'] %s DBM'%(self.trace,something)", None)],            #Manual S. 430
                     'GetRefLevel':  [("'DISP:WIND:TRAC%s:Y:RLEV?'%self.trace", r'(?P<reflevel>%s)'%self._FP)],
-                    'SetAtt':  [("'INPut:ATTenuation %s DB'%something", None)],
-                    'GetAtt':  [('INPut:ATTenuation?', r'(?P<att>%s)'%self._FP)],
-                    'SetAttAuto':  [("INPut:ATTenuation:AUTO ON", None)],
+                    'SetAtt':  [("'INPut<port_no>:ATTenuation %s DB'%something", None)],
+                    'GetAtt':  [('INPut<port_no>:ATTenuation?', r'(?P<att>%s)'%self._FP)],
+                    ###AttMode Hat das Gerät nicht, haben es andere???
                     #SetAttMode wird nicht über die standart SetGetSomething Funktion realisiert, siehe weiter unten
                     #'SetAttMode': [("'ATTMode %s'%something", None)],
                     #'GetAttMode':  [('ATTMode?', r'ATTMODE (?P<attmode>.*)')],
                     #SetPreAmp wird nicht über die standart SetGetSomething Funktion zur verfügung gestellt,
                     #sondern es wurde ein spezielle definiert, siehe weiter unten.
-                    'SetPreAmp':  [("'INPut:GAIN:STATe %s'%something", None)],
-                    'GetPreAmp':  [('INPut:GAIN:STATe?', r'(?P<preamp>%s)'%self._FP)],
-                    'SetDetectorAuto':   [("'SENSe:DETector%s:Auto On'%self.trace", None)],
-                    'SetDetector':  [("'SENSe:DETector%s %s'%(self.trace,something)", None)],
-                    'GetDetector':  [("'SENSe:DETector%s?'%self.trace", r'(?P<det>.*)')],
-                    'SetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE %s'%(self.trace,something)", None)],
-                    'SetTraceModeBlank':  [("'DISPlay:WINDow:TRACe%s:STATe OFF'%(self.trace)", None)],
-                    #GetTraceMode wird über dei standart SetGetSomething Funktion realisiert, siehe weiter unten       
-                    'GetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE?'%self.trace", r'(?P<tmode>.*)')],
-                    'GetTraceModeBlank':  [("'DISPlay:WINDow:TRACe%s:STATe?'%(self.trace)", r'(?P<tmodeblank>\d+)')],
-                    #SetTrace wird über dei standart SetGetSomething Funktion realisiert, siehe weiter unten
-                    #'SetTrace':  [("'TRACE %d'%trace", None)],
+                    ###SetPreAmp hat das Gerät nicht, haben es andere???
+                    #'SetPreAmp':  [("'INPut:GAIN:STATe %s'%something", None)],
+                    #'GetPreAmp':  [('INPut:GAIN:STATe?', r'(?P<preamp>%s)'%self._FP)],
+                    ###SetDetector hat das Gerät nicht, haben es andere???
+                    #'SetDetectorAuto':   [("'SENSe:DETector%s:Auto On'%self.trace", None)],
+                    #'SetDetector':  [("'SENSe:DETector%s %s'%(self.trace,something)", None)],
+                    #'GetDetector':  [("'SENSe:DETector%s?'%self.trace", r'(?P<det>.*)')],
+                    
+                    
+                    
+                    
+                    #'SetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE %s'%(self.trace,something)", None)],  
+                    #'GetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE?'%self.trace", r'(?P<tmode>.*)')],
+                    #'GetTraceModeBlank':  [("'DISPlay:WINDow:TRACe%s:STATe?'%(self.trace)", r'(?P<tmodeblank>\d+)')],
+                    'SetTrace':  [("'CALCulate<Ch>:PARameter:SDEFine '<Trace Name>','< Meas Parameter>'%(tracename,measParam)", None)],
                     #'GetTrace':  [('TRACE?', r'TRACE (?P<trace>\d+)')],
+                    'DelTrace':  [('CALCulate<Ch>:PARameter:DELete <Trace Name>')],
+                    'ShwoTrace': [("'DISPlay:WINDow<Wnd>:TRACe<WndTr>:FEED '<Trace Name>''")],
+                                   
+                     
+                    'SetChannel': [('CONFigure:CHANnel<Ch>:STATe ON')],
+                    'DelChannel': [('CONFigure:CHANnel<Ch>:STATe OFF')],
+                     
+                                   
+                                   
+                    ###Sweep Type Einfügen                                                            #Manual S. 521
                     'SetSweepCount':  [("'SENSe:SWEep:COUNt %d'%something", None)],
                     'GetSweepCount':  [('SENSe:SWEep:COUNt?', r'(?P<scount>\d+)')],
                     'SetSweepTimeAuto':   [("SENSe:SWEep:TIME:Auto On", None)],
@@ -115,9 +126,15 @@ class NETWORKANALYZER(NETWORKAN):
                     'GetTriggerMode':  [('TRIGger:SOURce?', r'(?P<trgmode>.*)')],
                     'SetTriggerDelay':  [("'TRIGger:TIME:RINTerval %s s'%something", None)],
                     'GetTriggerDelay':  [('TRIGger:TIME:RINTerval?', r'(?P<tdelay>%s)'%self._FP)],
-                    #'SetWindow':  [('WINDOW %d'%window, None)],
+                    
+                    
+                    'SetWindow':  [('DISPlay:WINDow<Wnd>:STATe ON'%window, None)],
+                    'DelWindow':  [('DISPlay:WINDow<Wnd>:STATe OFF'%window, None)],
+                    
+                    
+                    
                     #'Quit':     [('QUIT', None)],
-                    'SetSANMode': [("INSTrument:SELect SAN", None)],
+                    'SetSANMode': [("INSTrument:SELect NWA", None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         
         # Die nachfolgende List stellt im Prinzip eine Tabelle mit drei Spalten dar.
@@ -129,9 +146,6 @@ class NETWORKANALYZER(NETWORKAN):
         # In der dritten Spalte sind die Befehle vermerkt, welche den möglichen Werten in der vorhergehenden
         # Spalte, zugeordnent werden. 
         complex=[
-                 ('SetRBW',
-                      [('auto','a'),        ('.+')],
-                      ['SetRBWAuto',  'SetRBW']),
                  ('SetVBW',
                       ['auto',        '.+'],
                       ['SetVBWAuto',  'SetVBW']),
@@ -159,6 +173,28 @@ class NETWORKANALYZER(NETWORKAN):
                           functools.partial(self._SetTraceIntern))
         setattr(self, "GetTrace", 
                           functools.partial(self._GetTraceIntern))
+        
+        
+
+    #******************************************************************************
+    #
+    #             Verwaltungs Funktionen
+    #*******************************************************************************
+
+
+    def getChannelNumber(self):
+        return self.internChannel
+
+
+    def __gethighestChannelNumber(self):
+        numb=0
+        for nw in NETWORKANALYZERS:
+            if (nw.getChannelNumber() >= numb):
+                numb = nw.getChannelNumber()+1
+        return numb
+
+
+
 
 
     #************************************   
@@ -225,6 +261,11 @@ class NETWORKANALYZER(NETWORKAN):
     #       Die Init Funktion initialisiert das Gerät, sie muss als erstes aufgerufen werden
     #***************************************************************************
     def Init(self, ini=None, channel=None):
+        NETWORKANALYZERS.append(self)
+        self.internChannel=-1
+        self.internChannel=__gethighestChannelNumber()
+        
+        
         
         if channel is None:
             channel=1
@@ -451,4 +492,73 @@ def main():
 #
 if __name__ == '__main__':
     main()
-
+    
+    
+    
+    
+class TRACE(Objekt):
+    
+    TRACES=[]
+    
+    def __init__(self,name,win,measParam,nw):
+        TRACES.append(self)
+        self.name=name
+        self.window=win
+        self.networkanalyzer=nw
+        self.measParameter = measParam
+        self.traceWindowNumber=-1
+        self.traceWindowNumber=__gethighestTraceWindowNumber()
+        self.internName='%s_Ch%dWIN%dTR%d'%(name,self.networkanalyzer.getChannelNumber(),self.window.getInternNumber(),self.traceWindowNumber)
+    
+    def __gethighestTraceWindowNumber(self):
+        numb=0
+        for trace in TRACES:
+            if (trace.getTraceWindowNumber() >= numb):
+                numb = trace.getTraceWindowNumber()+1
+        return numb
+            
+    def getTraceWindowNumber(self):
+        return self.windowNumber
+    
+    def getName(self):
+        return self.name
+    
+    def getInternName(self):
+        return self.internName
+    
+    def getMeasParameter(self):
+        return self.measParameter
+    
+    def getWindow(self):
+        return self.window
+    
+    def getNetworkanalyzer(self):
+        return self.networkanalyzer
+    
+    
+class WINDOW(Objekt):
+    
+    WINDOWS=[]
+    
+    def __init__(self,number,nw):
+        WINDOWS.append(self)
+        self.networkanalyzer=nw
+        self.number=number
+        self.internNumber=-1
+        self.internNumber=__gethighestWindowNumber()
+        
+    def __gethighestWindowNumber(self):
+        numb=0
+        for win in WINDOWS:
+            if (win.getInternNumber() >= numb):
+                numb = win.getInternNumber()+1
+        return numb
+        
+    def getInternNumber(self):
+        return self.internNumber
+    
+    def getNumber(self):
+        return self.number
+    
+    def getNetworkanalyzer(self):
+        return self.networkanalyzer
