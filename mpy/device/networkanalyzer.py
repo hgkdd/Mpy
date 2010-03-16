@@ -118,7 +118,7 @@ class NETWORKANALYZER(DRIVER):
                     'GetTriggerDelay':  [('TRGDELAY?', r'TRGDELAY (?P<tdelay>%s) us'%self._FP)],
                     'SetWindow':  [("'WINDOW %d'%window", None)],
                     'SetMeasBandwidth': [("'MBANDWITH %s'%something",None)],
-                    'GetMeasBandwidth': [('MBANDWITH?',r'MBANDWITH (?P<mbandwith>%s)'%self._PB)],
+                    'GetMeasBandwidth': [('MBANDWITH?',r'MBANDWITH (?P<mbandwith>%s)'%self._FP)],
                     'Quit':     [('QUIT', None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
    
@@ -155,11 +155,11 @@ class NETWORKANALYZER(DRIVER):
                      
                      
                      ("SetSparameter","GetSparameter","sparam",str,"SPARAMETER"),
-                     ("SetSweepType","GetSweepType","stype",str,"SWEEPTYPES")
+                     ("SetSweepType","GetSweepType","stype",str,"SWEEPTYPES"),
                      
                      ("SetSweepCount", "GetSweepCount", "scount", int, None),
                      #("SetSweepTime", "GetSweepTime", "stime", float, None),
-                     ("SetTriggerMode", "GetTriggerMode", "trgmode", str, "TRIGGERMODES"),
+                     #("SetTriggerMode", "GetTriggerMode", "trgmode", str, "TRIGGERMODES"),
                      ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None),
                      ("SetSweepPoints", "GetSweepPoints", "spoints", int, None)]
 
