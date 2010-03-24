@@ -17,12 +17,7 @@ from numpy import array, linspace, add
 #
 class SPECTRUMANALYZER(SPECTRUMAN):
 
-    #TRACEMODES=('WRITe', 'VIEW', 'AVERage', 'MAXHold', 'MINHold', 'RMS')
-    #DETECTORS=('APEak', 'NEGative', 'POSitive', 'SAMPle', 'RMS', 'AVERage', 'QPEak')
-    #TRIGGERMODES=('TIME', 'IMMediate', 'EXTern', 'IFPower', 'VIDeo')
-    
-    
-    
+
     #*************************************************************************
     #
     #                    Init

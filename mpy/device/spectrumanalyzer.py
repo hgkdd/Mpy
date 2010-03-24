@@ -229,14 +229,16 @@ class SPECTRUMANALYZER(DRIVER):
             something=fstrcmp(something, getattr(self,possibilities), n=1,cutoff=0,ignorecase=True)[0]
             
             #Ist Map Vorhanden?
-            if getattr(self,"Map%s"%possibilities):
-                #Wenn Wert zum Key = None, dann Abbruch mit Fehler
-                #sonst setzen von something auf Wert in Map           
+            try:
+            #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+            #sonst setzen von something auf Wert in Map           
                 if getattr(self,"Map%s"%possibilities)[something] == None:
                     self.error=1
                     return self.error,0
                 else:
                     something=getattr(self,"Map%s"%possibilities)[something]
+            except AttributeError:
+                None
 
         ###Complex abarbeiten
         # Das dict complex wird zeilenweiße ausgelesen und die einzelnen Spalten in die Variablen
@@ -292,15 +294,17 @@ class SPECTRUMANALYZER(DRIVER):
                 setattr(self, what, type_(getattr(self, what)))
         
         #Zürück Mapen
-            if possibilities: 
-                if getattr(self,"Map%s_Back"%possibilities):
-                    #Wenn Wert zum Key = None, dann Abbruch mit Fehler
-                    #sonst setzen von something auf Wert in Map           
-                    if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
-                        self.error=1
-                        return self.error,0
-                    else:
-                        setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
+        try:
+            #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+            #sonst setzen von something auf Wert in Map           
+            if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
+                self.error=1
+                return self.error,0
+            else:
+                setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
+        except AttributeError:
+                None
+        
         return self.error, getattr(self, what)
 
 
@@ -335,16 +339,17 @@ class SPECTRUMANALYZER(DRIVER):
             else:
                 setattr(self, what, type_(getattr(self, what)))
                 
-      #Zürück Mapen
-        if possibilities: 
-            if getattr(self,"Map%s_Back"%possibilities):
-                #Wenn Wert zum Key = None, dann Abbruch mit Fehler
-                #sonst setzen von something auf Wert in Map           
-                if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
-                    self.error=1
-                    return self.error,0
-                else:
-                    setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
+        #Zürück Mapen
+        try:
+            #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+            #sonst setzen von something auf Wert in Map           
+            if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
+                self.error=1
+                return self.error,0
+            else:
+                setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
+        except AttributeError:
+                None
           
         return self.error, getattr(self, what)
 

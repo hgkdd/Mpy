@@ -33,8 +33,9 @@ class NETWORKANALYZER(DRIVER):
     ATTMODES=('NORMAL', 'LOWNOISE', 'LOWDIST')
     #DETECTORS=('AUTOSELECT','AUTOPEAK','MAXPEAK','MINPEAK','SAMPLE','RMS', 'AVERAGE','DET_QPEAK')
     TRIGGERMODES=('FREE', 'VIDEO', 'EXTERNAL')
-    SWEEPTYPES=()
+    SWEEPTYPES=('LINEAR','LOGARITHMIC')
     SPARAMETER=()
+    SINGELSWEEP=('SINGEL','CONTINUOUS')
 
     #???
     conftmpl={'description': 
@@ -154,14 +155,15 @@ class NETWORKANALYZER(DRIVER):
                      ("SetTrace", "GetTrace", "trace", int, None),
                      
                      
-                     ("SetSparameter","GetSparameter","sparam",str,"SPARAMETER"),
-                     ("SetSweepType","GetSweepType","stype",str,"SWEEPTYPES"),
+                    # ("SetSparameter","GetSparameter","sparam",str,"SPARAMETER"),
+                     ("SetSweepType","GetSweepType","sweepType",str,"SWEEPTYPES"),
                      
-                     ("SetSweepCount", "GetSweepCount", "scount", int, None),
+                     ("SetSweepCount", "GetSweepCount", "sweepcount", int, None),
                      #("SetSweepTime", "GetSweepTime", "stime", float, None),
                      #("SetTriggerMode", "GetTriggerMode", "trgmode", str, "TRIGGERMODES"),
                      ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None),
-                     ("SetSweepPoints", "GetSweepPoints", "spoints", int, None)]
+                     ("SetSweepPoints", "GetSweepPoints", "spoints", int, None),
+                     ("SetSingelSweep","GetSingelSweep","singelSweep",str,"SINGELSWEEP")]
 
 
 
@@ -244,17 +246,19 @@ class NETWORKANALYZER(DRIVER):
         
         ###Maping
         if possibilities:
-            something=fstrcmp(something, getattr(self,possibilities), n=1,cutoff=0,ignorecase=True)[0]
+            #something=fstrcmp(something, getattr(self,possibilities), n=1,cutoff=0,ignorecase=True)[0]
             
             #Ist Map Vorhanden?
-            if getattr(self,"Map%s"%possibilities):
-                #Wenn Wert zum Key = None, dann Abbruch mit Fehler
-                #sonst setzen von something auf Wert in Map           
+            try:
+            #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+            #sonst setzen von something auf Wert in Map           
                 if getattr(self,"Map%s"%possibilities)[something] == None:
                     self.error=1
                     return self.error,0
                 else:
                     something=getattr(self,"Map%s"%possibilities)[something]
+            except AttributeError:
+                None
 
         ###Complex abarbeiten
         # Das dict complex wird zeilenweiße ausgelesen und die einzelnen Spalten in die Variablen
@@ -310,15 +314,17 @@ class NETWORKANALYZER(DRIVER):
                 setattr(self, what, type_(getattr(self, what)))
         
         #Zürück Mapen
-            if possibilities: 
-                if getattr(self,"Map%s_Back"%possibilities):
-                    #Wenn Wert zum Key = None, dann Abbruch mit Fehler
-                    #sonst setzen von something auf Wert in Map           
-                    if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
-                        self.error=1
-                        return self.error,0
-                    else:
-                        setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
+        try:
+            #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+            #sonst setzen von something auf Wert in Map           
+            if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
+                self.error=1
+                return self.error,0
+            else:
+                setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
+        except AttributeError:
+                None
+                
         return self.error, getattr(self, what)
 
 
@@ -353,16 +359,17 @@ class NETWORKANALYZER(DRIVER):
             else:
                 setattr(self, what, type_(getattr(self, what)))
                 
-      #Zürück Mapen
-        if possibilities: 
-            if getattr(self,"Map%s_Back"%possibilities):
-                #Wenn Wert zum Key = None, dann Abbruch mit Fehler
-                #sonst setzen von something auf Wert in Map           
-                if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
-                    self.error=1
-                    return self.error,0
-                else:
-                    setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
+        #Zürück Mapen
+        try:
+            #Wenn Wert zum Key = None, dann Abbruch mit Fehler
+            #sonst setzen von something auf Wert in Map           
+            if getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)] == None:
+                self.error=1
+                return self.error,0
+            else:
+                setattr(self, what,getattr(self,"Map%s_Back"%possibilities)[getattr(self, what)])
+        except AttributeError:
+                None
           
         return self.error, getattr(self, what)
 
