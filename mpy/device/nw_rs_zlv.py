@@ -8,7 +8,7 @@ from scuq import *
 from mpy.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
 from mpy.tools.Configuration import fstrcmp
 
-from numpy import array, linspace, add
+import numpy
 
 #
 #
@@ -287,7 +287,13 @@ class NETWORKANALYZER(NETWORKAN):
         #split in eine liste umgewandelt.
         self.power=re.split(',', self.power)
 
-       # xValues = linspace(self.GetStartFreq()[1],self.GetStopFreq()[1],len(self.power))
+        #print self.GetStartFreq()
+        #print self.GetStopFreq()
+        #print self.GetSweepType()
+
+        #print numpy.logspace(self.GetStartFreq()[1],self.GetStopFreq()[1],num=len(self.power))
+        #print numpy.linspace(self.GetStartFreq()[1],self.GetStopFreq()[1],len(self.power))
+        # xValues = 
         #Die einzelnen Werte der Liste werden hier in float Zahlen
         #umgewandelt   
        # pow=[]
@@ -624,7 +630,7 @@ def main():
     
     _assertlist=[
                  ("SetCenterFreq", 3e9,"assert"),                     #Default:3e9
-                  ('SetSpan',6e9,"print"),                            #Default:6e9
+                  ('SetSpan',5999991000,"print"),                            #Default:6e9
                   ('SetStartFreq',9e3,"assert"),                      #Default:9e3
                   ('SetStopFreq',6e9,"assert"),                       #Default:6e9
                   ('SetRBW',10e3,"assert"),                           #Default:10e3
