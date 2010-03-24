@@ -79,16 +79,21 @@ class NETWORKANALYZER(NETWORKAN):
                     'GetStartFreq':  [("'SENSe%d:FREQuency:STARt?'%(self.internChannel)", r'(?P<stfreq>%s)'%self._FP)],         #Manual S. 501
                     'SetStopFreq':  [("'SENSe%d:FREQuency:STOP %s HZ'%(self.internChannel,something)", None)],                  #Manual S. 501
                     'GetStopFreq':  [("'SENSe%d:FREQuency:STOP?'%(self.internChannel)", r'(?P<spfreq>%s)'%self._FP)],           #Manual S. 501
+                    # Meas/Resolution Bandwidht:
                     'SetRBW':  [("'SENSe%d:BANDwidth:RESolution %s HZ'%(self.internChannel,something)", None)],                 #Manual S. 473
                     'GetRBW':  [("'SENSe%d:BANDwidth:RESolution?'%(self.internChannel)", r'(?P<rbw>%s)'%self._FP)],             #Manual S. 473
                     ###[SENSe<Ch>:]BANDwidth|BWIDth[:RESolution]:SELect FAST | NORMal???
-                    ### Meas Bandwidht???????
                    'SetRefLevel':  [("'DISPlay:WINDow%s:TRACe%s:Y:SCALe:RLEVel %s DBM'%(internWindow,windTraceNumber,something)", None)],            #Manual S. 430
-                   'GetRefLevel':  [("'DISPlay:WINDow%s:TRACe%s:Y:SCALe:RLEVel?'%(internWindow,windTraceNumber)", r'(?P<reflevel>%s)'%self._FP)],                                                                #Manual S. 430
-                    ### Scale / Div 
+                   'GetRefLevel':  [("'DISPlay:WINDow%s:TRACe%s:Y:SCALe:RLEVel?'%(internWindow,windTraceNumber)", r'(?P<reflevel>%s)'%self._FP)],    #Manual S. 430
+                   'SetDivisionValue': [("'DISPlay:WINDow%s:TRACe%s:Y:SCALe:PDIVision %s DBM'%(internWindow,windTraceNumber,something)", None)],                 #Manual S. 429
+                   'GetDivisionValue': [("'DISPlay:WINDow%s:TRACe%s:Y:SCALe:PDIVision?'%(internWindow,windTraceNumber)", r'(?P<setDivisionvalue>%s)'%self._FP)], #Manual S. 429    
+                
 
                      ###Trace Mode nur Max hold
+                     #CALCulate<Chn>:PHOLd MAX | OFF                #Manual S. 386
                      ###Dafür bei Sweep average!!!!!! 
+                     #[SENSe<Ch>:]AVERage[:STATe] <Boolean>           #Manual S. 473
+                     #[SENSe<Ch>:]AVERage:CLEar                       #Manual S. 472 
                     #'SetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE %s'%(self.trace,something)", None)],  
                     #'GetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE?'%self.trace", r'(?P<tmode>.*)')],
                     #'GetTraceModeBlank':  [("'DISPlay:WINDow:TRACe%s:STATe?'%(self.trace)", r'(?P<tmodeblank>\d+)')],
