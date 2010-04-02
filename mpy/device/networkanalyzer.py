@@ -37,6 +37,33 @@ class NETWORKANALYZER(DRIVER):
     SPARAMETER=()
     SINGELSWEEP=('SINGEL','CONTINUOUS')
 
+    _setgetlist=[("SetCenterFreq", "GetCenterFreq", "cfreq", float, None, float),
+                     ("SetSpan", "GetSpan", "span", float, None, float),
+                     ("SetStartFreq", "GetStartFreq", "stfreq", float, None, float),
+                     ("SetStopFreq", "GetStopFreq", "spfreq", float, None, float),
+                     ("SetRBW", "GetRBW", "rbw", float, None, float),
+                     ("SetVBW", "GetVBW", "vbw", float, None, float),
+                     ("SetRefLevel", "GetRefLevel", "reflevel", float, None, float),
+                     ("SetAtt", "GetAtt", "att", float, None, float),
+                     ("SetAttMode", "GetAttMode", "attmode", str, "ATTMODES", str),
+                     #("SetPreAmp", "GetPreAmp", "preamp", float, None, float),
+                     #("SetDetector", "GetDetector", "det", str, "DETECTORS", str),
+                     ("SetTraceMode", "GetTraceMode", "tmode", str, "TRACEMODES", str),
+                     ("SetTrace", "GetTrace", "trace", int, None, int),
+                     
+                     
+                    # ("SetSparameter","GetSparameter","sparam",str,"SPARAMETER", str),
+                     ("SetSweepType","GetSweepType","sweepType",str,"SWEEPTYPES", str),
+                     
+                     ("SetSweepCount", "GetSweepCount", "sweepcount", int, None, int),
+                     #("SetSweepTime", "GetSweepTime", "stime", float, None, float),
+                     #("SetTriggerMode", "GetTriggerMode", "trgmode", str, "TRIGGERMODES", str),
+                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None, float),
+                     ("SetSweepPoints", "GetSweepPoints", "spoints", int, None, int),
+                     ("SetSingelSweep","GetSingelSweep","singelSweep",str,"SINGELSWEEP", str)]
+
+
+
     #???
     conftmpl={'description': 
                  {'description': str,
@@ -140,37 +167,14 @@ class NETWORKANALYZER(DRIVER):
         
         
 
-        _setgetlist=[("SetCenterFreq", "GetCenterFreq", "cfreq", float, None),
-                     ("SetSpan", "GetSpan", "span", float, None),
-                     ("SetStartFreq", "GetStartFreq", "stfreq", float, None),
-                     ("SetStopFreq", "GetStopFreq", "spfreq", float, None),
-                     ("SetRBW", "GetRBW", "rbw", float, None),
-                     ("SetVBW", "GetVBW", "vbw", float, None),
-                     ("SetRefLevel", "GetRefLevel", "reflevel", float, None),
-                     ("SetAtt", "GetAtt", "att", float, None),
-                     ("SetAttMode", "GetAttMode", "attmode", str, "ATTMODES"),
-                     #("SetPreAmp", "GetPreAmp", "preamp", float, None),
-                     #("SetDetector", "GetDetector", "det", str, "DETECTORS"),
-                     ("SetTraceMode", "GetTraceMode", "tmode", str, "TRACEMODES"),
-                     ("SetTrace", "GetTrace", "trace", int, None),
-                     
-                     
-                    # ("SetSparameter","GetSparameter","sparam",str,"SPARAMETER"),
-                     ("SetSweepType","GetSweepType","sweepType",str,"SWEEPTYPES"),
-                     
-                     ("SetSweepCount", "GetSweepCount", "sweepcount", int, None),
-                     #("SetSweepTime", "GetSweepTime", "stime", float, None),
-                     #("SetTriggerMode", "GetTriggerMode", "trgmode", str, "TRIGGERMODES"),
-                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None),
-                     ("SetSweepPoints", "GetSweepPoints", "spoints", int, None),
-                     ("SetSingelSweep","GetSingelSweep","singelSweep",str,"SINGELSWEEP")]
+        
 
 
 
 
         # Die folgende for-Schleife arbeitet die _setgetlist ab und erzeugt dabei die Funktionen
         # über die das Gerät angesprochen werden kann.
-        for setter, getter, what, type_, possibilities in _setgetlist:
+        for setter, getter, what, type_, possibilities, ui in _setgetlist:
             # Zuerst wird eine Klassen-Variable angelegt.
             # Dazu wird die Python-Built-in Funktion setattr verwendet. Mit ihr ist es möglich Variablen
             # anzulegen, deren Namen in einer String Variable gespeicher ist.

@@ -1,0 +1,141 @@
+# -*- coding: utf-8 -*-
+#Es wird benötigt enthought.chaco und enthought.enable
+
+import StringIO
+import enthought.traits.api as tapi
+import enthought.traits.ui.api as tuiapi
+import enthought.traits.ui.menu as tuim
+from enthought.chaco.api import Plot, ArrayPlotData
+from enthought.enable.component_editor import ComponentEditor
+
+from scuq.quantities import Quantity
+from mpy.tools.util import format_block
+from mpy.device.device import CONVERT
+
+from mpy.device.Meta_ui import Metaui
+
+import numpy as np
+
+
+from mpy.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
+
+
+conv=CONVERT()
+
+std_ini=format_block("""
+                [DESCRIPTION]
+                description: sp template
+                type:        'SPECTRUMANALYZER'
+                vendor:      some company
+                serialnr:    SN12345
+                deviceid:    internal ID
+                driver:      dummy.py
+    
+                [Init_Value]
+                fstart: 100e6
+                fstop: 6e9
+                fstep: 1
+                gpib: 20
+                virtual: 0
+
+                [Channel_1]
+                unit: 'dBm'
+                attenuation: auto
+                reflevel: -20
+                rbw: auto
+                vbw: 10e6
+                span: 6e9
+                trace: 1
+                tracemode: 'WRITe'
+                detector: 'APEak'
+                sweepcount: 0
+                triggermode: 'IMMediate'
+                attmode: 'auto'
+                sweeptime: 10e-3
+                sweeppoints: 500
+                """)
+std_ini=StringIO.StringIO(std_ini)
+
+
+class UI(tapi.HasTraits):
+    
+    __metaclass__ = Metaui
+    __parentclass__ = NETWORKAN
+    Init=tapi.Button()
+    INI=tapi.Str()    
+    int_unit='dBm'
+    
+    
+    
+    GetSpectrum=tapi.Button("GetSpectrum")
+    SPECTRUM=tapi.Str()
+    power=()
+    
+    
+    def __init__(self, instance, ini=None):
+        # Wenn keine ini übergeben wurde wird die Standard ini verwendet.
+        self.sp=instance
+        if not ini:
+            ini=std_ini
+        self.ini=ini
+        self.INI=ini.read()
+        
+        # Plot Fenster erstellen.
+        x = np.array([])
+        y = np.array([])
+        self.plotdata = ArrayPlotData(x=x, y=y)
+        plot = Plot(self.plotdata)
+        plot.plot(("x", "y"), type="line", color="blue")
+        plot.title = "Spectrum"
+        plot.index_axis.title='Frequenz in Hz'
+        plot.value_axis.title='Amplitude in dBm'
+        self.plot = plot
+    
+    
+    
+    
+          
+    #*************************************************************************
+    #
+    # Funktionen die aufgerufen werden wenn ein Button gedrückt wird. 
+    #**************************************************************************
+    
+    # Spectrum holen und in Fester und Plot schreiben.
+    def _GetSpectrum_fired(self):
+        print "GetSprectrum"
+        #self.power=self.sp.GetSpectrum()[1]
+        #x = np.array(self.power[0])
+        #y = np.array(self.power[1])
+        #self.plotdata.set_data('x', x)
+        #self.plotdata.set_data('y', y)
+        #self.plot.request_redraw()
+        
+        #self.SPECTRUM=str(self.power[0])+"\n\n\n"+str(self.power[1])
+    
+    
+    
+    #*********************************************************************
+    #
+    #Fenster erstellen:
+    #**********************************************************************
+    
+    plot = tapi.Instance(Plot)
+    SPEC_grp=tuiapi.Group(tuiapi.Item('SPECTRUM', style='custom',springy=True,width=500,height=200,show_label=False),
+                         tuiapi.Item('GetSpectrum', show_label=False),
+                         label='Spectrum')
+    
+    PLOT_grp=tuiapi.Group(tuiapi.Item('plot',editor=ComponentEditor(), show_label=False),
+                         tuiapi.Item('GetSpectrum', show_label=False),
+                         label='Plot')
+
+    
+
+def main():
+    ui=UI("")
+    ui.configure_traits()
+    #sys.exit(0)    
+
+
+if __name__ == '__main__':
+    main()
+        
