@@ -74,14 +74,13 @@ class NETWORKANALYZER(DRIVER):
                      ("SetStopFreq", "GetStopFreq", "spfreq", float, None, float),
                      ("SetRBW", "GetRBW", "rbw", float, None, float),
                      ("SetRefLevel", "GetRefLevel", "reflevel", float, None, float),
-                     ("SetDivisionValue","GetDivisionValue","setDivisionvalue", float, None, float)
-                     ("SetTraceMode", "GetTraceMode", "tmode", str, "TRACEMODES"),
+                     ("SetDivisionValue","GetDivisionValue","setDivisionvalue", float, None, float),
+                     ("SetTraceMode", "GetTraceMode", "tmode", str, "TRACEMODES",str),
                      ("SetTrace", "GetTrace", "trace", str, None, str),
                      ("SetChannel", "GetChannel", "chan", int, None, int),
                     # ("SetSparameter","GetSparameter","sparam",str,"SPARAMETER", str),
                      ("SetSweepType","GetSweepType","sweepType",str,"SWEEPTYPES", str),
                      ("SetSweepCount", "GetSweepCount", "sweepcount", int, None, int),
-                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None, float),
                      ("SetSweepPoints", "GetSweepPoints", "spoints", int, None, int),
                      ("SetSingelSweep","GetSingelSweep","singelSweep",str,"SINGELSWEEP", str)]
 
@@ -162,7 +161,7 @@ class NETWORKANALYZER(DRIVER):
 
         # Die folgende for-Schleife arbeitet die _setgetlist ab und erzeugt dabei die Funktionen
         # über die das Gerät angesprochen werden kann.
-        for setter, getter, what, type_, possibilities, ui in _setgetlist:
+        for setter, getter, what, type_, possibilities, ui in self._setgetlist:
             # Zuerst wird eine Klassen-Variable angelegt.
             # Dazu wird die Python-Built-in Funktion setattr verwendet. Mit ihr ist es möglich Variablen
             # anzulegen, deren Namen in einer String Variable gespeicher ist.
