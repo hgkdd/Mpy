@@ -18,20 +18,8 @@ import numpy
 class NETWORKANALYZER(NETWORKAN):
     NETWORKANALYZERS=[]
 
-
-    #S11 | S12 | S21 | S22
-    #TRACEMODES=('WRITe', 'VIEW', 'AVERage', 'MAXHold', 'MINHold', 'RMS')
     
     #Map: {Allgemein gültige Bezeichnung : Bezeichnung Gerät} 
-#    MapTRACEMODES={'WRITE':         'WRITe',
-#                   'VIEW':          'VIEW',
-#                   'AVERAGE':       'AVERage',
-#                   'BLANK':         'OFF',       #Off umsetzen!!!!!  #RMS??
-#                   'MAXHOLD':       'MAXHold',
-#                   'MINHOLD':       'MINHold'
-#                   }
-    
-    
 
     #Back Map: {RückgabeWert von Gerät : Allgemein gültige Bezeichnung} 
     MapSWEEPTYPES_Back={'LOG'  :   'LOGARITHMIC',
@@ -94,12 +82,9 @@ class NETWORKANALYZER(NETWORKAN):
                      ###Dafür bei Sweep average!!!!!! 
                      #[SENSe<Ch>:]AVERage[:STATe] <Boolean>           #Manual S. 473
                      #[SENSe<Ch>:]AVERage:CLEar                       #Manual S. 472 
-                    #'SetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE %s'%(self.trace,something)", None)],  
-                    #'GetTraceMode':  [("'DISPlay:WINDow:TRACe%s:MODE?'%self.trace", r'(?P<tmode>.*)')],
-                    #'GetTraceModeBlank':  [("'DISPlay:WINDow:TRACe%s:STATe?'%(self.trace)", r'(?P<tmodeblank>\d+)')],
                     'SetTrace':  [("'CALCulate%d:PARameter:SDEFine \\'%s\\', \\'%s\\''%(self.internChannel,internTracename,measParam)", None)],    #Manual S. 384
                     'GetTrace':  [("'CALCulate%d:PARameter:CATalog?'%(self.internChannel)", r'(?P<trace>.*)')],                                    #Manual S. 381
-               #    'DelTrace':  [("'CALCulate<Ch>:PARameter:DELete %s'%(self.internChannel,internTracename)",None)],                              #Manual S. 382
+              #      'DelTrace':  [("'CALCulate%d:PARameter:DELete %s'%(self.internChannel,internTracename)",None)],                              #Manual S. 382
                     'ShwoTrace': [("'DISPlay:WINDow%d:TRACe%d:FEED \\'%s\\''%(internWindow,windTraceNumber,internTracename)",None)],                #Manual S. 426
                     'SetActiveTrace': [("'CALCulate%d:PARameter:SELect \\'%s\\''%(self.internChannel,internTracename)",None)],            
                      
@@ -107,6 +92,8 @@ class NETWORKANALYZER(NETWORKAN):
                #     'DelChannel': [("'CONFigure:CHANnel%d:STATe OFF'%self.internChannel";None)],
                #     'GetChannel': [("'CONFigure:CHANnel%d:CATalog?'%self.internChannel", r'(?P<chan>.*')],             #Manual S. 415 
                     
+                    'SetSparameter':  [("'SPARAM %s'%something",None)],
+                    'GetSparameter':  [('SPARAM?', r'SPARAM (?P<sparam>.*)')],
                                    
                     'SetSweepType': [("'SENSe%d:SWEep:TYPE %s'%(self.internChannel,something)",None)],                   # LINear | LOGarithmic | SEGMent    #Manual S. 523
                     'GetSweepType': [("'SENSe%d:SWEep:TYPE?'%(self.internChannel)",r'(?P<sweepType>.*)')],
@@ -116,13 +103,13 @@ class NETWORKANALYZER(NETWORKAN):
                     'GetSweepPoints':  [("'SENSe%d:SWEep:POINts?'%(self.internChannel)", r'(?P<spoints>\d+)')],          #Manual S. 521
                     'SetSingelSweep':  [("'INITiate%d:CONTinuous %s'%(self.internChannel,something)",None)],            #Manual S. 442
                     'GetSingelSweep':  [("'INITiate%d:CONTinuous?'%(self.internChannel)",r'(?P<singelSweep>.*)')],      #Manual S. 442 
+                    
                     'GetSpectrum':  [("'CALCulate%d:DATA? FDAT'%(self.internChannel)", r'(?P<power>([-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?,?)+)')],      #Manual S. 339
                     #Später:
                     #'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
  
                     'SetWindow':  [("'DISPlay:WINDow%d:STATe ON'%internWindow", None)],                               #Manual S. 424
               #      'DelWindow':  [("'DISPlay:WINDow<Wnd>:STATe OFF'%internWindow", None)],                          #Manual S. 424
-              #      'GetWindow':  [("...", r'WINDOW (?P<wind>.*')],
                     
                     #'Quit':     [('QUIT', None)],
                     'SetNWAMode': [("INSTrument:SELect NWA", None)],
@@ -379,11 +366,33 @@ class NETWORKANALYZER(NETWORKAN):
         # Optionen inhaltet. 
         #
         self._cmds['Preset']=[]
-        presets=[
-                 #('trace',
-                 #     None,
-                 #     'SetTrace')
-                      ]
+        presets=[('reflevel',
+                  None,
+                  'SetRefLevel'),
+                 ('rbw',
+                   None,
+                   'SetRBW'),
+                 ('span',
+                   None,
+                   'SetSpan'),
+                 ('window',
+                   None,
+                   'SetWindow'),
+                 ('trace_name'),
+                 ('S-Parameter'),
+                 #('tracemode')
+                 ('sweepcount',
+                    None,
+                    'SetSweepCount'),
+                 ('sweeppoints',
+                    None,
+                    'SetSweepPoints'),
+                 ('singelsweep',
+                    None,
+                   'SetSingelSweep'),  
+                 ('sweeptype',
+                    None,
+                    'SetSweepType')]
         
         
         #self.SetTrace(self.conf[sec]['trace'])
@@ -571,21 +580,18 @@ def main():
 
                         [Channel_1]
                         unit: 'dBm'
-                        attenuation: auto
-                        reflevel: -20
-                        rbw: auto
-                        vbw: 10e6
-                        span: 6e9
-                        trace: 1
-                        tracemode: 'WRITe'
-                        detector: 'APEak'
-                        sweepcount: 0
-                        triggermode: 'IMMediate'
-                        attmode: auto
-                        sweeptime: 10e-3
-                        sweeppoints: 500
+                        reflevel: O
+                        rbw: 10e3
+                        span: 5999991000
+                        window: 1
+                        trace_name: 'TRC1'
+                        S-Parameter: 'S11'
+                        tracemode: 'WRITE'
+                        sweepcount: 1
+                        sweeppoints: 50
+                        singelsweep: 'CONTINUOUS'
+                        sweeptyp: 'LINEAR'
                         """)
-                        # rbw: 3e6
         ini2=StringIO.StringIO(ini2)
         
     # #

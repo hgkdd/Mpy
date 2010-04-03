@@ -29,39 +29,10 @@ class NETWORKANALYZER(DRIVER):
     
     
     #???
-    TRACEMODES=('WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD')
-    ATTMODES=('NORMAL', 'LOWNOISE', 'LOWDIST')
-    #DETECTORS=('AUTOSELECT','AUTOPEAK','MAXPEAK','MINPEAK','SAMPLE','RMS', 'AVERAGE','DET_QPEAK')
-    TRIGGERMODES=('FREE', 'VIDEO', 'EXTERNAL')
+    #TRACEMODES=('WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD')
     SWEEPTYPES=('LINEAR','LOGARITHMIC')
-    SPARAMETER=()
+    SPARAMETER=('S11', 'S12', 'S21', 'S22')
     SINGELSWEEP=('SINGEL','CONTINUOUS')
-
-    _setgetlist=[("SetCenterFreq", "GetCenterFreq", "cfreq", float, None, float),
-                     ("SetSpan", "GetSpan", "span", float, None, float),
-                     ("SetStartFreq", "GetStartFreq", "stfreq", float, None, float),
-                     ("SetStopFreq", "GetStopFreq", "spfreq", float, None, float),
-                     ("SetRBW", "GetRBW", "rbw", float, None, float),
-                     ("SetVBW", "GetVBW", "vbw", float, None, float),
-                     ("SetRefLevel", "GetRefLevel", "reflevel", float, None, float),
-                     ("SetAtt", "GetAtt", "att", float, None, float),
-                     ("SetAttMode", "GetAttMode", "attmode", str, "ATTMODES", str),
-                     #("SetPreAmp", "GetPreAmp", "preamp", float, None, float),
-                     #("SetDetector", "GetDetector", "det", str, "DETECTORS", str),
-                     ("SetTraceMode", "GetTraceMode", "tmode", str, "TRACEMODES", str),
-                     ("SetTrace", "GetTrace", "trace", int, None, int),
-                     
-                     
-                    # ("SetSparameter","GetSparameter","sparam",str,"SPARAMETER", str),
-                     ("SetSweepType","GetSweepType","sweepType",str,"SWEEPTYPES", str),
-                     
-                     ("SetSweepCount", "GetSweepCount", "sweepcount", int, None, int),
-                     #("SetSweepTime", "GetSweepTime", "stime", float, None, float),
-                     #("SetTriggerMode", "GetTriggerMode", "trgmode", str, "TRIGGERMODES", str),
-                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None, float),
-                     ("SetSweepPoints", "GetSweepPoints", "spoints", int, None, int),
-                     ("SetSingelSweep","GetSingelSweep","singelSweep",str,"SINGELSWEEP", str)]
-
 
 
     #???
@@ -81,21 +52,39 @@ class NETWORKANALYZER(DRIVER):
                      'nr_of_channels': int},
                 'channel_%d':
                     {'unit': str,
-                     'attenuation': str,
                      'reflevel': float,
-                     'rbw': str,
-                     'vbw': float,
+                     'rbw': float,
                      'span': float,
-                     'trace': int,
+                     'window': int,
+                     'trace_name': str,
+                     'S-Parameter': str,
                      'tracemode': str,
-                     'detector': str,
                      'sweepcount': int,
-                     'triggermode': str,
-                     'attmode': str,
-                     'sweeptime': float,
-                     'sweeppoints': int}}
+                     'sweeppoints': int,
+                     'singelsweep': str,
+                     'sweeptype': str
+                     }}
 
     _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
+
+
+    _setgetlist=[   ("SetCenterFreq", "GetCenterFreq", "cfreq", float, None, float),
+                     ("SetSpan", "GetSpan", "span", float, None, float),
+                     ("SetStartFreq", "GetStartFreq", "stfreq", float, None, float),
+                     ("SetStopFreq", "GetStopFreq", "spfreq", float, None, float),
+                     ("SetRBW", "GetRBW", "rbw", float, None, float),
+                     ("SetRefLevel", "GetRefLevel", "reflevel", float, None, float),
+                     ("SetDivisionValue","GetDivisionValue","setDivisionvalue", float, None, float)
+                     ("SetTraceMode", "GetTraceMode", "tmode", str, "TRACEMODES"),
+                     ("SetTrace", "GetTrace", "trace", str, None, str),
+                     ("SetChannel", "GetChannel", "chan", int, None, int),
+                    # ("SetSparameter","GetSparameter","sparam",str,"SPARAMETER", str),
+                     ("SetSweepType","GetSweepType","sweepType",str,"SWEEPTYPES", str),
+                     ("SetSweepCount", "GetSweepCount", "sweepcount", int, None, int),
+                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None, float),
+                     ("SetSweepPoints", "GetSweepPoints", "spoints", int, None, int),
+                     ("SetSingelSweep","GetSingelSweep","singelSweep",str,"SINGELSWEEP", str)]
+
         
     def __init__(self):
         DRIVER.__init__(self)
@@ -109,44 +98,43 @@ class NETWORKANALYZER(DRIVER):
                     'GetStopFreq':  [('STOPFREQ?', r'STOPFREQ (?P<spfreq>%s) HZ'%self._FP)],
                     'SetRBW':  [("'RBW %s HZ'%something", None)],
                     'GetRBW':  [('RBW?', r'RBW (?P<rbw>%s) HZ'%self._FP)],
-                    'SetVBW':  [("'VBW %s HZ'%something", None)],
-                    'GetVBW':  [('VBW?', r'VBW (?P<vbw>%s) HZ'%self._FP)],
                     'SetRefLevel':  [("'REFLEVEL %s DBM'%something", None)],
                     'GetRefLevel':  [('REFLEVEL?', r'REFLEVEL (?P<reflevel>%s) DBM'%self._FP)],
-                    'SetAtt':  [("'ATT %s DB'%something", None)],
-                    'GetAtt':  [('ATT?', r'ATT (?P<att>%s) DB'%self._FP)],
-                    'SetAttAuto':  [("ATT -1", None)],
-                    'SetAttMode': [("'ATTMode %s'%something", None)],
-                    'GetAttMode':  [('ATTMode?', r'ATTMODE (?P<attmode>.*)')],
-                    #'SetPreAmp':  [("'PREAMP %s DB'%something", None)],
-                    #'GetPreAmp':  [('PREAMP?', r'PREAMP (?P<preamp>%s) DB'%self._FP)],
-                    #'SetDetector':  [("'DET %s'%something", None)],
-                    #'GetDetector':  [('DET?', r'DET (?P<det>.*)')],
+                    'SetDivisionValue': [("'DIVISIONVALUE %s DBM'%(something)", None)],
+                    'GetDivisionValue': [("'DIVISIONVALUE?", r'DIVISIONVALUE(?P<setDivisionvalue>%s)'%self._FP)],  
+
+                    #???   
                     'SetTraceMode':  [("'TMODE %s'%something", None)],
                     'GetTraceMode':  [('TMODE?', r'TMODE (?P<tmode>.*)')],
+                    
                     'SetTrace':  [("'TRACE %d'%trace", None)],
                     'GetTrace':  [('TRACE?', r'TRACE (?P<trace>\d+)')],
+                    'DelTrace':  [("'DELTRACE %s'%(something)",None)],       
+                     
+                    'SetChannel': [("'CHANNEL %s'%(something)",None)],
+                    'DelChannel': [("'DELCHANNEL %s'%(something)",None)],
+                    'GetChannel': [("'CHANNEL?'", r'CHANNEL (?P<chan>.*')],
+                    
                         
                     'SetSparameter':  [("'SPARAM %s'%something",None)],
                     'GetSparameter':  [('SPARAM?', r'SPARAM (?P<sparam>.*)')],
+                    
                     'SetSweepType':   [("'SWEEPTYPE %s'%something",None)],
                     'GetSweepType':   [('SWEEPTYPE?]', r'SWEEPTYPE (?P<stype>.*')],                  
                     
                     'SetSweepCount':  [("'SWEEPCOUNT %d'%something", None)],
                     'GetSweepCount':  [('SWEEPCOUNT?', r'SWEEPCOUNT (?P<scount>\d+)')],
-                    #'SetSweepTime':  [("'SWEEPTIME %s us'%something", None)],
-                    #'GetSweepTime':  [('SWEEPTIME?', r'SWEEPTIME (?P<stime>%s) us'%self._FP)],
                     'SetSweepPoints':  [("'SWEEPPOINTS %s '%something", None)],
-                    'GetSweepPoints':  [('SWEEPPOINTS?', r'SWEEPPOINTS (?P<spoints>%s)'%self._FP)], 
-                    'GetTrace':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
-                    'GetTraceNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
-                    'SetTriggerMode': [("'TRGMODE %d'%something", None)],
-                    'GetTriggerMode':  [('TRGMODE?', r'TRGMODE (?P<trgmode>.*)')],
-                    'SetTriggerDelay':  [("'TRGDELAY %s us'%something", None)],
-                    'GetTriggerDelay':  [('TRGDELAY?', r'TRGDELAY (?P<tdelay>%s) us'%self._FP)],
-                    'SetWindow':  [("'WINDOW %d'%window", None)],
-                    'SetMeasBandwidth': [("'MBANDWITH %s'%something",None)],
-                    'GetMeasBandwidth': [('MBANDWITH?',r'MBANDWITH (?P<mbandwith>%s)'%self._FP)],
+                    'GetSweepPoints':  [('SWEEPPOINTS?', r'SWEEPPOINTS (?P<spoints>%s)'%self._FP)],
+                    'SetSingelSweep':  [("'SINGELSWEEP %s'%(something)",None)],            #Manual S. 442
+                    'GetSingelSweep':  [("'SINGELSWEEP?'",r'SINGELSWEEP (?P<singelSweep>.*)')],   
+
+                    'GetSpectrum':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
+                    'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
+ 
+                    'SetWindow':  [("'WINDOW %d'%something", None)],
+                    'DelWindow':  [("'DELWINDOW %d'%something", None)],
+                    
                     'Quit':     [('QUIT', None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
    
