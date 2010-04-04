@@ -5,13 +5,14 @@ API Documentation
 
 This is the documentation of the API.
 
+
 :mod:`mpy.device.driver`
 ------------------------
 
 .. automodule:: mpy.device.driver
    :members:
    :undoc-members:
-   :inherited-members:   :inherited-members:
+   :inherited-members:
 
 :mod:`mpy.device.device`
 ------------------------
@@ -21,7 +22,7 @@ This is the documentation of the API.
    :undoc-members:
    :inherited-members:
 
-   :mod:`mpy.device.amplifier`
+:mod:`mpy.device.amplifier`
 ---------------------------
 
 .. automodule:: mpy.device.amplifier
@@ -60,6 +61,17 @@ This is the documentation of the API.
    :members:
    :undoc-members:
    :inherited-members:
+
+:mod:`mpy.device.networkanalyzer`
+----------------------------------
+.. automodule:: mpy.device.networkanalyzer
+
+.. toctree::
+	:maxdepth: 2
+	
+	mpy/device_networkanalyzer.rst
+
+
    
 :mod:`mpy.env.Measure`
 -----------------------

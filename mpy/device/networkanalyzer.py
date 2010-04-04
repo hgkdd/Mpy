@@ -1,4 +1,14 @@
 # -*- coding: utf-8 -*-
+"""This is :mod:`mpy.device.networkanalyzer`
+
+   :author: Christian Albrecht
+   :copyright: All rights reserved
+   :license: no licence yet
+
+
+"""
+
+
 
 import re
 import functools
@@ -9,9 +19,80 @@ from mpy.device.driver import DRIVER
 
 class NETWORKANALYZER(DRIVER):
     """
-    Parent class of all py-drivers for spectrum analyzers.
+
+    Parent class of all py-drivers for networkanalyzer analyzers.
     
     The parent class is :class:`mpy.device.driver.DRIVER`.
+
+    
+    The configuration template for this device class is::
+    
+        conftmpl={'description': 
+                 {'description': str,
+                  'type': str,
+                  'vendor': str,
+                  'serialnr': str,
+                  'deviceid': str,
+                  'driver': str},
+                'init_value':
+                    {'fstart': float,
+                     'fstop': float,
+                     'fstep': float,
+                     'gpib': int,
+                     'virtual': strbool,
+                     'nr_of_channels': int},
+                'channel_%d':
+                    {'unit': str,
+                     'reflevel': float,
+                     'rbw': float,
+                     'span': float,
+                     'window': int,
+                     'trace_name': str,
+                     'S-Parameter': str,
+                     'tracemode': str,
+                     'sweepcount': int,
+                     'sweeppoints': int,
+                     'sweeptype': str
+                     }}
+       
+    The meaning is:
+        
+    - Section *description*
+        - description: string describing the instrument
+        - type: string with the instrument type (here: POWERMETER)
+        - vendor: string ddescribing the vendor/manufactor
+        - serialnr: string with a unique identification
+        - deviceid: string with an internal id
+        - driver: filename of the instrument driver (.py, .pyc, .pyd, .dll)
+    - Section *init_value*
+        - *fstart*: lowest possible frequency in Hz of the device
+        - *fstop*: highest possible frequency in Hz of the device
+        - *fstep*: smallest frequency step in Hz of the device
+        - *gpib*: GPIB address of the device
+        - *virtual*: 0, false or 1, true. Virtual device are usefull for testing and debugging.
+        - *nr_of_channels*: indicates how many channel sections follow
+        
+    .. rubric:: Methods:
+    
+    .. method:: SetCenterFreq(something):
+    
+          Set the CenterFreq of the Device.
+    
+          :param something: CenterFreq for the device
+          :type something: float
+          :rtype: CenterFreq which is set on the Device after the set command
+    
+    .. method:: GetCenterFreq():
+            Get the CenterFreq of the Device
+            
+            :rtype: CenterFreq which is set on the Device
+    
+    .. method:: SetSpan(something):
+            Set the Span of the Device
+                
+            :param something: Span in Hz
+            :type something: float
+            :rtype: Span which is set on the Device after the set command 
     """
     
     
@@ -32,7 +113,7 @@ class NETWORKANALYZER(DRIVER):
     #TRACEMODES=('WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD')
     SWEEPTYPES=('LINEAR','LOGARITHMIC')
     SPARAMETER=('S11', 'S12', 'S21', 'S22')
-    SINGELSWEEP=('SINGEL','CONTINUOUS')
+    TRIGGERMODES=('IMMEDIATE', 'EXTERNAL')
 
 
     #???
@@ -61,28 +142,31 @@ class NETWORKANALYZER(DRIVER):
                      'tracemode': str,
                      'sweepcount': int,
                      'sweeppoints': int,
-                     'singelsweep': str,
                      'sweeptype': str
                      }}
 
     _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
 
 
+    #In der _setgetlist stehen alle Fuktionen die automatisch erstellt werden sollen. 
+    #(SetFunktion,GetFuktionen, Name der Variable die den Rückgabewert enthält, Typ das Rückgabewerts, Possibilities Liste, Type des Feldes in der Gui)
+    # Steht bei "Type des Feldes in der Gui" None wird der Button nicht angezeigt.
     _setgetlist=[   ("SetCenterFreq", "GetCenterFreq", "cfreq", float, None, float),
                      ("SetSpan", "GetSpan", "span", float, None, float),
                      ("SetStartFreq", "GetStartFreq", "stfreq", float, None, float),
                      ("SetStopFreq", "GetStopFreq", "spfreq", float, None, float),
                      ("SetRBW", "GetRBW", "rbw", float, None, float),
-                     ("SetRefLevel", "GetRefLevel", "reflevel", float, None, float),
-                     ("SetDivisionValue","GetDivisionValue","setDivisionvalue", float, None, float),
-                     ("SetTraceMode", "GetTraceMode", "tmode", str, "TRACEMODES",str),
-                     ("SetTrace", "GetTrace", "trace", str, None, str),
-                     ("SetChannel", "GetChannel", "chan", int, None, int),
-                    # ("SetSparameter","GetSparameter","sparam",str,"SPARAMETER", str),
+                     ("SetRefLevel", "GetRefLevel", "reflevel", float, None, None),
+                     ("SetDivisionValue","GetDivisionValue","setDivisionvalue", float, None, None),
+                     #("SetTraceMode", "GetTraceMode", "tmode", str, "TRACEMODES",None),
+                     ("SetTrace", "GetTrace", "trace", str, None, None),
+                     ("SetSparameter","GetSparameter", "sparam","SPARAMETER",None),
+                     ("SetChannel", "GetChannel", "chan", int, None, None),
                      ("SetSweepType","GetSweepType","sweepType",str,"SWEEPTYPES", str),
                      ("SetSweepCount", "GetSweepCount", "sweepcount", int, None, int),
                      ("SetSweepPoints", "GetSweepPoints", "spoints", int, None, int),
-                     ("SetSingelSweep","GetSingelSweep","singelSweep",str,"SINGELSWEEP", str)]
+                     ("SetTriggerMode", "GetTriggerMode", "trgmode", str, "TRIGGERMODES", str),
+                     ("SetTriggerDelay", "GetTriggerDelay", "tdelay", float, None,float)]
 
         
     def __init__(self):
@@ -103,37 +187,34 @@ class NETWORKANALYZER(DRIVER):
                     'GetDivisionValue': [("'DIVISIONVALUE?", r'DIVISIONVALUE(?P<setDivisionvalue>%s)'%self._FP)],  
 
                     #???   
-                    'SetTraceMode':  [("'TMODE %s'%something", None)],
-                    'GetTraceMode':  [('TMODE?', r'TMODE (?P<tmode>.*)')],
+                    #'SetTraceMode':  [("'TMODE %s'%something", None)],
+                    #'GetTraceMode':  [('TMODE?', r'TMODE (?P<tmode>.*)')],
                     
                     'SetTrace':  [("'TRACE %d'%trace", None)],
                     'GetTrace':  [('TRACE?', r'TRACE (?P<trace>\d+)')],
                     'DelTrace':  [("'DELTRACE %s'%(something)",None)],       
-                     
+                    'SetSparameter':  [("'SPARAM %s'%something",None)],
+                    'GetSparameter':  [('SPARAM?', r'SPARAM (?P<sparam>.*)')],
                     'SetChannel': [("'CHANNEL %s'%(something)",None)],
                     'DelChannel': [("'DELCHANNEL %s'%(something)",None)],
                     'GetChannel': [("'CHANNEL?'", r'CHANNEL (?P<chan>.*')],
-                    
-                        
-                    'SetSparameter':  [("'SPARAM %s'%something",None)],
-                    'GetSparameter':  [('SPARAM?', r'SPARAM (?P<sparam>.*)')],
-                    
                     'SetSweepType':   [("'SWEEPTYPE %s'%something",None)],
                     'GetSweepType':   [('SWEEPTYPE?]', r'SWEEPTYPE (?P<stype>.*')],                  
-                    
                     'SetSweepCount':  [("'SWEEPCOUNT %d'%something", None)],
                     'GetSweepCount':  [('SWEEPCOUNT?', r'SWEEPCOUNT (?P<scount>\d+)')],
+                    'NewSweepCount':  [("'NEWSWEEPCOUNT'", None)], 
                     'SetSweepPoints':  [("'SWEEPPOINTS %s '%something", None)],
                     'GetSweepPoints':  [('SWEEPPOINTS?', r'SWEEPPOINTS (?P<spoints>%s)'%self._FP)],
                     'SetSingelSweep':  [("'SINGELSWEEP %s'%(something)",None)],            #Manual S. 442
                     'GetSingelSweep':  [("'SINGELSWEEP?'",r'SINGELSWEEP (?P<singelSweep>.*)')],   
-
                     'GetSpectrum':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
                     'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
- 
+                    'SetTriggerMode': [("'TRGMODE %d'%something", None)],
+                    'GetTriggerMode':  [('TRGMODE?', r'TRGMODE (?P<trgmode>.*)')],
+                    'SetTriggerDelay':  [("'TRGDELAY %s us'%something", None)],
+                    'GetTriggerDelay':  [('TRGDELAY?', r'TRGDELAY (?P<tdelay>%s) us'%self._FP)],
                     'SetWindow':  [("'WINDOW %d'%something", None)],
                     'DelWindow':  [("'DELWINDOW %d'%something", None)],
-                    
                     'Quit':     [('QUIT', None)],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
    

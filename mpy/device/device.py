@@ -1971,54 +1971,52 @@ class Step2port(NPort):
           
 #################################################################
 class Vectornetworkanalyser(Device):
-    _postfix = {'GetCenterFreq' :    'GetCenterFreq',     
-                'SetSpan'       :    'SetSpan'       ,
-                'GetSpan'       :    'GetSpan'       ,
-                'SetStartFreq'  :    'SetStartFreq'  ,
-                'GetStartFreq'  :    'GetStartFreq'  ,
-                'SetStopFreq'   :    'SetStopFreq'   ,
-                'GetStopFreq'   :    'GetStopFreq'   ,
-                'SetRBW'        :    'SetRBW'        ,
-                'GetRBW'        :    'GetRBW'        ,
-                'SetVBW'        :    'SetVBW'        ,
-                'GetVBW'        :    'GetVBW'        ,
-                'SetRefLevel'   :    'SetRefLevel'   ,
-                'GetRefLevel'   :    'GetRefLevel'   ,
-                'SetAtt'        :    'SetAtt'        ,
-                'GetAtt'        :    'GetAtt'        ,
-                'SetAttAuto'    :    'SetAttAuto'    ,
-                'SetAttMode'    :    'SetAttMode'    ,
-                'GetAttMode'    :    'GetAttMode'    ,
-               #diese auskommentierten Einträge sind schon als Funktion vorhanden
-               #'SetPreAmp'    :     'SetPreAmp'    ,
-               #'GetPreAmp'    :     'GetPreAmp'    ,
-               #'SetDetector'  :     'SetDetector'  ,
-               #'GetDetector'  :     'GetDetector'  ,
-                'SetTraceMode'  :    'SetTraceMode'  ,
-                'GetTraceMode'  :    'GetTraceMode'  ,
-                'SetTrace'      :    'SetTrace'      ,
-                'GetTrace'      :    'GetTrace'      ,
-                'SetSparameter' :    'SetSparameter' ,
-                'GetSparameter' :    'GetSparameter' ,
-                'SetSweepType'  :    'SetSweepType'  ,
-                'GetSweepType'  :    'GetSweepType'  , 
-               #diese auskommentierten Einträge sind schon als Funktion vorhanden
-                'SetSweepCount':     'SetSweepCount',
-                'GetSweepCount':     'GetSweepCount',
-               #'SetSweepTime' :     'SetSweepTime' ,
-               #'GetSweepTime' :     'GetSweepTime' ,
-                'SetSweepPoints':    'SetSweepPoints',
-                'GetSweepPoints':    'GetSweepPoints',
-                #ist dies gleich "Trigger" weiter unten???
-                ###'SetTriggerMode':    'SetTriggerMode',
-                'GetTriggerMode':    'GetTriggerMode',
-                'SetTriggerDelay':   'SetTriggerDelay',
-                'GetTriggerDelay':   'GetTriggerDelay',
-                'SetWindow'     :    'SetWindow'     ,
-                'SetMeasBandwidth':  'SetMeasBandwidth',
-                'GetMeasBandwidth':  'GetMeasBandwidth',
-                'Quit'          :    'Quit'          ,
-                'GetDescription':    'GetDescription',
+    _postfix = {'SetCenterFreq': 'SetCenterFreq',
+                'GetCenterFreq': 'GetCenterFreq',
+                'SetSpan': 'SetSpan',
+                'GetSpan': 'GetSpan',
+                'SetStartFreq': 'SetStartFreq',
+                'GetStartFreq': 'GetStartFreq',
+                'SetStopFreq': 'SetStopFreq',
+                'GetStopFreq': 'GetStopFreq',
+                'SetRBW': 'SetRBW',
+                'GetRBW': 'GetRBW',
+                'SetRefLevel': 'SetRefLevel',
+                'GetRefLevel': 'GetRefLevel',
+                'SetDivisionValue': 'SetDivisionValue',
+                'GetDivisionValue': 'GetDivisionValue',
+
+                #???   
+                #'SetTraceMode': 'SetTraceMode',
+                #'GetTraceMode': 'GetTraceMode',
+                    
+                'SetTrace': 'SetTrace',
+                'GetTrace': 'GetTrace',
+                'DelTrace':  'DelTrace',
+                'SetSparameter': 'SetSparameter',
+                'GetSparameter': 'GetSparameter',
+                'SetChannel': 'SetChannel',
+                'DelChannel': 'DelChannel',
+                'GetChannel': 'GetChannel',
+                'SetSweepType': 'SetSweepType',
+                'GetSweepType': 'GetSweepType',
+                'SetSweepCount': 'SetSweepCount',
+                'GetSweepCount': 'GetSweepCount',
+                'NewSweepCount': 'NewSweepCount',
+                'SetSweepPoints': 'SetSweepPoints',
+                'GetSweepPoints': 'GetSweepPoints',
+                'SetSingelSweep': 'SetSingelSweep',
+                'GetSingelSweep':  'GetSingelSweep',
+                'GetSpectrum': 'GetSpectrum',
+                'GetSpectrumNB': 'GetSpectrumNB',
+                'SetTriggerMode': 'SetTriggerMode',
+                'GetTriggerMode': 'GetTriggerMode',
+                'SetTriggerDelay': 'SetTriggerDelay',
+                'GetTriggerDelay': 'GetTriggerDelay',
+                'SetWindow': 'SetWindow',
+                'DelWindow': 'DelWindow',
+                'Quit': 'Quit',
+                'GetDescription': 'GetDescription',
 
                 "Trigger": "SetTriggerMode",
                 "getData": "GetTrace",
@@ -2036,13 +2034,6 @@ class Vectornetworkanalyser(Device):
         self._addAttributes()
         return ret
 
-    def _GetMeasBandwidth_wrap(self, method):
-        if isinstance(method, ct._CFuncPtr):
-            raise NotImplementedError
-        else:
-            m=method
-        return m
-        
     def _GetTriggerDelay_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
@@ -2050,7 +2041,7 @@ class Vectornetworkanalyser(Device):
             m=method
         return m
         
-    def _GetVBW_wrap(self, method):
+    def _DelChannel_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
@@ -2058,6 +2049,41 @@ class Vectornetworkanalyser(Device):
         return m
         
     def _SetSweepType_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _DelTrace_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetSpectrum_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _SetChannel_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _GetDivisionValue_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+        
+    def _DelWindow_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
@@ -2072,13 +2098,6 @@ class Vectornetworkanalyser(Device):
         return m
         
     def _GetSweepType_wrap(self, method):
-        if isinstance(method, ct._CFuncPtr):
-            raise NotImplementedError
-        else:
-            m=method
-        return m
-        
-    def _GetAttMode_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
@@ -2106,7 +2125,7 @@ class Vectornetworkanalyser(Device):
             m=method
         return m
         
-    def _SetMeasBandwidth_wrap(self, method):
+    def _GetSpectrumNB_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
@@ -2127,7 +2146,7 @@ class Vectornetworkanalyser(Device):
             m=method
         return m
         
-    def _SetAttAuto_wrap(self, method):
+    def _SetStopFreq_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
@@ -2141,21 +2160,7 @@ class Vectornetworkanalyser(Device):
             m=method
         return m
         
-    def _SetAtt_wrap(self, method):
-        if isinstance(method, ct._CFuncPtr):
-            raise NotImplementedError
-        else:
-            m=method
-        return m
-        
     def _SetSparameter_wrap(self, method):
-        if isinstance(method, ct._CFuncPtr):
-            raise NotImplementedError
-        else:
-            m=method
-        return m
-        
-    def _GetSweepTime_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
@@ -2183,13 +2188,6 @@ class Vectornetworkanalyser(Device):
             m=method
         return m
         
-    def _SetStopFreq_wrap(self, method):
-        if isinstance(method, ct._CFuncPtr):
-            raise NotImplementedError
-        else:
-            m=method
-        return m
-        
     def _GetCenterFreq_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
@@ -2211,14 +2209,14 @@ class Vectornetworkanalyser(Device):
             m=method
         return m
         
-    def _SetSpan_wrap(self, method):
+    def _NewSweepCount_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
             m=method
         return m
         
-    def _GetAtt_wrap(self, method):
+    def _SetSpan_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
@@ -2232,21 +2230,14 @@ class Vectornetworkanalyser(Device):
             m=method
         return m
         
-    def _SetVBW_wrap(self, method):
+    def _SetCenterFreq_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
             m=method
         return m
         
-    def _SetDetector_wrap(self, method):
-        if isinstance(method, ct._CFuncPtr):
-            raise NotImplementedError
-        else:
-            m=method
-        return m
-        
-    def _GetPreAmp_wrap(self, method):
+    def _SetTriggerMode_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
@@ -2295,21 +2286,14 @@ class Vectornetworkanalyser(Device):
             m=method
         return m
         
-    def _GetDetector_wrap(self, method):
+    def _SetDivisionValue_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
             m=method
         return m
         
-    def _SetAttMode_wrap(self, method):
-        if isinstance(method, ct._CFuncPtr):
-            raise NotImplementedError
-        else:
-            m=method
-        return m
-        
-    def _SetPreAmp_wrap(self, method):
+    def _SetSingelSweep_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
@@ -2330,7 +2314,7 @@ class Vectornetworkanalyser(Device):
             m=method
         return m
         
-    def _SetSweepTime_wrap(self, method):
+    def _GetChannel_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             raise NotImplementedError
         else:
@@ -2343,6 +2327,14 @@ class Vectornetworkanalyser(Device):
         else:
             m=method
         return m
+        
+    def _GetSingelSweep_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            raise NotImplementedError
+        else:
+            m=method
+        return m
+
         
     def _Trigger_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):

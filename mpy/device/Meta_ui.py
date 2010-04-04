@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+"""This is :mod:`mpy.device.Metaui`: Metaclass to Build a standard GUI from the
+    _setgetlist.
+
+   :author: Christian Albrecht (main author)
+   :copyright: All rights reserved
+   :license: no licence yet
+"""
+
+
 
 from enthought.traits.has_traits import MetaHasTraits
 import enthought.traits.api as tapi
@@ -61,6 +70,8 @@ class Metaui(MetaHasTraits):
         mainEntries=[]     
         items=""
         for name,i1,i2,i3,i4,typ in mainTab:
+            if typ == None:
+                continue
             name = re.findall(r'Set(.*)',name)[0]
             items="%s tuiapi.Group("%(items)
             items="%s tuiapi.Item('%s',label='Wert',style='readonly',width=70),"%(items, name.upper())
