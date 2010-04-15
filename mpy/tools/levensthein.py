@@ -33,6 +33,8 @@ def distance(a,b):
     return dist
     
 def fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
+    a=a.strip("'")
+    a=a.strip('"')
     if n is None:
         n=3  # difflibs default
     if cutoff is None:

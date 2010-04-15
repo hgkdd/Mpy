@@ -2530,6 +2530,9 @@ class CONVERT(object):
         ret=[]
         fuguess=fstrcmp(fromunit, self.cunits, n=1, cutoff=0, ignorecase=True)[0]
         tuguess=fstrcmp(tounit, self.cunits, n=1, cutoff=0, ignorecase=True)[0]
+        #print self.cunits
+        #print fromunit, '->', fuguess
+        #print tounit, '->', tuguess
         c_meth=self.cmethods[fuguess][tuguess]
         if c_meth is None:
             return None

@@ -95,10 +95,13 @@ class SIGNALGENERATOR(SGNLGNRTR):
         # -> Bei Initialisierungsschritten mit Optionen erfolg die Auswahl der notwendigen Option über...(???)
         # 
         for k, vals, actions in presets:
-            print k, vals, actions
+            #print k, vals, actions
+            #print '---------------------------'
             try:
-                v=self.conf[sec][k] 
-                if (vals is None):  
+                v=self.conf[sec][k]
+                if vals is None:
+                    #print self.convert.c2c, self.levelunit, self._internal_unit, float(v)
+                    #print actions[0]
                     self._cmds['Preset'].append((eval(actions[0]),actions[1]))
                 else:
                     for idx,vi in enumerate(vals):
@@ -140,12 +143,12 @@ def main():
                         fstop: 6e9
                         fstep: 1
                         gpib: 28
-                        virtual: 1
+                        virtual: 0
 
                         [Channel_1]
                         name: RFOut
-                        level: -100
-                        unit: 'dBm'
+                        level: -100.0
+                        unit: dBm
                         outpoutstate: 0
                         """)
         ini=StringIO.StringIO(ini)
