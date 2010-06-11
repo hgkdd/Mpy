@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 #
 import sys
+import bidict
 import StringIO
 from scuq import *
+from mpy.tools.Configuration import fstrcmp
 from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 
 #
@@ -13,6 +15,18 @@ from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 class SIGNALGENERATOR(SGNLGNRTR):
     def __init__(self):
         SGNLGNRTR.__init__(self)
+        #print self.map
+        self.map['AM_sources']['INT1']='LF1'
+        self.map['AM_sources']['INT2']='LF2'
+        self.map['AM_waveforms']['SQUARE']='SQU'
+        self.map['AM_waveforms']['TRIANGLE']='TRI'
+        self.map['AM_LFOut']['OFF']='0'
+        self.map['AM_LFOut']['ON']='1'
+        self.map['PM_sources']['EXT1']= 'EXT'
+        self.map['PM_pol']['NORMAL']='NORM'
+        self.map['PM_pol']['INVERTED']='INV'
+        
+        #print self.map
         self._internal_unit='dBm'
         #
         # Im Wörterbuch '._cmds' werden die Befehle zum Steuern des speziellen Signalgenerators definiert, z.B. SetFreq() zum Setzen
@@ -24,31 +38,69 @@ class SIGNALGENERATOR(SGNLGNRTR):
         # für die darauffolgende Antwort des Signalgenerators enthaelt.
         #
         self._cmds={'Init':     [('*RST', None),
-                                 ('OUTP:STAT OFF', None)],
-                    'Quit':     [('OUTP:STAT OFF', None)],
-                    'RFOn':     [('OUTP:STAT ON', None)],
-                    'RFOff':    [('OUTP:STAT OFF', None)],
-                    'AMOn':     [('SOUR:AM:STAT ON', None)],
-                    'AMOff':    [('SOUR:AM:STAT OFF', None)],
-                    'PMOn':     [('SOUR:PULM:STAT ON', None)],
-                    'PMOff':    [('SOUR:PULM:STAT OFF', None)],                
+                                 ('OUTP:ALL:STAT OFF', None)],
+                    'Quit':     [('OUTP:ALL:STAT OFF', None)],
+                    'RFOn':     [('OUTP:ALL:STAT ON', None)],
+                    'RFOff':    [('OUTP:ALL:STAT OFF', None)],
+                    'AMOn':     [('AM:STAT ON', None)],
+                    'AMOff':    [('AM:STAT OFF', None)],
+                    'PMOn':     [('PULM:STAT ON', None),
+                                 ('MOD:STAT ON', None)],
+                    'PMOff':    [('PULM:STAT OFF', None),                
+                                 ('MOD:STAT OFF', None)],
                     'SetFreq':  [("'SOUR:FREQ:CW %fHz'%freq", None)],
                     'GetFreq':  [( 'SOUR:FREQ:CW?', r'(?P<freq>%s)'%self._FP)],
                     'SetLevel': [("'SOUR:POW:LEVEL:IMM:AMPL %f'%self.convert.scuq2c(unit, self._internal_unit, float(level))[0]", None)],
                     'GetLevel': [( 'SOUR:POW:LEVEL:IMM:AMPL?', r'(?P<level>%s)'%(self._FP))],
-                    'ConfAM':   [("'SOUR:AM:SOUR %s'%source", None), 
-                                 ( 'SOUR:AM:SOUR?', 'SOURCE (?P<source>\S+)'),
-                                 ("'SOUR:AM:DEPT %d '%(int(depth*100))", None), # Vorlage enthielt '%d %%' !!!???
-                                 ( 'SOUR:AM:DEPT?', 'DEPTH (?P<depth>\d+)'),
-                                 ("'SOUR:LFO:FREQ %s HZ'%freq", None),
-                                 ( 'SOUR:LFO:FREQ?', 'FREQ (?P<freq>%s) HZ'%self._FP),
-                                 ("'SOUR:LFO:SHAP %s'%(waveform)", None), # waveform --> SINE | SQUare
-                                 ( 'SOUR:LFO:SHAP?', 'WFRM (?P<waveform>\S+)')],
-                                 #("'LF:OUT %s'%(LFOut)", None),
-                                 #( 'LF:OUT?', 'LF (?P<LFOut>\S+)')],
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         # 
         #
+    def ConfAM(self, source, freq, depth, waveform, LFOut):
+        source=fstrcmp(source, self.AM_sources, n=1,cutoff=0,ignorecase=True)[0]
+        waveform=fstrcmp(source, self.AM_waveforms, n=1,cutoff=0,ignorecase=True)[0]
+        lfo=1
+        if source == 'INT2':
+            lfo=2
+        if source in ('EXT_AC','EXT_DC','TWOTONE_AC','TWOTONE_DC'):
+            raise NotImplementedError
+        if source == 'OFF':
+            return self.AMOff()
+        if waveform in ('NOISE', 'SAWTOOTH'):
+            raise NotImplementedError            
+            
+        self._cmds['ConfAM']=[("'" + 'SOUR:AM:SOUR ' + "%s'%source", None), 
+                             ( 'SOUR:AM:SOUR?', '(?P<source>\S+)'),
+                             ( "'" + 'SOUR:AM:DEPT ' + "%dPCT'%(int(depth*100))", None), # Vorlage enthielt '%d %%' !!!???
+                             ( 'SOUR:AM:DEPT?', '(?P<depth>\d+)'),
+                             ( "'" + 'SOUR:LFO%d:FREQ '%lfo + "%s HZ'%freq", None),
+                             ( 'SOUR:LFO%d:FREQ?'%lfo, '(?P<freq>%s)'%self._FP),
+                             ( "'" + 'SOUR:LFO%d:SHAP '%lfo + "%s'%(waveform)", None), # waveform --> SINE | SQUare
+                             ( 'SOUR:LFO%d:SHAP?'%lfo, '(?P<waveform>\S+)'),
+                             ( "'" + 'SOUR:LFO%d '%lfo + "%s'%(LFOut)", None),
+                             ( 'SOUR:LFO%d?'%lfo, '(?P<LFOut>\S+)')]
+        return SGNLGNRTR.ConfAM(self, source, freq, depth, waveform, LFOut)
+
+    def ConfPM(self, source, freq, pol, width, delay):
+        source=fstrcmp(source, self.PM_sources, n=1,cutoff=0,ignorecase=True)[0]
+        if source == 'EXT2':
+            raise NotImplementedError
+        if source == 'OFF':
+            return self.PMOff()
+        self._cmds['ConfPM']=[("'PULM:SOUR %s'%source", None), 
+                             ( 'PULM:SOUR?', '(?P<source>\S+)'),
+                             ("'PULM:POL %s'%pol", None), 
+                             ( 'PULM:POL?', '(?P<pol>\S+)'),
+                             ("'PULM:WIDT %f s'%width", None), 
+                             ( 'PULM:WIDT?', '(?P<width>%s)'%self._FP),
+                             ("'PULM:DEL %f s'%delay", None), 
+                             ( 'PULM:DEL?', '(?P<delay>%s)'%self._FP),
+                             ("'PULM:PER %f s'%(1.0/freq)", None), 
+                             ( 'PULM:PER?', '(?P<period>%s)'%self._FP)]
+        
+        self.error=SGNLGNRTR.ConfPM(self, source, freq, pol, width, delay)
+        
+        return self.error
+
     def Init(self, ini=None, channel=None):
         if channel is None:
             channel=1
@@ -71,9 +123,9 @@ class SIGNALGENERATOR(SGNLGNRTR):
         presets=[('attmode',
                       [('0','auto'),               ('1','fixed')],
                       [('OUTP:AMOD AUTO', None),('OUTP:AMOD FIX', None)]),
-                 #('attenuation',
-                 #     None,
-                 #     ("'OUTP:ATT %f dB'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
+                 ('attenuation',
+                      None,
+                      ("'SOUR:POW:ATT %fdB'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
                  ('leveloffset',
                       None,
                       ("'SOUR:POW:LEV:IMM:OFFS %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
@@ -155,6 +207,46 @@ def main():
     sg=SIGNALGENERATOR()
     ui=UI(sg,ini=ini)
     ui.configure_traits()
+
+def test():
+    from mpy.tools.util import format_block
+    from mpy.device.signalgenerator_ui import UI as UI
+    #
+    # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
+    # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
+    # 'StringIO' in eine virtuelle Datei umgewandelt.
+    #
+    try:
+        ini=sys.argv[1]
+    except IndexError:
+        ini=format_block("""
+                        [DESCRIPTION]
+                        description: 'SMF100A'
+                        type:        'SIGNALGENERATOR'
+                        vendor:      'Rohde&Schwarz'
+                        serialnr:
+                        deviceid:
+                        driver:
+
+                        [Init_Value]
+                        fstart: 100e3
+                        fstop: 22e9
+                        fstep: 1
+                        gpib: 28
+                        virtual: 0
+
+                        [Channel_1]
+                        name: RFOut
+                        level: -100.0
+                        unit: dBm
+                        outpoutstate: 0
+                        """)
+        ini=StringIO.StringIO(ini)
+    sg=SIGNALGENERATOR()
+    sg.Init(ini)
+    return sg
+    
+    
 #
 #          
 #  ------------ Hauptprogramm ---------------------------
