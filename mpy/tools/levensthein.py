@@ -39,13 +39,19 @@ def fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
         n=3  # difflibs default
     if cutoff is None:
         cutoff=0.0 # don't sort out not-so-good matches
+
+    
     if ignorecase:
         dists=[relative(a.lower(),p) for p in rmcp(possibilities,ignorecase=ignorecase)]
     else:
         dists=[retative(a,p) for p in rmcp(possibilities,ignorecase=ignorecase)]
+    #handle perfect matches
+    for i,p in enumerate(possibilities):
+        if (ignorecase and a.lower()==p.lower()) or a==p:
+            dists[i]=1
 
     pairs=zip(dists,possibilities)
-#    print pairs
+    #print pairs
     return [v for d,v in sorted(pairs,None,None,True) if d >= cutoff]
 
 
@@ -71,4 +77,5 @@ def levenshtein(a,b, ch_cost=1, add_cost=1, del_cost=1):
 
 if __name__=="__main__":
     from sys import argv
-    print levenshtein(argv[1],argv[2],ch_cost=float(argv[3]), add_cost=float(argv[4]), del_cost=float(argv[5]))
+    #print levenshtein(argv[1],argv[2],ch_cost=float(argv[3]), add_cost=float(argv[4]), del_cost=float(argv[5]))
+    print fstrcmp(argv[1], ('ON','OFF'))

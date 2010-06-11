@@ -206,6 +206,9 @@ class DRIVER(object):
         if not hasattr(self, '_cmds'): 
             # if self._cmds is not defined we return a empty dict
             return dct
+        #print key
+        #print self._cmds
+        #print callerdict
         if key in self._cmds: # in key is the name of the command to excecute, e.g. 'SetFreq'
             for cmd,tmpl in self._cmds[key]: # loop all command, template pairs for key 'key'
                 try:
@@ -226,6 +229,7 @@ class DRIVER(object):
                 elif not cmd: # no cmd, no write
                     dct.update(self.read(tmpl))
                 else: # both -> write and read
+                    #print expr, tmpl
                     dct.update(self.query(expr, tmpl))
                 #print "key=",key,"cmd=",cmd,"tmpl=",tmpl,'expr=',expr,'dct=',dct
         return dct

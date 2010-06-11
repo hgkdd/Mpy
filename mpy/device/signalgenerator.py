@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import bidict
 from mpy.tools.Configuration import Configuration,strbool,fstrcmp
 from scuq import quantities
 from mpy.device.device import CONVERT, Device
@@ -20,6 +21,16 @@ class SIGNALGENERATOR(DRIVER):
     PM_pol =('NORMAL', 'INVERTED')
 
     ATT_modes=('AUTO','FIXED')    
+
+    map={}
+    for name in ('AM_sources', 
+                 'AM_waveforms',
+                 'AM_LFOut',
+                 'PM_sources',
+                 'PM_pol',
+                 'ATT_modes'):
+        map[name]=bidict.bidict([(a,a) for a in eval(name)]) # key=value
+    
     
     conftmpl={'description': 
                  {'description': str,
@@ -124,17 +135,34 @@ class SIGNALGENERATOR(DRIVER):
     def ConfAM(self, source, freq, depth, waveform, LFOut):
         self.error=0
         source=fstrcmp(source, self.AM_sources, n=1,cutoff=0,ignorecase=True)[0]
+        source=self.map['AM_sources'][source]
         waveform=fstrcmp(waveform, self.AM_waveforms,n=1,cutoff=0,ignorecase=True)[0]
-        LFOut=fstrcmp(LFOut, self.AM_LFOut,n=1,cutoff=0,ignorecase=True)[0]    
+        waveform=self.map['AM_waveforms'][waveform]
+        LFOut=fstrcmp(LFOut, self.AM_LFOut,n=1,cutoff=0,ignorecase=True)[0]
+        LFOut=self.map['AM_LFOut'][LFOut]
         dct=self._do_cmds('ConfAM', locals())
+        #print dct
+        dct['source']=self.map['AM_sources'][:dct['source']]  # inverse mapping from bidict
+        dct['waveform']=self.map['AM_waveforms'][:dct['waveform']]  # inverse mapping from bidict
+        dct['LFOut']=self.map['AM_LFOut'][:dct['LFOut']]  # inverse mapping from bidict
+        if dct['depth'] > 1: # depth was returned in PCT
+            dct['depth']=0.01*float(dct['depth'])
+        dct['freq']=float(dct['freq'])
+        #print dct
         self._update(dct)
         return self.error
 
     def ConfPM(self, source, freq, pol, width, delay):
         self.error=0
         source=fstrcmp(source, self.PM_sources, n=1,cutoff=0,ignorecase=True)[0]
+        source=self.map['PM_sources'][source]
         pol=fstrcmp(pol, self.PM_pol,n=1,cutoff=0,ignorecase=True)[0]
+        pol=self.map['PM_pol'][pol]
         dct=self._do_cmds('ConfPM', locals())
+        dct['source']=self.map['PM_sources'][:dct['source']]
+        dct['pol']=self.map['PM_pol'][:dct['pol']]
+        if 'period' in dct:
+            dct['freq']=1./float(dct['period'])
         self._update(dct)
         return self.error
     

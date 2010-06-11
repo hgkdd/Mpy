@@ -354,3 +354,11 @@ def gmax_fs (f, rstep=None, s=10, hg=0.8, RH=(0.8,0.8)):
     r = math.sqrt(s*s+(RH[0]-hg)**2)
     ret=1.0/r
     return {'h': ret, 'v': ret}
+
+def isiterable(obj):
+    try:
+        iter(obj)
+        return True
+    except TypeError:
+        return False
+    
