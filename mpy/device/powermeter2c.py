@@ -16,7 +16,8 @@ class POWERMETER(PM):
         self.ch=channel
         self.trg_threshold=self.conf['channel_%d'%channel]['trg_threshold']
         self.gpib=self.conf['init_value']['gpib']
-        if self.gpib and not self.virtual:  # ignore virtual instruments
+        virtual=self.conf['init_value'].get('virtual',False)
+        if self.gpib and not virtual:  # ignore virtual instruments
             key = self._hash() # here: gbib_ch
             if key in POWERMETER.instances:
                 raise UserError, "2Ch Powermeter: Instance allready in use: %s"%key
