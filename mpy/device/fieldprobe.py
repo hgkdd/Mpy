@@ -27,7 +27,6 @@ class FIELDPROBE(DRIVER):
                      'fstop': float,
                      'fstep': float,
                      'gpib': int,
-                     'com': int,
                      'virtual': strbool},
                 'channel_%d':
                     {'name': str,
@@ -53,7 +52,7 @@ class FIELDPROBE(DRIVER):
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         self.freq=None
         self.unit=None
-        self._internal_unit='Vovermm'
+        self._internal_unit='Voverm'
 
     def SetFreq(self, freq):
         # set a certain frequency
@@ -68,9 +67,9 @@ class FIELDPROBE(DRIVER):
     
     def Zero(self, state):
         self.error=0
-        ZeroState='off'
+        self.ZeroState='off'
         if state.lower() == 'on':
-            ZeroState='on'
+            self.ZeroState='on'
         dct=self._do_cmds('Zero', locals())
         self._update(dct)
         return self.error, self.ZeroState

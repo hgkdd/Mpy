@@ -6,14 +6,17 @@ import struct
 import bidict
 import StringIO
 import serial
-from scuq import *
+from scuq import si,quantities,ucomponents
 from mpy.tools.Configuration import fstrcmp
 from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
 
 class FIELDPROBE(FLDPRB):
+    conftmpl=FLDPRB.conftmpl
+    conftmpl['init_value']['com']=int
     def __init__(self):
         FLDPRB.__init__(self)
-        self._internal_unit='Voverm'
+        self._internal_unit=si.VOLT/si.METER
+
 
     def Init(self, ini=None, channel=None):
         if channel is None:
@@ -41,7 +44,7 @@ class FIELDPROBE(FLDPRB):
                 break
             des.append(ans)
         des=''.join(des)
-        print des
+        #print des
         m=re.match(r'.*v(.*):(.*) (.*)', des)
         model,fw,date=m.groups()
         return self.error, "Company: PMM, Model: %s, FW: %s, DATE: %s"%(model,fw,date)
@@ -72,6 +75,8 @@ class FIELDPROBE(FLDPRB):
         ans=self.dev.read(1)
         if ans=='A':
             data=struct.unpack('<3f', self.dev.read(12))
+            relerr=0.1  # geschaetzt        
+            data=[quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(v, v*relerr)) for v in data]
         else: 
             self.error=1
         return self.error, data
@@ -89,7 +94,7 @@ class FIELDPROBE(FLDPRB):
     
     def GetBatteryState(self):
         self.error=0
-        state = 'BATTERY LOW'
+        percent=0.0
         self.dev.write('#00?b*')
         ans=self.dev.read(1)
         nn=0
@@ -99,10 +104,7 @@ class FIELDPROBE(FLDPRB):
         else: 
             self.error=1
         percent=3*1.6*nn/1024
-        print percent
-        if percent>10:
-            state='BATTERY OK'
-        return self.error, state
+        return self.error, percent*0.01
     
     def Quit(self):
         self.error=0
