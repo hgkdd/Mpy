@@ -3,7 +3,7 @@
 import sys
 import bidict
 import StringIO
-from scuq import *
+#from scuq import *
 from mpy.tools.Configuration import fstrcmp
 from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 

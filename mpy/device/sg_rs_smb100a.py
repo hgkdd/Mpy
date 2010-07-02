@@ -2,7 +2,8 @@
 #
 import sys
 import StringIO
-from scuq import *
+#from scuq import *
+from mpy.tools.Configuration import fstrcmp
 from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 
 #
@@ -13,6 +14,12 @@ from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 class SIGNALGENERATOR(SGNLGNRTR):
     def __init__(self):
         SGNLGNRTR.__init__(self)
+        self.map['AM_sources']['INT1']='INT'
+        self.map['AM_sources']['INT2']='INT'
+        self.map['AM_waveforms']['SQUARE']='SQU'
+        self.map['PM_sources']['EXT1']= 'EXT'
+        self.map['PM_pol']['NORMAL']='NORM'
+        self.map['PM_pol']['INVERTED']='INV'
         self._internal_unit='dBm'
         #
         # Im Wörterbuch '._cmds' werden die Befehle zum Steuern des speziellen Signalgenerators definiert, z.B. SetFreq() zum Setzen
