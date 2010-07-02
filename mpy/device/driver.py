@@ -164,6 +164,9 @@ class DRIVER(object):
         Return: 0 if sucessful. 
         """
         self.error=0
+        self.channel=channel
+        if not self.channel:
+            self.channel=1
         if not ininame:
             self.conf['init_value']['virtual']=True
         else:
@@ -285,5 +288,6 @@ class DRIVER(object):
             des = self.conf['description']
         except KeyError:
             des = self.conf['description']=''
-        return self.error, self.conf['description']+self.IDN
+        #print self.conf['description'], self.IDN
+        return self.error, str(self.conf['description'])+self.IDN
 

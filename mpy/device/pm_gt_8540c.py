@@ -16,9 +16,9 @@ class POWERMETER(PWRMTR):
         self.ch_tup=('','A','B')
         self._cmds={'SetFreq':  [("'%sE FR %s HZ'%(self.ch_tup[self.channel], freq)", None)],
                     'GetFreq':  [],
-                    'GetData':  [("'%sP TR2'%self.ch_tup[self.channel]", r'(?P<power>%s)'%self._FP)],
-                    'GetDataNB':  [("'%sP TR2'%self.ch_tup[self.channel]", r'(?P<power>%s)'%self._FP)],
-                    'Trigger': [],
+                    'GetData':  [("'%sP'%self.ch_tup[self.channel]", r'(?P<power>%s)'%self._FP)],
+                    'GetDataNB':  [("'%sP'%self.ch_tup[self.channel]", r'(?P<power>%s)'%self._FP)],
+                    'Trigger': [('TR2', None)],
                     'ZeroOn':  [("'%sE ZE'%self.ch_tup[self.channel]", None)],
                     'ZeroOff':  [],
                     'Quit':     [],
@@ -131,10 +131,12 @@ def main():
                         rangemode: auto
                         #manrange: 
                         swr: 1.1
+                        trg_threshold: 0.5
 
                         [Channel_2]
                         name: B
                         unit: 'W'
+                        trg_threshold: 0.5
                         """)
         ini=StringIO.StringIO(ini)
 

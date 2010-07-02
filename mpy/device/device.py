@@ -147,7 +147,7 @@ class Device(object):
         if len(DD) == 1:
             values=values[0]
             sigmas=sigmas[0]
-##        print values, sigmas, c_data.v.r, c_data.v.i, c_data.unit
+#        print values, sigmas, c_data.v.r, c_data.v.i, c_data.unit
         ui=ucomponents.UncertainInput(values, sigmas)
         obj=quantities.Quantity(scuq_unit, ui)
         return obj
