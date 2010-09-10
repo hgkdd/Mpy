@@ -5,10 +5,16 @@ import re,time
 import sys
 import StringIO
 from scuq import *
-from mpy.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
+#from mpy.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
+from networkanalyzer import NETWORKANALYZER as NETWORKAN
 from mpy.tools.Configuration import fstrcmp
 
 import numpy
+
+from tools import *
+from r_types import *
+from validators import *
+
 
 #
 #
@@ -16,6 +22,8 @@ import numpy
 # Diese greift auf die Unterklasse SPECTRUMANALYZER (spectrumanalyzer.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
 class NETWORKANALYZER(NETWORKAN):
+
+    
     """
     Test
     Test
@@ -36,168 +44,271 @@ class NETWORKANALYZER(NETWORKAN):
     
     """
     
+    __metaclass__=Meta_Driver
+    
     NETWORKANALYZERS=[]
 
     
     #Map: {Allgemein gültige Bezeichnung : Bezeichnung Gerät} 
 
     #Back Map: {RückgabeWert von Gerät : Allgemein gültige Bezeichnung} 
-    MapSWEEPTYPES_Back={'LOG'  :   'LOGARITHMIC',
-                        'LIN'  :   'LINEAR',
+    
+    
+    
+    GetSweepType_rmap={'LOG'  :   'LOGARITHMIC',
+                       'LIN'  :   'LINEAR',
                         }
     
-    MapSWEEPTYPES_Back={'IMM'  :   'IMMEDIATE',
-                        'EXT'  :   'EXTERNAL',
+    
+    
+    sweepType_possib_map={'LOGARITHMIC'  :   'LOGARITHMIC_map',
+                          'LINEAR'  :   'LINEAR_map',
                         }
 
 
-    
-    
-    #*************************************************************************
-    #
-    #                    Init
-    #*************************************************************************
-    def __init__(self):    
-        NETWORKAN.__init__(self)
-        self.traces={}
-        self.windows={}
-        self._internal_unit='dBm'
-        
-        NETWORKANALYZER.NETWORKANALYZERS.append(self)
-        self.internChannel=-1
-        self.internChannel=self.__gethighestChannelNumber()
 
-        #
-        # Im Wörterbuch '._cmds' werden die Befehle zum Steuern des speziellen Spektrumanalysator definiert, z.B. SetFreq() zum Setzen
-        # der Frequenz. Diese können in der Dokumentation des entsprechenden Spektrumanalysator nachgeschlagen werden.
-        # In der Unterklasse NETWORKANALYZER wurden bereits Methoden zur Ansteuerung eines allgemeinen Spektrumanalysators definiert,
-        # welche die Steuerbefehle aus dem hier definierten '.cmds' Wörterbuch abrufen.
-        # Das Wörterbuch enthält für jeden Eintrag ein Schlüsselwort mit dem allgemeinen Befehl als String, z.B. SetFreq(). Diesem
-        # Schlüsselwort wird eine Liste zugeordnet, wobei jeder Listeneintrag ein Tupel ist und jeder Tupel einen Befehl und eine Vorlage
-        # für die darauffolgende Antwort des Signalgenerators enthaelt.
-        #
-        self._cmds={'SetCenterFreq':  [("'SENSe%d:FREQuency:CENTer %s HZ'%(self.internChannel,something)", None)],              #Manual S. 499
-                    'GetCenterFreq':  [("'SENSe%d:FREQuency:CENTer?'%(self.internChannel)", r'(?P<cfreq>%s)'%self._FP)],        #Manual S. 499
-                    'SetSpan':  [("'SENSe%d:FREQuency:SPAN %s HZ'%(self.internChannel,something)", None)],                      #Manual S. 500
-                    'GetSpan':  [("'SENSe%d:FREQuency:SPAN?'%(self.internChannel)", r'(?P<span>%s)'%self._FP)],                 #Manual S. 500
-                    'SetStartFreq':  [("'SENSe%d:FREQuency:STARt %s HZ'%(self.internChannel,something)", None)],                #Manual S. 501
-                    'GetStartFreq':  [("'SENSe%d:FREQuency:STARt?'%(self.internChannel)", r'(?P<stfreq>%s)'%self._FP)],         #Manual S. 501
-                    'SetStopFreq':  [("'SENSe%d:FREQuency:STOP %s HZ'%(self.internChannel,something)", None)],                  #Manual S. 501
-                    'GetStopFreq':  [("'SENSe%d:FREQuency:STOP?'%(self.internChannel)", r'(?P<spfreq>%s)'%self._FP)],           #Manual S. 501
+    _cmds= CommandsStorage(
+                    #Manual S. 499       
+                    Command('SetCenterFreq','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('cfreq',ptype=float)# requires=IN_RANGE(0,10e6))   
+                                              ), rfunction='GetCenterFreq'),              
+                    
+                    #Manual S. 499                          
+                    Command('GetCenterFreq','SENSe%(channel)d:FREQuency:CENTer?',
+                                              Parameter('channel',global_var='internChannel'), 
+                                              rtype="<default>"),
+                    
+                    #Manual S. 500                          
+                    Command('SetSpan','SENSe%(channel)d:FREQuency:SPAN %(span)s HZ',(
+                                              Parameter('channel',global_var='internChannel'),                                       
+                                              Parameter('span',ptype=float),                                      
+                                              ), rfunction='GetSpan'),
+                    
+                    #Manual S. 500                          
+                    Command('GetSpan', 'SENSe%(channel)d:FREQuency:SPAN?',
+                                              Parameter('channel',global_var='internChannel'), 
+                                              rtype="<default>"),
+                    
+                    #Manual S. 501
+                    Command('SetStartFreq','SENSe%(channel)d:FREQuency:STARt %(stfreq)s HZ',(
+                                              Parameter('channel',global_var='internChannel'),      
+                                              Parameter('stfreq',ptype=float)      
+                                              ), rfunction='GetStartFreq'),
+                    
+                    #Manual S. 501                          
+                    Command('GetStartFreq', 'SENSe%(channel)d:FREQuency:STARt?',
+                                              Parameter('channel',global_var='internChannel'), 
+                                              rtype="<default>"),
+                    
+                    #Manual S. 501                                                    
+                    Command('SetStopFreq', 'SENSe%(channel)d:FREQuency:STOP %(spfreq)s HZ', ( 
+                                              Parameter('channel',global_var='internChannel'),      
+                                              Parameter('spfreq',ptype=float)      
+                                              ), rfunction='GetStopFreq'),                                                                                                                
+                    
+                    #Manual S. 501
+                    Command('GetStopFreq', 'SENSe%(channel)d:FREQuency:STOP?',
+                                              Parameter('channel',global_var='internChannel'), 
+                                              rtype="<default>"),
+                    
                     # Meas/Resolution Bandwidht:
-                    'SetRBW':  [("'SENSe%d:BANDwidth:RESolution %s HZ'%(self.internChannel,something)", None)],                 #Manual S. 473
-                    'GetRBW':  [("'SENSe%d:BANDwidth:RESolution?'%(self.internChannel)", r'(?P<rbw>%s)'%self._FP)],             #Manual S. 473
+                    #Manual S. 473
+                    Command('SetRBW', 'SENSe%(channel)d:BANDwidth:RESolution %(rbw)s HZ',(
+                                              Parameter('channel',global_var='internChannel'),      
+                                              Parameter('rbw',ptype=float)      
+                                              ), rfunction='GetRBW'),                    
+                    
+                    #Manual S. 473
+                    Command('GetRBW','SENSe%(channel)d:BANDwidth:RESolution?',
+                                              Parameter('channel',global_var='internChannel'), 
+                                              rtype="<default>"),                    
+                    
                     ###[SENSe<Ch>:]BANDwidth|BWIDth[:RESolution]:SELect FAST | NORMal???
-                    'SetRefLevel':  [("'DISPlay:WINDow%s:TRACe%s:Y:SCALe:RLEVel %s DBM'%(internWindow,windTraceNumber,something)", None)],            #Manual S. 430
-                    'GetRefLevel':  [("'DISPlay:WINDow%s:TRACe%s:Y:SCALe:RLEVel?'%(internWindow,windTraceNumber)", r'(?P<reflevel>%s)'%self._FP)],    #Manual S. 430
-                    'SetDivisionValue': [("'DISPlay:WINDow%s:TRACe%s:Y:SCALe:PDIVision %s DBM'%(internWindow,windTraceNumber,something)", None)],                 #Manual S. 429
-                    'GetDivisionValue': [("'DISPlay:WINDow%s:TRACe%s:Y:SCALe:PDIVision?'%(internWindow,windTraceNumber)", r'(?P<setDivisionvalue>%s)'%self._FP)], #Manual S. 429    
+                    
+                    #Manual S. 430
+                    Command('SetRefLevel', 'DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:RLEVel %(reflevel)s DBM',(
+                                              Parameter('WindowName', global_var='activeWindow_Name'),
+                                              Parameter('windTraceNumber',global_var='activeTrace_WinNum'),
+                                              Parameter('reflevel',ptype=float)      
+                                              ), rfunction='GetRefLevel'),                            
+                    
+                    #Manual S. 430                   
+                    Command('GetRefLevel','DISPlay:WINDow%(windTraceNumber)s:TRACe%(windTraceNumber)s:Y:SCALe:RLEVel?',(
+                                              Parameter('WindowName', global_var='activeWindow_Name'),
+                                              Parameter('windTraceNumber', global_var='activeTrace_WinNum')                                          
+                                              ), rtype="<default>"),                                        
+                    
+                    #Manual S. 429                          
+                    Command('SetDivisionValue', 'DISPlay:WINDow%(windTraceNumber)s:TRACe%(windTraceNumber)s:Y:SCALe:PDIVision %(divivalue)s DBM',(
+                                              Parameter('WindowName', global_var='activeWindow_Name'),
+                                              Parameter('windTraceNumber', global_var='activeTrace_WinNum'),
+                                              Parameter('divivalue',ptype=float)      
+                                              ), rfunction='GetDivisionValue'),                                                                                                                     
+                    
+                    #Manual S. 429         
+                    Command('GetDivisionValue', 'DISPlay:WINDow%(windTraceNumber)s:TRACe%(windTraceNumber)s:Y:SCALe:PDIVision?',(
+                                              Parameter('WindowName', global_var='activeWindow_Name'),
+                                              Parameter('windTraceNumber', global_var='activeTrace_WinNum')                                          
+                                              ), rtype="<default>"),                                                   
+
+ 
                      ###Trace Mode nur Max hold
                      #CALCulate<Chn>:PHOLd MAX | OFF                #Manual S. 386
                      ###Dafür bei Sweep average!!!!!! 
                      #[SENSe<Ch>:]AVERage[:STATe] <Boolean>           #Manual S. 473
                      #[SENSe<Ch>:]AVERage:CLEar                       #Manual S. 472 
-                    'SetTrace':  [("'CALCulate%d:PARameter:SDEFine \\'%s\\', \\'%s\\''%(self.internChannel,internTracename,measParam)", None)],    #Manual S. 384
-                    'GetTrace':  [("'CALCulate%d:PARameter:CATalog?'%(self.internChannel)", r'(?P<trace>.*)')],                                    #Manual S. 381
-                    #'DelTrace':  [("'CALCulate%d:PARameter:DELete %s'%(self.internChannel,internTracename)",None)],
-                    'SetSparameter':  [("'CALCulate%d:PARameter:MEASure \\'%s\\' \\'%s\\'%(self.internChannel,internTracename,something)",None)],   #Manual S. 383
-                    #Wird über eine Funktion realisiert
-                    #'GetSparameter':  [('SPARAM?', r'(?P<sparam>.*)')],                                
-                    'ShwoTrace': [("'DISPlay:WINDow%d:TRACe%d:FEED \\'%s\\''%(internWindow,windTraceNumber,internTracename)",None)],                #Manual S. 426
-                    'SetActiveTrace': [("'CALCulate%d:PARameter:SELect \\'%s\\''%(self.internChannel,internTracename)",None)],            
-                    'SetChannel': [("'CONFigure:CHANnel%d:STATe ON'%(self.internChannel)",None)],
+                    
+                                              
+                    Function('CreateTrace',(
+                                   #Manual S. 384         
+                                   Command('CreateTrace',"CALCulate%(channel)d:PARameter:SDEFine \\'%(tracename)s\\', \\'%(measParam)s\\'", (
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('tracename',ptype=str),
+                                              Parameter('measParam',ptype=str)
+                                              ), ), 
+                                   Command('ActivedTrace', "DISPlay:WINDow%(windowName)d:TRACe%(windTraceNumber)d:FEED \\'%(tracename)s\\",(
+                                              Parameter('windowName', global_var='activeWindow_Name'),
+                                              Parameter('windTraceNumber',ptype=int),                                                                                                                                                 
+                                              Parameter('tracename',ptype=str)
+                                              )  ),
+                                  ) ),
+                     
+                    Command('DelTrace', "CALCulate%(channel)d:PARameter:DELete \\'%(traceName)s\\'",(
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('traceName', global_var='activeTrace_Name')
+                                              )      ) ,                                                     
+                                                                                                                        
+                    Command('GetTrace','CALCulate%(channel)d:PARameter:CATalog?',
+                                              Parameter('channel',global_var='internChannel'), 
+                                              rtype="<default>"
+                                              ),                            
+                    
+                    #???
+                    Command('SetActiveTrace',"CALCulate%(channel)d:PARameter:SELect \\'%s\\'",(
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('traceName',ptype=str)
+                                              )     ),
+                    
+                    #Manual S. 383
+                    Command('SetSparameter',"CALCulate%(channel)d:PARameter:MEASure \\'%(traceName)s\\' \\'%(measParam)s\\",(
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('traceName',global_var='activeTrace_Name'),
+                                              Parameter('measParam',ptype=str) 
+                                              )   ),
+                    
+                    #Manual S. 523                          
+                    Command('SetSweepType','SENSe%(channel)d:SWEep:TYPE %(sweepType)s',(
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('sweepType',ptype=str)
+                                              ), rfunction='GetSweepType'),
+                               
+                    Command('GetSweepType','SENSe%(channel)d:SWEep:TYPE?',
+                                              Parameter('channel',global_var='internChannel'),
+                                              rtype='<default>'),
+
+                    #Manual S. 520
+                    Command('SetSweepCount', 'SENSe%(channel)d:SWEep:COUNt %(sweepCount)s',(
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('sweepCount',ptype=int)
+                                              ), rfunction='GetSweepCount'),
+                    
+                    #Manual S. 520                                                                       
+                    Command('GetSweepCount', 'SENSe%(channel)d:SWEep:COUNt?',
+                                              Parameter('channel',global_var='internChannel'),
+                                              rtype='<default>'),
+                    
+                    #Manual S. 443                                      
+                    Command('NewSweepCount','INITiate%(channel)d:IMMediate',
+                                              Parameter('channel',global_var='internChannel'),
+                                              rtype='<default>'),
+                    
+                    #Manual S. 521                          
+                    Command('SetSweepPoints', 'SENSe%(channel)d:SWEep:POINts %(spoints)s',(
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('spoints',ptype=int)
+                                              ), rfunction='GetSweepPoints'),
+                    
+                    #Manual S. 521
+                    Command('GetSweepPoints', 'SENSe%(channel)d:SWEep:POINts?',
+                                              Parameter('channel',global_var='internChannel'),
+                                              rtype='<default>'),
+
+                    #Manual S. 442
+                    Command('SetSingelSweep','INITiate%(channel)d:CONTinuous %(singelSweep)s',(            
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('singelSweep',ptype=str)
+                                              ), rfunction='GetSingelSweep'),
+                    
+                    #Manual S. 442 
+                    Command('GetSingelSweep', 'INITiate%(channel)d:CONTinuous?',
+                                              Parameter('channel',global_var='internChannel'),
+                                              rtype=bool), 
+                    
+                    #Manula S. 547
+                    Command('SetTriggerMode', 'TRIGger%(channel)d:SEQuence:SOURce %(trgmode)s',(
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('trgmode',ptype=str)
+                                              ), rfunction='GetTriggerMode'),
+                    
+                    #Manula S. 547
+                    Command('GetTriggerMode', 'TRIGger%(channel)d:SEQuence:SOURce?',
+                                             Parameter('channel',global_var='internChannel'),
+                                             rtype='<default>'),
+                    
+                    #Manual S. 546
+                    Command('SetTriggerDelay', 'TRIGger%(channel)d:SEQuence:HOLDoff %(tdelay)s s',(
+                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('tdelay',ptype=int)
+                                              ), rfunction='GetTriggerDelay'),
+                    #Manula S. 546 
+                    Command('GetTriggerDelay', 'TRIGger%(channel)d:SEQuence:HOLDoff?',
+                                              Parameter('channel',global_var='internChannel'),
+                                              rtype='<default>'),
+
+                    #Manual S. 424
+                    Command('CreateWindow', 'DISPlay:WINDow%(windowName)d:STATe ON',
+                                              Parameter('windowName',ptype=int),
+                                              ),
+                    
+                    #Manual S. 424                                                      
+                    #'DelWindow':  [("'DISPlay:WINDow<Wnd>:STATe OFF'%internWindow", None)],
+                                            
+                    Command('CreateChannel','CONFigure:CHANnel%(channel)d:STATe ON',
+                                            Parameter('channel',global_var='internChannel')
+                                            ),                
+                                            
                     #'DelChannel': [("'CONFigure:CHANnel%d:STATe OFF'%self.internChannel";None)],
-                    #'GetChannel': [("'CONFigure:CHANnel%d:CATalog?'%self.internChannel", r'(?P<chan>.*')],             #Manual S. 415 
-                    'SetSweepType': [("'SENSe%d:SWEep:TYPE %s'%(self.internChannel,something)",None)],                   # LINear | LOGarithmic | SEGMent    #Manual S. 523
-                    'GetSweepType': [("'SENSe%d:SWEep:TYPE?'%(self.internChannel)",r'(?P<sweepType>.*)')],
-                    'SetSweepCount':  [("'SENSe%d:SWEep:COUNt %s'%(self.internChannel,something)", None)],            #Manual S. 520
-                    'GetSweepCount':  [("'SENSe%d:SWEep:COUNt?'%(self.internChannel)", r'(?P<sweepcount>\d+)')],             #Manual S. 520
-                    'NewSweepCount':     [("'INITiate%d:IMMediate'%(self.internChannel)", None)],                          #Manual S. 443
-                    'SetSweepPoints':  [("'SENSe%d:SWEep:POINts %s '%(self.internChannel,something)", None)],            #Manual S. 521
-                    'GetSweepPoints':  [("'SENSe%d:SWEep:POINts?'%(self.internChannel)", r'(?P<spoints>\d+)')],          #Manual S. 521
-                    'SetSingelSweep':  [("'INITiate%d:CONTinuous %s'%(self.internChannel,something)",None)],            #Manual S. 442
-                    'GetSingelSweep':  [("'INITiate%d:CONTinuous?'%(self.internChannel)",r'(?P<singelSweep>.*)')],      #Manual S. 442 
-                    'GetSpectrum':  [("'CALCulate%d:DATA? FDAT'%(self.internChannel)", r'(?P<power>([-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?,?)+)')],      #Manual S. 339
+                    #Manual S. 415
+                    #'GetChannel': [("'CONFigure:CHANnel%d:CATalog?'%self.internChannel", r'(?P<chan>.*')],
+                    
+                    #Manual S. 339
+                    Command('GetSpectrum', 'CALCulate%(channel)d:DATA? FDAT', 
+                                            Parameter('channel',global_var='internChannel'),
+                                            rtype=LIST_OF_FLOAT()
+                                            ),
+                    
                     #Später:
-                    #'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],    
-                    'SetTriggerMode': [("'TRIGger%d:SEQuence:SOURce %s'%(self.internChannel,something)", None)], #Manula S. 547
-                    'GetTriggerMode':  [("'TRIGger%d:SEQuence:SOURce?'%(self.internChannel)", r'(?P<trgmode>.*)')], #Manula S. 547
-                    'SetTriggerDelay':  [("'TRIGger%d:SEQuence:HOLDoff %s s'%(self.internChannel,something)", None)], #Manual S. 546
-                    'GetTriggerDelay':  [("'TRIGger%d:SEQuence:HOLDoff?'%(self.internChannel)", r'(?P<tdelay>%s)'%self._FP)], #Manula S. 546                         
-                    'SetWindow':  [("'DISPlay:WINDow%d:STATe ON'%internWindow", None)],  #Manual S. 424
-                    #'DelWindow':  [("'DISPlay:WINDow<Wnd>:STATe OFF'%internWindow", None)],         #Manual S. 424
+                    #'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],   
+                                    
+                    Command('SetNWAMode',"INSTrument:SELect NWA",()),
+                    
+                    Command('GetDescription','*IDN?',(),
+                                            rtype=str)  
+                    
                     #'Quit':     [('QUIT', None)],
-                    'SetNWAMode': [("INSTrument:SELect NWA", None)],
-                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
-        
-        # Die nachfolgende List stellt im Prinzip eine Tabelle mit drei Spalten dar.
-        # In der ersten Spalte steht der Name der Funktion auf welche die entprechende Zeile der Tabelle
-        # zutrifft.
-        # In der zweiten Spalte stehen mögliche Werte die der Funktion übergeben werden können. Die
-        # möglichen Werte können wiederum in Listen gespeichert werden. So ist es mölich einem Befehl
-        # mehrer Werte zuzuordnen. Achtung!!! Die Werte werden als reguläre Expression interpretiert!!
-        # In der dritten Spalte sind die Befehle vermerkt, welche den möglichen Werten in der vorhergehenden
-        # Spalte, zugeordnent werden. 
-        complex=[ ]
-        
-        
-        # Dieser Teil ist nötig, weil die meisten Funktionen erst durch setattr in der init der
-        # Main Klasse erstellt werden. Um die so erstellten Funktionen wieder zu überlagern,
-        # muss sie durch setattr wieder überschreiben lassen:
-        self._cmds['Complex']=complex
-         
-        
-        
-        setattr(self, "SetWindow", 
-                          functools.partial(self._SetWindowIntern))
+                   )    
+                
 
-        setattr(self, "SetTrace", 
-                          functools.partial(self._SetTraceIntern))
-        setattr(self, "GetTrace", 
-                          functools.partial(self._GetTraceIntern))
-        
-        self.SetSweepCountSuper=self.SetSweepCount
-        setattr(self, "SetSweepCount", 
-                          functools.partial(self._SetSweepCountIntern))
-        
-        setattr(self, "SetRefLevel", 
-                          functools.partial(self._SetRefLevelIntern))
-        setattr(self, "GetRefLevel", 
-                          functools.partial(self._GetRefLevelIntern))
-    
-        setattr(self, "SetDivisionValue", 
-                          functools.partial(self._SetDivisionValueIntern))
-        setattr(self, "GetDivisionValue", 
-                          functools.partial(self._GetDivisionValueIntern))
-
-
-        setattr(self, "SetSparameter", 
-                          functools.partial(self._SetSparameterIntern))
-        setattr(self, "GetSparameter", 
-                          functools.partial(self._GetSparameterIntern))
-
-    
-    #******************************************************************************
-    #
-    #             Abgeänderte standard SetGet Funktionen
-    #*******************************************************************************   
-
-        
     
     #Erstellt ein neues Festern, dazu muss die Fensternumer übergeben werden.
     #Die hier übergebenen Nummer ist nur in der aktuellen Instanz güllig.
     #Die eigentliche auf dem Gerät verwendet Nummer wird von der Klasse selbständig ermittelt,
     #und ist über alle Instancen hinweg eindeutig.
-    def _SetWindowIntern(self,winNumber):
-        win=WINDOW(winNumber,self)
-        self.windows.update({winNumber : win})
-        #Nummer des Fensters holen, die auf dem Gerät verwendet weden soll.
-        internWindow=win.getInternNumber()
-        
-        self.error=0
-        dct=self._do_cmds('SetWindow', locals())
-        self._update(dct)
-        return self.error,0
+    def CreateWindow(self,windowName):
+        win=WINDOW(windowName)
+        self.windows[windowName]=win
+        self._CreateWindow(win.getInternName())
         
 
 
@@ -208,176 +319,49 @@ class NETWORKANALYZER(NETWORKAN):
     # *winNumber: Hier muss die Nummer des Fensters angegeben werden, in dem der Trace dargestellt werden soll.
     #             Das Fenster muss vorher mit SetWindow(self, winNumber) angelegt werden.
 
-    def _SetTraceIntern(self,tracename,measParam,winNumber):
-        
-        tra = TRACE(tracename,self.windows.get(winNumber),measParam,self)
+    def CreateTrace(self,tracename,measParam):
+        tra = TRACE(self,tracename,self.activeWindow,measParam)
         self.traces.update({tracename: tra})
-        #Nummer des Traces holen die auf dem Gerät verwendet werden soll
-        internTracename=tra.getInternName()
-        windTraceNumber=tra.getTraceWindowNumber()
-        #Nummer des Fenster holen, die auf dem Gerät verwendet wird.
-        internWindow = self.windows.get(winNumber).getInternNumber()
-        
-        self.error=0
-        dct=self._do_cmds('SetTrace', locals())
-        self._update(dct)
-        
-        dct=self._do_cmds('ShwoTrace', locals())
-        self._update(dct)
-        
-        return self.error,0
-    
-    
-    #Infos über einen gestimten Trace abrufen
-    def _GetTraceIntern(self,tracename):
-        tra = self.traces.get(tracename)
-        internTracename = tra.getInternName()
-        
-        self.error=0
-        dct=self._do_cmds('GetTrace', locals())
-        self._update(dct)
-        
-        trace = re.split(r",",self.trace[1:-1])
-        #print trace.index(internTracename)+1
-        #print trace
-
-        return self.error,trace[trace.index(internTracename)+1]
-    
-        
-    def _SetSweepCountIntern(self,something):
-        self.error=0
-        somethingsave=something
-        if something == 0:
-            something='CONTINUOUS'
-            dct=self._do_cmds('SetSingelSweep', locals())
-            self._update(dct)
-        else:
-            something='SINGEL'
-            dct=self._do_cmds('SetSingelSweep', locals())
-            self._update(dct)
-        something=somethingsave
-        self.error,ret=self.SetSweepCountSuper(something)
-        return self.error,ret
-    
-    
-    def _SetRefLevelIntern(self,tracename,level):
-        self.error=0
-        tra = self.traces.get(tracename)
-        windTraceNumber = tra.getTraceWindowNumber()
-        internWindow = tra.getWindow().getInternNumber()
-        something=level
-        dct=self._do_cmds('SetRefLevel', locals())
-        self._update(dct)
-        self.error,ret=self.GetRefLevel(tracename)
-        return self.error,ret
-        
-        
-    def _GetRefLevelIntern(self,tracename):
-        self.error=0
-        tra = self.traces.get(tracename)
-        windTraceNumber = tra.getTraceWindowNumber()
-        internWindow = tra.getWindow().getInternNumber()
-        dct=self._do_cmds('GetRefLevel', locals())
-        self._update(dct)
-        if not dct:
-                 self.reflevel=self.reflevel
-        else:
-                 self.reflevel=float(self.reflevel)        
-        return self.error,self.reflevel
-    
-    def _SetDivisionValueIntern(self,tracename,something):
-        self.error=0
-        tra = self.traces.get(tracename)
-        windTraceNumber = tra.getTraceWindowNumber()
-        internWindow = tra.getWindow().getInternNumber()                 
-        dct=self._do_cmds('GetRefLevel', locals())
-        self._update(dct)
-        self.error,ret=self.GetDivisionValue(tracename)
-        return self.error,ret
-    
-    
-    def _GetDivisionValueIntern(self,tracename):
-        self.error=0
-        tra = self.traces.get(tracename)
-        windTraceNumber = tra.getTraceWindowNumber()
-        internWindow = tra.getWindow().getInternNumber()
-        dct=self._do_cmds('GetDivisionValue', locals())
-        self._update(dct)
-        if not dct:
-                 self.reflevel=self.reflevel
-        else:
-                 self.reflevel=float(self.reflevel)        
-        return self.error,self.reflevel
+        self._CreateTrace(tra.getInternName(),measParam,tra.getTraceWindowNumber())
     
     #something sie die SParameter als String z.B. 'S11'
-    def _SetSparameterIntern(self,tracename,something):
-        self.error=0
-        tra = self.traces.get(tracename)
-        internTracename = tra.getInternName()
-        dct=self._do_cmds('SetSparameter', locals())
-        self._update(dct)
-        self.error,ret=self.GetSparameter(tracename)
-        return self.error,ret
-        
-        
-    def _GetSparameterIntern(self,tracename,):
-        tra = self.traces.get(tracename)
-        internTracename = tra.getInternName()
-        self.error=0
-        dct=self._do_cmds('GetTrace', locals())
-        self._update(dct)
-        trace = re.split(r",",self.trace[1:-1])
-        return self.error,trace[trace.index(internTracename)+1]
-
-
-
-    #************************************   
-    #  Spectrum aus Gerät auslesen
-    #************************************
-    def GetSpectrum(self,tracename):
-        tra = self.traces.get(tracename)
-        internTracename = tra.getInternName()
-        
-        
-        self.error=0
-        dct=self._do_cmds('SetActiveTrace', locals())
-        self._update(dct)
-        
-        #sleep ist nötig, da das Gerät einen Moment benötigt, bis es den ActiveTrace
-        #richtig gesetzt hat
-        time.sleep(0.1)
-        
-        dct=self._do_cmds('GetSpectrum', locals())
-        self._update(dct)
-        if self.error == 0:
-            if not dct:
-             self.power=0
-        else:
-             self.power=float(self.power)
-        
-        #Spectrum wird als ein String vom Gerät übertragen.
-        #Werte sind durch Komma getrennt, und werden mit Hilfe von
-        #split in eine liste umgewandelt.
-        self.power=re.split(',', self.power)
-
-        #print self.GetStartFreq()
-        #print self.GetStopFreq()
-        #print self.GetSweepType()
-
-        #print numpy.logspace(self.GetStartFreq()[1],self.GetStopFreq()[1],num=len(self.power))
-        #print numpy.linspace(self.GetStartFreq()[1],self.GetStopFreq()[1],len(self.power))
-        # xValues = 
-        #Die einzelnen Werte der Liste werden hier in float Zahlen
-        #umgewandelt   
-       # pow=[]
-       # for i in self.power:
-       #     pow.append(float(i))
-
-        #xValues als auch y=pow in einem Tuple speichern
-       # self.power = (tuple(xValues),tuple(pow))
-        return self.error, self.power
+    def SetSparameter(self,sparam):
+        tra=self.activeTrace
+        self._SetSparameter(tra.getInternName(),sparam)
     
+    def SetTrace(self,traceName):
+        self.activeTrace=self.traces.get(traceName)
+        self.activeTrace_Name=self.activeTrace.getInternName()
+        self.activeTrace_WinNum=self.activeTrace.getTraceWindowNumber()
+    
+    
+    def SetWindow(self,windowName):
+        self.activeWindow=self.windows[windowName]
+        self.activeWindow_Name=self.activeWindow.getInternName()
+        
+    
+    #*************************************************************************
+    #
+    #                    Init
+    #*************************************************************************
+    def __init__(self): 
+        NETWORKAN.__init__(self)
+        
+        self.traces={}
+        self.windows={}
+        self._internal_unit='dBm'
+        
+        NETWORKANALYZER.NETWORKANALYZERS.append(self)
+        self.internChannel=-1
+        self.internChannel=self.__gethighestChannelNumber()
+        
+        self.activeTrace=None
+        self.activeWindow=None
 
+
+
+
+    
 
 
     #******************************************************************************
@@ -397,21 +381,7 @@ class NETWORKANALYZER(NETWORKAN):
                 numb = nw.getChannelNumber()+1
         return numb
 
-   #Erstellt einne neuen Channel auf dem Gerät
-   #Wir automatisch in der Ini aufgerufen
-    def _SetChannelIntern(self):
-        
-        self.error=0
-        dct=self._do_cmds('SetChannel', locals())
-        self._update(dct)
-        return self.error,0
             
-    #Diese Funktion schlaten das ZVL in den Network Analyzer Mode
-    def SetNWAMode(self):
-        self.error=0
-        dct=self._do_cmds('SetNWAMode', locals())
-        self._update(dct)
-        return self.error,0
     
 
 
@@ -425,122 +395,61 @@ class NETWORKANALYZER(NETWORKAN):
         """                
         if channel is None:
             channel=1
-        self.error=NETWORKAN.Init(self, ini, channel)
+        self.error=NETWORKAN.Init(self,ini, channel)
+        
         sec='channel_%d'%channel
         try:
             self.levelunit=self.conf[sec]['unit']
         except KeyError:
             self.levelunit=self._internal_unit
         
-        
-        
-        
         #Schaltet das ZVL in in den SAN - Spectrum analyzer Mode
         self.SetNWAMode()
         
         #Erstellt einne neuen Channel auf dem Gerät
-        self._SetChannelIntern()
-        
-        #   
-        # Die Befehlsliste (dictionary) 'self._cmds'  wird mit einem Eintag namens 'Preset' erweitert und bekommt als Wert zunächst eine leere Liste zugewiesen.
-        # Als Wert wurde eine Liste gewählt, da zur Initilisierung mehrere Befehle notwendig sein können. Jedem Listeneintrag bzw.
-        # Initialisierungseschritt muss ein Tupel bestehend aus dem Befehl und eine Auswertung der Spektrumanalysator Antwort zugewiesen
-        # werden. 
-        # Zur Auswahl der notwendigen Initialisierungsschritte wird zunächst die Liste 'presets' definiert. Dabei handelt
-        # es sich um eine Art Tabelle mit drei Spalten, welche die möglichen Initialisierungsschritte und falls vorhanden zugehörigen
-        # Optionen inhaltet. 
-        #
-        self._cmds['Preset']=[]
-        presets=[('reflevel',
-                  None,
-                  'SetRefLevel'),
-                 ('rbw',
-                   None,
-                   'SetRBW'),
-                 ('span',
-                   None,
-                   'SetSpan'),
-                 ('window',
-                   None,
-                   'SetWindow'),
-                 ('trace_name'),
-                 ('S-Parameter'),
-                 #('tracemode')
-                 ('sweepcount',
-                    None,
-                    'SetSweepCount'),
-                 ('sweeppoints',
-                    None,
-                    'SetSweepPoints'),
-                 ('singelsweep',
-                    None,
-                   'SetSingelSweep'),  
-                 ('sweeptype',
-                    None,
-                    'SetSweepType')]
+        self.CreateChannel()
         
         
-        #self.SetTrace(self.conf[sec]['trace'])
         
-        #
-        # Die zur Initialisierung des Signalgenerators notwendigen Schritte werden durch zeilenweise Betrachtung der Liste 'presets'
-        # herausgefiltert und in die Befehlsliste (dictionary) 'self._cmds['Preset']' übertragen und stehen damit stehen auch in 'sg._cmds' zur
-        # Verfügung.
-        # Die Klassenvariable '.conf' (dictionary) wurde in der (Unter-)Klasse DRIVER definert, sie enthält die Daten der ini-Datei.
-        # In 'sec' ist gespeicher welcher Channel bearbeitet wird, somit erhält man über '.conf[sec]' zugriff auf die
-        # Einstellungen für den aktuellen channel.
-        #
-        # -> If / else Anweisung zur Behandlung von Initialisierungsschritten ohne Optionen (if) und mit Optionen (else).
-        # -> Wurden keine Optionen Angeben so wird versucht ob action dem Namen einer Funktion entspricht,
-        #    ist dies der Fall, wird die entsprechende Funktion ausgeführt.
-        #    Gibt es keine passende Funktion so der Befehl in 'self._cmds['Preset']' übertragen.
-        # -> Wurden in 'presets' Optionen angegeben, dann werden diese einzeln durch eine for-Schleife abgearbeitet.
-        #    Durch eine if-Anweiseung wird überprüft, welcher der möglichen Optionen in der ini-Datei angegeben wurden.
-        #    Wird eine Übereinstimmung gefunden, wird der Befehl in 'self._cmds['Preset']' übertragen.
-        # 
-        for k, vals, actions in presets:
-            #print k, vals, actions
+        eval("self.%s(%s)"%('CreateWindow',self.conf[sec]['CreateWindow']))
+        eval("self.%s(%s)"%('SetWindow',self.conf[sec]['CreateWindow']))
+        
+        
+        eval("self.%s(%s)"%('CreateTrace',self.conf[sec]['CreateTrace']))
+        eval("self.%s(%s)"%('SetTrace',self.conf[sec]['CreateTrace'].split(',')[0]))
+
+        for func,args in self.conf[sec].items():
+            if (func == 'CreateTrace') or (func == 'CreateWindow') :
+                continue
+            #print func,args
             try:
-                v=self.conf[sec][k] 
-        
-                if (vals is None):
-                    try:
-                        err,ret=getattr(self,actions)(v)
-                        if err != 0:
-                            self.error=err
-                            return self.error
-                    except (AttributeError):
-                        self._cmds['Preset'].append((eval(actions[0]),actions[1])) 
-                else:
-                    for idx,vi in enumerate(vals):
-                        if v.lower() in vi:
-                            self._cmds['Preset'].append(actions[idx])
-            except KeyError:
+                #eval("self.%s(%s)"%(func,args))
                 pass
-            
-            
-        #
-        # Initialisierung des Signalgenerators über die Methode '._do_cmds' der Klasse DRIVER (driver.py)
-        #
-        dct=self._do_cmds('Preset', locals())
-        self._update(dct)                
+            except (AttributeError,NotImplementedError),e :
+                #print e
+                pass
+        
+        print "\n\nINIT ENDE\n\n",self,"\n\n"
+        
         return self.error
         
-            
+   
     
 class TRACE(object):
     
     TRACES=[]
     
-    def __init__(self,name,win,measParam,nw):
+    def __init__(self,nw,name,win,measParam):
         TRACE.TRACES.append(self)
+        self.networkanalyzer=nw
         self.name=name
         self.window=win
-        self.networkanalyzer=nw
         self.measParameter = measParam
         self.traceWindowNumber=-1
         self.traceWindowNumber=self.__gethighestTraceWindowNumber()
-        self.internName='%s_Ch%dWIN%dTR%d'%(name,self.networkanalyzer.getChannelNumber(),self.window.getInternNumber(),self.traceWindowNumber)
+        self.internName='%s_Ch%dWIN%sTR%d'%(name,self.networkanalyzer.getChannelNumber(),self.window.getInternName(),self.traceWindowNumber)
+    
+    
     def __gethighestTraceWindowNumber(self):
         numb=9
         for trace in TRACE.TRACES:
@@ -563,36 +472,32 @@ class TRACE(object):
     def getWindow(self):
         return self.window
     
-    def getNetworkanalyzer(self):
-        return self.networkanalyzer
-    
     
 class WINDOW(object):
     
     WINDOWS=[]
     
-    def __init__(self,number,nw):
+    def __init__(self,name):
         WINDOW.WINDOWS.append(self)
-        self.networkanalyzer=nw
-        self.number=number
+        self.name=name
         self.internNumber=-1
         self.internNumber=self.__gethighestWindowNumber()
         
     def __gethighestWindowNumber(self):
         numb=1
         for win in WINDOW.WINDOWS:
-            if (win.getInternNumber() >= numb):
-                numb = win.getInternNumber()+1
+            if (win._getInternNumber() >= numb):
+                numb = win._getInternNumber()+1
         return numb
-        
-    def getInternNumber(self):
+    
+    def _getInternNumber(self):
         return self.internNumber
     
-    def getNumber(self):
-        return self.number
+    def getInternName(self):
+        return str(self.internNumber)
     
-    def getNetworkanalyzer(self):
-        return self.networkanalyzer
+    def getName(self):
+        return self.name
 
 
 
@@ -608,6 +513,7 @@ def main():
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
     # 'StringIO' in eine virtuelle Datei umgewandelt.
     #
+    err = 0
     try:
         ini=sys.argv[1]
     except IndexError:
@@ -625,23 +531,19 @@ def main():
                         fstop: 6e9
                         fstep: 1
                         gpib: 20
-                        virtual: 0
+                        virtual: 1
+                        nr_of_channels: 2
 
                         [Channel_1]
                         unit: 'dBm'
-                        attenuation: auto
-                        reflevel: -20
-                        rbw: auto
-                        vbw: 10e6
-                        span: 6e9
-                        trace: 1
-                        tracemode: 'WRITe'
-                        detector: 'APEak'
-                        sweepcount: 0
-                        triggermode: 'IMMediate'
-                        attmode: auto
-                        sweeptime: 10e-3
-                        sweeppoints: 500
+                        SetRefLevel: 0
+                        SetRBW: 10e3
+                        SetSpan: 5999991000
+                        CreateWindow: 'default'
+                        CreateTrace: 'default','S22'
+                        SetSweepCount: 1
+                        SetSweepPoints: 50
+                        SetSweepType: 'Log'
                         """)
                         # rbw: 3e6
         ini=StringIO.StringIO(ini)
@@ -661,20 +563,18 @@ def main():
                         fstop: 6e9
                         fstep: 1
                         gpib: 20
-                        virtual: 0
+                        virtual: 1
 
-                        [Channel_1]
+                        [channel_1]
                         unit: 'dBm'
-                        reflevel: O
-                        rbw: 10e3
-                        span: 5999991000
-                        window: 1
-                        trace_name: 'TRC1'
-                        S-Parameter: 'S11'
-                        tracemode: 'WRITE'
-                        sweepcount: 1
-                        sweeppoints: 50
-                        sweeptyp: 'LINEAR'
+                        SetRefLevel: 0
+                        SetRBW: 10e3
+                        SetSpan: 5999991000
+                        CreateWindow: 'default'
+                        CreateTrace: 'default','S11'
+                        SetSweepCount: 1
+                        SetSweepPoints: 50
+                        SetSweepType: 'LINEAR'
                         """)
         ini2=StringIO.StringIO(ini2)
         
@@ -686,69 +586,66 @@ def main():
     #from mpy.device.networkanalyzer_ui import UI as UI
     nw=NETWORKANALYZER()
     nw2=NETWORKANALYZER()
-    try:
-        from mpy.device.networkanalyzer_ui import UI as UI
-    except ImportError:
-        pass
-    else:
-        ui=UI(nw,ini=ini)
-        ui.configure_traits()
-        sys.exit(0)    
+    
+    #try:
+    #    from mpy.device.networkanalyzer_ui import UI as UI
+    #except ImportError:
+    #    pass
+    #else:
+    #   ui=UI(nw,ini=ini)
+    #   ui.configure_traits()
+    #   sys.exit(0)    
     
     err=nw.Init(ini)
     assert err==0, 'Init() fails with error %d'%(err)
-    
     
     err=nw2.Init(ini2)
     assert err==0, 'Init() fails with error %d'%(err)
     
     
     
-    nw.SetWindow(1)
-    nw.SetTrace("Trc1","S11",1)
-    #nw.SetTrace("Trc2","S11",1)
     
     
-    #nw2.SetWindow(1)
-    #nw2.SetTrace("Trc2","S11",1)
-    #nw2.SetTrace("Trc3","S21",1)
-    #nw2.SetWindow(2)
-    #nw2.SetTrace("Trc2","S22",2)
+    print 
+    print nw.SetCenterFreq(11)
+    print nw.SetSweepType('LOG')
     
+    print nw2.SetCenterFreq(22)
     
-    ret=nw.GetTrace("Trc1")
-    print '%s(): Rückgabewert: %s   Sollwert: %s'%("GetTrace",ret[1],"--")
+    print "\n\nKommando Test:\n"
+    #print nw._CreateTrace.commands['CreateTrace'](nw,'tracename','S11')
+    #print nw._CreateTrace.commands.CreateTrace(nw,'tracename','S11')
+   
     
-    ret= nw.SetRefLevel("Trc1",0)     #Default: 0
-    print '%s(): Rückgabewert: %s   Sollwert: %s'%("SetRefLevel",ret[1],"20")
+    #print '%s(): Rückgabewert: %s   Sollwert: %s'%("SetRefLevel",ret[1],"20")
      
     
-    _assertlist=[
-                 ("SetCenterFreq", 3e9,"assert"),                     #Default:3e9
-                  ('SetSpan',5999991000,"print"),                            #Default:6e9
-                  ('SetStartFreq',9e3,"assert"),                      #Default:9e3
-                  ('SetStopFreq',6e9,"assert"),                       #Default:6e9
-                  ('SetRBW',10e3,"assert"),                           #Default:10e3
-                  ('SetSweepType',"LOGARITHMIC","print"),                  #LINear | LOGARITHMIC | SEGMent   
-                  ('SetSweepPoints',50,"assert"),                     #Default: 201  
+    #_assertlist=[
+    #             ("SetCenterFreq", 3e9,"assert"),                     #Default:3e9
+    #              ('SetSpan',5999991000,"print"),                            #Default:6e9
+    #              ('SetStartFreq',9e3,"assert"),                      #Default:9e3
+    #              ('SetStopFreq',6e9,"assert"),                       #Default:6e9
+    #              ('SetRBW',10e3,"assert"),                           #Default:10e3
+    #              ('SetSweepType',"LOGARITHMIC","print"),                  #LINear | LOGARITHMIC | SEGMent   
+    #              ('SetSweepPoints',50,"assert"),                     #Default: 201  
                   #('SetSweepCount',1,"print"),                       #Default: 1
-                 ]
+    #             ]
  
-    for funk,value,test in _assertlist:
-        err,ret = getattr(nw,funk)(value)
-        assert err==0,  '%s() fails with error %d'%(funk,err)
-        if value != None:
-            if test == "assert":
-                assert ret==value, '%s() returns freq=%s instead of %s'%(funk,ret,value)
-            else:
-                print '%s(): Rückgabewert: %s   Sollwert: %s'%(funk,ret,value)
-        else:
-            print '%s(): Rückgabewert: %s'%(funk,ret)
+    #for funk,value,test in _assertlist:
+    #    err,ret = getattr(nw,funk)(value)
+    #    assert err==0,  '%s() fails with error %d'%(funk,err)
+    #    if value != None:
+    #        if test == "assert":
+    #            assert ret==value, '%s() returns freq=%s instead of %s'%(funk,ret,value)
+    #        else:
+    #            print '%s(): Rückgabewert: %s   Sollwert: %s'%(funk,ret,value)
+    #    else:
+    #        print '%s(): Rückgabewert: %s'%(funk,ret)
 
 
-    err,spectrum=nw.GetSpectrum("Trc1")
-    assert err==0, 'GetSpectrum() fails with error %d'%(err)
-    print spectrum
+    #err,spectrum=nw.GetSpectrum("Trc1")
+    #assert err==0, 'GetSpectrum() fails with error %d'%(err)
+    #print spectrum
     
     #err,spectrum=nw.GetSpectrum("Trc2")
     #assert err==0, 'GetSpectrum() fails with error %d'%(err)
@@ -757,7 +654,9 @@ def main():
     #err=nw.Quit()
     #assert err==0, 'Quit() fails with error %d'%(err)
 #
-#      
+
+
+  
 #  ------------ Hauptprogramm ---------------------------
 #
 # Die Treiberdatei selbst und damit das Hauptprogramm wird nur gestartet, um den Treibercode zu testen. In diesem Fall springt
