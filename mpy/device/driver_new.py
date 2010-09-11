@@ -224,7 +224,6 @@ class Communication(object):
     def write(self, cmd):
         print "IN write", cmd
         print "%s out:"%self.IDN, cmd
-        return 0
     
     def read(self):
         print "In read"

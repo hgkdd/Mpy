@@ -22,7 +22,6 @@ from validators import *
 # Diese greift auf die Unterklasse SPECTRUMANALYZER (spectrumanalyzer.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
 class NETWORKANALYZER(NETWORKAN):
-
     
     """
     Test
@@ -67,7 +66,7 @@ class NETWORKANALYZER(NETWORKAN):
 
 
 
-    _cmds= CommandsStorage(
+    _cmds= CommandsStorage( NETWORKAN,
                     #Manual S. 499       
                     Command('SetCenterFreq','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
                                               Parameter('channel',global_var='internChannel'),
@@ -220,8 +219,8 @@ class NETWORKANALYZER(NETWORKAN):
                     
                     #Manual S. 443                                      
                     Command('NewSweepCount','INITiate%(channel)d:IMMediate',
-                                              Parameter('channel',global_var='internChannel'),
-                                              rtype='<default>'),
+                                              Parameter('channel',global_var='internChannel')
+                                              ),
                     
                     #Manual S. 521                          
                     Command('SetSweepPoints', 'SENSe%(channel)d:SWEep:POINts %(spoints)s',(
@@ -608,7 +607,7 @@ def main():
     
     print 
     print nw.SetCenterFreq(11)
-    print nw.SetSweepType('LOG')
+    #print nw.SetSweepType('LOG')
     
     print nw2.SetCenterFreq(22)
     
