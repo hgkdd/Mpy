@@ -13,8 +13,19 @@ import inspect
 import copy
 
 class Meta_Driver(type):
-    """
-    Meta-Klasse für Driver.
+    """ Meta-Klasse für Driver.
+        Die Meta-Klasse hat mehrere Aufgaben: 
+
+        Sie Baut anhand _cmds der Driver Klasse, Methoden für diese Klasse. 
+        Die Methoden haben als Namen den Namen welcher dem Command bzw. der Function übergeben wurde. 
+        Als Parameter sind diejenigen vorhanden, welche in der Function bzw. in dem Command definiert
+        wurden. Eine Methode ruft im Grund nur das ihr zugewiesene Command oder Function Objekt auf.
+
+
+        Weiterhin führt die Meta-Klasse einen Syntax Check für Methoden durch die im _commands dict 
+        der Eltern Klasse definiert wurden. Die Parameter einer Methode der Klasse, deren Name ebenfalls
+        im _commands dict vorhanden ist, müssen mit den dort angegeben übereinstimmen. 
+    
     """
     
     def __new__(cls,cls_name,bases,dict):
@@ -338,9 +349,10 @@ class Function(dict):
     
     
     def __call__(self,driver,*para):
-        """Nähre Infos zur Verwendung des Function Objekt siehe Klassen Beschreibung
+        """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
+        Nähre Infos zur Verwendung des Function Objekt siehe Klassen Beschreibung
         
-        :param driver: Driver eine instanze
+        :param driver: Instanze eines Drivers
         :param para: Argumente für die Parameter des Function objekts 
         """
         
@@ -419,6 +431,7 @@ class Command(object):
                          Parameter('channel',global_var='internChannel'),
                          Parameter('cfreq')  
                          ) )
+                         
         Der VISA-Befehls String ist ein Formatting String. In einen Platzhalter %(name)s wird der 
         aktuelle Werte des Parameters mit gleichen Name eingefügt und so der String vervollständigt. 
         Für jeden Platzhalter im String muss es einen passenden Parameter geben. 
@@ -501,14 +514,15 @@ class Command(object):
     
     
     def __init__(self,name,command,parameter,rfunction=None,rtype=None,return_map=None):
-        """
+        """ Zur Verwendung von Command, siehe Klassen Beschreibung
+        
         :param name:        Der Name des Commands
-        :param command:     Der Visa Befehl als Formatting String (siehe Klasse Beschreibung)
+        :param command:     Der Visa Befehl als Formatting String (siehe Klassen Beschreibung)
         :param parameter:   Parameter des Commands, wenn mehr als ein Parameter verwendet werden soll, 
                             dann müssen die Parameter als List oder Tuple übergeben werden. 
-        :param rfunction:   Methode dessen Wert zurück gegen werden soll (siehe Klasse Beschreibung)
-        :param rtype:       Rückgabe Type (siehe Klasse Beschreibung) 
-        :param return_map:  Rückgabe Map (siehe Klasse Beschreibung)
+        :param rfunction:   Methode dessen Wert zurück gegen werden soll (siehe Klassen Beschreibung)
+        :param rtype:       Rückgabe Type (siehe Klassen Beschreibung) 
+        :param return_map:  Rückgabe Map (siehe Klassen Beschreibung)
         """
         
         self.return_map = return_map
@@ -526,6 +540,7 @@ class Command(object):
         
         self.rfunction=rfunction
         
+        
         if self.rfunction and  not isinstance(self.rfunction, basestring):
             raise TypeError('Value for rfunction must be type of String. Command: %s'%self.name)
             
@@ -534,6 +549,7 @@ class Command(object):
         
         self.tmpl=None
       
+        #Parameter in eine List umwandeln, falls Tuple oder nur ein Parameter übergeben wurde. 
         if not isinstance(parameter, (list, tuple)):
             parameter = [parameter]
         elif isinstance(parameter, tuple):
@@ -542,6 +558,7 @@ class Command(object):
         ParameterTuple=[]
         self.parameter = {}
         
+        #Parameter in einem Dict speichern. 
         for para in parameter:
             self.parameter[para.getName()] = para
             if not para.isGlobal():
@@ -561,7 +578,8 @@ class Command(object):
            :param driver_super: Driver Super Klasse, !nicht Instanze! 
            :param f_name: Name der Function welche das Command umschließt 
         """
-           
+        
+        #Wenn default angegeben wurde, den rtype aus dem _command dict der Eltern Klasse holen.
         if self.rtype == '<default>':
             if self.function_name:
                 raise TypeError('<default> is not allowed if Command is component of function')
@@ -572,6 +590,7 @@ class Command(object):
         else:
             rtype = self.rtype
         
+        #Zum rtype passendes R_TYPES Objekt speichern, falls nicht direkt ein R_TYPES Objekt angegeben wurde. 
         if rtype:
             if isinstance(rtype, R_TYPES):
                 self.tmpl = rtype
@@ -587,13 +606,18 @@ class Command(object):
         
         
     def __call__(self,driver,*para):
-        """
-        """            
+        """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
+           Nähre Infos zur Verwendung des Command Objekt siehe Klassen Beschreibung
         
+        :param driver: Instanze eines Drivers
+        :param para: Argumente für die Parameter des Command objekts 
+        """         
         
+        #Überprüfen, ob das erste Argument eine Instanze von Driver ist
         if not isinstance(driver, DRIVER):
             raise TypeError('First argument of Command %s(driver,%s) must be a instance of DRIVER'%(self.name,self.getParameterStr())) 
        
+        #Die Anzahl der Argumente prüfen
         if len(para) > len(self.parameterTuple) or len(para) < len(self.parameterTuple):
             raise TypeError('Command %s(driver,%s) takes exactly %d arguments (%d given)'%(self.name,self.getParameterStr(),len(self.parameterTuple)+1,len(para)+1))
    
@@ -606,7 +630,7 @@ class Command(object):
    
         prameter=self.intance_param[driver]
         
-   
+        #Den Parameter die Werte übergeben
         i=0
         for p in self.parameterTuple:
             prameter[p](para[i])
@@ -616,13 +640,27 @@ class Command(object):
         
    
    
-    def _do_command(self,driver,parameters,):
-     
+    def _do_command(self,driver,parameters):
+        """Diese Methode führt das VISA Command aus.
+
+           Diese Methode sollte nie direkt verwendet werden, es sollte immer das Objekt selbst 
+           aufgerufen werden (also der __call__ Slot verwendet werden) !!!
+
+           Nähre Infos zur Verwendung von Command siehe Klassen Beschreibung 
+
+           :param driver:      Eine Instanze eines Drivers
+           :param parameters:        Paramter für den VISA Kommando String  
+        """
+
+        #Prüfen, ob von Driver schon die init() Methode aufgerufen wurde.
+        #Diese muss immer zu erst aufgerufen werden
         if not driver.isInit():
             raise InitError()
         
         communication_obj=driver.getCommunication_obj()
         
+        #Das Kommando mit Hilfe des Communication Objektes ausführen.
+        #und die Rückegabe mit Hilfe eines R_TYPES Objekt laut vorgabe umwandeln  
         try: 
             if self.command == "":
                 ans = communication_obj.read()
@@ -649,12 +687,14 @@ class Command(object):
                     else: 
                         raise ValueError(e)
 
+        #Wenn eine rfunction angegeben wurde, diese Auführen und zurückgeben. 
         if self.rfunction:
             try:
                 return getattr(driver,self.rfunction)()
             except AttributeError,e:
                 raise AttributeError("%s\n           Failure at Command: %s  Parameter: rfunction"%(e,self.name))
         
+        #Wenn ein return_map definiert wurdeh, mappen:
         if self.return_map:
             try:
                 ans = self.return_map[ans]
@@ -671,22 +711,100 @@ class Command(object):
         return self.name
     
     def getParameter(self):
-        """Gibt die Paramet
+        """Gibt alle Parameter des Commands als Map zurück
         """
         return self.parameter
     
     def getParameterTuple(self):
+        """Gibt die Parameter des Commands, welche nicht an globale Attribute der Driver Klasse gebunden sind, als Tubel zurück.
+        """
         return self.parameterTuple
     
     def getParameterStr(self):
+        """Gibt die Parameter des Commands, welche nicht an globale Attribute der Driver Klasse gebunden sind, als String zurück
+        """
         return ", ".join(self.parameterTuple) 
     
     def setReturn_map(self,return_map):
+        """Mit dieser Methode kann nachträglich die return_Map des Commands gesetzt werden.
+           Wird von der Meta-Klasse verwendet.
+        """
         self.return_map=return_map
     
     
 
 class Parameter(object):
+    """ Parameter verwaltet und speichert die Argumente für die VISA Kommandos. 
+
+        HINWEIß! Es ist nie nötig den Parametern direkt Werte zu übergeben, das wird 
+                 immer durch ein Function bzw. Command Objekt erledigt! 
+
+        **Verwendung:
+
+        * Dem einfachsten Parameter Objekt muss nur ein Name über geben werden:
+
+            p=Parameter('name')
+
+
+        * Es ist möglich einen Type für diesen Parameter zu definieren:
+
+            p=Parameter('name', ptype=float)
+
+        Der Parameter versucht dann, den ihm übergebenen Wert in den angegeben Typ umzuwandeln, klappt das nicht,
+        wird eine Exception geworfen
+        Alle Python Standard Typen sind erlaubt.
+
+
+        * Weiterhin ist es möglich sogenannte Possibilities anzugeben:
+
+            p=Parameter('name', possibilities=('LINEAR','LOGARITHMIC'))
+
+        Dies ist eine Liste oder Tuple mit möglichen Werte des Parameters. 
+        Wird dem Parameter keiner der der möglichen Werte übergeben, verwendet er einen, 
+        zu dem übergebene Wert ähnlichen, aus der Liste. 
+        Possibilities ist also kein strickte Prüfung, dies ist aber mit Validatoren möglich 
+        (siehe weiter unten).
+
+
+        * Mit Possibilities_Map ist es möglich, übergebene Werte auf für den VISA Befehl 
+          brauchbar zu mappen:
+
+            p=Parameter('name', possibilities_map={'LOGARITHMIC'  :   'LOGARITHMIC_map',
+                                      'LINEAR'  :   'LINEAR_map'})
+                            
+        In diesem Beispiel wird dem Parameter z.B. LOGARITHMIC übergeben, dieser würde 
+        LOGARITHMIC_map daraus machen.
+        Dieses vorgehen ist oft nötig, da alle Geräte einer Geräteklasse auf die gleiche 
+        Arte und Weise angesprochen werden sollen, also auch mit den gleichen Argumenten. 
+        Diese Argumente entsprechen aber nicht immer den Werte welche die VISA Kommandos 
+        verlangen, somit muss gemappt werden.  
+
+
+        * Das requires Keyword Argument:
+
+            p=Parameter('name', requires=IS_IN_SET(('a','b')) ) 
+
+        Requires kann man Objekte sogenannter Validatoren Klassen übergeben. 
+        Es ist auch möglich, mehrerer Validatoren zu übergeben, diese müssen dann in einer 
+        List oder Tuple zusammengefasst werden. 
+        Der dem Parameter übergebene Wert, wird mit Hilfe dieser Klassen auf seine 
+        Richtigkeit geprüft. Dieser Test ist immer ein strikter Test. So darf im obigen 
+        Beispiel dem Parameter nur 'a' oder 'b' übergeben werden und nichts andres. 
+        Was für Validatoren exitieren, siehe validators.py
+
+
+        * Validatoren haben die höchste Priorität, erst danach werden possibilities und danach possibilities_map verarbeitet.  
+
+        
+        * Man kann aber ein Parameter aber auch an ein Attribut der Driver Instanz binden: 
+    
+            p=Parameter('name', global_var='Attribut der Instanz')
+
+        Der Werte für den Parameter wird dann immer aus diesem Attribut genommen.
+        Wird global_var definiert, haben  ptype, possibilities und possibilities_map keine Wirkung mehr.
+    """
+    
+    
     
     def __init__(self,name,global_var=None,ptype=None,requires=None,possibilities_map=None,possibilities=None):
         self.name=name
@@ -699,6 +817,7 @@ class Parameter(object):
         self.possib=possibilities
         self.possib_map=possibilities_map
     
+    
     def init(self,cmd,driver):
         self.command=cmd
         self.driver=driver
@@ -710,7 +829,19 @@ class Parameter(object):
             return getattr(self.driver,self.global_var)
         return self.value
 
-    def setValue(self,value):
+
+
+    def __call__(self,value):
+                
+        if self.ptype:
+            if not isinstance(value,self.ptype):
+                try:
+                    value=self.ptype(value)
+                except:
+                    raise TypeError('Attribute %s of %s must be of type %s'%(self.name,self.command.getName(),str(self.ptype)))
+        
+        self.validate(value)
+        
         if self.possib and isinstance(value,basestring):
             value =fstrcmp(value, self.possib, n=1,cutoff=0,ignorecase=True)[0]
             #print 'value after fsrtrcmp ',value
@@ -721,18 +852,9 @@ class Parameter(object):
             except:
                 pass
             #print 'value after maping:',value
-            
-        self.validate(value)
-        if self.ptype:
-            if not isinstance(value,self.ptype):
-                try:
-                    value=self.ptype(value)
-                except:
-                    raise TypeError('Attribute %s of %s must be of type %s'%(self.name,self.command.getName(),str(self.ptype)))       
+               
         self.value = value
     
-    def __call__(self,value):
-        self.setValue(value)
     
     def __repr__(self):
         #print 'repr'
@@ -789,5 +911,4 @@ class Parameter(object):
     
     def setPossibilities(self,possib):
         self.possib=possib
-    
     

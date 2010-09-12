@@ -87,7 +87,7 @@ class  IS_IN_SET(object):
     def __init__(self,set,message=''):
         self.set=set
         if message != '':
-            self.message='Argument must be in Set %s. Argument must be greater or equal.'%(self.set)
+            self.message='Argument must be in Set %s.'%(self.set)
         else:
             self.message=message
             
