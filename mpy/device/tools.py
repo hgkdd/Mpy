@@ -17,15 +17,82 @@ class Meta_Driver(type):
         Die Meta-Klasse hat mehrere Aufgaben: 
 
         Sie Baut anhand _cmds der Driver Klasse, Methoden für diese Klasse. 
-        Die Methoden haben als Namen den Namen welcher dem Command bzw. der Function übergeben wurde. 
-        Als Parameter sind diejenigen vorhanden, welche in der Function bzw. in dem Command definiert
-        wurden. Eine Methode ruft im Grund nur das ihr zugewiesene Command oder Function Objekt auf.
+
+        Die Methoden haben den selben Namen wie das jeweilige Command bzw. wie die 
+        jeweilige Function. Als Parameter sind diejenigen vorhanden, welche in der Function 
+        bzw. in dem Command definiert wurden. Eine Methode ruft im Grund nur das ihr 
+        zugewiesene Command oder Function Objekt auf.
 
 
-        Weiterhin führt die Meta-Klasse einen Syntax Check für Methoden durch die im _commands dict 
-        der Eltern Klasse definiert wurden. Die Parameter einer Methode der Klasse, deren Name ebenfalls
-        im _commands dict vorhanden ist, müssen mit den dort angegeben übereinstimmen. 
+        Weiterhin führt die Meta-Klasse einen Syntax Check für Methoden durch, die im 
+        _commands dict der Super Klasse definiert wurden. Die Parameter einer Methode der 
+        Klasse, deren Name ebenfalls im _commands dict vorhanden ist, müssen mit den dort 
+        angegeben übereinstimmen! Sind in _commands Methoden definiert, welche nicht in der
+        Klasse implementiert sind, wird eine Methode gebaut, die eine  NotImplementedError Exception wirft. 
+
+
+
+        Durch die Meta-Klasse ist auch möglich, globale return_maps für commands und globale possibilities,
+        possibilities_maps für Parameter zu definieren.
+
+        *possibilities:
+
+        Possibilities dürfen sowohl in der Super Klasse des Driver als auch in der Klasse selbst definiert werden.
+        Wird in beiden Klassen eine Possibilities-Liste  erzeugt, welche den gleichen Parameter anspricht, wird die 
+        diejenige aus der Superklasse verwendet.
+        Beispiel:
+            _cmds= CommandsStorage( NETWORKAN,
+                            Command('SetSparameter',"VISA Command String",(
+                                        ...
+                                        Parameter('measParam',ptype=str) 
+                                         )   ),
+
+        Will man für den Parameter 'measParam' eine Possibilites-Liste erzeugen, dann muss diese folgenden Namen 
+        besitzen: Name_des_Parameters_possib (unabhängig davon ob die Liste in der Super Klasse oder in der Klasse 
+        selbst definiert wurde):
+        Beispiel:
+            measParam_possib=('S11', 'S12', 'S21', 'S22')
+
+        Diese Liste gilt für alle Parameter mit dem Namen 'measParam', egal in welchem Command oder Function.
+
+
+        *possibilities_maps:
+
+        possibilities_maps können nur in der Klasse selbst nicht in der Superklasse definiert werden.
+        Beispiel:
+                Command('SetSweepType','VISA Command String'),
+                            Parameter('sweepType',ptype=str)
+                            )),
+
+        Will man für den Parameter 'sweepType' eine Possibilites_Map erzeugen, dann muss diese folgenden Namen 
+        besitzen: Name_des_Parameters_possib_map
+        Beispiel:
     
+            sweepType_possib_map={'LOGARITHMIC'  :   'LOGARITHMIC_map',
+                                  'LINEAR'  :   'LINEAR_map',
+                                    }
+        
+        Diese Map gilt für alle Parameter mit dem Namen 'sweepType', egal in welchem Command oder Function.
+
+
+        * return_maps
+
+        return_maps können nur in der Klasse selbst nicht in der Superklasse definiert werden.
+        Beispiel:
+
+            Command('SetSweepType','VISA Command String'),
+                            Parameter('sweepType',ptype=str)
+                            )),
+
+        Will man für dieses Command eine return_maps erzeugen, dann muss diese folgenden Namen besitzen: 
+        Name_des_Command_rmap
+        Beispiel:
+
+            GetSweepType_rmap={'LOG'  :   'LOGARITHMIC',
+                               'LIN'  :   'LINEAR',
+                                }
+    
+        Das Vorgehen für Functions ist äquivalent. 
     """
     
     def __new__(cls,cls_name,bases,dict):
