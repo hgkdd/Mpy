@@ -193,7 +193,7 @@ class NETWORKANALYZER(NETWORKAN):
                                               Parameter('channel',global_var='internChannel'),
                                               Parameter('traceName',global_var='activeTrace_Name'),
                                               Parameter('measParam',ptype=str) 
-                                              )   ),
+                                              ),rfunction='GetSparameter'  ),
                     
                     #Manual S. 523                          
                     Command('SetSweepType','SENSe%(channel)d:SWEep:TYPE %(sweepType)s',(
@@ -333,14 +333,19 @@ class NETWORKANALYZER(NETWORKAN):
     
     #something sie die SParameter als String z.B. 'S11'
     def SetSparameter(self,sparam):
-        tra=self.activeTrace
-        self._SetSparameter(tra.getInternName(),sparam)
+        self._SetSparameter(sparam)
+    
+    
+    def GetSparameter(self):
+        return 0,self.GetTrace()[1][1]
+
     
     def SetTrace(self,traceName):
         self.activeTrace=self.traces.get(traceName)
         self.activeTrace_Name=self.activeTrace.getInternName()
         self.activeTrace_WinNum=self.activeTrace.getTraceWindowNumber()
         self._SetTrace(self.activeTrace_Name)
+        return self.GetTrace()
     
     
     def SetWindow(self,windowName):
@@ -373,10 +378,6 @@ class NETWORKANALYZER(NETWORKAN):
         #print trace
         return 0,(trace[trace_index],trace[trace_index+1])
    
-    
-    def GetSparameter(self):
-        return 0,self.GetTrace()[1][1]
-
 
     #************************************   
     #  Spectrum aus Gerät auslesen
@@ -488,7 +489,7 @@ class NETWORKANALYZER(NETWORKAN):
                 continue
             #print func,args
             try:
-                eval("self.%s(%s)"%(func,args))
+                #eval("self.%s(%s)"%(func,args))
                 pass
             except (AttributeError,NotImplementedError),e :
                 #print e
@@ -572,7 +573,9 @@ class WINDOW(object):
 
 from networkanalyzer_ui import UI as super_ui
 from Meta_ui import Metaui
-
+import enthought.traits.api as tapi
+import enthought.traits.ui.api as tuiapi
+import enthought.traits.ui.menu as tuim
 
 class UI(super_ui):
     
@@ -582,9 +585,23 @@ class UI(super_ui):
     def __init__(self,instance, ini=None):
         super_ui.__init__(self,instance,ini)
    
-
-
-
+   
+   
+   
+    SetTrace=tapi.Button("SetTrace")
+    SETTRACE=tapi.Str()
+    newSETTRACE=tapi.Str()
+   
+    def _SetTrace_fired(self):
+        err,value=self.dv.SetTrace(self.newSETTRACE)
+        self.SETTRACE=value
+    
+    
+    Main_S=tuiapi.Group(tuiapi.Group(tuiapi.Item('SetTrace',show_label=False,width=100),
+                                     tuiapi.Item('SETTRACE',label='Wert',style='readonly',width=70),
+                                     tuiapi.Item('newSETTRACE',label='traceName',width=60),
+                                     orientation='horizontal'),
+                        label='Main_Rest')
 
 
 
@@ -619,7 +636,7 @@ def main():
                         fstop: 6e9
                         fstep: 1
                         gpib: 18
-                        virtual: 0
+                        virtual: 1
                         nr_of_channels: 2
 
                         [Channel_1]

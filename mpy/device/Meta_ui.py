@@ -26,8 +26,7 @@ def erzeugeFired_Methode_mit_Rfunction(command,rfunction,param_list):
     """
     """
     def Methode_fired(self):
-        eval('self.dv.%s(%s)'%(command,", ".join(param_list)))
-        setattr(self,rfunction.upper(),getattr(self.dv,rfunction)[0])
+        setattr(self,rfunction.upper(),str(eval('self.dv.%s(%s)'%(command,", ".join(param_list)))[1]))
         
     return Methode_fired
 
@@ -39,10 +38,10 @@ def erzeugeFired_Methode(name,param_list):
     """
     """
     def Methode_fired(self):
-        print name.upper()
-        print 'self.%s(%s)'%(name,", ".join(param_list))
-        print eval('self.dv.%s(%s)'%(name,", ".join(param_list)))[0]
-        setattr(self,name.upper(),eval('self.dv.%s(%s)'%(name,", ".join(param_list)))[0])
+        #print name.upper()
+        #print 'self.%s(%s)'%(name,", ".join(param_list))
+        #print eval('self.dv.%s(%s)'%(name,", ".join(param_list)))[0]
+        setattr(self,name.upper(),eval('self.dv.%s(%s)'%(name,", ".join(param_list)))[1])
         
     return Methode_fired
 
@@ -93,11 +92,11 @@ class Metaui(MetaHasTraits):
             
             
             items="%s tuiapi.Group("%(items)
-            items="%s tuiapi.Item('%s',show_label=False),"%(items,command_name)
+            items="%s tuiapi.Item('%s',show_label=False,width=100),"%(items,command_name)
             
             
             if command.Rfunction():
-                items="%s tuiapi.Item('%s',show_label=False),"%(items,command.Rfunction())
+                items="%s tuiapi.Item('%s',show_label=False,width=100),"%(items,command.Rfunction())
                 items="%s tuiapi.Item('%s',label='Wert',style='readonly',width=70),"%(items,command.Rfunction().upper())
                 
                 class_dict[command.Rfunction().upper()]=Erzeuge_TapiVar(str)
@@ -116,7 +115,7 @@ class Metaui(MetaHasTraits):
                 
                 
             else:
-                items="%s tuiapi.Item('%s',label='Wert',style='readonly',width=70),"%(items,command_name.upper())
+                items="%s tuiapi.Item('%s',label='%s',style='readonly',width=70),"%(items,command_name.upper(),'Wert'.rjust(38))
                 class_dict.update({command_name: tapi.Button(command_name)})
                 class_dict[command_name.upper()]=Erzeuge_TapiVar(str)
             
@@ -132,7 +131,7 @@ class Metaui(MetaHasTraits):
                         continue
                 
                 items="%s tuiapi.Item('param_%s_%s',label='%s',width=60),"%(items,command_name,param_name.upper(),param_name)
-                class_dict['param_%s_%s'%(command_name,param_name.upper())]=Erzeuge_TapiVar(param.Getptype)
+                class_dict['param_%s_%s'%(command_name,param_name.upper())]=Erzeuge_TapiVar(param.Getptype())
                 param_list.append('self.param_%s_%s'%(command_name,param_name.upper()))
                 
                 
@@ -157,24 +156,29 @@ class Metaui(MetaHasTraits):
         item_List=items_Map.values()
         item_List=[item_List[i:i+16] for i in range(0, len(item_List), 16)]
         
-        print len(item_List[0])
-        
-        items=", ".join(items_Map.values())
-        
-        
-        MAIN_grp=tuiapi.Group(eval(items),                        
-                          label='Main')
-        
-        
         INI_grp=tuiapi.Group(tuiapi.Item('INI', style='custom',springy=True,width=500,height=200,show_label=False),
                          tuiapi.Item('Init', show_label=False),
                          label='Ini')
         
-        tabs='INI_grp,MAIN_grp'
+        i=0
+        tabs_list=[]
+        tabs='INI_grp'
+        for item in item_List:
+            "MAIN_grp_%d"%i,
+            tabs_list.append(tuiapi.Group(eval(", ".join(item)),label='Main_%d'%i))
+            tabs=tabs+", tabs_list[%d]"%i
+            i=i+1
         
-        #for i in class_dict:
-        #    if type(class_dict.get(i)) == tuiapi.Group:
-        #        tabs ='%s,class_dict.get("%s")'%(tabs,i)
+        for i in class_dict:
+            if type(class_dict.get(i)) == tuiapi.Group:
+                tabs ='%s,class_dict.get("%s")'%(tabs,i)
+        
+        i=0
+        for b in bases:
+           for n,v in b.GROUPS.items():
+               if type(v) == tuiapi.Group:
+                   tabs ='%s,bases[%d].GROUPS["%s"]'%(tabs,i,n)     
+           i=i+1
         
         tabs = "tuiapi.Group(%s, layout='tabbed')"%tabs
         

@@ -111,11 +111,14 @@ class UI(tapi.HasTraits):
     #**********************************************************************
     
     plot = tapi.Instance(Plot)
-    SPEC_grp=tuiapi.Group(tuiapi.Item('SPECTRUM', style='custom',springy=True,width=500,height=200,show_label=False),
-                         tuiapi.Item('GetSpectrum', show_label=False),
-                         label='Spectrum')
     
-    PLOT_grp=tuiapi.Group(tuiapi.Item('plot',editor=ComponentEditor(), show_label=False),
+    GROUPS={'Spectrum':tuiapi.Group(tuiapi.Item('SPECTRUM', style='custom',springy=True,width=500,height=200,show_label=False),
                          tuiapi.Item('GetSpectrum', show_label=False),
-                         label='Plot')
+                         label='Spectrum'),
+    
+            'Plot': tuiapi.Group(tuiapi.Item('plot',editor=ComponentEditor(), show_label=False),
+                         tuiapi.Item('GetSpectrum', show_label=False),
+                         label='Plot')}
+    
+  
         
