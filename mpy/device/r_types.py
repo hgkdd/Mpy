@@ -40,6 +40,8 @@ class R_FLOAT(R_TYPES):
         self.command = command
         
     def __call__(self,value):
+            #print value
+            
             m=re.match(self.tmpl, value)
             if m:
                 ans=m.group(0)
@@ -102,7 +104,31 @@ class R_STR(R_TYPES):
 
         
 class R_BOOL(R_TYPES):
-    def __init__(self,tmpl=r'.*',command=None):
+    def __init__(self,values_false=('off', '0','false'), values_true=('on','1','true'), command=None):
+        self.values_true=values_true
+        self.values_false=values_false
+        self.command = command
+        
+    def __call__(self,value):
+            #print value
+            ans=str(value).lower()
+            if ans in self.values_false:
+                return False
+            elif ans in self.values_true:
+                return True
+            
+            mess=''
+            if self.command:
+                mess='Command:  %s'%self.command.getName()
+            raise Return_TypesError('Can not convert received value to boolean \n           %s'%mess)
+            return None
+
+
+
+
+
+class TUPLE_OF_FLOAT(R_TYPES):
+    def __init__(self,tmpl=r'([-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?,?)+',command=None):
         self.tmpl=tmpl
         self.command = command
         
@@ -111,22 +137,20 @@ class R_BOOL(R_TYPES):
             if m:
                 ans=m.group(0)
                 try:
-                    value=str(ans)
-                    return value
+                    temp=re.split(',', ans)
+                    temp2=[]
+                    for i in temp:
+                        temp2.append(float(i))
+                    return tuple(temp2)
                 except:
                     pass
             
             mess=''
             if self.command:
                 mess='Command:  %s'%self.command.getName()
-            raise Return_TypesError('Can not convert received value to str \n           %s'%mess)
+            raise Return_TypesError('Can not convert received value to a tuple of float \n           %s'%mess)
+            
+            
             return None
-
-
-
-
-
-class LIST_OF_FLOAT(R_TYPES):
-    pass
+    
         
-#r'(?P<power>([-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?,?)+)')],

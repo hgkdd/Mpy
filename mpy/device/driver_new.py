@@ -74,24 +74,20 @@ class DRIVER(object):
 
     def _init_bus(self,virtual):
         if virtual:
-            self.dev = Communication(self.IDN,virtual=True)
+            self.dev = Virtual_Communication(self.IDN)
         
         elif 'gpib' in self.conf['init_value']:
+            self.conf['bus']['gpib']=self.conf['init_value']['gpib']
             #print 'gpib' 
-            self.dev = Communication(self.IDN,buss='gpib',**self.conf['bus'])
-            print 'test'
-            print self.dev
-            
-            if self.dev != None:
-                try:
-                    self.error,re=self.Init_Device()
-                except:
-                    pass
+            self.dev = GPIB_Communication(**self.conf['bus'])
+            #print self.dev
+                
         #other Buss-Systems, if required in the future:   
         #elif 'something' in self.conf['init_value']:
-        #    self.dev = Communication(buss='something',**self.conf['bus'])
-               
-        self.dev = Communication(self.IDN,virtual=True)
+        #    self.dev = somthing_Communication(**self.conf['bus'])
+        
+        else:
+            self.dev = Virtual_Communication(self.IDN)
         
 
 
@@ -111,7 +107,7 @@ class DRIVER(object):
         Return: 0 if sucessful. 
         """
         
-        self.error=0
+        error=0
         self.channel=channel
         if not self.channel:
             self.channel=1
@@ -127,7 +123,7 @@ class DRIVER(object):
                 self._init_bus(virtual=True)
                    
         self.isinit=True
-        return self.error
+        return error
 
 
 
@@ -146,27 +142,26 @@ class DRIVER(object):
         """
         Quit the instrument.
         """
-        self.error=0
+        error=0
         try:
-            self.error,re=self.__Quit()
+            error,re=self._Quit()
         except:
             pass
-        return self.error
+        return error
 
     def SetVirtual(self, virtual):
         """
         Sets ``self.conf['init_value']['virtual']`` to ``virtual``.
         """
-        self.error=0
+        error=0
         self.conf['init_value']['virtual']=virtual
-        return self.error
+        return error
 
     def GetVirtual(self):
         """
         Returns ``(0, self.conf['init_value']['virtual'])``
         """
-        self.error=0
-        return self.error, self.conf['init_value']['virtual']
+        return 0,self.conf['init_value']['virtual']
 
 
     def GetDescription(self):
@@ -175,9 +170,8 @@ class DRIVER(object):
         and ``self.IDN``. The former comes from the ini file, the latter may be set by the driver during
         initialization.
         """
-        self.error=0
         try:
-            self.error,re=self.__GetDescription()
+            error,re=self.__GetDescription()
             self.IDN = str(re)
         except:
             pass
@@ -187,7 +181,7 @@ class DRIVER(object):
             des = self.conf['description']=''
             
         #print self.conf['description'], self.IDN
-        return self.error, str(self.conf['description'])+self.IDN
+        return error, str(self.conf['description'])+self.IDN
     
    
 
@@ -201,25 +195,16 @@ class DRIVER(object):
         return self.isinit
     
     
-    
+
+
+
     
 
-class Communication(object): 
+class Virtual_Communication(object): 
     
     
-    def __init__(self,IDN,virtual=False,buss='gpib',**args):
+    def __init__(self,IDN):
         self.IDN=IDN
-        if not virtual: 
-            if buss == 'gpib':
-                self.buss=GPIB_Communication(**args)
-            else:
-                raise NotImplementedError('Bus systems %s not implemented'%buss)
-              
-            self.write=self.buss.write
-            self.read=self.buss.read
-            self.query=self.buss.query
-        
-    
     
     def write(self, cmd):
         print "IN write", cmd
@@ -239,7 +224,8 @@ class Communication(object):
     
 class GPIB_Communication(object):
     
-    def __init__(self,timeout=5,
+    def __init__(self,gpib=20,
+                 timeout=5,
                  chunk_size=20480,
                  values_format=None,
                  term_chars=None,
@@ -263,7 +249,7 @@ class GPIB_Communication(object):
         
         
     def write(self, cmd):
-        #print "In write", cmd
+        print "In write: ", cmd
         stat=0
         if self.dev and isinstance(cmd, basestring):
             ans=self.dev.write(cmd)
@@ -276,6 +262,7 @@ class GPIB_Communication(object):
 
 
     def query(self, cmd):
+        print 'In query: ',cmd
         if self.dev and isinstance(cmd, basestring):
             ans=self.dev.ask(cmd)
         return ans

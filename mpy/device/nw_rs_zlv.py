@@ -8,13 +8,13 @@ from scuq import *
 #from mpy.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
 from networkanalyzer import NETWORKANALYZER as NETWORKAN
 from mpy.tools.Configuration import fstrcmp
-
+from mpy.tools.spacing import logspaceN,linspaceN
 import numpy
 
 from tools import *
 from r_types import *
 from validators import *
-
+from mpy_exceptions import *
 
 #
 #
@@ -57,13 +57,11 @@ class NETWORKANALYZER(NETWORKAN):
     GetSweepType_rmap={'LOG'  :   'LOGARITHMIC',
                        'LIN'  :   'LINEAR',
                         }
-    
-    
-    
-    sweepType_possib_map={'LOGARITHMIC'  :   'LOGARITHMIC_map',
-                          'LINEAR'  :   'LINEAR_map',
-                        }
 
+    sweepMode_possib_map={'CONTINUOUS'  : 'ON',
+                          'SINGEL'  :'OFF'
+                          }
+    
 
 
     _cmds= CommandsStorage( NETWORKAN,
@@ -133,20 +131,20 @@ class NETWORKANALYZER(NETWORKAN):
                                               ), rfunction='GetRefLevel'),                            
                     
                     #Manual S. 430                   
-                    Command('GetRefLevel','DISPlay:WINDow%(windTraceNumber)s:TRACe%(windTraceNumber)s:Y:SCALe:RLEVel?',(
+                    Command('GetRefLevel','DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:RLEVel?',(
                                               Parameter('WindowName', global_var='activeWindow_Name'),
                                               Parameter('windTraceNumber', global_var='activeTrace_WinNum')                                          
                                               ), rtype="<default>"),                                        
                     
                     #Manual S. 429                          
-                    Command('SetDivisionValue', 'DISPlay:WINDow%(windTraceNumber)s:TRACe%(windTraceNumber)s:Y:SCALe:PDIVision %(divivalue)s DBM',(
+                    Command('SetDivisionValue', 'DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:PDIVision %(divivalue)s DBM',(
                                               Parameter('WindowName', global_var='activeWindow_Name'),
                                               Parameter('windTraceNumber', global_var='activeTrace_WinNum'),
                                               Parameter('divivalue',ptype=float)      
                                               ), rfunction='GetDivisionValue'),                                                                                                                     
                     
                     #Manual S. 429         
-                    Command('GetDivisionValue', 'DISPlay:WINDow%(windTraceNumber)s:TRACe%(windTraceNumber)s:Y:SCALe:PDIVision?',(
+                    Command('GetDivisionValue', 'DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:PDIVision?',(
                                               Parameter('WindowName', global_var='activeWindow_Name'),
                                               Parameter('windTraceNumber', global_var='activeTrace_WinNum')                                          
                                               ), rtype="<default>"),                                                   
@@ -161,19 +159,20 @@ class NETWORKANALYZER(NETWORKAN):
                                               
                     Function('CreateTrace',(
                                    #Manual S. 384         
-                                   Command('CreateTrace',"CALCulate%(channel)d:PARameter:SDEFine \\'%(tracename)s\\', \\'%(measParam)s\\'", (
+                                   Command('CreateTrace',"CALCulate%(channel)d:PARameter:SDEFine \'%(tracename)s\', \'%(measParam)s\'", (
                                               Parameter('channel',global_var='internChannel'),
                                               Parameter('tracename',ptype=str),
                                               Parameter('measParam',ptype=str)
-                                              ), ), 
-                                   Command('ActivedTrace', "DISPlay:WINDow%(windowName)d:TRACe%(windTraceNumber)d:FEED \\'%(tracename)s\\",(
+                                              ), ),
+                                   #Manual S. 426
+                                   Command('ActivedTrace', "DISPlay:WINDow%(windowName)d:TRACe%(windTraceNumber)d:FEED \'%(tracename)s\'",(
                                               Parameter('windowName', global_var='activeWindow_Name'),
                                               Parameter('windTraceNumber',ptype=int),                                                                                                                                                 
                                               Parameter('tracename',ptype=str)
                                               )  ),
                                   ) ),
                      
-                    Command('DelTrace', "CALCulate%(channel)d:PARameter:DELete \\'%(traceName)s\\'",(
+                    Command('DelTrace', "CALCulate%(channel)d:PARameter:DELete \'%(traceName)s\'",(
                                               Parameter('channel',global_var='internChannel'),
                                               Parameter('traceName', global_var='activeTrace_Name')
                                               )      ) ,                                                     
@@ -184,13 +183,13 @@ class NETWORKANALYZER(NETWORKAN):
                                               ),                            
                     
                     #???
-                    Command('SetActiveTrace',"CALCulate%(channel)d:PARameter:SELect \\'%s\\'",(
+                    Command('SetTrace',"CALCulate%(channel)d:PARameter:SELect \'%(traceName)s\'",(
                                               Parameter('channel',global_var='internChannel'),
                                               Parameter('traceName',ptype=str)
                                               )     ),
                     
                     #Manual S. 383
-                    Command('SetSparameter',"CALCulate%(channel)d:PARameter:MEASure \\'%(traceName)s\\' \\'%(measParam)s\\",(
+                    Command('SetSparameter',"CALCulate%(channel)d:PARameter:MEASure \'%(traceName)s\' \'%(measParam)s\'",(
                                               Parameter('channel',global_var='internChannel'),
                                               Parameter('traceName',global_var='activeTrace_Name'),
                                               Parameter('measParam',ptype=str) 
@@ -234,20 +233,20 @@ class NETWORKANALYZER(NETWORKAN):
                                               rtype='<default>'),
 
                     #Manual S. 442
-                    Command('SetSingelSweep','INITiate%(channel)d:CONTinuous %(singelSweep)s',(            
+                    Command('SetSweepMode',"INITiate%(channel)d:CONTinuous %(sweepMode)s",(            
                                               Parameter('channel',global_var='internChannel'),
-                                              Parameter('singelSweep',ptype=str)
-                                              ), rfunction='GetSingelSweep'),
+                                              Parameter('sweepMode',ptype=str)
+                                              ), rfunction='GetSweepMode'),
                     
                     #Manual S. 442 
-                    Command('GetSingelSweep', 'INITiate%(channel)d:CONTinuous?',
+                    Command('GetSweepMode', 'INITiate%(channel)d:CONTinuous?',
                                               Parameter('channel',global_var='internChannel'),
                                               rtype=bool), 
                     
                     #Manula S. 547
-                    Command('SetTriggerMode', 'TRIGger%(channel)d:SEQuence:SOURce %(trgmode)s',(
+                    Command('SetTriggerMode', 'TRIGger%(channel)d:SEQuence:SOURce %(triggerMode)s',(
                                               Parameter('channel',global_var='internChannel'),
-                                              Parameter('trgmode',ptype=str)
+                                              Parameter('triggerMode',ptype=str)
                                               ), rfunction='GetTriggerMode'),
                     
                     #Manula S. 547
@@ -284,7 +283,7 @@ class NETWORKANALYZER(NETWORKAN):
                     #Manual S. 339
                     Command('GetSpectrum', 'CALCulate%(channel)d:DATA? FDAT', 
                                             Parameter('channel',global_var='internChannel'),
-                                            rtype=LIST_OF_FLOAT()
+                                            rtype=TUPLE_OF_FLOAT()
                                             ),
                     
                     #Später:
@@ -319,9 +318,18 @@ class NETWORKANALYZER(NETWORKAN):
     #             Das Fenster muss vorher mit SetWindow(self, winNumber) angelegt werden.
 
     def CreateTrace(self,tracename,measParam):
+        
+        existing_traces = re.split(r",",self._GetTrace()[1][1:-1])
+        
         tra = TRACE(self,tracename,self.activeWindow,measParam)
+        
+        if tra.getInternName() in existing_traces:
+            raise GeneralDriverError("Trace \'%s\' already exist"%tracename)
+        
         self.traces.update({tracename: tra})
         self._CreateTrace(tra.getInternName(),measParam,tra.getTraceWindowNumber())
+    
+    
     
     #something sie die SParameter als String z.B. 'S11'
     def SetSparameter(self,sparam):
@@ -332,12 +340,70 @@ class NETWORKANALYZER(NETWORKAN):
         self.activeTrace=self.traces.get(traceName)
         self.activeTrace_Name=self.activeTrace.getInternName()
         self.activeTrace_WinNum=self.activeTrace.getTraceWindowNumber()
+        self._SetTrace(self.activeTrace_Name)
     
     
     def SetWindow(self,windowName):
         self.activeWindow=self.windows[windowName]
         self.activeWindow_Name=self.activeWindow.getInternName()
         
+
+
+    def SetSweepCount(self,sweepCount):
+        if sweepCount == 0:
+            error,ans = self.SetSweepMode('CONTINUOUS')
+            if ans:
+                return 0
+            else:
+                raise GeneralDriverError('Can not deactivate SweepCount')
+        else:
+            error,ans = self.SetSweepMode('SINGEL')
+            if ans:
+                raise GeneralDriverError('Can not activate SweepCount')
+            
+        return self._SetSweepCount(sweepCount)
+
+
+
+    #Infos über einen gestimten Trace abrufen
+    def GetTrace(self):        
+        trace = re.split(r",",self._GetTrace()[1][1:-1])
+        trace_index= trace.index(self.activeTrace.getInternName())
+        #print trace_index
+        #print trace
+        return 0,(trace[trace_index],trace[trace_index+1])
+   
+    
+    def GetSparameter(self):
+        return 0,self.GetTrace()[1][1]
+
+
+    #************************************   
+    #  Spectrum aus Gerät auslesen
+    #************************************
+    def GetSpectrum(self):
+
+        #self.SetSweepCount(1)
+        #self.NewSweepCount()
+        #time.sleep(1)
+        
+        error,spec=self._GetSpectrum()
+        error,sweepType= self.GetSweepType()
+ 
+        if  sweepType == 'LOGARITHMIC':
+            xValues=logspaceN(self.GetStartFreq(),self.GetStopFreq(),self.GetSweepPoints(),endpoint=1,precision=0)
+        elif sweepType == 'LINEAR':
+            xValues=linspaceN(self.GetStartFreq(),self.GetStopFreq(),self.GetSweepPoints(),endpoint=1,precision=0)
+        else:
+            raise GeneralDriverError('SweeType %s is not supported'%sweepType)
+ 
+        return 0,(tuple(xValues),spec)
+    
+
+             
+        
+        
+
     
     #*************************************************************************
     #
@@ -394,7 +460,7 @@ class NETWORKANALYZER(NETWORKAN):
         """                
         if channel is None:
             channel=1
-        self.error=NETWORKAN.Init(self,ini, channel)
+        error=NETWORKAN.Init(self,ini, channel)
         
         sec='channel_%d'%channel
         try:
@@ -422,15 +488,15 @@ class NETWORKANALYZER(NETWORKAN):
                 continue
             #print func,args
             try:
-                #eval("self.%s(%s)"%(func,args))
+                eval("self.%s(%s)"%(func,args))
                 pass
             except (AttributeError,NotImplementedError),e :
                 #print e
                 pass
         
-        print "\n\nINIT ENDE\n\n",self,"\n\n"
+        print "\nINIT ENDE   ",self,"\n\n"
         
-        return self.error
+        return error
         
    
     
@@ -529,19 +595,19 @@ def main():
                         fstart: 100e6
                         fstop: 6e9
                         fstep: 1
-                        gpib: 20
-                        virtual: 1
+                        gpib: 18
+                        virtual: 0
                         nr_of_channels: 2
 
                         [Channel_1]
                         unit: 'dBm'
-                        SetRefLevel: 0
+                        SetRefLevel: 10
                         SetRBW: 10e3
                         SetSpan: 5999991000
                         CreateWindow: 'default'
                         CreateTrace: 'default','S22'
-                        SetSweepCount: 1
-                        SetSweepPoints: 50
+                        SetSweepCount: 0
+                        SetSweepPoints: 100
                         SetSweepType: 'Log'
                         """)
                         # rbw: 3e6
@@ -561,8 +627,8 @@ def main():
                         fstart: 100e6
                         fstop: 6e9
                         fstep: 1
-                        gpib: 20
-                        virtual: 1
+                        gpib: 18
+                        virtual: 0
 
                         [channel_1]
                         unit: 'dBm'
@@ -601,31 +667,15 @@ def main():
     err=nw2.Init(ini2)
     assert err==0, 'Init() fails with error %d'%(err)
     
-    
-    
-    
-    
-    print 
-    print nw.SetCenterFreq(11)
-    #print nw.SetSweepType('LOG')
-    
-    print nw2.SetCenterFreq(22)
-    
-    print "\n\nKommando Test:\n"
-    #print nw._CreateTrace.commands['CreateTrace'](nw,'tracename','S11')
-    #print nw._CreateTrace.commands.CreateTrace(nw,'tracename','S11')
-   
-    
-    #print '%s(): Rückgabewert: %s   Sollwert: %s'%("SetRefLevel",ret[1],"20")
      
     
     #_assertlist=[
     #             ("SetCenterFreq", 3e9,"assert"),                     #Default:3e9
-    #              ('SetSpan',5999991000,"print"),                            #Default:6e9
+    #              ('SetSpan',5999991000,"print"),                     #Default:6e9
     #              ('SetStartFreq',9e3,"assert"),                      #Default:9e3
     #              ('SetStopFreq',6e9,"assert"),                       #Default:6e9
     #              ('SetRBW',10e3,"assert"),                           #Default:10e3
-    #              ('SetSweepType',"LOGARITHMIC","print"),                  #LINear | LOGARITHMIC | SEGMent   
+    #              ('SetSweepType',"LOGARITHMIC","print"),             #LINear | LOGARITHMIC | SEGMent   
     #              ('SetSweepPoints',50,"assert"),                     #Default: 201  
                   #('SetSweepCount',1,"print"),                       #Default: 1
     #             ]
@@ -642,13 +692,24 @@ def main():
     #        print '%s(): Rückgabewert: %s'%(funk,ret)
 
 
-    #err,spectrum=nw.GetSpectrum("Trc1")
-    #assert err==0, 'GetSpectrum() fails with error %d'%(err)
-    #print spectrum
+    nw.SetSweepCount(1)
+    nw.NewSweepCount()
+    time.sleep(1)
+    err,spec=nw.GetSpectrum()
+    assert err==0, 'GetSpectrum() fails with error %d'%(err)
+    print spec[0]
+    print spec[1]
     
-    #err,spectrum=nw.GetSpectrum("Trc2")
-    #assert err==0, 'GetSpectrum() fails with error %d'%(err)
-    #print spectrum
+    
+    nw2.SetSweepCount(1)
+    nw2.NewSweepCount()
+    time.sleep(1)
+    err,spec=nw2.GetSpectrum()
+    assert err==0, 'GetSpectrum() fails with error %d'%(err)
+    print spec[0][25]
+    print spec[1][25]
+
+    
     
     #err=nw.Quit()
     #assert err==0, 'Quit() fails with error %d'%(err)

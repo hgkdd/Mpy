@@ -145,8 +145,9 @@ class NETWORKANALYZER(DRIVER):
 
     sweepType_possib=('LINEAR','LOGARITHMIC')
     
-    TRIGGERMODES=('IMMEDIATE', 'EXTERNAL')
+    triggerMode_possib=('IMMEDIATE', 'EXTERNAL')
 
+    sweepMode_possib=('CONTINUOUS','SINGEL')
     
     measParam_possib=('S11', 'S12', 'S21', 'S22')
  
@@ -233,7 +234,7 @@ class NETWORKANALYZER(DRIVER):
                "GetSweepPoints":    {'parameter': None,
                                       'returntype': int},
 
-               "SetTriggerMode":    {'parameter': "trgmode",
+               "SetTriggerMode":    {'parameter': "triggerMode",
                                      'returntype': str},
                
                "GetTriggerMode":    {'parameter': None,
