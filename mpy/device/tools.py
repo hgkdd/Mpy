@@ -482,7 +482,8 @@ class Function(dict):
         return self.parameter
        
        
-       
+    def Rfunction(self):
+        return None
        
 
 class Command(object):
@@ -783,7 +784,7 @@ class Command(object):
         return self.parameter
     
     def getParameterTuple(self):
-        """Gibt die Parameter des Commands, welche nicht an globale Attribute der Driver Klasse gebunden sind, als Tubel zurück.
+        """Gibt die Namen der Parameter des Commands, welche nicht an globale Attribute der Driver Klasse gebunden sind, als Tubel zurück.
         """
         return self.parameterTuple
     
@@ -798,7 +799,8 @@ class Command(object):
         """
         self.return_map=return_map
     
-    
+    def Rfunction(self):
+        return self.rfunction
 
 class Parameter(object):
     """ Parameter verwaltet und speichert die Argumente für die VISA Kommandos. 
@@ -923,9 +925,9 @@ class Parameter(object):
         self.value = value
     
     
-    def __repr__(self):
-        #print 'repr'
-        return self.getValue()
+    #def __repr__(self):
+    #    #print 'repr'
+    #    return self.getValue()
         
     def __str__(self):
         #print 'str'
@@ -978,4 +980,7 @@ class Parameter(object):
     
     def setPossibilities(self,possib):
         self.possib=possib
+        
+    def Getptype(self):
+        return self.ptype
     

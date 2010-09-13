@@ -12,12 +12,10 @@ from scuq.quantities import Quantity
 from mpy.tools.util import format_block
 from mpy.device.device import CONVERT
 
-from mpy.device.Meta_ui import Metaui
 
 import numpy as np
 
 
-from mpy.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
 
 
 conv=CONVERT()
@@ -35,32 +33,25 @@ std_ini=format_block("""
                 fstart: 100e6
                 fstop: 6e9
                 fstep: 1
-                gpib: 20
+                gpib: 18
                 virtual: 0
 
                 [Channel_1]
                 unit: 'dBm'
-                attenuation: auto
-                reflevel: -20
-                rbw: auto
-                vbw: 10e6
-                span: 6e9
-                trace: 1
-                tracemode: 'WRITe'
-                detector: 'APEak'
-                sweepcount: 0
-                triggermode: 'IMMediate'
-                attmode: 'auto'
-                sweeptime: 10e-3
-                sweeppoints: 500
+                SetRefLevel: 0
+                SetRBW: 10e3
+                SetSpan: 5999991000
+                CreateWindow: 'default'
+                CreateTrace: 'default','S11'
+                SetSweepCount: 1
+                SetSweepPoints: 50
+                SetSweepType: 'LINEAR'
                 """)
 std_ini=StringIO.StringIO(std_ini)
 
 
 class UI(tapi.HasTraits):
     
-    __metaclass__ = Metaui
-    __parentclass__ = NETWORKAN
     Init=tapi.Button()
     INI=tapi.Str()    
     int_unit='dBm'
@@ -74,7 +65,7 @@ class UI(tapi.HasTraits):
     
     def __init__(self, instance, ini=None):
         # Wenn keine ini übergeben wurde wird die Standard ini verwendet.
-        self.sp=instance
+        self.dv=instance
         if not ini:
             ini=std_ini
         self.ini=ini
@@ -127,15 +118,4 @@ class UI(tapi.HasTraits):
     PLOT_grp=tuiapi.Group(tuiapi.Item('plot',editor=ComponentEditor(), show_label=False),
                          tuiapi.Item('GetSpectrum', show_label=False),
                          label='Plot')
-
-    
-
-def main():
-    ui=UI("")
-    ui.configure_traits()
-    #sys.exit(0)    
-
-
-if __name__ == '__main__':
-    main()
         

@@ -391,9 +391,9 @@ class NETWORKANALYZER(NETWORKAN):
         error,sweepType= self.GetSweepType()
  
         if  sweepType == 'LOGARITHMIC':
-            xValues=logspaceN(self.GetStartFreq(),self.GetStopFreq(),self.GetSweepPoints(),endpoint=1,precision=0)
+            xValues=logspaceN(self.GetStartFreq()[1],self.GetStopFreq()[1],self.GetSweepPoints()[1],endpoint=1,precision=0)
         elif sweepType == 'LINEAR':
-            xValues=linspaceN(self.GetStartFreq(),self.GetStopFreq(),self.GetSweepPoints(),endpoint=1,precision=0)
+            xValues=linspaceN(self.GetStartFreq()[1],self.GetStopFreq()[1],self.GetSweepPoints()[1],endpoint=1,precision=0)
         else:
             raise GeneralDriverError('SweeType %s is not supported'%sweepType)
  
@@ -566,13 +566,36 @@ class WINDOW(object):
 
 
 
+
+
+
+
+from networkanalyzer_ui import UI as super_ui
+from Meta_ui import Metaui
+
+
+class UI(super_ui):
+    
+    __metaclass__ = Metaui
+    __driverclass__=NETWORKANALYZER
+    
+    def __init__(self,instance, ini=None):
+        super_ui.__init__(self,instance,ini)
+   
+
+
+
+
+
+
+
+
 ##########################################################################       
 #
 # Die Funktion main() wird nur zum Test des Treibers verwendet!
 ###########################################################################
 def main():
     from mpy.tools.util import format_block
-    #from mpy.device.signalgenerator_ui import UI as UI
     #
     # Wird f￼r den Test des Treibers keine ini-Datei ￼ber die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
@@ -652,14 +675,14 @@ def main():
     nw=NETWORKANALYZER()
     nw2=NETWORKANALYZER()
     
-    #try:
-    #    from mpy.device.networkanalyzer_ui import UI as UI
-    #except ImportError:
-    #    pass
-    #else:
-    #   ui=UI(nw,ini=ini)
-    #   ui.configure_traits()
-    #   sys.exit(0)    
+    try:
+        UI(nw)
+    except NameError:
+        pass
+    else:
+       ui=UI(nw,ini=ini)
+       ui.configure_traits()
+       sys.exit(0)    
     
     err=nw.Init(ini)
     assert err==0, 'Init() fails with error %d'%(err)
