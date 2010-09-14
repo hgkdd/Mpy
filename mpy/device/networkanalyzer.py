@@ -191,12 +191,6 @@ class NETWORKANALYZER(DRIVER):
     
                "GetDivisionValue":  {'parameter': None,
                                      'returntype': float},
-
-               "SetTraceMode":      {'parameter': "tmode",
-                                     'returntype': str},
-                
-               "GetTraceMode":      {'parameter': None,
-                                     'returntype': str},
                
                "SetTrace":          {'parameter': "traceName",
                                      'returntype': str},

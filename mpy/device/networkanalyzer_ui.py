@@ -15,9 +15,6 @@ from mpy.device.device import CONVERT
 
 import numpy as np
 
-
-
-
 conv=CONVERT()
 
 std_ini=format_block("""
@@ -93,15 +90,20 @@ class UI(tapi.HasTraits):
     
     # Spectrum holen und in Fester und Plot schreiben.
     def _GetSpectrum_fired(self):
-        print "GetSprectrum"
-        #self.power=self.sp.GetSpectrum()[1]
-        #x = np.array(self.power[0])
-        #y = np.array(self.power[1])
-        #self.plotdata.set_data('x', x)
-        #self.plotdata.set_data('y', y)
-        #self.plot.request_redraw()
         
-        #self.SPECTRUM=str(self.power[0])+"\n\n\n"+str(self.power[1])
+        if self.dv.GetSweepType()[1] == 'LOGARITHMIC':
+            self.plot.index_scale = 'log' 
+        else:
+            self.plot.index_scale = 'linear'
+        
+        self.power=self.dv.GetSpectrum()[1]
+        x = np.array(self.power[0])
+        y = np.array(self.power[1])
+        self.plotdata.set_data('x', x)
+        self.plotdata.set_data('y', y)
+        self.plot.request_redraw()
+        
+        self.SPECTRUM=str(self.power[0])+"\n\n\n"+str(self.power[1])
     
     
     

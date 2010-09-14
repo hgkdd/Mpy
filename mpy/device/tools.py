@@ -180,29 +180,29 @@ class Meta_Driver(type):
         #Angaben des _commands dict über einstimmen.
         #***********************    
         for commands_name,commad_map in bases[0]._commands.items():
-            para_command_map=commad_map['parameter']
-            if isinstance(para_command_map, basestring):
-                para_command_map=(para_command_map,)
+            para_command=commad_map['parameter']
+            if isinstance(para_command, basestring):
+                para_command=(para_command,)
         
             try:
                 args=['self']
-                if para_command_map:
-                    args.extend(para_command_map)
+                if para_command:
+                    args.extend(para_command)
                     
                 if not args == inspect.getargspec(dict[commands_name])[0]:
                     raise DriverImplementedError('The function %s is not correct implemented\n            args current: %s      args should be: %s'%(commands_name,inspect.getargspec(dict[commands_name])[0],args))
             
             except KeyError:
                 
-                if para_command_map:
-                    args= ", ".join(para_command_map)
+                if para_command:
+                    args= ", ".join(para_command)
                 else:
                     args="" 
                 
                 func_str={'name': commands_name,
                           'args': args}
                 
-                M_code="""def %(name)s(self,%(args)s):
+                M_code="""def %(name)s(self,%(args)s): 
                               raise NotImplementedError('The function %(name)s is not implemented yet')"""%func_str
                         
                 code = compile(M_code, '<string>', 'single')

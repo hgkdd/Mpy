@@ -62,7 +62,9 @@ class NETWORKANALYZER(NETWORKAN):
                           'SINGEL'  :'OFF'
                           }
     
-
+    GetSweepMode_rmap={'1':'CONTINUOUS',
+                       '0':'SINGEL'
+                          }
 
     _cmds= CommandsStorage( NETWORKAN,
                     #Manual S. 499       
@@ -174,7 +176,7 @@ class NETWORKANALYZER(NETWORKAN):
                      
                     Command('DelTrace', "CALCulate%(channel)d:PARameter:DELete \'%(traceName)s\'",(
                                               Parameter('channel',global_var='internChannel'),
-                                              Parameter('traceName', global_var='activeTrace_Name')
+                                              Parameter('traceName', ptype=str)
                                               )      ) ,                                                     
                                                                                                                         
                     Command('GetTrace','CALCulate%(channel)d:PARameter:CATalog?',
@@ -182,7 +184,7 @@ class NETWORKANALYZER(NETWORKAN):
                                               rtype="<default>"
                                               ),                            
                     
-                    #???
+                    #
                     Command('SetTrace',"CALCulate%(channel)d:PARameter:SELect \'%(traceName)s\'",(
                                               Parameter('channel',global_var='internChannel'),
                                               Parameter('traceName',ptype=str)
@@ -241,7 +243,7 @@ class NETWORKANALYZER(NETWORKAN):
                     #Manual S. 442 
                     Command('GetSweepMode', 'INITiate%(channel)d:CONTinuous?',
                                               Parameter('channel',global_var='internChannel'),
-                                              rtype=bool), 
+                                              rtype=str), 
                     
                     #Manula S. 547
                     Command('SetTriggerMode', 'TRIGger%(channel)d:SEQuence:SOURce %(triggerMode)s',(
@@ -266,18 +268,25 @@ class NETWORKANALYZER(NETWORKAN):
 
                     #Manual S. 424
                     Command('CreateWindow', 'DISPlay:WINDow%(windowName)d:STATe ON',
-                                              Parameter('windowName',ptype=int),
+                                              Parameter('windowName',ptype=str),
                                               ),
                     
-                    #Manual S. 424                                                      
-                    #'DelWindow':  [("'DISPlay:WINDow<Wnd>:STATe OFF'%internWindow", None)],
+                    #Manual S. 424
+                    Command('DelWindow','DISPlay:WINDow%(windowName)d:STATe OFF',
+                                              Parameter('windowName',ptype=int),
+                                              ),
                                             
                     Command('CreateChannel','CONFigure:CHANnel%(channel)d:STATe ON',
                                             Parameter('channel',global_var='internChannel')
                                             ),                
-                                            
-                    #'DelChannel': [("'CONFigure:CHANnel%d:STATe OFF'%self.internChannel";None)],
-                    #Manual S. 415
+                    
+                    
+                    Command('DelChannel','CONFigure:CHANnel%(channel)d:STATe OFF',
+                                            Parameter('channel',global_var='internChannel')
+                                            ),                         
+
+                    
+                    #Manual S. 415 Wird über Method realisiert 
                     #'GetChannel': [("'CONFigure:CHANnel%d:CATalog?'%self.internChannel", r'(?P<chan>.*')],
                     
                     #Manual S. 339
@@ -298,6 +307,31 @@ class NETWORKANALYZER(NETWORKAN):
                    )    
                 
 
+
+
+    #*************************************************************************
+    #
+    #                    Init
+    #*************************************************************************
+    def __init__(self): 
+        NETWORKAN.__init__(self)
+        
+        self.traces={}
+        self.windows={}
+        self._internal_unit='dBm'
+        
+        NETWORKANALYZER.NETWORKANALYZERS.append(self)
+        self.internChannel=-1
+        self.internChannel=self.__gethighestChannelNumber()
+        
+        self.activeTrace=None
+        self.activeWindow=None
+        
+    def __del__(self):
+        try:
+            del NETWORKANALYZER.NETWORKANALYZERS[NETWORKANALYZER.NETWORKANALYZERS.index(self)]
+        except ValueError:
+            pass
     
     #Erstellt ein neues Festern, dazu muss die Fensternumer übergeben werden.
     #Die hier übergebenen Nummer ist nur in der aktuellen Instanz güllig.
@@ -307,8 +341,14 @@ class NETWORKANALYZER(NETWORKAN):
         win=WINDOW(windowName)
         self.windows[windowName]=win
         self._CreateWindow(win.getInternName())
+        return 0,windowName
         
 
+    def DelWindow(self):
+        self.activeWindow.__del__()
+        del self.windows[self.activeWindow.getName()]
+        return self._DelWindow(self.activeWindow_Name)
+        
 
     #Diese Funktion legt einen neuen Trace auf dem Gerät an
     # *tracename: Name des Traces, dieser ist nur für die aktuelle Instance gültig. Auf dem Gerät
@@ -328,12 +368,18 @@ class NETWORKANALYZER(NETWORKAN):
         
         self.traces.update({tracename: tra})
         self._CreateTrace(tra.getInternName(),measParam,tra.getTraceWindowNumber())
+        
+        return 0,tracename
     
     
+    def DelTrace(self):
+        self.activeTrace.__del__()
+        del self.traces[self.activeTrace.getName()]
+        return self._DelTrace(self.activeTrace_Name)
     
     #something sie die SParameter als String z.B. 'S11'
     def SetSparameter(self,sparam):
-        self._SetSparameter(sparam)
+        return self._SetSparameter(sparam)
     
     
     def GetSparameter(self):
@@ -351,7 +397,10 @@ class NETWORKANALYZER(NETWORKAN):
     def SetWindow(self,windowName):
         self.activeWindow=self.windows[windowName]
         self.activeWindow_Name=self.activeWindow.getInternName()
-        
+        return self.GetWindow()
+    
+    def GetWindow(self):
+        return 0,self.activeWindow.getName()
 
 
     def SetSweepCount(self,sweepCount):
@@ -363,7 +412,7 @@ class NETWORKANALYZER(NETWORKAN):
                 raise GeneralDriverError('Can not deactivate SweepCount')
         else:
             error,ans = self.SetSweepMode('SINGEL')
-            if ans:
+            if ans != 'SINGEL':
                 raise GeneralDriverError('Can not activate SweepCount')
             
         return self._SetSweepCount(sweepCount)
@@ -379,6 +428,10 @@ class NETWORKANALYZER(NETWORKAN):
         return 0,(trace[trace_index],trace[trace_index+1])
    
 
+    def GetChannel(self):
+        return 0,self.internChannel
+    
+    
     #************************************   
     #  Spectrum aus Gerät auslesen
     #************************************
@@ -401,34 +454,6 @@ class NETWORKANALYZER(NETWORKAN):
         return 0,(tuple(xValues),spec)
     
 
-             
-        
-        
-
-    
-    #*************************************************************************
-    #
-    #                    Init
-    #*************************************************************************
-    def __init__(self): 
-        NETWORKAN.__init__(self)
-        
-        self.traces={}
-        self.windows={}
-        self._internal_unit='dBm'
-        
-        NETWORKANALYZER.NETWORKANALYZERS.append(self)
-        self.internChannel=-1
-        self.internChannel=self.__gethighestChannelNumber()
-        
-        self.activeTrace=None
-        self.activeWindow=None
-
-
-
-
-    
-
 
     #******************************************************************************
     #
@@ -448,7 +473,7 @@ class NETWORKANALYZER(NETWORKAN):
         return numb
 
             
-    
+
 
 
     #***************************************************************************
@@ -480,6 +505,14 @@ class NETWORKANALYZER(NETWORKAN):
         eval("self.%s(%s)"%('CreateWindow',self.conf[sec]['CreateWindow']))
         eval("self.%s(%s)"%('SetWindow',self.conf[sec]['CreateWindow']))
         
+        #Existierende Traces im Window löschen:
+        trace = re.split(r",",self._GetTrace()[1][1:-1])
+        print self._GetTrace()
+        if trace[0] != '':
+            i=0
+            while i<len(trace):
+                self._DelTrace(trace[i])
+                i=i+2
         
         eval("self.%s(%s)"%('CreateTrace',self.conf[sec]['CreateTrace']))
         eval("self.%s(%s)"%('SetTrace',self.conf[sec]['CreateTrace'].split(',')[0]))
@@ -489,8 +522,7 @@ class NETWORKANALYZER(NETWORKAN):
                 continue
             #print func,args
             try:
-                #eval("self.%s(%s)"%(func,args))
-                pass
+                eval("self.%s(%s)"%(func,args))
             except (AttributeError,NotImplementedError),e :
                 #print e
                 pass
@@ -499,7 +531,6 @@ class NETWORKANALYZER(NETWORKAN):
         
         return error
         
-   
     
 class TRACE(object):
     
@@ -515,6 +546,12 @@ class TRACE(object):
         self.traceWindowNumber=self.__gethighestTraceWindowNumber()
         self.internName='%s_Ch%dWIN%sTR%d'%(name,self.networkanalyzer.getChannelNumber(),self.window.getInternName(),self.traceWindowNumber)
     
+    
+    def __del__(self):
+        try:
+            del TRACE.TRACES[TRACE.TRACES.index(self)]
+        except ValueError:
+            pass
     
     def __gethighestTraceWindowNumber(self):
         numb=9
@@ -549,6 +586,13 @@ class WINDOW(object):
         self.internNumber=-1
         self.internNumber=self.__gethighestWindowNumber()
         
+        
+    def __del__(self):
+        try:
+            del WINDOW.WINDOWS[WINDOW.WINDOWS.index(self)]
+        except ValueError:
+            pass
+        
     def __gethighestWindowNumber(self):
         numb=1
         for win in WINDOW.WINDOWS:
@@ -581,6 +625,9 @@ class UI(super_ui):
     
     __metaclass__ = Metaui
     __driverclass__=NETWORKANALYZER
+    __super_driverclass__=NETWORKAN
+    
+    _ignore=('SetChannel','CreateChannel','GetSpectrum')
     
     def __init__(self,instance, ini=None):
         super_ui.__init__(self,instance,ini)
@@ -588,20 +635,18 @@ class UI(super_ui):
    
    
    
-    SetTrace=tapi.Button("SetTrace")
-    SETTRACE=tapi.Str()
-    newSETTRACE=tapi.Str()
-   
-    def _SetTrace_fired(self):
-        err,value=self.dv.SetTrace(self.newSETTRACE)
-        self.SETTRACE=value
-    
-    
-    Main_S=tuiapi.Group(tuiapi.Group(tuiapi.Item('SetTrace',show_label=False,width=100),
-                                     tuiapi.Item('SETTRACE',label='Wert',style='readonly',width=70),
-                                     tuiapi.Item('newSETTRACE',label='traceName',width=60),
+    SetWindow=tapi.Button("SetWindow")
+    SETWINDOW=tapi.Str()
+    newSETWINDOW=tapi.Str()
+    def _SetWindow_fired(self):
+        err,value=self.dv.SetWindow(self.newSETWINDOW)
+        self.SETWINDOW=value
+    Main_S=tuiapi.Group(tuiapi.Group(tuiapi.Item('SetWindow',show_label=False,width=100),
+                                     tuiapi.Item('SETWINDOW',label='Wert',style='readonly',width=70),
+                                     tuiapi.Item('newSETWINDOW',label='traceName',width=60),
                                      orientation='horizontal'),
                         label='Main_Rest')
+
 
 
 
@@ -636,7 +681,7 @@ def main():
                         fstop: 6e9
                         fstep: 1
                         gpib: 18
-                        virtual: 1
+                        virtual: 0
                         nr_of_channels: 2
 
                         [Channel_1]
@@ -697,9 +742,12 @@ def main():
     except NameError:
         pass
     else:
+       
        ui=UI(nw,ini=ini)
        ui.configure_traits()
        sys.exit(0)    
+    
+    
     
     err=nw.Init(ini)
     assert err==0, 'Init() fails with error %d'%(err)
