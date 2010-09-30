@@ -36,9 +36,10 @@ def strbool(s):
     return bool(int(s))
 
 class Configuration(object):
-    def __init__(self, ininame, cnftmpl):
+    def __init__(self, ininame, cnftmpl,casesensitive=False):
         self.cnftmpl=cnftmpl
         self.conf={}
+        self.casesensitive=casesensitive
         fp=None
         try:
             # try to open file
@@ -63,6 +64,7 @@ class Configuration(object):
                 #print tmplsec.lower().split('channel_')
                 #print repr(sec.lower().split('channel_')[1])
                 thechannel=int(sec.lower().split('channel_')[1])
+                    
                 self.channel_list.append(thechannel)
                 try:
                     thesec=tmplsec%thechannel
@@ -70,9 +72,19 @@ class Configuration(object):
                     pass
             except IndexError:
                 pass
-            self.conf[thesec.lower()]={}
+            
+            if self.casesensitive:
+                thesec_c=thesec
+            else:
+                thesec_c=thesec.lower()
+                
+            self.conf[thesec_c]={}
             for key,val in config.items(sec):
                 #print key, val
                 tmplkey=fstrcmp(key, self.cnftmpl[tmplsec].keys(),n=1,cutoff=0,ignorecase=True)[0]
-                self.conf[thesec.lower()][tmplkey.lower()]=self.cnftmpl[tmplsec][tmplkey](val)
+                if self.casesensitive:
+                    tmplkey_c=tmplkey
+                else:
+                    tmplkey_c=tmplkey.lower()
+                self.conf[thesec_c][tmplkey_c]=self.cnftmpl[tmplsec][tmplkey](val)
             
