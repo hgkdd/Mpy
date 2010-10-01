@@ -46,8 +46,12 @@ class SG(object):
     def SetLevel(self, lv):
         print "SG:", lv
 
-class Regler(object):
+class Leveler(object):
     def __init__(self, sg, amp, pin=None):
+        """
+        sg: object providing sg.SetLevel(lv) lv: float
+        amp: object providing amp.Pout(pin); amp.PinMax
+        """
         self.sg=sg
         self.amp=amp
         self.Out=amp.Pout
@@ -75,7 +79,7 @@ class Regler(object):
         self.i_interp=scipy.interpolate.interp1d(y,x)
         self.i_extrap=extrap1d(self.i_interp)
 
-    def regle (self, soll, maxiter=10, relerr=0.01):
+    def adjust_level (self, soll, maxiter=10, relerr=0.01):
         self.add_samples(soll/self.amp.g)
         self.x=[]
         self.y=[]
@@ -103,12 +107,12 @@ if __name__ == '__main__':
     #pin=scipy.linspace(0,2e-3,100)
     #pout=amp.Pout(pin)
     #print pout
-    regler=Regler(sg,amp)
+    regler=Leveler(sg,amp)
     #regler.add_samples([1e-5,1e-4,1e-3])
     #print regler.samples
     #interp=regler.extrap
     #print interp(2e-2), amp.Pout(2e-2)
-    regler.regle(soll,maxiter=10)
+    regler.adjust_level(soll,maxiter=10)
     sampx=regler.samples.keys()
     sampy=regler.samples.values()
     x=scipy.linspace(min(sampx),2*max(sampx),100)
