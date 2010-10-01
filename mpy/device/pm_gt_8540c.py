@@ -228,6 +228,7 @@ class POWERMETER(PWRMTR):
             self.value=self.linav(values[self.N:])
             if self.other and self.other._data_valid():
                 self.other.value=self.linav(values[:self.N])
+        time.sleep(0.1)
         return self.error
         
     def GetData(self):
