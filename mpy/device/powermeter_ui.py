@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import StringIO
+import atexit
 import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
 import enthought.traits.ui.menu as tuim
@@ -59,6 +60,7 @@ class UI(tapi.HasTraits):
         ini=StringIO.StringIO(self.INI)
         self.ch=self.CHANNEL
         self.pm.Init(ini,self.ch)
+        atexit.register(self.pm.Quit)
         self.unit=self.pm.conf['channel_%d'%self.ch]['unit']
         self._FREQ_changed()
 

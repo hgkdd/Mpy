@@ -148,6 +148,18 @@ class DRIVER(object):
         self.write(cmd)
         return self.read(tmpl)
 
+    def get_config(self, ininame, channel):
+        self.channel=channel
+        if not self.channel:
+            self.channel=1
+        if not ininame:
+            self.conf['init_value']['virtual']=True
+        else:
+            #print ininame, type(ininame)
+            #print self.conftmpl
+            self.Configuration=Configuration(ininame, self.conftmpl)
+            self.conf.update(self.Configuration.conf)
+        
     def Init(self, ininame=None, channel=None):
         """
         Init the instrument.
@@ -164,33 +176,26 @@ class DRIVER(object):
         Return: 0 if sucessful. 
         """
         self.error=0
-        self.channel=channel
-        if not self.channel:
-            self.channel=1
-        if not ininame:
-            self.conf['init_value']['virtual']=True
-        else:
-            self.Configuration=Configuration(ininame, self.conftmpl)
-            self.conf.update(self.Configuration.conf)
-            if not self.conf['init_value']['virtual']:
-                buspars={}
-                #print "Here"
-                for k in ('timeout',
-                          'chunk_size',
-                          'values_format',
-                          'term_chars',
-                          'send_end',
-                          'delay',
-                          'lock'):
-                    try:
-                        buspars[k]=getattr(self, k)
-                    except AttributeError:
-                        pass
-                
-                self.dev=self._init_bus(**buspars)
-                if self.dev != None:
-                    dct=self._do_cmds('Init', locals())
-                    self._update(dct)
+        self.get_config(ininame, channel)
+        if not self.conf['init_value']['virtual']:
+            buspars={}
+            #print "Here"
+            for k in ('timeout',
+                      'chunk_size',
+                      'values_format',
+                      'term_chars',
+                      'send_end',
+                      'delay',
+                      'lock'):
+                try:
+                    buspars[k]=getattr(self, k)
+                except AttributeError:
+                    pass
+            
+            self.dev=self._init_bus(**buspars)
+            if self.dev != None:
+                dct=self._do_cmds('Init', locals())
+                self._update(dct)
         return self.error
 
     def _get(self, sec, key):
