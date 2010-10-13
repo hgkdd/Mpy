@@ -18,8 +18,8 @@ def linav_dB(dbvals):
     
     Example: linav_dB([0,-10]) -> -0.301
     """
-    linmean=np.mean(np.power(10., dbvals))
-    return np.log10(linmean)
+    linmean=np.mean(np.power(10., 0.1*dbvals))
+    return 10*np.log10(linmean)
 
 def linav_lin(linvals):
     """
@@ -70,10 +70,10 @@ class POWERMETER(PWRMTR):
     def _fbuf_off(self):
         self.write('FBUF OFF')
 
-    def Zero(self, state):
+    def Zero(self, state='on'):
         self.error=0
         self._fbuf_off()
-        self.error,_= PWRMTR.Zero(self, state)
+        self.error,_= PWRMTR.Zero(self, state=state)
         self._fbuf_on()
         return self.error,0
 
@@ -126,6 +126,7 @@ class POWERMETER(PWRMTR):
         
     def Init(self, ini=None, channel=None, N=10, trg_threshold=0):
         self.N=N
+        self.trg_threshold=trg_threshold
         #self.term_chars=visa.LF
         if channel is None:
             self.channel=1
@@ -138,16 +139,15 @@ class POWERMETER(PWRMTR):
             if self.conf['init_value']['virtual']:
                 self.reghash=-1
             else:
-                self.reghash=self.conf['init_value']['gpib']
+                self.reghash=self.conf['init_value']['gpib']   # key for the class-registry
 
-            self.error=self._register()
+            self.error=self._register()   # registzer this instance
 
-            self.trg_threshold=trg_threshold
             self.value=None        
             if self.master:
-                self.error=PWRMTR.Init(self, ini, self.channel)
+                self.error=PWRMTR.Init(self, ini, self.channel)  # run init from parent class
             else:
-                self.dev=self.other.dev
+                self.dev=self.other.dev  # use physical device of master
                 self.error=0
 
             sec='channel_%d'%self.channel
@@ -161,10 +161,10 @@ class POWERMETER(PWRMTR):
                 self._cmds['Preset']=[('PR', None)]
             else:
                 self._cmds['Preset']=[]
-            self._cmds['Preset'].append(('self.Zero("on")', None))
+            self._cmds['Preset'].append(('self.Zero("on")', None))  # Zero Channel
             
             # key, vals, actions
-            presets=[('filter', [], [])]
+            presets=[('filter', [], [])]   # TODO: fill with information from ini-file
 
             for k, vals, actions in presets:
                 #print k, vals, actions
@@ -205,6 +205,8 @@ class POWERMETER(PWRMTR):
         ans=self.dev.ask('%sP SM'%self.ch_tup[self.channel])
         ans=int(ans[-1])
         self._internal_unit=tup[ans]
+        # in fbuf mode several data are returned. GetData returs the average of this data.
+        # Here, the appropriate average routine is set up
         if self._internal_unit in ['dB','dBm']:
             self.linav=linav_dB
         else:
@@ -232,10 +234,20 @@ class POWERMETER(PWRMTR):
         return self.error
         
     def GetData(self):
-        return self.error, self.value
+        v=self.value
+        swr_err=self.get_standard_mismatch_uncertainty()
+        self.power=float(v)
+        try:
+            obj=quantities.Quantity(eval(self._internal_unit), 
+                                    ucomponents.UncertainInput(self.power, self.power*swr_err))
+        except (AssertionError, NameError):
+            self.power,self.unit=self.convert.c2scuq(self._internal_unit, float(self.power))
+            obj=quantities.Quantity(self.unit, 
+                                    ucomponents.UncertainInput(self.power, self.power*swr_err))
+        return self.error, obj  # TODO: include other uncertainties
         
     def GetDataNB(self, retrigger):
-        v=self.value
+        self.err, v = self.GetData()
         if retrigger:
             self.Trigger
         return self.error, v
@@ -253,6 +265,13 @@ class POWERMETER(PWRMTR):
         self.error, freq = PWRMTR.SetFreq(self, freq)
         self._fbuf_on()
         return self.error, freq
+
+    def GetDescription(self):
+        self.error=0
+        self._fbuf_off()
+        self.error, des = PWRMTR.GetDescription(self)
+        self._fbuf_on()
+        return self.error, des
             
     def Quit(self):
         self.error=0
