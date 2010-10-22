@@ -161,7 +161,7 @@ class POWERMETER(PWRMTR):
                 self._cmds['Preset']=[('PR', None)]
             else:
                 self._cmds['Preset']=[]
-            self._cmds['Preset'].append(('self.Zero("on")', None))  # Zero Channel
+            #self._cmds['Preset'].append(('self.Zero("on")', None))  # Zero Channel
             
             # key, vals, actions
             presets=[('filter', [], [])]   # TODO: fill with information from ini-file
@@ -221,7 +221,8 @@ class POWERMETER(PWRMTR):
         self.write('FBUF DUMP')
         POWERMETER.lasttrigger=time.time()
         buf=self.read('(?P<A>.*)')['A']
-        values=[float(d) for d in buf.split(',')]
+        values=np.array([float(d) for d in buf.split(',')])
+        #print values
         if self.channel==1:
             self.value=self.linav(values[:self.N])
             if self.other and self.other._data_valid():
@@ -236,6 +237,7 @@ class POWERMETER(PWRMTR):
     def GetData(self):
         v=self.value
         swr_err=self.get_standard_mismatch_uncertainty()
+        #print v
         self.power=float(v)
         try:
             obj=quantities.Quantity(eval(self._internal_unit), 

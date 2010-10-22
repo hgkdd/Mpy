@@ -3,12 +3,19 @@
 import inspect
 import pydot
 import ConfigParser
+from numpy import bool_
 
 import mpy.device.device as device
 from scuq import *
 from mpy.tools.aunits import *
 from mpy.tools.Configuration import fstrcmp
 
+def _stripstr(s):
+    r=s
+    r=r.strip('"')
+    r=r.strip("'")
+    return r
+    
 class Graph(object):
     """Graph class based on :mod:`pydot`.
 
@@ -52,6 +59,14 @@ class Graph(object):
         except IndexError:
             return None
 
+    def _active(self, edge_or_gnode):
+        try:
+            att=edge_or_gnode.get_attributes()
+            act=att['active']
+            return act
+        except (AttributeError, KeyError):
+            return True
+    
     def find_all_paths(self, start, end, path=[], edge=None):
         """Find all paths in graph from *start* to *end* (without circles).
            Ignores edges with attribute `active==False`.
@@ -70,7 +85,9 @@ class Graph(object):
         for edge in start_edges:
             next_node=edge.get_destination()
             gnode=self.graph.get_node(next_node)
-            is_active = edge.get_attributes().setdefault('active', True) and gnode.get_attributes().setdefault('active', True) 
+            eact=self._active(edge)
+            gact=self._active(gnode)
+            is_active = eact and gact 
             if is_active and edge not in path:
                 newpaths = self.find_all_paths(next_node, end, path, edge)
                 #print "newpaths returned:", newpaths
@@ -129,7 +146,7 @@ class MGraph(Graph):
                     dev = str(n_attr['dev'])
                     # edge device instance
                     inst = self.nodes[dev]['inst']
-                    what = str(n_attr['what'])
+                    what = _stripstr(str(n_attr['what']))
                     try:
                         stat = -1
                         for cmd in ['getData', 'GetData']:
@@ -147,7 +164,7 @@ class MGraph(Graph):
                         raise UserWarning, 'Failed to getData %s, %s'%(dev, what) 
                     # store the values unconverted
                     #print dev, result[dev]
-                    r=result[dev].get_value(unit)
+                    r=result[dev]  #.get_value(unit)
                     TotalPath *= r            
 
             # for different paths between two points, s parameters have
@@ -155,6 +172,8 @@ class MGraph(Graph):
             #print TotalPath
             #for k,v in result.items():
             #    print k,v
+            TotalPath.set_strict(False)
+            TotalPath = quantities.Quantity (unit, TotalPath.get_value(unit))
             Total += TotalPath
         result['total'] = Total        
         return result
@@ -167,30 +186,53 @@ class MGraph(Graph):
 
            The condition may refer to variables in the callers namespace, e.g. 'f'.
         """
+        
         __frame = inspect.currentframe()
         __outerframes = inspect.getouterframes(__frame)
         __caller = __outerframes[1][0]
-        for name,dct in self.nodes.items():
-            node=dct['gnode']
-            n_attr=node.get_attributes() # dict with node or edge atributs
-            if 'condition' in n_attr:
-                stmt = "(" + str(n_attr['condition']) + ")"
+        # loop all nodes
+        for name,act_dct in self.nodes.items():
+            node=act_dct['gnode']
+            cond_dct=node.get_attributes() # dict with node or edge atributs
+            if 'condition' in cond_dct:
+                stmt = "(%s)"%_stripstr(str(cond_dct['condition']))
                 #print " Cond:", stmt, " = ", 
                 cond = eval (stmt, __caller.f_globals, __caller.f_locals)
                 #print cond
-                if cond:
-                    dct['active']=True
-                    if doAction and 'action' in n_attr:
-                        act = n_attr['action']
+                if (cond is True) or (cond is bool_(True)):
+                    act_dct['active']=True
+                    if doAction and 'action' in cond_dct:
+                        act = cond_dct['action']
                         #print str(act)
                         #print self.CallerLocals['f']
                         #print act
                         exec str(act) # in self.CallerGlobals, self.CallerLocals
                 else:
-                    dct['active']=False
+                    act_dct['active']=False
             else:
-                dct['active']=True
+                act_dct['active']=True
         self.activenodes=[name for name,dct in self.nodes.items() if dct['active']]
+        # loop all edges
+        for edge in self.edges:
+            act_dct=cond_dct=edge.get_attributes()
+            if 'condition' in cond_dct:
+                stmt = "(%s)"%_stripstr(str(cond_dct['condition']))
+                #print " Cond:", stmt, " = ", 
+                cond = eval (stmt, __caller.f_globals, __caller.f_locals)
+                #print cond
+                if (cond is True) or (cond is bool_(True)):
+                    act_dct['active']=True
+                    if doAction and 'action' in cond_dct:
+                        act = cond_dct['action']
+                        #print str(act)
+                        #print self.CallerLocals['f']
+                        #print act
+                        exec str(act) # in self.CallerGlobals, self.CallerLocals
+                else:
+                    act_dct['active']=False
+            else:
+                act_dct['active']=True
+
         del __caller
         del __outerframes
         del __frame
@@ -223,15 +265,15 @@ class MGraph(Graph):
                  'amplifier': 'Amplifier',
                  'step2port': 'SwitchedTwoPort',
                  'spectrumanalyzer': 'Spectrumanalyzer',
-                 'vectornetworkanalyser': 'NetworkAnalyser'}
+                 'vectornetworkanalyser': 'NetworkAnalyser',
+                 'custom': 'Custom'}
         devs=dev_map.keys()
         ddict={}
         for name,dct in self.nodes.items():
             obj=dct['gnode']
             attribs=obj.get_attributes()
             for n,v in attribs.items():
-                attribs[n]=v.strip("'")   # strip '
-                attribs[n]=v.strip('"')   # strip "
+                attribs[n]=_stripstr(v)   # strip ' and "
                 
             dct['active']=True
             try:
@@ -253,7 +295,14 @@ class MGraph(Graph):
                 best_type_guess=fstrcmp(typetxt, devs, n=1, cutoff=0, ignorecase=True)[0]
             except IndexError:
                 raise IndexError, 'Instrument type %s from file %s not in list of valid instrument types: %r'%(typetxt,ini,devs)
-            d=getattr(device, dev_map[best_type_guess])()
+            dtype=dev_map[best_type_guess]
+            if dtype == 'Custom':
+                driver = dct['inidic']['description']['driver']
+                cls = dct['inidic']['description']['class']
+                m = __import__(driver)
+                d = getattr(m, cls)()
+            else:    
+                d=getattr(device, dtype)()
             ddict[name]=dct['inst']=d # save instances in nodes dict and in return value
             #self.CallerGlobals['d']=d
             #exec str(key)+'=d' in self.CallerGlobals # valiable in caller context
@@ -382,7 +431,7 @@ class MGraph(Graph):
         devices=[name for name in self.nodes if IgnoreInactive or name in self.activenodes]  # intersept        
         serr=0
         for n in devices:
-            print "Init %s ..."%str(n)
+            #print "Init %s ..."%str(n)
             attribs=self.nodes[n]
             if attribs['inst'] is None:
                 continue
