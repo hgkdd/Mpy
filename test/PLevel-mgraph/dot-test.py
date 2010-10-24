@@ -5,63 +5,54 @@ from scuq import quantities,si,units
 from mpy.tools.mgraph import MGraph
 from mpy.tools.aunits import POWERRATIO
 
+def dBm2W (v):
+    return 10**(v*0.1)*0.001
+def W2dBm (v):
+    return 10*np.log10(v*1000)
+
+
 dot='gtem-immunity.dot'
-mg=MGraph(dot)
+# keys: names in program, values: names in graph
 names={'sg': 'sg',
        'amp_in': 'amp_in',
        'amp_out': 'amp_out',
        'pm_fwd': 'pm1',
        'pm_bwd': 'pm2',
        'output': 'gtem'}
+mg=MGraph(dot, names)
 
 instrumentation=mg.CreateDevices()
-sg=instrumentation[names['sg']]
+sg=instrumentation.sg
 
 mg.Init_Devices()  # init all devices in graph
 
 try:
 
-    readlist=[names['pm_fwd'], names['pm_bwd']] 
+    readlist=[ mg.get_gname(dev) for dev in ('pm_fwd','pm_bwd') ] 
     for f in np.linspace(10e3, 4.2e9, 100):
-        if f <= 1103037676.77:
-            continue
-        #print "Freq: %.3f MHz"%(f/1e6),
         mg.SetFreq_Devices(f)
         mg.EvaluateConditions()
+        
         # s21 of the connections
-        c_sg_amp=mg.get_path_correction(names['sg'], names['amp_in'], POWERRATIO)
-        c_amp_out=mg.get_path_correction(names['amp_out'], names['output'], POWERRATIO)
-        c_amp_pm1=mg.get_path_correction(names['amp_out'], names['pm_fwd'], POWERRATIO)
-        c_amp_pm2=mg.get_path_correction(names['amp_out'], names['pm_bwd'], POWERRATIO)
+        c_sg_amp  = mg.get_path_correction(mg.sg, mg.amp_in, POWERRATIO)
+        c_amp_out = mg.get_path_correction(mg.amp_out, mg.output, POWERRATIO)
+        c_amp_pm1 = mg.get_path_correction(mg.amp_out, mg.pm_fwd, POWERRATIO)
+        c_amp_pm2 = mg.get_path_correction(mg.amp_out, mg.pm_bwd, POWERRATIO)
 
         mg.RFOn_Devices()
         for dbmlv in np.linspace(-30, 0, 31):
-            lv=quantities.Quantity(si.WATT, 10**(dbmlv*0.1)*1e-3)
+            lv=quantities.Quantity(si.WATT, dbm2W(dbmlv))
             sg.SetLevel(lv)
             time.sleep(0.2)
             
-            # for var in [c_sg_amp, c_amp_out, c_amp_pm1, c_amp_pm2]:
-                # #print str(var)
-                # for k,v in var.items():
-                    # print "\t%s: %s"%(k, abs(v))
-            
             mg.NBTrigger(readlist)
             results=mg.Read(readlist)
-            #print results
-            #for p in readlist:
-            #    print p, results[p],
-            #print
-            
-            pin=lv*c_sg_amp['total']
-            pin.set_strict(False)
-            pin=quantities.Quantity(si.WATT, pin.get_value(si.WATT))
-            pfwd=results[names['pm_fwd']]
-            pout=pfwd/c_amp_pm1['total']
-            pout.set_strict(False)
-            pout=quantities.Quantity(si.WATT, pout.get_value(si.WATT))
-            pgtem=pout*c_amp_out['total']
-            pgtem.set_strict(False)
-            pgtem=quantities.Quantity(si.WATT, pgtem.get_value(si.WATT))
+
+            pfwd=results[mg.pm_fwd]
+            pin=(lv*c_sg_amp).reduce_to(si.WATT)
+            pout=(pfwd/c_amp_pm1).reduce_to(si.WATT)
+            pgtem=(pout*c_amp_out).reduce_to(si.WATT)
+
             print f, abs(lv), abs(pin), abs(pout), abs(pgtem) 
             sys.stdout.flush()
         print

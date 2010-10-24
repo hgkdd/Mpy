@@ -15,7 +15,14 @@ def _stripstr(s):
     r=r.strip('"')
     r=r.strip("'")
     return r
-    
+
+class DictObj(dict):
+    def __getattr__(self, name):
+        try:
+            return self.__getitem__(name)
+        except KeyError:
+            return super(DictObj,self).__getattr__(name)
+
 class Graph(object):
     """Graph class based on :mod:`pydot`.
 
@@ -109,7 +116,7 @@ class Graph(object):
 class MGraph(Graph):
     """Measurement grapg class based of :class:`Graph`. See there for the argument of the :meth:`__init__` method.
     """
-    def __init__(self, fname_or_data=None):
+    def __init__(self, fname_or_data=None, map=None):
         super(MGraph, self).__init__(fname_or_data)
         self.gnodes=self.graph.get_nodes()
         self.gedges=self.graph.get_edges()
@@ -118,8 +125,33 @@ class MGraph(Graph):
         for n,dct in self.nodes.items():
             dct['gnode']=nametonode[n]
         self.activenodes=self.nodes.keys()
-    
+        if map is None:
+            map={}
+        self.map=map
+        # make map bijective
+        self.bimap=self.map
+        for k,v in map.items():
+            self.bimap[v]=k
+
+    def __getattr__(self, name):
+        gname=self.get_gname(name)
+        if gname is None:
+            raise AttributeError
+        else:
+            return gname
+
+    def get_gname(self, name):
+        if name in self.map:
+            return self.map[name]
+        elif name in self.bimap:
+            return name
+        else:
+            return None
+
     def get_path_correction (self, start, end, unit=None):
+        return self.get_path_corrections (start, end, unit=unit)['total']
+    
+    def get_path_corrections (self, start, end, unit=None):
         """Returns a dict with the corrections for all edges from *start* to *end*. *unit* can be 
            :data:`mpy.tools.aunits.AMPLITUDERATIO` or :data:`mpy.tools.aunits.POWERRATIO`. If *unit* is `None`, 
            :data:`mpy.tools.aunits.AMPLITUDERATIO` is used. 
@@ -172,8 +204,7 @@ class MGraph(Graph):
             #print TotalPath
             #for k,v in result.items():
             #    print k,v
-            TotalPath.set_strict(False)
-            TotalPath = quantities.Quantity (unit, TotalPath.get_value(unit))
+            TotalPath = TotalPath.reduce_to(unit)
             Total += TotalPath
         result['total'] = Total        
         return result
@@ -268,7 +299,7 @@ class MGraph(Graph):
                  'vectornetworkanalyser': 'NetworkAnalyser',
                  'custom': 'Custom'}
         devs=dev_map.keys()
-        ddict={}
+        ddict=DictObj()
         for name,dct in self.nodes.items():
             obj=dct['gnode']
             attribs=obj.get_attributes()
@@ -308,6 +339,9 @@ class MGraph(Graph):
             #exec str(key)+'=d' in self.CallerGlobals # valiable in caller context
             #exec 'self.'+str(key)+'=d'   # as member variable
             self.__dict__.update(ddict)
+            for k,v in ddict:
+                if k in self.bimap:
+                    ddict[self.bimap[k]]=v
         return ddict
 
     def NBTrigger (self, list):
