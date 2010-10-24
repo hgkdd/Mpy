@@ -16,30 +16,31 @@ class Meta_Driver(type):
     """ Meta-Klasse für Driver.
         Die Meta-Klasse hat mehrere Aufgaben: 
 
-        Sie Baut anhand _cmds der Driver Klasse, Methoden für diese Klasse. 
+        Sie Baut anhand _cmds Dict der Driver Klasse, Methoden für diese Klasse. 
 
-        Die Methoden haben den selben Namen wie das jeweilige Command bzw. wie die 
+        Die Methoden haben den gleichen Namen wie das jeweilige Command bzw. wie die 
         jeweilige Function. Als Parameter sind diejenigen vorhanden, welche in der Function 
         bzw. in dem Command definiert wurden. Eine Methode ruft im Grund nur das ihr 
         zugewiesene Command oder Function Objekt auf.
 
 
         Weiterhin führt die Meta-Klasse einen Syntax Check für Methoden durch, die im 
-        _commands dict der Super Klasse definiert wurden. Die Parameter einer Methode der 
-        Klasse, deren Name ebenfalls im _commands dict vorhanden ist, müssen mit den dort 
-        angegeben übereinstimmen! Sind in _commands Methoden definiert, welche nicht in der
-        Klasse implementiert sind, wird eine Methode gebaut, die eine  NotImplementedError Exception wirft. 
+        _commands dict der Super Klasse definiert wurden. Die Parameter einer Driver-Methode,
+        deren Name ebenfalls im _commands dict vorhanden ist, müssen mit den dort 
+        angegeben Parameter-Namen übereinstimmen! Sind in _commands Methoden definiert welche 
+        nicht in der Klasse implementiert sind, wird eine Methode gebaut die eine 
+        NotImplementedError Exception wirft. 
 
 
 
-        Durch die Meta-Klasse ist auch möglich, globale return_maps für commands und globale possibilities,
+        Durch die Meta-Klasse ist es auch möglich, globale return_maps für commands und globale possibilities,
         possibilities_maps für Parameter zu definieren.
 
         *possibilities:
 
         Possibilities dürfen sowohl in der Super Klasse des Driver als auch in der Klasse selbst definiert werden.
         Wird in beiden Klassen eine Possibilities-Liste  erzeugt, welche den gleichen Parameter anspricht, wird die 
-        diejenige aus der Superklasse verwendet.
+        diejenige, der Superklasse verwendet.
         Beispiel:
             _cmds= CommandsStorage( NETWORKAN,
                             Command('SetSparameter',"VISA Command String",(
@@ -103,7 +104,8 @@ class Meta_Driver(type):
         #*********************
         #Erstellen und Kompilieren der Methoden
         #*********************
-        for cmd_func_name,cmd_func in dict['_cmds'].items():       
+        for cmd_func_name,cmd_func in dict['_cmds'].items():
+            #Prüfen ob Methode schon existiert, wenn ja, dann private Methode erzeugen.       
             if dict.has_key(cmd_func_name):
                 cmd_func_name = "_"+cmd_func_name
             func_str={}
@@ -130,7 +132,8 @@ class Meta_Driver(type):
             
             
             #********************
-            #Übergeben von Possibilities-tupel/dicts, Return-dicts
+            #Übergeben von Possibilities-tupel/dicts, Return-dicts an die
+            #Funktionen oder Parameter
             #********************
             
             if isinstance(cmd_func, Function):
@@ -177,7 +180,7 @@ class Meta_Driver(type):
         #Existiert eine Methode nicht, wir eine erstellt welche einen NotImplementedError Exception wirft
         #
         #Syntaxcheck heißt: Es wird geprüft, ob die Parameter der implementierte Methoden mit den 
-        #Angaben des _commands dict über einstimmen.
+        #Angaben des _commands dict übereinstimmen (Name, Reihenfolge).
         #***********************    
         for commands_name,commad_map in bases[0]._commands.items():
             para_command=commad_map['parameter']
@@ -222,8 +225,9 @@ class Meta_Driver(type):
 
 
 class CommandsStorage(dict):
-    """ CommandStorage ist im Grunde ein dict. Es ermöglicht die Übergabe der Werte als Argument. 
-        Jedes Argument muss eine Methode .getName() besitzen. 
+    """ CommandStorage ist im Grunde ein dict. Es ermöglicht die Übergabe der Werte als Argument an 
+        die __init__ Methode. 
+        Jedes Argument muss eine Methode .getName() besitzen.
         
         CommandStorage fügt jedes Argument, mit dessen Namen als key, sich selbst hinzu, 
         weiterhin wird für jedes Argument ein Attribut mit dessen Namen angelegt.
@@ -257,9 +261,9 @@ class Function(dict):
 
         **Verwendung:
         
-        Die Commands werden Function beim initialisierend des Objekts
+        Die Commands werden der Function beim initialisieren des Objekts
         übergeben. Will man mehr als ein Command angeben muss man eine List/Tuple von Commands übergeben. 
-        Das erste Argument von Funktion muss immer, der name der Function sein:
+        Das erste Argument von Funktion muss immer der name der Function sein:
  
            f=Function(name_der_Function,(
               Command('command_1','command_str',(Parameter_1),rtype=float)
@@ -270,7 +274,7 @@ class Function(dict):
     
             print f(self,Argumente)
 
-        Die Parameter die Function besitzt, richtet sich nach den Parametern der Commands. 
+        Die Parameter die Function besitzt, richten sich nach den Parametern der Commands. 
         Bei dem oben aufgeführten Beispiel hätte das Function Objekt zwei Parameter, in folgender Reihenfolge: 
     
             f(self,Parameter_1,Parameter_2)
