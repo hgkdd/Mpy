@@ -496,7 +496,7 @@ class Command(object):
         **Verwendung:
 
             c = Command('nane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
-                         Parameter('channel',global_var='internChannel'),
+                         Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
                          ) )
                          
@@ -526,7 +526,7 @@ class Command(object):
         (Da alle Commands bzw. Functions in _cmds auch zu Methoden werden, können auch diese Verwendet werden):
 
             c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
-                         Parameter('channel',global_var='internChannel'),
+                         Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
                          ),rfunction='Getname')
             print self.Getname()
@@ -541,12 +541,12 @@ class Command(object):
         * Mit rtype kann der Rückgabe-Type bestimmt werden:
 
             c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
-                         Parameter('channel',global_var='internChannel'),
+                         Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
                          ),rtype=float)
             oder:
             c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
-                         Parameter('channel',global_var='internChannel'),
+                         Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
                          ),rtype=R_FLOAT())
 
@@ -567,7 +567,7 @@ class Command(object):
         * Mit return_map können Werte, die das Geräte zurückgibt, auf gewünschte Werte gemappt werden:
 
             c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
-                         Parameter('channel',global_var='internChannel'),
+                         Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
                          ),return_map={777:'2000'},rtype=float)
 
@@ -867,17 +867,17 @@ class Parameter(object):
         
         * Man kann aber ein Parameter aber auch an ein Attribut der Driver Instanz binden: 
     
-            p=Parameter('name', global_var='Attribut der Instanz')
+            p=Parameter('name', class_attr='Attribut der Instanz')
 
         Der Werte für den Parameter wird dann immer aus diesem Attribut genommen.
-        Wird global_var definiert, haben  ptype, possibilities und possibilities_map keine Wirkung mehr.
+        Wird class_attr definiert, haben  ptype, possibilities und possibilities_map keine Wirkung mehr.
     """
     
     
     
-    def __init__(self,name,global_var=None,ptype=None,requires=None,possibilities_map=None,possibilities=None):
+    def __init__(self,name,class_attr=None,ptype=None,requires=None,possibilities_map=None,possibilities=None):
         self.name=name
-        self.global_var=global_var
+        self.class_attr=class_attr
         self.ptype=ptype
         self.requires=requires
         self.value=None
@@ -894,8 +894,8 @@ class Parameter(object):
     
     def getValue(self):
         
-        if self.global_var:
-            return getattr(self.driver,self.global_var)
+        if self.class_attr:
+            return getattr(self.driver,self.class_attr)
         return self.value
 
 
@@ -971,7 +971,7 @@ class Parameter(object):
 
     def isGlobal(self):
         r = False
-        if self.global_var:
+        if self.class_attr:
             r = True
         return r
     
