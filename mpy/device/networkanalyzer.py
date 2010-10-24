@@ -264,13 +264,4 @@ if __name__ == '__main__':
     err, des=d.GetDescription()
     print "Description: %s"%des
 
-    for cfreq in [100]:
-        print "Set center freq to %e Hz"%cfreq
-        err, rfreq = d.SetCenterFreq(cfreq)
-        if err == 0:
-            print "Center Freq set to %e Hz"%rfreq
-        else:
-            print "Error setting center freq"
-
-
     d.Quit()

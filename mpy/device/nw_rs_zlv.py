@@ -69,86 +69,86 @@ class NETWORKANALYZER(NETWORKAN):
     _cmds= CommandsStorage( NETWORKAN,
                     #Manual S. 499       
                     Command('SetCenterFreq','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               Parameter('cfreq',ptype=float)# requires=IN_RANGE(0,10e6))   
                                               ), rfunction='GetCenterFreq'),              
                     
                     #Manual S. 499                          
                     Command('GetCenterFreq','SENSe%(channel)d:FREQuency:CENTer?',
-                                              Parameter('channel',global_var='internChannel'), 
+                                              Parameter('channel',class_attr='internChannel'), 
                                               rtype="<default>"),
                     
                     #Manual S. 500                          
                     Command('SetSpan','SENSe%(channel)d:FREQuency:SPAN %(span)s HZ',(
-                                              Parameter('channel',global_var='internChannel'),                                       
+                                              Parameter('channel',class_attr='internChannel'),                                       
                                               Parameter('span',ptype=float),                                      
                                               ), rfunction='GetSpan'),
                     
                     #Manual S. 500                          
                     Command('GetSpan', 'SENSe%(channel)d:FREQuency:SPAN?',
-                                              Parameter('channel',global_var='internChannel'), 
+                                              Parameter('channel',class_attr='internChannel'), 
                                               rtype="<default>"),
                     
                     #Manual S. 501
                     Command('SetStartFreq','SENSe%(channel)d:FREQuency:STARt %(stfreq)s HZ',(
-                                              Parameter('channel',global_var='internChannel'),      
+                                              Parameter('channel',class_attr='internChannel'),      
                                               Parameter('stfreq',ptype=float)      
                                               ), rfunction='GetStartFreq'),
                     
                     #Manual S. 501                          
                     Command('GetStartFreq', 'SENSe%(channel)d:FREQuency:STARt?',
-                                              Parameter('channel',global_var='internChannel'), 
+                                              Parameter('channel',class_attr='internChannel'), 
                                               rtype="<default>"),
                     
                     #Manual S. 501                                                    
                     Command('SetStopFreq', 'SENSe%(channel)d:FREQuency:STOP %(spfreq)s HZ', ( 
-                                              Parameter('channel',global_var='internChannel'),      
+                                              Parameter('channel',class_attr='internChannel'),      
                                               Parameter('spfreq',ptype=float)      
                                               ), rfunction='GetStopFreq'),                                                                                                                
                     
                     #Manual S. 501
                     Command('GetStopFreq', 'SENSe%(channel)d:FREQuency:STOP?',
-                                              Parameter('channel',global_var='internChannel'), 
+                                              Parameter('channel',class_attr='internChannel'), 
                                               rtype="<default>"),
                     
                     # Meas/Resolution Bandwidht:
                     #Manual S. 473
                     Command('SetRBW', 'SENSe%(channel)d:BANDwidth:RESolution %(rbw)s HZ',(
-                                              Parameter('channel',global_var='internChannel'),      
+                                              Parameter('channel',class_attr='internChannel'),      
                                               Parameter('rbw',ptype=float)      
                                               ), rfunction='GetRBW'),                    
                     
                     #Manual S. 473
                     Command('GetRBW','SENSe%(channel)d:BANDwidth:RESolution?',
-                                              Parameter('channel',global_var='internChannel'), 
+                                              Parameter('channel',class_attr='internChannel'), 
                                               rtype="<default>"),                    
                     
                     ###[SENSe<Ch>:]BANDwidth|BWIDth[:RESolution]:SELect FAST | NORMal???
                     
                     #Manual S. 430
                     Command('SetRefLevel', 'DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:RLEVel %(reflevel)s DBM',(
-                                              Parameter('WindowName', global_var='activeWindow_Name'),
-                                              Parameter('windTraceNumber',global_var='activeTrace_WinNum'),
+                                              Parameter('WindowName', class_attr='activeWindow_Name'),
+                                              Parameter('windTraceNumber',class_attr='activeTrace_WinNum'),
                                               Parameter('reflevel',ptype=float)      
                                               ), rfunction='GetRefLevel'),                            
                     
                     #Manual S. 430                   
                     Command('GetRefLevel','DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:RLEVel?',(
-                                              Parameter('WindowName', global_var='activeWindow_Name'),
-                                              Parameter('windTraceNumber', global_var='activeTrace_WinNum')                                          
+                                              Parameter('WindowName', class_attr='activeWindow_Name'),
+                                              Parameter('windTraceNumber', class_attr='activeTrace_WinNum')                                          
                                               ), rtype="<default>"),                                        
                     
                     #Manual S. 429                          
                     Command('SetDivisionValue', 'DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:PDIVision %(divivalue)s DBM',(
-                                              Parameter('WindowName', global_var='activeWindow_Name'),
-                                              Parameter('windTraceNumber', global_var='activeTrace_WinNum'),
+                                              Parameter('WindowName', class_attr='activeWindow_Name'),
+                                              Parameter('windTraceNumber', class_attr='activeTrace_WinNum'),
                                               Parameter('divivalue',ptype=float)      
                                               ), rfunction='GetDivisionValue'),                                                                                                                     
                     
                     #Manual S. 429         
                     Command('GetDivisionValue', 'DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:PDIVision?',(
-                                              Parameter('WindowName', global_var='activeWindow_Name'),
-                                              Parameter('windTraceNumber', global_var='activeTrace_WinNum')                                          
+                                              Parameter('WindowName', class_attr='activeWindow_Name'),
+                                              Parameter('windTraceNumber', class_attr='activeTrace_WinNum')                                          
                                               ), rtype="<default>"),                                                   
 
  
@@ -162,108 +162,108 @@ class NETWORKANALYZER(NETWORKAN):
                     Function('CreateTrace',(
                                    #Manual S. 384         
                                    Command('CreateTrace',"CALCulate%(channel)d:PARameter:SDEFine \'%(tracename)s\', \'%(measParam)s\'", (
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               Parameter('tracename',ptype=str),
                                               Parameter('measParam',ptype=str)
                                               ), ),
                                    #Manual S. 426
                                    Command('ActivedTrace', "DISPlay:WINDow%(windowName)d:TRACe%(windTraceNumber)d:FEED \'%(tracename)s\'",(
-                                              Parameter('windowName', global_var='activeWindow_Name'),
+                                              Parameter('windowName', class_attr='activeWindow_Name'),
                                               Parameter('windTraceNumber',ptype=int),                                                                                                                                                 
                                               Parameter('tracename',ptype=str)
                                               )  ),
                                   ) ),
                      
                     Command('DelTrace', "CALCulate%(channel)d:PARameter:DELete \'%(traceName)s\'",(
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               Parameter('traceName', ptype=str)
                                               )      ) ,                                                     
                                                                                                                         
                     Command('GetTrace','CALCulate%(channel)d:PARameter:CATalog?',
-                                              Parameter('channel',global_var='internChannel'), 
+                                              Parameter('channel',class_attr='internChannel'), 
                                               rtype="<default>"
                                               ),                            
                     
                     #
                     Command('SetTrace',"CALCulate%(channel)d:PARameter:SELect \'%(traceName)s\'",(
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               Parameter('traceName',ptype=str)
                                               )     ),
                     
                     #Manual S. 383
                     Command('SetSparameter',"CALCulate%(channel)d:PARameter:MEASure \'%(traceName)s\' \'%(measParam)s\'",(
-                                              Parameter('channel',global_var='internChannel'),
-                                              Parameter('traceName',global_var='activeTrace_Name'),
+                                              Parameter('channel',class_attr='internChannel'),
+                                              Parameter('traceName',class_attr='activeTrace_Name'),
                                               Parameter('measParam',ptype=str) 
                                               ),rfunction='GetSparameter'  ),
                     
                     #Manual S. 523                          
                     Command('SetSweepType','SENSe%(channel)d:SWEep:TYPE %(sweepType)s',(
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               Parameter('sweepType',ptype=str)
                                               ), rfunction='GetSweepType'),
                                
                     Command('GetSweepType','SENSe%(channel)d:SWEep:TYPE?',
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               rtype='<default>'),
 
                     #Manual S. 520
                     Command('SetSweepCount', 'SENSe%(channel)d:SWEep:COUNt %(sweepCount)s',(
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               Parameter('sweepCount',ptype=int)
                                               ), rfunction='GetSweepCount'),
                     
                     #Manual S. 520                                                                       
                     Command('GetSweepCount', 'SENSe%(channel)d:SWEep:COUNt?',
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               rtype='<default>'),
                     
                     #Manual S. 443                                      
                     Command('NewSweepCount','INITiate%(channel)d:IMMediate',
-                                              Parameter('channel',global_var='internChannel')
+                                              Parameter('channel',class_attr='internChannel')
                                               ),
                     
                     #Manual S. 521                          
                     Command('SetSweepPoints', 'SENSe%(channel)d:SWEep:POINts %(spoints)s',(
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               Parameter('spoints',ptype=int)
                                               ), rfunction='GetSweepPoints'),
                     
                     #Manual S. 521
                     Command('GetSweepPoints', 'SENSe%(channel)d:SWEep:POINts?',
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               rtype='<default>'),
 
                     #Manual S. 442
                     Command('SetSweepMode',"INITiate%(channel)d:CONTinuous %(sweepMode)s",(            
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               Parameter('sweepMode',ptype=str)
                                               ), rfunction='GetSweepMode'),
                     
                     #Manual S. 442 
                     Command('GetSweepMode', 'INITiate%(channel)d:CONTinuous?',
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               rtype=str), 
                     
                     #Manula S. 547
                     Command('SetTriggerMode', 'TRIGger%(channel)d:SEQuence:SOURce %(triggerMode)s',(
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               Parameter('triggerMode',ptype=str)
                                               ), rfunction='GetTriggerMode'),
                     
                     #Manula S. 547
                     Command('GetTriggerMode', 'TRIGger%(channel)d:SEQuence:SOURce?',
-                                             Parameter('channel',global_var='internChannel'),
+                                             Parameter('channel',class_attr='internChannel'),
                                              rtype='<default>'),
                     
                     #Manual S. 546
                     Command('SetTriggerDelay', 'TRIGger%(channel)d:SEQuence:HOLDoff %(tdelay)s s',(
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               Parameter('tdelay',ptype=int)
                                               ), rfunction='GetTriggerDelay'),
                     #Manula S. 546 
                     Command('GetTriggerDelay', 'TRIGger%(channel)d:SEQuence:HOLDoff?',
-                                              Parameter('channel',global_var='internChannel'),
+                                              Parameter('channel',class_attr='internChannel'),
                                               rtype='<default>'),
 
                     #Manual S. 424
@@ -277,12 +277,12 @@ class NETWORKANALYZER(NETWORKAN):
                                               ),
                                             
                     Command('CreateChannel','CONFigure:CHANnel%(channel)d:STATe ON',
-                                            Parameter('channel',global_var='internChannel')
+                                            Parameter('channel',class_attr='internChannel')
                                             ),                
                     
                     
                     Command('DelChannel','CONFigure:CHANnel%(channel)d:STATe OFF',
-                                            Parameter('channel',global_var='internChannel')
+                                            Parameter('channel',class_attr='internChannel')
                                             ),                         
 
                     
@@ -291,7 +291,7 @@ class NETWORKANALYZER(NETWORKAN):
                     
                     #Manual S. 339
                     Command('GetSpectrum', 'CALCulate%(channel)d:DATA? FDAT', 
-                                            Parameter('channel',global_var='internChannel'),
+                                            Parameter('channel',class_attr='internChannel'),
                                             rtype=TUPLE_OF_FLOAT()
                                             ),
                     
