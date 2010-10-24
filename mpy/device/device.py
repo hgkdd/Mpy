@@ -285,7 +285,7 @@ class Device(object):
                 setattr(self, "%s"%klass, getattr(self, "_%s_wrap"%klass)(getattr(self, "_%s"%klass)))
         # call the init method
         #print self._lib_Init
-        ret=self._lib_Init(ini=self.ininame, channel=channel)
+        ret=self._lib_Init(self.ininame, channel=channel)
         for tt in tmpfiles:
             tt.close()
         # update self.virtual

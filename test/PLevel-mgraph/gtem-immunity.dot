@@ -1,0 +1,50 @@
+digraph {
+    sg [ini="ini\\sg_rs_smb100a.ini"]
+    amp1 [ini="ini\\amp_ifi_smx25.ini" condition="10e3<=f<=1e9"]
+    amp2 [ini="ini\\amp_ar_25s1g4.ini" condition="800e6<=f<=4.2e9"]
+    pm1 [ini="ini\\pm_gt_8542.ini" ch=1]
+    pm2 [ini="ini\\pm_gt_8542.ini" ch=2]
+    sw [ini="ini\\sw_gtem.ini"]
+
+    cbl_sg_amp1 [ini="ini\\sg-amp1in.ini" condition="0<=f<=18e9"]
+    cbl_amp1_gtem [ini="ini\\amp1out-gtem.ini" condition="10e3<=f<=1e9"]
+    cbl_amp1_pm1 [ini="ini\\amp1out-pm1.ini" condition="10e3<=f<=1e9"]
+    cbl_amp1_pm2 [ini="ini\\amp1out-pm2.ini" condition="10e3<=f<=1e9"]
+
+    cbl_sg_amp2 [ini="ini\\sg-amp2in.ini" condition="0<=f<=18e9"]
+    cbl_amp2_gtem [ini="ini\\amp2out-gtem.ini" condition="700e6<=f<=4.2e9"]
+    cbl_amp2_pm1 [ini="ini\\amp2out-pm1.ini" condition="700e6<=f<=4.2e9"]
+    cbl_amp2_pm2 [ini="ini\\amp2out-pm2.ini" condition="700e6<=f<=4.2e9"]
+
+    sg -> sg1 [condition="0<=f<=1e9"]
+    sg -> sg2 [condition="1e9<f<=18e9"]
+    
+    sg1 -> a1i       [dev=cbl_sg_amp1 what="S21"]
+    sg2 -> a2i       [dev=cbl_sg_amp2 what="S21"]
+    a1i -> amp_in   [condition="0<=f<=1e9"]
+    a2i -> amp_in   [condition="1e9<f<=18e9"]
+
+    amp_in -> a1ii   [condition="0<=f<=1e9"]
+    amp_in -> a2ii   [condition="1e9<f<=18e9"]
+
+    a1ii -> a1oo   [dev=amp1 what="S21"]
+    a2ii -> a2oo   [dev=amp2 what="S21"]
+
+    a1oo -> amp_out   [condition="0<=f<=1e9"]
+    a2oo -> amp_out   [condition="1e9<f<=18e9"]
+    
+    amp_out -> gtem1    [dev=cbl_amp1_gtem what="S21"]
+    amp_out -> gtem2    [dev=cbl_amp2_gtem what="S21"]
+    gtem1 -> gtem   [condition="0<=f<=1e9"]
+    gtem2 -> gtem   [condition="1e9<f<=18e9"]
+   
+    amp_out -> pm11    [dev=cbl_amp1_pm1 what="S21"]
+    amp_out -> pm12    [dev=cbl_amp2_pm1 what="S21"]
+    amp_out -> pm21    [dev=cbl_amp1_pm2 what="S21"]
+    amp_out -> pm22    [dev=cbl_amp2_pm2 what="S21"]
+    
+    pm11 -> pm1 [condition="0<=f<=1e9"]
+    pm12 -> pm1 [condition="1e9<f<=18e9"]
+    pm21 -> pm2 [condition="0<=f<=1e9"]
+    pm22 -> pm2 [condition="1e9<f<=18e9"]
+}

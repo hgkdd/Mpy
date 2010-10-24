@@ -205,6 +205,7 @@ class DatFile(Parser):
         'line : ABSERROR val NEWLINE'
         self.relerror=None
         self.abserror=p[2]
+        
 
     def p_line_data1(self, p):
         'line : FPNUMBER val val val NEWLINE'
@@ -257,6 +258,7 @@ class DatFile(Parser):
     def _makeuq(self, a,b,c, unit):
         def cplx_cmp(a,b):
             try:
+                # length(a) * sgn(a.real)
                 ma=abs(a)*a.real/abs(a.real)
             except AttributeError:
                 ma=a
