@@ -23,6 +23,19 @@ class DictObj(dict):
         except KeyError:
             return super(DictObj,self).__getattr__(name)
 
+class GName(object):
+    def __init__(self, mginst):
+        self.mg=mginst
+    def __getattribute__ (self, name):
+        try:
+            attr=object.__getattribute__(self, name)
+        except AttributeError:
+            attr=self.mg.get_gname(name)
+            if attr == None:
+                raise AttributeError
+        return attr
+        
+    
 class Graph(object):
     """Graph class based on :mod:`pydot`.
 
@@ -118,6 +131,7 @@ class MGraph(Graph):
     """
     def __init__(self, fname_or_data=None, map=None):
         super(MGraph, self).__init__(fname_or_data)
+        self.name=GName(self)
         self.gnodes=self.graph.get_nodes()
         self.gedges=self.graph.get_edges()
         self.nodes=dict([[n.get_name(),{}] for n in self.gnodes])
@@ -133,12 +147,14 @@ class MGraph(Graph):
         for k,v in map.items():
             self.bimap[v]=k
 
-    def __getattr__(self, name):
-        gname=self.get_gname(name)
-        if gname is None:
-            raise AttributeError
-        else:
-            return gname
+    # def __getattribute__(self, name):
+        # try:
+            # attr=Graph.__getattribute__(self, name)
+        # except AttributeError:
+            # attr=self.get_gname(name)
+            # if attr is None:
+                # raise AttributeError
+        # return attr
 
     def get_gname(self, name):
         if name in self.map:
@@ -339,7 +355,7 @@ class MGraph(Graph):
             #exec str(key)+'=d' in self.CallerGlobals # valiable in caller context
             #exec 'self.'+str(key)+'=d'   # as member variable
             self.__dict__.update(ddict)
-            for k,v in ddict:
+            for k,v in ddict.items():
                 if k in self.bimap:
                     ddict[self.bimap[k]]=v
         return ddict

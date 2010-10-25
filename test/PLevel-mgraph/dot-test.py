@@ -29,26 +29,26 @@ mg.Init_Devices()  # init all devices in graph
 try:
 
     readlist=[ mg.get_gname(dev) for dev in ('pm_fwd','pm_bwd') ] 
-    for f in np.linspace(10e3, 4.2e9, 100):
+    for f in np.linspace(10e3, 4.2e9, 10):
         mg.SetFreq_Devices(f)
         mg.EvaluateConditions()
         
         # s21 of the connections
-        c_sg_amp  = mg.get_path_correction(mg.sg, mg.amp_in, POWERRATIO)
-        c_amp_out = mg.get_path_correction(mg.amp_out, mg.output, POWERRATIO)
-        c_amp_pm1 = mg.get_path_correction(mg.amp_out, mg.pm_fwd, POWERRATIO)
-        c_amp_pm2 = mg.get_path_correction(mg.amp_out, mg.pm_bwd, POWERRATIO)
+        c_sg_amp  = mg.get_path_correction(mg.name.sg, mg.name.amp_in, POWERRATIO)
+        c_amp_out = mg.get_path_correction(mg.name.amp_out, mg.name.output, POWERRATIO)
+        c_amp_pm1 = mg.get_path_correction(mg.name.amp_out, mg.name.pm_fwd, POWERRATIO)
+        c_amp_pm2 = mg.get_path_correction(mg.name.amp_out, mg.name.pm_bwd, POWERRATIO)
 
         mg.RFOn_Devices()
-        for dbmlv in np.linspace(-30, 0, 31):
-            lv=quantities.Quantity(si.WATT, dbm2W(dbmlv))
+        for dbmlv in np.linspace(-30, 0, 3):
+            lv=quantities.Quantity(si.WATT, dBm2W(dbmlv))
             sg.SetLevel(lv)
             time.sleep(0.2)
             
             mg.NBTrigger(readlist)
             results=mg.Read(readlist)
 
-            pfwd=results[mg.pm_fwd]
+            pfwd=results[mg.name.pm_fwd]
             pin=(lv*c_sg_amp).reduce_to(si.WATT)
             pout=(pfwd/c_amp_pm1).reduce_to(si.WATT)
             pgtem=(pout*c_amp_out).reduce_to(si.WATT)
