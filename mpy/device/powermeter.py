@@ -220,8 +220,9 @@ class POWERMETER(DRIVER):
         The expanded uncertainty is obtained by multiplying with the correct coverage factor. 
         Here, this is 0.997*sqrt(2) approx 1.4 (U-shaped distribution) for 95% coverage.
         """
-        vswr1=self.conf.get('swr1', 1.0)
-        vswr2=self.conf.get('swr2', 1.0)
+        chdict=self.conf['channel_%d'%self.ch]
+        vswr1=chdict.get('swr1', 1.0)
+        vswr2=chdict.get('swr2', 1.0)
         # calculate reflection coefficients from vswr
         G1=(vswr1-1.)/(vswr1+1.)
         G2=(vswr2-1.)/(vswr2+1.)

@@ -40,7 +40,7 @@ try:
         c_amp_pm2 = mg.get_path_correction(mg.name.amp_out, mg.name.pm_bwd, POWERRATIO)
 
         mg.RFOn_Devices()
-        for dbmlv in np.linspace(-30, 0, 3):
+        for dbmlv in np.linspace(-30, 0, 31):
             lv=quantities.Quantity(si.WATT, dBm2W(dbmlv))
             sg.SetLevel(lv)
             time.sleep(0.2)
