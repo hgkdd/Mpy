@@ -13,7 +13,14 @@ import cPickle
 import gzip
 import re
 import tempfile
-
+try:
+    import mpy.tools.unixcrt as crt
+except ImportError:
+    class CRT:
+        def unbuffer_stdin(self): pass
+        def restore_stdin(self): pass
+    crt=CRT()
+    
 from mpy.device import device
 from mpy.tools import util,calling
 import scuq as uq
@@ -35,11 +42,11 @@ class Measure(object):
         self.autosave = False
         self.autosave_interval = 3600
         self.lastautosave = time.time()
-        self.logger=[self.std_logger]
+        self.logger=[self.stdLogger]
         self.logfile=None
         self.logfilename=None
-        self.messenger=self.std_user_messenger
-        self.user_interrupt_tester=self.std_user_interrupt_tester
+        self.messenger=self.stdUserMessenger
+        self.user_interrupt_tester=self.stdUserInterruptTester
         self.pre_user_event=self.std_pre_user_event
         self.post_user_event=self.std_post_user_event        
 
@@ -127,7 +134,7 @@ class Measure(object):
         """
         self.autosave_interval = interval
         
-    def std_logger(self, block, *args):
+    def stdLogger(self, block, *args):
         """The standard method to write messages to log file.
 
            Print *block* to `self.logfile` or to `stdout` (if `self.logfile` is `None`).
@@ -176,7 +183,7 @@ class Measure(object):
             sys.stdout=stdout #restore stdout
 
 
-    def std_user_messenger(self, msg="Are you ready?", but=["Ok","Quit"], level='', dct={}):
+    def stdUserMessenger(self, msg="Are you ready?", but=["Ok","Quit"], level='', dct={}):
         """The standard (default) method to present messages to the user.
 
            The behaviour depends on the value of the parameter *but*.
@@ -217,7 +224,7 @@ class Measure(object):
         else:
             return -1
     
-    def std_user_interrupt_tester(self):
+    def stdUserInterruptTester(self):
         """The standard (default) user interrupt tester.
 
            Returns return value of :meth:`mpy.util.anykeyevent()`
@@ -360,17 +367,17 @@ class Measure(object):
 
         #print self.ascmd
                 
-    def std_pre_user_event(self):
-        """Just calls :meth:`mpy.tools.util.unbuffer_stdin()`.
+    def stdPreUserEvent(self):
+        """Just calls :meth:`mpy.tools.unixcrt.unbuffer_stdin()`.
            See there...
         """
-        util.unbuffer_stdin()
+        crt.unbuffer_stdin()
 
-    def std_post_user_event(self):
-        """Just calls :meth:`mpy.tools.util.restore_stdin()`
+    def stdPostUserEvent(self):
+        """Just calls :meth:`mpy.tools.unixcrt.restore_stdin()`
            See there...
         """
-        util.restore_stdin()
+        crt.restore_stdin()
         
     def do_leveling(self, leveling, mg, names, dct):
         """Perform leveling on the measurement graph.
@@ -501,7 +508,7 @@ class Measure(object):
             whatlist = [w for w in what if w in allwhat]
         return whatlist
 
-    def std_eut_status_checker(self, status):
+    def stdEutStatusChecker(self, status):
         return status in ['ok', 'OK']
 
 class Error(Exception):

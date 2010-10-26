@@ -8,6 +8,7 @@ from scuq import quantities,si,units
 from mpy.env.Measure import Measure
 from mpy.tools.mgraph import MGraph
 from mpy.tools.aunits import POWERRATIO
+from mpy.tools import util
 
 def dBm2W (v):
     return 10**(v*0.1)*0.001
@@ -21,7 +22,7 @@ class AmplifierTest(Measure):
         self.autosave = False
         self.autosave_interval = 3600
         self.lastautosave = time.time()
-        self.logger=[self.stdlogger]
+        self.logger=[self.stdLogger]
         self.logfile=None
         self.logfilename=None
         self.messenger=self.stdUserMessenger
@@ -87,7 +88,7 @@ class AmplifierTest(Measure):
 
         self.rawData.setdefault(description, {})
 
-        mg=mgraph.MGraph(dotfile, names)
+        mg=MGraph(dotfile, names)
         instrumentation=mg.CreateDevices()
 
         self.messenger(util.tstamp()+" Init devices...", [])
@@ -147,7 +148,7 @@ Quit: quit measurement.
       
                 mg.RFOn_Devices()
                 for counter, lv in enumerate(levels):
-                    sg.SetLevel(lv)
+                    instrumentation.sg.SetLevel(lv)
                     time.sleep(delay)
                     
                     mg.NBTrigger(readlist)
@@ -218,12 +219,40 @@ Quit: quit measurement.
         self.PostUserEvent()
         return stat
 
+    def __insert_it(self, field, value, pf, pb, f, pin, dct=None):
+        """
+        Inserts a value in a field.
+        field: '3D' dictionary of a list of dicts ;-)
+        e.g.: amp_pout[f][pin] is a list [{'value': vector of Quantities, 'pfwd': Quantity, 'pbwd': Quantity}, ...]
+        f: frequency (float)
+        """
+        field.setdefault(f, {})
+        field[f].setdefault(pin, [])
+        field[f][pin].append({'value': value, 'pfwd': pf, 'pbwd': pb})
+        if not dct is None:
+            field[f][pin][-1].update(dct)
+        return field
+
+    def __addLoggerBlock (self, parent, key, comment, val, parameter):
+        """
+        Helper function to add a block for the logger function(s).
+        parent must be a dict
+        key is used as key
+        parent[key] results in a dict like {'comment' comment, 'value': val, 'parameter': parameter}
+        parameter should be a dict of the same form as parent or an empty dict
+        """
+        parent[key]={}
+        parent[key]['comment']=comment
+        parent[key]['value']=val
+        parent[key]['parameter']=parameter
+
+        
 
 if __name__ == '__main__':
     import cPickle as pickle
     from numpy import linspace
-    from scuq.quantity import Quantity
-    from scuq.units.si import WATT
+    from scuq.quantities import Quantity
+    from scuq.si import WATT
     
     def get_gain_compression (pin, pout, small_signal_factor=10):
         pin_ss=[pi for pi in pin if pi <= pin[0]*small_signal_factor]
@@ -249,9 +278,10 @@ if __name__ == '__main__':
            'output': 'gtem'}
 
     AT = AmplifierTest()
+    AT.set_logfile('at.log')
     AT.Measure(description="IFI SMX25 Band1",
                dotfile=dot,
                names=names,
                freqs=linspace(10e3,200e6,10),
                levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-30, 0, 3)])
-    pickle.dump (AT, file('out.p', 'wb'), 2)
+    pickle.dump (AT, file('at.p', 'wb'), 2)
