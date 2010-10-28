@@ -26,9 +26,9 @@ from mpy.tools import util,calling
 import scuq as uq
 
 try:
-    import pyTTS
-    _tts=pyTTS.Create()
-    _tts.SetVoiceByName('MSMary')
+    import pyttsx
+    _tts=pyttsx.init()
+    #_tts.SetVoiceByName('MSMary')
 except ImportError:
     _tts=None
 
@@ -46,9 +46,9 @@ class Measure(object):
         self.logfile=None
         self.logfilename=None
         self.messenger=self.stdUserMessenger
-        self.user_interrupt_tester=self.stdUserInterruptTester
-        self.pre_user_event=self.std_pre_user_event
-        self.post_user_event=self.std_post_user_event        
+        self.UserInterruptTester=self.stdUserInterruptTester
+        self.PreUserEvent=self.stdPreUserEvent
+        self.PostUserEvent=self.stdPostUserEvent        
 
     def __setstate__(self, dct):
         """used instead of __init__ when instance is created from pickle file""" 
@@ -58,11 +58,11 @@ class Measure(object):
             logfile = file(dct['logfilename'], "a+")
         self.__dict__.update(dct)
         self.logfile = logfile
-        self.messenger=self.std_user_messenger
+        self.messenger=self.stdUserMessenger
         self.logger=[self.std_logger]
-        self.user_interrupt_tester=self.std_user_interrupt_tester
-        self.pre_user_event=self.std_pre_user_event
-        self.post_user_event=self.std_post_user_event        
+        self.UserInterruptTester=self.stdUserInterruptTester
+        self.PreUserEvent=self.stdPreUserEvent
+        self.PostUserEvent=self.stdPostUserEvent        
 
     def __getstate__(self):
         """prepare a dict for pickling"""
@@ -70,18 +70,18 @@ class Measure(object):
         del odict['logfile']
         del odict['logger']
         del odict['messenger']
-        del odict['user_interrupt_tester']
-        del odict['pre_user_event']
-        del odict['post_user_event']        
+        del odict['UserInterruptTester']
+        del odict['PreUserEvent']
+        del odict['PostUserEvent']        
         return odict
 
-    def wait(self, delay, dct, uihandler, intervall=0.1):
+    def wait(self, delay, dct, uitester, intervall=0.1):
         """A wait function that can de interrupted.
 
            - *delay*: seconds to wait
-           - *dct*: namespace used by uihandler (:meth:`Measure.stdUserInterruptHandler`)
-           - *uihandler*: User-Interupt Handler
-           - *intervall*: seconds to sllep between uihandler calls
+           - *dct*: namespace used by uitester (:meth:`Measure.stdUserInterruptTester`)
+           - *uitester*: User-Interupt Tester
+           - *intervall*: seconds to sllep between uitester calls
 
            Return: *None*
         """
@@ -89,7 +89,7 @@ class Measure(object):
         delay = abs(delay)
         intervall = abs(intervall)
         while (time.time()-start < delay):
-            uihandler(dct)
+            uitester(dct)
             time.sleep(intervall)
 
     def out(self, item):
@@ -212,14 +212,16 @@ class Measure(object):
 
         if len(but): # button(s) are given -> wait
             if _tts:
-                _tts.Speak(msg, pyTTS.tts_async)
+                _tts.say(msg)
+                _tts.runAndWait()
             while True:
                 key=chr(util.keypress())
                 key=key.lower()
                 for s in but:
                     if s.lower().startswith(key):
                         if _tts:
-                            _tts.Speak(s, pyTTS.tts_purge_before_speak)
+                            _tts.say(s)#, pyTTS.tts_purge_before_speak)
+                            _tts.runAndWait()
                         return but.index(s)
         else:
             return -1
@@ -271,22 +273,22 @@ class Measure(object):
     def set_messenger(self, messenger):
         """Set function to present messages.
 
-           Parameter *messenger*: the messenger (see :meth:`std_user_messenger`)
+           Parameter *messenger*: the messenger (see :meth:`stdUserMessenger`)
 
            Return: *None*
         """
         if callable(messenger):
             self.messenger=messenger
 
-    def set_user_interrupt_tester(self, tester):
+    def set_user_interrupt_Tester(self, tester):
         """Set function to test for user interrupt.
 
-           Parameter *tester*: the user interrupt tester (see :meth:`std_user_interrupt_tester`)
+           Parameter *tester*: the user interrupt Tester (see :meth:`stdUserInterruptTester`)
 
            Return: *None*
         """
         if callable(tester):
-            self.user_interrupt_tester=tester
+            self.UserInterruptTester=tester
 
     def set_autosave(self, name):
         """Setter for the class attribute *asname* (name of the auto save file).

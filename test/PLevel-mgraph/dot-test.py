@@ -55,6 +55,87 @@ class AmplifierTest(Measure):
         del odict['PostUserEvent']        
         return odict
 
+    def _HandleUserInterrupt(self, dct, ignorelist=''):
+        key = self.UserInterruptTester() 
+        if key and not chr(key) in ignorelist:
+            # empty key buffer
+            _k = self.UserInterruptTester()
+            while not _k is None:
+                _k = self.UserInterruptTester()
+
+            mg = dct['mg']
+            names = dct['names']
+            f = dct['f']
+            try:
+                SGLevel=dct['SGLevel'] 
+                leveling = dct['leveling']
+            except:
+                hassg = False
+            else:
+                hassg = True
+            try:
+                delay=dct['delay']
+            except KeyError:
+                pass
+            try:
+                nblist = dct['nblist']
+            except KeyError:
+                nblist=[]
+            
+            self.messenger(util.tstamp()+" RF Off...", [])
+            stat = mg.RFOff_Devices() # switch off after measure
+            msg1 = """The measurement has been interrupted by the user.\nHow do you want to proceed?\n\nContinue: go ahead...\nSuspend: Quit devices, go ahead later after reinit...\nInteractive: Go to interactive mode...\nQuit: Quit measurement..."""
+            but1 = ['Continue','Suspend','Interactive','Quit']
+            answer = self.messenger(msg1, but1)
+            #print answer
+            if answer == but1.index('Quit'):
+                self.messenger(util.tstamp()+" measurment terminated by user.", [])
+                raise UserWarning      # to reach finally statement
+            elif answer == but1.index('Interactive'):
+                util.interactive("Press CTRL-Z plus Return to exit")
+            elif answer == but1.index('Suspend'):
+                self.messenger(util.tstamp()+" measurment suspended by user.", [])
+                stat = mg.Quit_Devices()                                
+                msg2 = """Measurement is suspended.\n\nResume: Reinit and continue\nQuit: Quit measurement..."""
+                but2 = ['Resume','Quit']
+                answer = self.messenger(msg2, but2)
+                if answer == but2.index('Resume'):
+                    # TODO: check if init was successful
+                    self.messenger(util.tstamp()+" Init devices...", [])
+                    stat = mg.Init_Devices()
+                    self.messenger(util.tstamp()+" ... Init returned with stat = %d"%stat, [])        
+                    stat = mg.RFOff_Devices() # switch off
+                    self.messenger(util.tstamp()+" Zero devices...", [])
+                    stat = mg.Zero_Devices()
+                    if hassg:
+                        try:
+                            level = self.setLevel(mg, names, SGLevel)
+                        except AmplifierProtectionError, _e:
+                            self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
+
+                    # set frequency for all devices
+                    (minf, maxf) = mg.SetFreq_Devices (f)
+                    mg.EvaluateConditions()
+                elif answer == but2.index('Quit'):
+                    self.messenger(util.tstamp()+" measurment terminated by user.", [])
+                    raise UserWarning      # to reach finally statement
+            self.messenger(util.tstamp()+" RF On...", [])
+            stat = mg.RFOn_Devices()   # switch on just before measure
+            if hassg:
+                level2 = self.doLeveling(leveling, mg, names, locals())
+                if level2:
+                    level=level2
+            try:
+                # wait delay seconds
+                self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
+                self.wait(delay, dct,self._HandleUserInterrupt)
+                self.messenger(util.tstamp()+" ... back.", [])
+            except:
+                pass
+            mg.NBTrigger(nblist)
+
+        
+        
     def Measure (self, description="AmplifierTest",
                        dotfile='amplifier.dot',
                        delay=0.2,
@@ -160,33 +241,33 @@ Quit: quit measurement.
                     pout=(pfwd/c_amp_pm1).reduce_to(si.WATT)
                     pgtem=(pout*c_amp_out).reduce_to(si.WATT)
                 
-                    self.__addLoggerBlock(block, 'sg_pout_%d'%counter, 'Amplifier test sg level reading', lv, {})
-                    self.__addLoggerBlock(block['sg_pout_%d'%counter]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                    self.__addLoggerBlock(block, 'pfwd_%d'%counter, 'Fwd power meter reading reading', pfwd, {})
-                    self.__addLoggerBlock(block['pfwd_%d'%counter]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                    self.__addLoggerBlock(block['pfwd_%d'%counter]['parameter'], 'lv', 'sg level', lv, {}) 
-                    self.__addLoggerBlock(block, 'pbwd_%d'%counter, 'Bwd power meter reading reading', pbwd, {})
-                    self.__addLoggerBlock(block['pbwd_%d'%counter]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                    self.__addLoggerBlock(block['pbwd_%d'%counter]['parameter'], 'lv', 'sg level', lv, {}) 
+                    self.__addLoggerBlock(block, 'sg_pout_%d', 'Amplifier test sg level reading', lv, {})
+                    self.__addLoggerBlock(block['sg_pout_%d']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
+                    self.__addLoggerBlock(block, 'pfwd_%d', 'Fwd power meter reading reading', pfwd, {})
+                    self.__addLoggerBlock(block['pfwd_%d']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
+                    self.__addLoggerBlock(block['pfwd_%d']['parameter'], 'lv', 'sg level', lv, {}) 
+                    self.__addLoggerBlock(block, 'pbwd_%d', 'Bwd power meter reading reading', pbwd, {})
+                    self.__addLoggerBlock(block['pbwd_%d']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
+                    self.__addLoggerBlock(block['pbwd_%d']['parameter'], 'lv', 'sg level', lv, {}) 
                     self.__addLoggerBlock(block, 'c_sg_amp', 'Correction from sg to amp', c_sg_amp, {})
                     self.__addLoggerBlock(block['c_sg_amp']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                     self.__addLoggerBlock(block, 'c_amp_pm1', 'Correction from amp to pm1', c_amp_pm1, {})
                     self.__addLoggerBlock(block['c_amp_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                    self.__addLoggerBlock(block, 'c_amp_pm2', 'Correction from amp to pm2', c_amp_pm1, {})
+                    self.__addLoggerBlock(block, 'c_amp_pm2', 'Correction from amp to pm2', c_amp_pm2, {})
                     self.__addLoggerBlock(block['c_amp_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                    self.__addLoggerBlock(block, 'c_amp_out', 'Correction from amp to out', c_amp_pm1, {})
+                    self.__addLoggerBlock(block, 'c_amp_out', 'Correction from amp to out', c_amp_out, {})
                     self.__addLoggerBlock(block['c_amp_out']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
  
-                    self.__addLoggerBlock(block, 'amp_pin_%d'%counter, 'Amplifier test input level reading', pin, {})
-                    self.__addLoggerBlock(block['amp_pin_%d'%counter]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                    self.__addLoggerBlock(block['amp_pin_%d'%counter]['parameter'], 'lv', 'sg level', lv, {}) 
-                    self.__addLoggerBlock(block,'amp_pout_%d'%counter, 'Amplifier test output level reading', pout, {})
-                    self.__addLoggerBlock(block['amp_pout_%d'%counter]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                    self.__addLoggerBlock(block['amp_pout_%d'%counter]['parameter'], 'lv', 'sg level', lv, {}) 
+                    self.__addLoggerBlock(block, 'amp_pin_%d', 'Amplifier test input level reading', pin, {})
+                    self.__addLoggerBlock(block['amp_pin_%d']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
+                    self.__addLoggerBlock(block['amp_pin_%d']['parameter'], 'lv', 'sg level', lv, {}) 
+                    self.__addLoggerBlock(block,'amp_pout_%d', 'Amplifier test output level reading', pout, {})
+                    self.__addLoggerBlock(block['amp_pout_%d']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
+                    self.__addLoggerBlock(block['amp_pout_%d']['parameter'], 'lv', 'sg level', lv, {}) 
 
-                    sg_pout = self.__insert_it (lv, counter, None, None, f, 0, 0)
-                    amp_pin = self.__insert_it (pin, counter, None, None, f, lv, 0)
-                    amp_pout = self.__insert_it (pout, counter, None, None, f, lv, 0)
+                    sg_pout = self.__insert_it (sg_pout, lv, pfwd, pbwd, f, lv)
+                    amp_pin = self.__insert_it (amp_pin, lv, pfwd, pbwd, f, lv)
+                    amp_pout = self.__insert_it (amp_pout, lv, pfwd, pbwd, f, lv)
                 mg.RFOff_Devices()
                 self.messenger(util.tstamp()+" Amplifier test measurement done.", [])
                 for log in self.logger:
@@ -219,18 +300,18 @@ Quit: quit measurement.
         self.PostUserEvent()
         return stat
 
-    def __insert_it(self, field, value, pf, pb, f, pin, dct=None):
+    def __insert_it(self, field, value, pf, pb, f, sglv, dct=None):
         """
         Inserts a value in a field.
         field: '3D' dictionary of a list of dicts ;-)
-        e.g.: amp_pout[f][pin] is a list [{'value': vector of Quantities, 'pfwd': Quantity, 'pbwd': Quantity}, ...]
+        e.g.: amp_pout[f][sglv] is a list [{'value': vector of Quantities, 'pfwd': Quantity, 'pbwd': Quantity}, ...]
         f: frequency (float)
         """
         field.setdefault(f, {})
-        field[f].setdefault(pin, [])
-        field[f][pin].append({'value': value, 'pfwd': pf, 'pbwd': pb})
+        field[f].setdefault(repr(sglv), [])
+        field[f][repr(sglv)].append({'value': value, 'pfwd': pf, 'pbwd': pb})
         if not dct is None:
-            field[f][pin][-1].update(dct)
+            field[f][repr(sglv)][-1].update(dct)
         return field
 
     def __addLoggerBlock (self, parent, key, comment, val, parameter):

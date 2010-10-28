@@ -37,7 +37,8 @@ class POWERMETER(DRIVER):
                          'resolution': int,
                          'rangemode': str,
                          'manrange': float,
-                         'swr': float,
+                         'swr1': float,
+                         'swr2': float,
                          'sensor': str}}
        
     The meaning is:
@@ -93,7 +94,8 @@ class POWERMETER(DRIVER):
                      'resolution': int,
                      'rangemode': str,
                      'manrange': float,
-                     'swr': float,
+                     'swr1': float,
+                     'swr2': float,
                      'sensor': str}}
 
     _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
