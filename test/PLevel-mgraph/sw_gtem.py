@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
 import visa
 
+LF='R1P1'
+HF='R1P2'
+
+TERM='R2P0'
+GTEM='R2P1'
+
+REST='R3P1R4P0'
+sw_freq=800e6
+
 class SWController(object):
     def __init__(self):
         self.sw=visa.instrument('GPIB::4')#, term_chars = visa.LF)
@@ -12,14 +21,19 @@ class SWController(object):
         return ans
     
     def Init(self, ini, ch=1):
+        self.ch=ch
         self.ask('R1P4R2P0R3P1R4P0') # save settings
+        if ch==1:
+            self.R2=GTEM
+        else:
+            self.R2=TERM
         return 0
     
     def SetFreq(self, f):
-        if f<=1e9:
-            cmd='R1P1R2P1R3P1R4P0'
+        if f<sw_freq:
+            cmd=LF+self.R2+REST
         else:
-            cmd='R1P2R2P1R3P1R4P0'
+            cmd=HF+self.R2+REST
         ans=self.ask(cmd)
         return 0, f
 

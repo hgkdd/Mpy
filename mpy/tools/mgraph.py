@@ -182,6 +182,7 @@ class MGraph(Graph):
         result = {}
         all_paths = self.find_all_paths(start, end) # returs a list of (list of edges)
         #print all_paths
+        ctx=ucomponents.Context()
         Total = quantities.Quantity (unit, 0.0) # init total path correction with 0
         for p in all_paths: # p is a list of edges
             # totals in that path
@@ -220,9 +221,10 @@ class MGraph(Graph):
             #print TotalPath
             #for k,v in result.items():
             #    print k,v
+            TotalPath=ctx.value_of(TotalPath)
             TotalPath = TotalPath.reduce_to(unit)
             Total += TotalPath
-        result['total'] = Total        
+        result['total'] = ctx.value_of(Total)        
         return result
 
     def EvaluateConditions (self, doAction=True):

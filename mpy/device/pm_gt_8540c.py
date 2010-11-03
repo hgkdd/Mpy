@@ -217,7 +217,7 @@ class POWERMETER(PWRMTR):
         self.error=0
         if self._data_valid() and self.value:
             return
-        time.sleep(0.1)
+        time.sleep(0.2)
         self.write('FBUF DUMP')
         POWERMETER.lasttrigger=time.time()
         buf=self.read('(?P<A>.*)')['A']
@@ -231,7 +231,7 @@ class POWERMETER(PWRMTR):
             self.value=self.linav(values[self.N:])
             if self.other and self.other._data_valid():
                 self.other.value=self.linav(values[:self.N])
-        time.sleep(0.1)
+        time.sleep(0.2)
         return self.error
         
     def GetData(self):

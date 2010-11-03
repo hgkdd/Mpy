@@ -1,8 +1,9 @@
 import time
 import sys
+import re
 import numpy as np
 from scipy.interpolate import interp1d
-from scipy.optimize import fmin
+from scipy.optimize import fminbound
 
 from scuq import quantities,si,units
 from mpy.env.Measure import Measure
@@ -327,7 +328,104 @@ Quit: quit measurement.
         parent[key]['value']=val
         parent[key]['parameter']=parameter
 
+    def GetGainAndCompression (self, description=None, small_signal_factor=10):
+        rd=self.rawData[description]
+        pd={}
+        pdg=pd.setdefault('gain', {})
+        pdic1=pd.setdefault('input_compression_1dB', {})
+        pdic3=pd.setdefault('input_compression_3dB', {})
+        pdoc1=pd.setdefault('output_compression_1dB', {})
+        pdoc3=pd.setdefault('output_compression_3dB', {})
+        freqs=rd['amp_pin'].keys()
+        r=re.compile(r'[(Quantity)\(, \)]*')
+        idx=0
+        while True:
+            anyprocessed=False
+            for f in freqs:
+                pinlst=[]
+                poutlst=[]
+                pin=rd['amp_pin'][f]
+                pout=rd['amp_pout'][f]
+                pdg.setdefault(f, [])
+                pdic1.setdefault(f, [])
+                pdic3.setdefault(f, [])
+                pdoc1.setdefault(f, [])
+                pdoc3.setdefault(f, [])
+                sglvs=pin.keys()  # e.g. "Quantity(W, 1e-6)"
+                u_l=[r.split(lv)[1:3] for lv in sglvs]
+                for u,lv in sorted(u_l, key=lambda l: float(l[1])):
+                    sgkey="Quantity(%s, %s)"%(u, lv)
+                    try:
+                        pinlst.append(pin[sgkey][idx]['value'])
+                        poutlst.append(pout[sgkey][idx]['value'])
+                    except IndexError:
+                        pass
+                if pinlst and len(pinlst)==len(poutlst):
+                    #process list
+                    gain, offset, pinc1, poutc1, pinc3, poutc3 = self._get_gain_compression(pinlst, poutlst, small_signal_factor=small_signal_factor)
+                    pdg[f].append(gain)
+                    pdic1[f].append(pinc1)
+                    pdic3[f].append(pinc3)
+                    pdoc1[f].append(poutc1)
+                    pdoc3[f].append(poutc3)
+                    anyprocessed=True
+            if not anyprocessed:
+                del pdg[f]
+                del pdic1[f]
+                del pdic3[f]
+                del pdoc1[f]
+                del pdoc3[f]
+                break
+            idx+=1
+        self.processedData[description]=pd.copy()
+
+                
+    def _get_gain_compression (self, pin, pout, small_signal_factor=10):
+        in_unit=pin[0]._unit
+        out_unit=pout[0]._unit
+        assert(in_unit.get_dimension() == out_unit.get_dimension())
         
+        pin_vals=[abs(p.get_expectation_value()) for p in pin]
+        pout_vals=[abs(p.get_expectation_value()) for p in pout]
+        
+        pin_ss=[pi for pi in pin_vals if pi <= pin_vals[0]*small_signal_factor]
+        pout_ss = pout_vals[:len(pin_ss)]
+        gain, offset = np.polyfit(pin_ss, pout_ss, 1)
+        ideal = lambda pi: offset+gain*pi  # linear
+        orig = interp1d(pin_vals, pout_vals)
+        c1func = lambda pi: ideal(pi)/orig(pi)-1.259   # 1 dB
+        c3func = lambda pi: ideal(pi)/orig(pi)-1.995   # 3 dB
+        pinc1 = fminbound(c1func, pin_vals[0], pin_vals[-1])[0]
+        pinc3 = fminbound(c3func, pinc1, pin_vals[-1])[0]
+        poutc1=float(orig(pinc1))
+        poutc3=float(orig(pinc3))
+        # make quantities
+        pinc1 = quantities.Quantity(in_unit, pinc1)
+        pinc3 = quantities.Quantity(in_unit, pinc3)
+        poutc1 = quantities.Quantity(out_unit, poutc1)
+        poutc3 = quantities.Quantity(out_unit, poutc3)
+        gain = quantities.Quantity(out_unit/in_unit, gain)
+        offset = quantities.Quantity(out_unit, offset)
+
+        return gain, offset, pinc1, poutc1, pinc3, poutc3
+        
+        # pin_vals=10*np.log10(pin_vals)
+        # pout_vals=10*np.log10(pout_vals)
+        
+        # pin_ss=[pi for pi in pin_vals if pi <= pin_vals[0]+np.log10(small_signal_factor)]
+        # pout_ss = pout_vals[:len(pin_ss)]
+        # gain, offset = np.polyfit(pin_ss, pout_ss, 1)
+        # ideal = lambda pi: offset+gain*pi
+        # orig = interp1d(pin_vals, pout_vals)
+        # c1func = lambda pi: ideal(pi)-orig(pi)-1.   # 1 dB
+        # c3func = lambda pi: ideal(pi)-orig(pi)-3.   # 3 dB
+        # pinc1 = fminbound(c1func, pin_vals[0], pin_vals[-1])[0]
+        # pinc3 = fminbound(c3func, pinc1, pin_vals[-1])[0]
+        # poutc1=float(orig(pinc1))
+        # poutc3=float(orig(pinc3))
+        # return offset, gain, 10**(pinc1*0.1), 10**(poutc1*0.1), 10**(pinc3*0.1), 10**(poutc3*0.1)
+                    
+                
 
 if __name__ == '__main__':
     import cPickle as pickle
@@ -335,19 +433,6 @@ if __name__ == '__main__':
     from scuq.quantities import Quantity
     from scuq.si import WATT
     
-    def get_gain_compression (pin, pout, small_signal_factor=10):
-        pin_ss=[pi for pi in pin if pi <= pin[0]*small_signal_factor]
-        pout_ss = pout[:len(pin_ss)]
-        gain, offset = np.polyfit(pin_ss, pout_ss, 1)
-        ideal = lambda pin: offset+gain*pin
-        orig = interp1d(pin, pout)
-        c1func = lambda pin: ideal(pin)/orig(pin)-1.259
-        c3func = lambda pin: ideal(pin)/orig(pin)-1.995
-        pinc1 = fmin(c1func, pin[0])
-        pinc3 = fmin(c3func, pinc1)
-        pountc1=orig(pinc1)
-        poutc3=orig(pinc3)
-        return gain, offset, pinc1, poutc1, pinc3, poutc3
     
     dot='gtem-immunity.dot'
     # keys: names in program, values: names in graph
