@@ -393,9 +393,9 @@ Quit: quit measurement.
         gain, offset = np.polyfit(pin_ss, pout_ss, 1)
         ideal = lambda pi: offset+gain*pi  # linear
         orig = interp1d(pin_vals, pout_vals)
-        c1func = lambda pi: ideal(pi)/orig(pi)-1.259   # 1 dB
-        c3func = lambda pi: ideal(pi)/orig(pi)-1.995   # 3 dB
-        pinc1 = fminbound(c1func, pin_vals[0], pin_vals[-1])[0]
+        c1func = lambda pi: abs(ideal(pi)-orig(pi)*1.259)   # 1 dB
+        c3func = lambda pi: abs(ideal(pi)-orig(pi)*1.995)   # 3 dB
+        pinc1 = fminbound(c1func, 0.5*pin_vals[-1], pin_vals[-1])[0]
         pinc3 = fminbound(c3func, pinc1, pin_vals[-1])[0]
         poutc1=float(orig(pinc1))
         poutc3=float(orig(pinc3))
