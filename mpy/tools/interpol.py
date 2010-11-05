@@ -11,6 +11,7 @@ import cmath
 import math
 import scipy
 scipy.pkgload('interpolate')
+from numpy import nan_to_num
 from scuq import *
 
 def _arg(obj):
@@ -50,6 +51,7 @@ def unwrap(dct, arg=None):
         unwrapped[2].append(phik)
         try:
             q=dct[freqs[k+1]]/dct[f]
+            q=nan_to_num(q)
             dang=arg(q)
         except ZeroDivisionError:
             dang=0

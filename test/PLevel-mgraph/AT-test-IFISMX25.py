@@ -11,7 +11,7 @@ def W2dBm (v):
 
 description="IFI SMX25"
     
-if False:
+if True:
     dot='gtem-immunity.dot'
     # keys: names in program, values: names in graph
     names={'sg': 'sg',
@@ -32,7 +32,7 @@ if False:
                dotfile=dot,
                names=names,
                freqs=freqs,
-               levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-30, 0, 31)])
+               levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-5, 0, 6)])
     pickle.dump (AT, file('%s.p'%description, 'wb'), 2)
 else:
     AT=pickle.load (file('%s.p'%description, 'rb'))

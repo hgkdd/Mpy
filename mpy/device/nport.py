@@ -8,7 +8,7 @@ from mpy.device.driver import DRIVER
 class NPORT(DRIVER):
     """
     Child class for all py-drivers for n-ports (like antennas, cables, hybrids, ...)
-	The parent class is DRIVER
+    The parent class is DRIVER
     """
     conftmpl={'description': 
                  {'description': str,

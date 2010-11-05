@@ -717,10 +717,10 @@ class MGraph(Graph):
                     pass
         return eta
                     
-    def AmplifierProtect (self, start, end, startlevel, sg_unit, typ='save'):
+    def AmplifierProtect (self, start, end, startlevel, sg_unit=si.WATT, typ='save'):
         isSafe = True
         msg = ''
-        if not hasattr(startlevel, '__unit__'):
+        if not isinstance(startlevel, quantities.Quantity):
             startlevel = quantities.Quantity(sg_unit, startlevel)
         allpaths = self.find_all_paths(start, end)
         for path in allpaths: #path is a list of edges
@@ -763,7 +763,8 @@ class MGraph(Graph):
                                 #for _k,_v in corr.items():
                                     #print "corr[%s]:"%_k, _v
                                 #print "Startlevel:", startlevel
-                                level = corr['total'] * startlevel
+                                level = corr * startlevel
+                                level=level.reduce_to(result._unit)
                                 #print "Level:", level
                                 #print "What = '%s', Level = %s, Max = %s\n"%(w, str(level), str(result))
                                 #if typ=='lasy':
@@ -774,7 +775,7 @@ class MGraph(Graph):
                                 #    condition=level.get_u() > result.get_l() #be safe: errorbars overlap
                                 if condition: 
                                     isSafe=False
-                                    msg += "Amplifier Pretection failed for node '%s'. What = '%s', Level = %s, Max = %s, Startlevel = %s, Corr = %s\n"%(edge_dev, w, level, result, startlevel, corr['total'])
+                                    msg += "Amplifier Pretection failed for node '%s'. What = '%s', Level = %s, Max = %s, Startlevel = %s, Corr = %s\n"%(edge_dev, w, level, result, startlevel, corr)
                             break        
         return isSafe,msg
 

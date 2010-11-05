@@ -230,6 +230,10 @@ Quit: quit measurement.
       
                 mg.RFOn_Devices()
                 for counter, lv in enumerate(levels):
+                    isSafe, msg = mg.AmplifierProtect(mg.name.sg, mg.name.amp_out, lv)
+                    if not isSafe:
+                        self.messenger(util.tstamp()+" %s"%(msg), [])
+                        continue
                     instrumentation.sg.SetLevel(lv)
                     time.sleep(delay)
                     
