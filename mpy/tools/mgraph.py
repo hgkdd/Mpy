@@ -768,12 +768,12 @@ class MGraph(Graph):
                                 #print "Level:", level
                                 #print "What = '%s', Level = %s, Max = %s\n"%(w, str(level), str(result))
                                 #if typ=='lasy':
-                                condition=( abs(level) > abs(result) )
+                                notsafe=( abs(level.get_expectation_value()) > abs(result.get_expectation_value()) )
                                 #elif typ=='save':
                                 #    condition=level.get_u() > result.get_l() #be safe: errorbars overlap
                                 #else:
                                 #    condition=level.get_u() > result.get_l() #be safe: errorbars overlap
-                                if condition: 
+                                if notsafe: 
                                     isSafe=False
                                     msg += "Amplifier Pretection failed for node '%s'. What = '%s', Level = %s, Max = %s, Startlevel = %s, Corr = %s\n"%(edge_dev, w, level, result, startlevel, corr)
                             break        

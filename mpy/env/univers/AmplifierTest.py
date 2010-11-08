@@ -147,7 +147,7 @@ class AmplifierTest(Measure):
                                'amp_out': 'amp_out',
                                'pm_fwd': 'pm1',
                                'pm_bwd': 'pm2',
-                               'output': 'gtem'}):
+                               'output': 'gtem'}, virtual=False):
         """
         Performs an amplifier test measurement.
 
@@ -172,6 +172,8 @@ class AmplifierTest(Measure):
 
         mg=MGraph(dotfile, names)
         instrumentation=mg.CreateDevices()
+        if virtual:
+            mg.CmdDevices(False, 'SetVirtual', True)
 
         self.messenger(util.tstamp()+" Init devices...", [])
         err = mg.Init_Devices()
@@ -389,8 +391,8 @@ Quit: quit measurement.
         out_unit=pout[0]._unit
         assert(in_unit.get_dimension() == out_unit.get_dimension())
         
-        pin_vals=[abs(p.get_expectation_value()) for p in pin]
-        pout_vals=[abs(p.get_expectation_value()) for p in pout]
+        pin_vals=[abs(p.get_expectation_value_as_float()) for p in pin]
+        pout_vals=[abs(p.get_expectation_value_as_float()) for p in pout]
         
         pin_ss=[pi for pi in pin_vals if pi <= pin_vals[0]*small_signal_factor]
         pout_ss = pout_vals[:len(pin_ss)]

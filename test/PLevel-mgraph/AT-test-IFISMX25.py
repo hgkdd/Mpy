@@ -32,7 +32,7 @@ if True:
                dotfile=dot,
                names=names,
                freqs=freqs,
-               levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-5, 0, 6)])
+               levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-5, 0, 6)], virtual=True)
     pickle.dump (AT, file('%s.p'%description, 'wb'), 2)
 else:
     AT=pickle.load (file('%s.p'%description, 'rb'))
