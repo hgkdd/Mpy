@@ -12,6 +12,7 @@ import types
 import time
 import sys
 import traceback
+import numpy as np
 
 from mpy.tools.getch import getch
 from mpy.tools.kbhit import kbhit
@@ -361,4 +362,23 @@ def isiterable(obj):
         return True
     except TypeError:
         return False
-    
+
+
+def extrap1d(interpolator):
+    xs = interpolator.x
+    ys = interpolator.y
+
+    def pointwise(x):
+        if x < xs[0]:
+            return min(ys[0],ys[0]+(x-xs[0])*(ys[1]-ys[0])/(xs[1]-xs[0]))
+        elif x > xs[-1]:
+            return max(ys[-1],ys[-1]+(x-xs[-1])*(ys[-1]-ys[-2])/(xs[-1]-xs[-2]))
+        else:
+            return interpolator(x)
+
+    def ufunclike(xs):
+        if not hasattr(xs, '__iter__'):
+            xs=[xs]
+        return np.array(map(pointwise, np.array(xs)))
+
+    return ufunclike

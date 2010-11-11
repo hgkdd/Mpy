@@ -8,7 +8,7 @@ TERM='R2P0'
 GTEM='R2P1'
 
 REST='R3P1R4P0'
-sw_freq=800e6
+sw_freq=1000e6
 
 class SWController(object):
     def __init__(self):

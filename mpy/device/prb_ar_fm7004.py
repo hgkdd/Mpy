@@ -73,6 +73,7 @@ def test():
     ini=format_block("""
                         [DESCRIPTION]
                         description: 'FL7018@FM7004'
+                        description: 'FL7018@FM7004'
                         type:        'FIELDPROBE'
                         vendor:      'Amplifier Research'
                         serialnr:

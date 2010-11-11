@@ -232,6 +232,9 @@ Quit: quit measurement.
       
                 mg.RFOn_Devices()
                 for counter, lv in enumerate(levels):
+                    maxSafe=mg.MaxSafeLevel(mg.name.sg, mg.name.amp_out)
+                    if maxSafe:
+                        self.messenger(util.tstamp()+" Maximum safe level: %s"%(maxSafe), [])
                     isSafe, msg = mg.AmplifierProtect(mg.name.sg, mg.name.amp_out, lv)
                     if not isSafe:
                         self.messenger(util.tstamp()+" %s"%(msg), [])

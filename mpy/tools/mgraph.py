@@ -4,11 +4,13 @@ import inspect
 import pydot
 import ConfigParser
 from numpy import bool_
+from scipy.interpolate import interp1d
 
 import mpy.device.device as device
 from scuq import *
 from mpy.tools.aunits import *
 from mpy.tools.Configuration import fstrcmp
+from mpy.tools.util import extrap1d
 
 def _stripstr(s):
     r=s
@@ -116,6 +118,24 @@ class Graph(object):
         #print 'exit:', paths
         return paths
 
+    def get_common_parent (self, n1, n2):
+        # trivial cases
+        if self.find_path(n1,n2):
+            return n1
+        if self.find_path(n2,n1):
+            return n2
+        # find for 'real' parent
+        edges=[e for e in self.edges if e.get_destination() == n1]
+        for edge in edges:
+            parent_node=edge.get_source()
+            gnode=self.graph.get_node(parent_node)
+            eact=self._active(edge)
+            gact=self._active(gnode)
+            is_active = eact and gact
+            if is_active:
+                return self.get_common_parent(parent_node, n2)
+        return None
+        
     def find_shortest_path(self, start, end, path=[]):
         """Returns the shortest path from *start* to *end*.
            Ignores edges with attribute `active==False`.
@@ -165,7 +185,17 @@ class MGraph(Graph):
             return None
 
     def get_path_correction (self, start, end, unit=None):
-        return self.get_path_corrections (start, end, unit=unit)['total']
+        if start == end:
+            return quantities.Quantity(units.ONE, 1)
+    
+        parent=self.get_common_parent(start, end)
+        if parent==start:
+            corr=self.get_path_corrections (start, end, unit=unit)['total']
+        elif parent==end:
+            corr=1.0/self.get_path_corrections (end, start, unit=unit)['total']
+        else:
+            corr=self.get_path_corrections (parent, end, unit=unit)['total']/self.get_path_corrections (parent, start, unit=unit)['total']
+        return corr
     
     def get_path_corrections (self, start, end, unit=None):
         """Returns a dict with the corrections for all edges from *start* to *end*. *unit* can be 
@@ -180,6 +210,7 @@ class MGraph(Graph):
             unit=AMPLITUDERATIO
         assert unit in (AMPLITUDERATIO, POWERRATIO)
         result = {}
+                
         all_paths = self.find_all_paths(start, end) # returs a list of (list of edges)
         #print all_paths
         ctx=ucomponents.Context()
@@ -305,7 +336,7 @@ class MGraph(Graph):
         dev_map={'signalgenerator': 'Signalgenerator',
                  'powermeter': 'Powermeter',
                  'switch': 'Switch',
-                 'probe': 'Fieldprobe',
+                 'fieldprobe': 'Fieldprobe',
                  'cable': 'Cable',
                  'motorcontroller': 'MotorController',
                  'tuner': 'Tuner',
@@ -779,6 +810,54 @@ class MGraph(Graph):
                             break        
         return isSafe,msg
 
+    def MaxSafeLevel (self, start, end, typ='save'):
+        levels=[]
+        allpaths = self.find_all_paths(start, end)
+        for path in allpaths: #path is a list of edges
+            edges = []
+            for p in path:
+                left  = p.get_source()
+                right = p.get_destination()
+                edges.append((left,right,p))
+            for left,right,edge in edges:
+                try:
+                    edge_dev=edge.get_attributes()['dev']
+                    attribs = self.nodes[edge_dev]
+                except KeyError:
+                    continue
+                if attribs['inst'] is None:
+                    continue
+                err = 0
+                if attribs['active']:
+                    dev=attribs['inst']
+                    cmds = ['getData', 'GetData']
+                    stat = -1
+                    for cmd in cmds:
+                        #print hasattr(dev, cmd)
+                        if hasattr(dev, cmd):
+                            # at the moment, we only check for MAXIN
+                            what = ['MAXIN'] #['MAXIN', 'MAXFWD', 'MAXBWD']
+                            for w in what:
+                                stat = 0
+                                try:
+                                    stat, result = getattr(dev, cmd)(w)
+                                except AttributeError:
+                                    # function not callable
+                                    #print "attrErr"
+                                    continue 
+                                if stat != 0:
+                                    #print stat
+                                    continue
+                                # ok we have a value that can be checked
+                                corr = self.get_path_correction(start, left, POWERRATIO)
+                                level = result / corr # level at start
+                                level=level.reduce_to(result._unit)
+                                levels.append(level)
+        if not len(levels):
+            return None
+        else:
+            return min(levels)
+
 
     def CalcLevelFrom (self, sg, limiter, what):
         if sg not in self.nodes:
@@ -824,3 +903,87 @@ class MGraph(Graph):
         #    raise "Ini file '%s' not found. Path is '%s'"%(ini,umdpath)
         v=readConfig(ini)
         return makeDict(v)
+
+class Leveler(object):
+    def __init__(self, mg, actor, output, lpoint, observer, pin=None, datafunc=None):
+        """
+        mg: MGraph instance
+        actor: name of device in mg. device instance has to have SetLevel method
+        output: name of output device: path from actor to output is checked for MaxSafeLevel
+        lpoint: name of point where a specific value has to be reached
+        observer: name of device where lpoint is observed
+        """
+        self.mg=mg
+        self.actor=actor
+        self.sg=getattr(mg, actor)
+        self.pm=getattr(mg, observer)
+        
+        self.lpoint=lpoint
+        self.output=output
+        self.observer=observer
+        self.MaxSafe=abs(mg.MaxSafeLevel(actor, output).get_expectation_value())
+        self.actorunit=self.MaxSafe._unit
+        self.lpointunit=None
+        self.corr=None
+        self.samples={}
+        if pin is None:
+            pin=[fac*self.MaxSafe for fac in (0.001, 0.01)]
+        if datafunc is None:
+            self.datafunc = lambda x: x
+        else:
+            self.datafunc=datafunc
+        self.add_samples(pin)
+        self.update_interpol()
+
+    def add_samples(self, pin):
+        if not hasattr(pin, '__iter__'):
+            pin=[pin]
+        for pi in pin:
+            if pi > self.MaxSafe:
+                continue
+            self.sg.SetLevel(pi)
+            pikey=abs(pi)
+            pikey=pikey.get_expectation_value_as_float()
+            self.pm.Trigger()
+            err, obs = self.pm.GetData()
+            obs=self.datafunc(obs)
+            self.corr = self.mg.get_path_correction(self.observer, self.lpoint, POWERRATIO)
+            lpoint = obs * self.corr
+            if not self.lpointunit:
+                self.lpointunit=lpoint._unit
+            assert(self.lpointunit==lpoint._unit)
+            lpoint=lpoint.reduce_to(obs._unit)
+            lpoint=abs(lpoint)
+            self.samples[pikey]=lpoint.get_expectation_value_as_float()
+        self.update_interpol()
+
+    def update_interpol(self):
+        x=sorted(self.samples)
+        y=[self.samples[xi] for xi in x]
+        self.interp=interp1d(x,y)
+        self.extrap=extrap1d(self.interp)
+        self.i_interp=interp1d(y,x)
+        self.i_extrap=extrap1d(self.i_interp)
+
+    def adjust_level (self, soll, maxiter=10, relerr=0.01):
+        #self.add_samples(soll/self.amp.g)
+        sf=soll.get_value(self.lpointunit)
+        sf=float(abs(sf))
+        safemax=self.MaxSafe.get_expectation_value_as_float()
+        #self.x=[]
+        #self.y=[]
+        for i in range(maxiter):
+            inval=self.i_extrap(sf)[0]
+            pin=quantities.Quantity(self.actorunit, min(inval, safemax))
+            self.add_samples(pin)
+            pout=quantities.Quantity(self.lpointunit, self.samples[pin.get_expectation_value_as_float()])
+            re=abs(pout-soll)/soll
+            re=re.reduce_to(units.ONE)
+            #self.x.append(pin)
+            #self.y.append(pout)
+            #print i, pin, pout, soll, re
+            if re.get_expectation_value_as_float()<=relerr:
+                break
+            if (pin>=self.MaxSafe) and (pout <= soll):
+                break
+        return pin, pout

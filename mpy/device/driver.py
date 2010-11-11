@@ -81,7 +81,7 @@ class DRIVER(object):
             self.write=self._debug_write
             self.read=self._debug_read
             self.query=self._debug_query
-            return True
+            return self.dev
         else:
             import visa
             if values_format is None:

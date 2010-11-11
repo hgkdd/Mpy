@@ -2,6 +2,7 @@
 #
 import sys
 import re
+import time
 import struct
 import bidict
 import StringIO
@@ -10,6 +11,11 @@ from scuq import si,quantities,ucomponents
 from mpy.tools.Configuration import fstrcmp
 from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
 
+debug = True
+def dprint(arg):
+    if debug:
+        print(arg)
+
 class FIELDPROBE(FLDPRB):
     conftmpl=FLDPRB.conftmpl
     conftmpl['init_value']['com']=int
@@ -17,30 +23,53 @@ class FIELDPROBE(FLDPRB):
         FLDPRB.__init__(self)
         self._internal_unit=si.VOLT/si.METER
 
+    def _write(self, cmd):
+        self.dev.flushInput()
+        self.dev.flushOutput()
+        self.dev.write(cmd)
+        time.sleep(0.1)
+
+    def _read(self, num=1):
+        ans=self.dev.read(num)
+        return ans
+
+    def _query(self, cmd, num=1):
+        self._write(cmd)
+        ans=self._read(num)
+        return ans
 
     def Init(self, ini=None, channel=None):
         if channel is None:
             channel=1
-        #self.error=FLDPRB.Init(self, ini, channel)
+        self.error=0
+        self.error=FLDPRB.Init(self, ini, channel)
         sec='channel_%d'%channel
         try:
             self.unit=self.conf[sec]['unit']
         except KeyError:
             self.unit=self._internal_unit
 
-        self.com=3
-        self.dev=serial.Serial('COM%d'%self.com)
-        self.dev.timeout=1
-        self.dev.write('#00e 600') # switch off after 3 minutes
-        return 0
+        self.com=int(self.conf['init_value']['com'])
+        self.dev=serial.Serial(port='COM%d'%self.com, 
+                               timeout=1,
+                               baudrate=9600)
+
+        #self.dev.write('#00e 600') # switch off after 3 hours
+        ans=self._query('#00e 10800*', 1) # switch off after 3 hours
+        if ans != 'e':
+            self.error=1
+        self._write('#00?v*')  # set device to slave mode
+        self.dev.flushInput()
+        return self.error
 
     def GetDescription(self):
         self.error=0
-        self.dev.write('#00?v*')
+        self_write('#00?v*')
         des=[]
         while True:
-            ans=self.dev.read(1)
+            ans=self._read(1)
             if ans==';':
+                self.dev.flushInput()
                 break
             des.append(ans)
         des=''.join(des)
@@ -54,31 +83,36 @@ class FIELDPROBE(FLDPRB):
         rfreq=None
         ifreq=int(freq*1e-4)
         cmd='#00k %d*'%ifreq
-        print cmd
-        self.dev.write(cmd)
+        #print cmd
+        self._write(cmd)
         for i in range(10):
-            ans=self.dev.read(1)
+            ans=self._read(1)
             if ans == 'k':
                 break
         #print len(ans), ans, repr(ans)
         if ans=='k':
-            rfreq=struct.unpack('<f', self.dev.read(4))[0]
+            rfreq=struct.unpack('<f', self._read(4))[0]
             #print rfreq
         else:
             self.error=1
+        self.dev.flushInput()
         return self.error, rfreq*1e6
     
     def GetData(self):
         self.error=0
         data=None
-        self.dev.write('#00?A*')
-        ans=self.dev.read(1)
-        if ans=='A':
-            data=struct.unpack('<3f', self.dev.read(12))
-            relerr=0.1  # geschaetzt        
-            data=[quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(v, v*relerr)) for v in data]
-        else: 
-            self.error=1
+        for i in range(5):
+            ans=self._query('#00?A*',1)
+            #if debug: print ans
+            if ans=='A':
+                data=struct.unpack('<3f', self._read(12))
+                relerr=0.1  # geschaetzt        
+                data=[quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(v, v*relerr)) for v in data]
+                self.error=0
+                break
+            else: 
+                self.error=1
+        self.dev.flushInput()
         return self.error, data
     
     def GetDataNB(self, retrigger):
@@ -95,21 +129,50 @@ class FIELDPROBE(FLDPRB):
     def GetBatteryState(self):
         self.error=0
         percent=0.0
-        self.dev.write('#00?b*')
-        ans=self.dev.read(1)
+        ans=self._query('#00?b*', 1)
         nn=0
         if ans=='b':
-            nn=struct.unpack('<H', self.dev.read(2))[0]
+            nn=struct.unpack('<H', self._read(2))[0]
             #print nn
         else: 
             self.error=1
         percent=3*1.6*nn/1024
+        self.dev.flushInput()
         return self.error, percent*0.01
     
     def Quit(self):
         self.error=0
         return self.error
-            
+
+def test():
+    from mpy.tools.util import format_block
+    ini=format_block("""
+                    [DESCRIPTION]
+                    description: PMM EP601
+                    type:        FIELDPROBE
+                    vendor:      PMM
+                    serialnr:
+                    deviceid:
+                    driver: prb_pmm_ep601.py
+
+                    [Init_Value]
+                    fstart: 10e3
+                    fstop: 9.25e9
+                    fstep: 0
+                    COM: 3
+                    virtual: 0
+
+                    [Channel_1]
+                    name: EField
+                    unit: Voverm
+                    """)
+    ini=StringIO.StringIO(ini)
+    dev=FIELDPROBE()
+    dev.Init(ini)
+    return dev
+
+
+        
 def main():
     from mpy.tools.util import format_block
     from mpy.device.fieldprobe_ui import UI as UI
@@ -123,29 +186,27 @@ def main():
     except IndexError:
         ini=format_block("""
                         [DESCRIPTION]
-                        description: 'SMF100A'
-                        type:        'SIGNALGENERATOR'
-                        vendor:      'Rohde&Schwarz'
+                        description: PMM EP601
+                        type:        FIELDPROBE
+                        vendor:      PMM
                         serialnr:
                         deviceid:
                         driver:
 
                         [Init_Value]
-                        fstart: 100e3
-                        fstop: 22e9
-                        fstep: 1
-                        gpib: 28
+                        fstart: 10e3
+                        fstop: 9.25e9
+                        fstep: 0
+                        COM: 3
                         virtual: 0
 
                         [Channel_1]
-                        name: RFOut
-                        level: -100.0
-                        unit: dBm
-                        outpoutstate: 0
+                        name: EField
+                        unit: Voverm
                         """)
         ini=StringIO.StringIO(ini)
-    sg=SIGNALGENERATOR()
-    ui=UI(sg,ini=ini)
+    dev=FIELDPROBE()
+    ui=UI(dev,ini=ini)
     ui.configure_traits()
 
 if __name__ == '__main__':
