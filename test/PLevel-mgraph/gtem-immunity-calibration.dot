@@ -5,7 +5,7 @@ digraph {
     pm1 [ini="ini\\pm_gt_8542.ini" ch=1]
     pm2 [ini="ini\\pm_gt_8542.ini" ch=2]
     fp [ini="ini\\prb_pmm_ep601.ini"]
-    sw [ini="ini\\sw_gtem.ini" ch=1]
+    sw [ini="ini\\sw_gtem.ini"]
 
     cbl_sg_amp1 [ini="ini\\sg-amp1in.ini" condition="0<=f<=18e9"]
     cbl_amp1_gtem [ini="ini\\amp1out-gtem.ini" condition="10e3<=f<=1e9"]
