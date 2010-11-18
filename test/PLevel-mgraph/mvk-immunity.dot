@@ -1,0 +1,66 @@
+digraph {
+    Sw [ini="ini\\.ini"]
+    Sg [ini="ini\\.ini"]
+    AmpLF [ini="ini\\.ini" condition="8e7<=f<=1e9"]
+    AmpHF [ini="ini\\.ini" condition="1e9<f<=18e9"]
+    Rec [ini="ini\\.ini"]
+    Pm1 [ini="ini\\.ini" ch=1]
+    Pm2 [ini="ini\\.ini" ch=2]
+    
+    Cbl_Sg_LFamp [ini="ini\\.ini" condition=""]
+    Cbl_Sg_HFamp [ini="ini\\.ini" condition=""]
+    
+    Cbl_LFamp_TxLFant[ini="ini\\.ini" condition=""]
+    Cbl_HFamp_TxHFant[ini="ini\\.ini" condition=""]
+
+    Cbl_LFamp_PmFwd[ini="ini\\.ini" condition=""]
+    Cbl_TxLFant_PmRev[ini="ini\\.ini" condition=""]
+    
+    Cbl_HFamp_PmFwd[ini="ini\\.ini" condition=""]
+    Cbl_TxHFant_PmRev[ini="ini\\.ini" condition=""]
+    
+    Cbl_RxLFamp_Att0_Pm[ini="ini\\.ini" condition=""]
+    Cbl_RxLFamp_Att20_Pm[ini="ini\\.ini" condition=""]
+    Cbl_RxHFamp_Att0_Pm[ini="ini\\.ini" condition=""]
+    Cbl_RxHFamp_Att20_Pm[ini="ini\\.ini" condition=""]
+    
+    RxAnt -> RxAnt_LF [condition="8e7<=f<=1e9"]
+    RxAnt -> RxAnt_HF [condition="1e9<f<=18e9"]
+    
+    RxAnt_LF -> RxPath_direct [dev=Cbl_RxLFamp_Att0_Rec what="S21"]
+    RxAnt_HF -> RxPath_direct [dev=Cbl_RxHFamp_Att0_Rec what="S21"]
+    RxAnt_LF -> RxPath_20dB [dev=Cbl_RxLFamp_Att20_Rec what="S21"]
+    RxAnt_HF -> RxPath_20dB [dev=Cbl_RxHFamp_Att20_Rec what="S21"]
+    
+    RxPath_direct -> Pm [condition=""]
+    RxPath_20dB -> Pm [condition=""]
+    
+    Sg -> Sg_LFamp [condition="8e7<=f<=1e9"]
+    Sg -> Sg_HFamp [condition="1e9<f<=18e9"]
+    
+    Sg_LFamp -> Amp_Input [dev=Cbl_Sg_LFamp what="S21"]
+    Sg_HFamp -> Amp_Input [dev=Cbl_Sg_HFamp what="S21"]
+    
+    Amp_Input -> Amp_LF   [condition="8e7<=f<=1e9"]
+    Amp_Input -> Amp_HF   [condition="1e9<f<=18e9"]
+
+    Amp_LF -> Amp_Output   [dev=AmpLF what="S21"]
+    Amp_HF -> Amp_Output   [dev=AmpHF what="S21"]
+
+    Amp_Output -> TxAnt_LF  [condition="8e7<=f<=1e9"]
+    Amp_Output -> TxAnt_HF  [condition="1e9<f<=18e9"]
+    
+    TxAnt_LF -> TxAnt  [dev=Cbl_LFamp_TxLFant what="S21"]
+    TxAnt_HF -> TxAnt  [dev=Cbl_HFamp_TxHFant what="S21"]
+   
+    Amp_Output -> PmFwd_LF  [condition="8e7<=f<=1e9"]
+    Amp_Output -> PmFwd_HF  [condition="1e9<f<=18e9"]
+    Amp_Output -> PmRev_LF  [condition="8e7<=f<=1e9"]
+    Amp_Output -> PmRev_HF  [condition="1e9<f<=18e9"]
+    
+    PmFwd_LF -> PmFwd [dev=Cbl_LFamp_PmFwd what="S21"]
+    PmFwd_HF -> PmFwd [dev=Cbl_HFamp_PmFwd what="S21"]
+    PmRev_LF -> PmRev [dev=Cbl_TxLFant_PmRev what="S21"]
+    PmRev_HF -> PmRev [dev=Cbl_TxHFant_PmRev what="S21"]
+    
+}
