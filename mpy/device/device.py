@@ -94,7 +94,7 @@ class Device(object):
               "ANTENNA",
               "NPORT",
               "SWITCH",
-              "PROBE",
+              "FIELDPROBE",
               "AMPLIFIER",
               "MOTORCONTROLLER",
               "TUNER",

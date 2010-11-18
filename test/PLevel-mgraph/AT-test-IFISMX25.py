@@ -27,12 +27,12 @@ if True:
     freqb1=linspace(10e3, 200e6, 20)
     freqb2=linspace(200e6, 1e9 , 20)
     freqs = concatenate((freqb1,freqb2))
-
+    levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-5, 0, 6)]
     AT.Measure(description=description,
                dotfile=dot,
                names=names,
                freqs=freqs,
-               levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-5, 0, 6)], virtual=True)
+               levels=levels, virtual=False)
     pickle.dump (AT, file('%s.p'%description, 'wb'), 2)
 else:
     AT=pickle.load (file('%s.p'%description, 'rb'))
