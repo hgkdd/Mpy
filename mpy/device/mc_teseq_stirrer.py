@@ -23,12 +23,12 @@ class MOTORCONTROLLER(MC):
     def _wait(self):
         stopped=False
         while not stopped: # loop until stirrer is stopped
-            stopped, ca, drive_init_ok, fail = self_state()
+            stopped, ca, drive_init_ok, fail = self._state()
             time.sleep(0.2) # don't jam the serial bus
         return self.ca
     
     def _write(self, cmd):
-        self.dev.flushInput() # flus input buffer before new cmd is send
+        self.dev.flushInput() # flush input buffer before new cmd is send
         n=self.dev.write('%s\r'%cmd)
         return n-1
     
@@ -122,15 +122,15 @@ class MOTORCONTROLLER(MC):
 
     def GetState(self):
         self.error=0
-        stopped, ca, drive_init_ok, fail = self_state()
+        stopped, ca, drive_init_ok, fail = self._state()
         if stopped:
             return self.error, ca, 0
         else:
             ca2=ca
             d=0
-            while (not stopped) or (ca2!=ca)
+            while (not stopped) or (ca2!=ca):
                 time.sleep(0.1)
-                stopped, ca2, drive_init_ok, fail = self_state()
+                stopped, ca2, drive_init_ok, fail = self._state()
             if ca2>ca:
                 d=1
             elif ca2<ca:
