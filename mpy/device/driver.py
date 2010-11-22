@@ -7,6 +7,7 @@
 """
 
 import re
+import os
 from mpy.tools.Configuration import Configuration,fstrcmp
 from mpy.device.device import CONVERT, Device
 
@@ -52,7 +53,10 @@ class DRIVER(object):
     
     For other low level operation you may use the device stored in ``self.dev`` directly.
     """
-    def __init__(self):
+    def __init__(self, SearchPaths=None):
+        if SearchPaths == None:
+            SearchPaths=[os.getcwd()]
+        self.SearchPaths=SearchPaths
         self.error=0
         self.conf={}
         self.conf['description']={}

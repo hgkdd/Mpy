@@ -17,44 +17,33 @@ def W2dBm (v):
     return 10*np.log10(v*1000)
 
 class AmplifierTest(Measure):
-    def __init__(self):
-        self.asname=None
-        self.ascmd=None
-        self.autosave = False
-        self.autosave_interval = 3600
-        self.lastautosave = time.time()
-        self.logger=[self.stdLogger]
-        self.logfile=None
-        self.logfilename=None
-        self.messenger=self.stdUserMessenger
-        self.UserInterruptTester=self.stdUserInterruptTester
-        self.PreUserEvent=self.stdPreUserEvent
-        self.PostUserEvent=self.stdPostUserEvent        
+    def __init__(self, SearchPath=None):
+        Measure.__init__(self, SearchPaths=SearchPaths)
         self.rawData= {}
         self.processedData = {}
 
-    def __setstate__(self, dct):
-        if dct['logfilename'] is None:
-            logfile = None
-        else:
-            logfile = file(dct['logfilename'], "a+")
-        self.__dict__.update(dct)
-        self.logfile = logfile
-        self.messenger=self.stdUserMessenger
-        self.logger=[self.stdLogger]
-        self.UserInterruptTester=self.stdUserInterruptTester
-        self.PreUserEvent=self.stdPreUserEvent
-        self.PostUserEvent=self.stdPostUserEvent        
+    # def __setstate__(self, dct):
+        # if dct['logfilename'] is None:
+            # logfile = None
+        # else:
+            # logfile = file(dct['logfilename'], "a+")
+        # self.__dict__.update(dct)
+        # self.logfile = logfile
+        # self.messenger=self.stdUserMessenger
+        # self.logger=[self.stdLogger]
+        # self.UserInterruptTester=self.stdUserInterruptTester
+        # self.PreUserEvent=self.stdPreUserEvent
+        # self.PostUserEvent=self.stdPostUserEvent        
 
-    def __getstate__(self):
-        odict = self.__dict__.copy()
-        del odict['logfile']
-        del odict['logger']
-        del odict['messenger']
-        del odict['UserInterruptTester']
-        del odict['PreUserEvent']
-        del odict['PostUserEvent']        
-        return odict
+    # def __getstate__(self):
+        # odict = self.__dict__.copy()
+        # del odict['logfile']
+        # del odict['logger']
+        # del odict['messenger']
+        # del odict['UserInterruptTester']
+        # del odict['PreUserEvent']
+        # del odict['PostUserEvent']        
+        # return odict
 
     def _HandleUserInterrupt(self, dct, ignorelist=''):
         key = self.UserInterruptTester() 
@@ -170,7 +159,7 @@ class AmplifierTest(Measure):
 
         self.rawData.setdefault(description, {})
 
-        mg=MGraph(dotfile, names)
+        self.mg=mg=MGraph(dotfile, names, SearchPaths=self.SearchPaths)
         instrumentation=mg.CreateDevices()
         if virtual:
             mg.CmdDevices(False, 'SetVirtual', True)

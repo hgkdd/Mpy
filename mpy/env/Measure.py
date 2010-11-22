@@ -35,8 +35,11 @@ except ImportError:
 class Measure(object):
     """Base class for measurements.
     """
-    def __init__(self):
+    def __init__(self, SearchPaths=None):
         """constructor"""
+        if SearchPaths==None:
+            SearchPaths=[os.getcwd()]
+        self.SearchPaths=SearchPaths
         self.asname=None
         self.ascmd=None
         self.autosave = False
@@ -381,69 +384,69 @@ class Measure(object):
         """
         crt.restore_stdin()
         
-    def do_leveling(self, leveling, mg, names, dct):
-        """Perform leveling on the measurement graph.
+    # def do_leveling(self, leveling, mg, names, dct):
+        # """Perform leveling on the measurement graph.
         
-           - *leveling*: sequence of dicts with leveling records. Each record is a dict with keys 
-             'conditions', 'actor', 'watch', 'nominal', 'reader', 'path', 'actor_min', and 'actor_max'.
+           # - *leveling*: sequence of dicts with leveling records. Each record is a dict with keys 
+             # 'conditions', 'actor', 'watch', 'nominal', 'reader', 'path', 'actor_min', and 'actor_max'.
         
-             The meaning is:
+             # The meaning is:
 
-               - condition: has to be True in order that this lewveling takes place. The condition is evaluated in the global namespace and in C{dct}.
-               - actor: at the moment, this can only be a signalgenerator 'sg'
-               - watch: the point in the graph to be monitored (e.g. antena input)
-               - nominal: the desired value at watch
-               - reader: the device reading the value for watch (e.g. forward poer meter)
-               - path: Path between reader and watch
-               - actor_min, actor_max: valid range for actor values
+               # - condition: has to be True in order that this lewveling takes place. The condition is evaluated in the global namespace and in C{dct}.
+               # - actor: at the moment, this can only be a signalgenerator 'sg'
+               # - watch: the point in the graph to be monitored (e.g. antena input)
+               # - nominal: the desired value at watch
+               # - reader: the device reading the value for watch (e.g. forward poer meter)
+               # - path: Path between reader and watch
+               # - actor_min, actor_max: valid range for actor values
 
-           - *mg*: the measurement graph
-           - *names*: mapping between symbolic names and real names in the dot file
-           - *dct*: namespace used for the evaluation of *condition*  
+           # - *mg*: the measurement graph
+           # - *names*: mapping between symbolic names and real names in the dot file
+           # - *dct*: namespace used for the evaluation of *condition*  
 
-           Return: the level set at the actor 
-        """
-        for l in leveling:
-            if eval(l['condition'], globals(), dct):
-                actor = l['actor']
-                watch = l['watch']
-                nominal = l['nominal']
-                reader = l['reader']
-                path = l['path']
-                ac_min = l['actor_min']
-                ac_max = l['actor_max']
+           # Return: the level set at the actor 
+        # """
+        # for l in leveling:
+            # if eval(l['condition'], globals(), dct):
+                # actor = l['actor']
+                # watch = l['watch']
+                # nominal = l['nominal']
+                # reader = l['reader']
+                # path = l['path']
+                # ac_min = l['actor_min']
+                # ac_max = l['actor_max']
 
-                if actor not in ['sg']:
-                    self.messenger(util.tstamp()+" Only signal generator can be used as leveling actor.", [])
-                    break
-                for dev in [watch, reader]: 
-                    if dev not in names:
-                        self.messenger(util.tstamp()+" Device '%s' not found"%dev, [])
-                        break
-                c_level = device.UMDCMResult(complex(0.0,mg.zero(umddevice.UMD_dB)),umddevice.UMD_dB)
-                for cpath in path:
-                    if mg.find_shortest_path(names[cpath[0]],names[cpath[-1]]):
-                        c_level *= mg.get_path_correction(names[cpath[0]],names[cpath[-1]], umddevice.UMD_dB)['total']
-                    elif mg.find_shortest_path(names[cpath[-1]],names[cpath[0]]):
-                        c_level /= mg.get_path_correction(names[cpath[-1]],names[cpath[0]], umddevice.UMD_dB)['total']
-                    else:
-                        self.messenger(util.tstamp()+" can't find path from %s tp %s (looked for both directions)."%(cpath[0],cpath[-1]), [])
-                        break
+                # if actor not in ['sg']:
+                    # self.messenger(util.tstamp()+" Only signal generator can be used as leveling actor.", [])
+                    # break
+                # for dev in [watch, reader]: 
+                    # if dev not in names:
+                        # self.messenger(util.tstamp()+" Device '%s' not found"%dev, [])
+                        # break
+                # c_level = device.UMDCMResult(complex(0.0,mg.zero(umddevice.UMD_dB)),umddevice.UMD_dB)
+                # for cpath in path:
+                    # if mg.find_shortest_path(names[cpath[0]],names[cpath[-1]]):
+                        # c_level *= mg.get_path_correction(names[cpath[0]],names[cpath[-1]], umddevice.UMD_dB)['total']
+                    # elif mg.find_shortest_path(names[cpath[-1]],names[cpath[0]]):
+                        # c_level /= mg.get_path_correction(names[cpath[-1]],names[cpath[0]], umddevice.UMD_dB)['total']
+                    # else:
+                        # self.messenger(util.tstamp()+" can't find path from %s tp %s (looked for both directions)."%(cpath[0],cpath[-1]), [])
+                        # break
                 
-                if ac_min == ac_max:
-                    return self.set_level(mg, names, ac_min)
+                # if ac_min == ac_max:
+                    # return self.set_level(mg, names, ac_min)
 
-                def __objective (x, mg=mg):
-                    self.set_level(mg, names, x)
-                    actual = mg.Read([names[reader]])[names[reader]]
-                    actual = device.UMDCMResult(actual)
-                    cond, a, n = self.__test_leveling_condition(actual, nominal, c_level)
-                    return a-n
+                # def __objective (x, mg=mg):
+                    # self.set_level(mg, names, x)
+                    # actual = mg.Read([names[reader]])[names[reader]]
+                    # actual = device.UMDCMResult(actual)
+                    # cond, a, n = self.__test_leveling_condition(actual, nominal, c_level)
+                    # return a-n
 
-                l = util.secant_solve(__objective, ac_min, ac_max, nominal.get_u()-nominal.get_v(), 0.1)
-                return self.set_level(mg, names, l)
-                #break  # only first true condition ie evaluated
-        return None
+                # l = util.secant_solve(__objective, ac_min, ac_max, nominal.get_u()-nominal.get_v(), 0.1)
+                # return self.set_level(mg, names, l)
+                # #break  # only first true condition ie evaluated
+        # return None
 
     def set_level(self, mg, names, l):
         sg = mg.nodes[names['sg']]['inst']
@@ -473,18 +476,18 @@ class Measure(object):
         self.messenger(util.tstamp()+" Signal Generator set to %s"%(str(level)), [])
         return level
 
-    def __test_leveling_condition(self, actual, nominal, c_level):
-        cond = True
-        actual = util.flatten(actual)  # ensure lists
-        nominal= util.flatten(nominal)
-        for ac,nom in zip(actual,nominal):
-            ac *= c_level
-            if hasattr(nom.get_v(), 'mag'): # a complex
-                nom = nom.mag()
-                ac = ac.mag()
-            ac = ac.convert(nominal.unit)
-            cond &= (nom.get_l() <= ac.get_v() <= nom.get_u())
-        return cond, actual.get_v(), nominal.get_v()
+    # def __test_leveling_condition(self, actual, nominal, c_level):
+        # cond = True
+        # actual = util.flatten(actual)  # ensure lists
+        # nominal= util.flatten(nominal)
+        # for ac,nom in zip(actual,nominal):
+            # ac *= c_level
+            # if hasattr(nom.get_v(), 'mag'): # a complex
+                # nom = nom.mag()
+                # ac = ac.mag()
+            # ac = ac.convert(nominal.unit)
+            # cond &= (nom.get_l() <= ac.get_v() <= nom.get_u())
+        # return cond, actual.get_v(), nominal.get_v()
 
     def make_deslist(self, thedata, description):
         if description is None:

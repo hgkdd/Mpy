@@ -1,0 +1,6 @@
+digraph {
+    pm1 [ini="pm_gt_8542.ini" ch=1]
+    cdb [ini="sg-amp1in.ini"]
+
+    a -> pm1
+}

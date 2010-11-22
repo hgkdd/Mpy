@@ -4,7 +4,7 @@ import ply.lex as lex
 import ply.yacc as yacc
 import os
 import StringIO # for evaluation of a string containing a file like object
-from mpy.tools.util import format_block
+from mpy.tools.util import format_block, get_var_from_nearest_outerframe, locate
 
 class Parser(object):
     """
@@ -16,6 +16,9 @@ class Parser(object):
     def __init__(self, **kw):
         self.debug = kw.get('debug', 0)
         self.filename = kw.get('filename', None)
+        self.SearchPaths=kw.get('SearchPaths', None)
+        if self.SearchPaths == None:
+            self.SearchPaths=[os.getcwd()]
         self.names = { }
         try:
             modname = os.path.split(os.path.splitext(__file__)[0])[1] + "_" + self.__class__.__name__
@@ -38,7 +41,9 @@ class Parser(object):
                 data=self.filename.read()  # file like object
             except AttributeError:
                 try:
-                    data=file(self.filename).read() # name of an existing file
+                    #paths=get_var_from_nearest_outerframe('SearchPaths')
+                    print self.SearchPaths, self.filename, locate(self.filename, paths=self.SearchPaths).next()
+                    data=file(locate(self.filename, paths=self.SearchPaths).next()).read() # name of an existing file
                 except IOError:
                     data=eval(self.filename).read() # eval to a file like object
             self.parseresult=yacc.parse(data)

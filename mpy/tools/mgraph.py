@@ -1,4 +1,4 @@
-#import os
+import os
 #import re
 import inspect
 import pydot
@@ -10,7 +10,7 @@ import mpy.device.device as device
 from scuq import *
 from mpy.tools.aunits import *
 from mpy.tools.Configuration import fstrcmp
-from mpy.tools.util import extrap1d
+from mpy.tools.util import extrap1d, locate
 
 def _stripstr(s):
     r=s
@@ -51,14 +51,22 @@ class Graph(object):
 
        with the argument of the :meth:`__init__` method.
     """
-    def __init__(self, fname_or_data=None):
+    def __init__(self, fname_or_data=None, SearchPaths=None):
+        if SearchPaths==None:
+            SearchPaths=[os.getcwd()]
+        self.SearchPaths=SearchPaths
+        
         methods=('graph_from_dot_file','graph_from_dot_data','graph_from_edges',
                  'graph_from_adjacency_matrix','graph_from_incidence_matrix')             
         dotgraph=None
         for m in methods:
             meth=getattr(pydot, m)
             try:
-                dotgraph=meth(fname_or_data)
+                if m == 'graph_from_dot_file':
+                    fname_or_data = locate(fname_or_data, paths=self.SearchPaths).next()  # first hit
+                    dotgraph=meth(fname_or_data)
+                else:
+                    dotgraph=meth(fname_or_data)
             except (IOError, IndexError):
                 continue
             else:
@@ -149,8 +157,12 @@ class Graph(object):
 class MGraph(Graph):
     """Measurement grapg class based of :class:`Graph`. See there for the argument of the :meth:`__init__` method.
     """
-    def __init__(self, fname_or_data=None, map=None):
-        super(MGraph, self).__init__(fname_or_data)
+    def __init__(self, fname_or_data=None, map=None, SearchPaths=None):
+        self.fname_or_data=fname_or_data
+        self.map=map
+        if SearchPaths==None:
+            SearchPaths=[os.getcwd()]
+        super(MGraph, self).__init__(fname_or_data, SearchPaths=SearchPaths)
         self.name=GName(self)
         self.gnodes=self.graph.get_nodes()
         self.gedges=self.graph.get_edges()
@@ -167,6 +179,17 @@ class MGraph(Graph):
         for k,v in map.items():
             self.bimap[v]=k
 
+    def __setstate__(self, dct):
+        """used instead of __init__ when instance is created from pickle file""" 
+        self.__init__(**dct)
+
+    def __getstate__(self):
+        """prepare a dict for pickling"""
+        odict = {'fname_or_data': self.fname_or_data, 
+                'map': self.map, 
+                'SearchPaths': self.SearchPaths}
+        return odict
+        
     # def __getattribute__(self, name):
         # try:
             # attr=Graph.__getattribute__(self, name)
@@ -357,7 +380,8 @@ class MGraph(Graph):
                 
             dct['active']=True
             try:
-                ini=dct['ini']=attribs['ini']   # the ini file name
+                ini=dct['ini']=locate(attribs['ini'], paths=self.SearchPaths).next()   # the ini file name
+                print ini
             except KeyError:    
                 ini=dct['ini']=dct['inst']=None # no ini file, no device
                 continue            
@@ -382,7 +406,7 @@ class MGraph(Graph):
                 m = __import__(driver)
                 d = getattr(m, cls)()
             else:    
-                d=getattr(device, dtype)()
+                d=getattr(device, dtype)(SearchPaths=self.SearchPaths)
             ddict[name]=dct['inst']=d # save instances in nodes dict and in return value
             #self.CallerGlobals['d']=d
             #exec str(key)+'=d' in self.CallerGlobals # valiable in caller context
