@@ -11,6 +11,7 @@ import math, re, inspect
 import types
 import time
 import sys
+import os, fnmatch
 import traceback
 import numpy as np
 
@@ -382,3 +383,15 @@ def extrap1d(interpolator):
         return np.array(map(pointwise, np.array(xs)))
 
     return ufunclike
+    
+
+def locate(pattern, paths=None):
+    '''Locate all files matching supplied filename pattern in and below
+    supplied root directory.'''
+    if paths is None:
+        paths=[os.getcwd()]
+    for root in paths:
+        for path, dirs, files in os.walk(os.path.abspath(root)):
+            for filename in fnmatch.filter(files, pattern):
+                yield os.path.join(path, filename)
+
