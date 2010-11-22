@@ -3,6 +3,7 @@ from numpy import linspace,concatenate
 from scuq.quantities import Quantity
 from scuq.si import WATT
 import mpy.env.univers.AmplifierTest
+from mpy.tools.util import locate
 
 def dBm2W (v):
     return 10**(v*0.1)*0.001
@@ -10,9 +11,12 @@ def W2dBm (v):
     return 10*np.log10(v*1000)
 
 description="IFI SMX25"
-    
+MpyDIRS=['\\MpyConfig\\LargeGTEM', '.']
+
+
 if True:
     dot='gtem-immunity.dot'
+    #print dot
     # keys: names in program, values: names in graph
     names={'sg': 'sg',
            'amp_in': 'amp_in',
@@ -21,7 +25,7 @@ if True:
            'pm_bwd': 'pm2',
            'output': 'gtem'}
 
-    AT = mpy.env.univers.AmplifierTest.AmplifierTest()
+    AT = mpy.env.univers.AmplifierTest.AmplifierTest(SearchPaths=MpyDIRS)
     AT.set_logfile('%s.log'%description)
 
     freqb1=linspace(10e3, 200e6, 20)

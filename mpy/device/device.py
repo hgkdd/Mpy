@@ -104,7 +104,8 @@ class Device(object):
     # map instrument types to prefixes
     _pyprefixdict=dict(zip(_types,_pyprefix))
 
-    def __init__(self):
+    def __init__(self, **kw):
+        self.kw = kw
         self.instance=None
         self.error=0
         self.virtual=False
@@ -258,7 +259,10 @@ class Device(object):
             mod=__import__(DLLbasename, globals(),locals(),[])
             for i in DLLbasename.split(".")[1:]:  # emulate from ... import ...
                 mod=getattr(mod,i)
-            lib=getattr(mod,self.pyprefix)()
+            try:
+                lib=getattr(mod,self.pyprefix)(**self.kw)
+            except TypeError:  # keyword argument unknown
+                lib=getattr(mod,self.pyprefix)()
             # import DLLbasename as lib
         else:
             raise "Unknown driver type '%s'."%(DLLext)
@@ -416,9 +420,9 @@ class NPort(Device):
     _postfix = {"setFreq": "SetFreq",
                 "getData": "GetData"}
 
-    def __init__(self):
+    def __init__(self, **kw):
         # call parent init
-        Device.__init__(self)
+        Device.__init__(self, **kw)
         
     def Init (self, ininame, channel=None):
         if channel is None:
@@ -472,9 +476,9 @@ class Amplifier(NPort):
     # additional functions for this instrument type
     _postfix = {"setState": "SetState"}
 
-    def __init__(self):
+    def __init__(self, **kw):
         # call parent init
-        NPort.__init__(self)
+        NPort.__init__(self, **kw)
         Amplifier._postfix.update(NPort._postfix)
         #print Amplifier._postfix
         #print NPort._postfix
@@ -526,8 +530,9 @@ class Signalgenerator(Device):
                 "AM": "SetAM",
                 "PM": "SetPM"}
     
-    def __init__(self):
-        Device.__init__(self)
+    def __init__(self, **kw):
+        # call parent init
+        Device.__init__(self, **kw)
         self.Z=quantities.Quantity(si.OHM, 50)
         self.levelunit=None
 
@@ -710,8 +715,8 @@ class Powermeter(Device):
                 "getData": "GetData",
                 "Trigger": "Trigger"}
     
-    def __init__(self):
-        Device.__init__(self)
+    def __init__(self, **kw):
+        Device.__init__(self, **kw)
 
     def Init (self, ininame, channel=None):
         if channel==None:
@@ -837,8 +842,8 @@ class Spectrumanalyzer(Powermeter):
                      "SetTriggerMode", "SetTriggerDelay", "SetWindow","SetSweepPoints","GetSweepPoints")
     _postfix = dict(zip(_postfix_list,_postfix_list)) # spelling was OK
 
-    def __init__(self):
-        Powermeter.__init__(self)
+    def __init__(self, **kw):
+        Powermeter.__init__(self, **kw)
         Spectrumanalyzer._postfix.update(Powermeter._postfix)
         self.levelunit=None
 
@@ -1423,8 +1428,9 @@ class Switch(Device):
                 "getNrSWDev": "GetNrSWDev",
                 "setQuitMode": "SetQuitMode"}
     
-    def __init__(self):
-        Device.__init__(self)
+    def __init__(self, **kw):
+        # call parent init
+        Device.__init__(self, **kw)
 
     def Init (self, ininame, channel=None):
         if channel is None:
@@ -1573,8 +1579,9 @@ class Fieldprobe(Device):
                 "Trigger": "Trigger",
                 "getBatteryState": "GetBatteryState"}
     
-    def __init__(self):
-        Device.__init__(self)
+    def __init__(self, **kw):
+        # call parent init
+        Device.__init__(self, **kw)
         
     def Init (self, ininame, channel=None):
         if channel==None:
@@ -1710,8 +1717,9 @@ class Motorcontroller(Device):
                 "getSpeed": "GetSpeed",
                 "move": "Move"}
 
-    def __init__(self):
-        Device.__init__(self)
+    def __init__(self, **kw):
+        # call parent init
+        Device.__init__(self, **kw)
         self.posunit=None
 
     def Init (self, ininame, channel=None):
@@ -1828,8 +1836,9 @@ class Tuner(Device):
                 "getPos":  "GetPos",
                 "nextPos": "NextPos"}
     
-    def __init__(self):
-        Device.__init__(self)
+    def __init__(self, **kw):
+        # call parent init
+        Device.__init__(self, **kw)
 
     def Init (self, ininame, channel=None):
         ret=Device.Init(self, ininame, channel)
@@ -1903,9 +1912,9 @@ class Step2port(NPort):
                 "getNStates": "GetNStates",
                 "SwitchTo": "SwitchTo"}
 
-    def __init__(self):
+    def __init__(self, **kw):
         # call parent init
-        NPort.__init__(self)
+        NPort.__init__(self, **kw)
         Step2port._postfix.update(NPort._postfix)
         self.chunit=None
 
@@ -2022,8 +2031,9 @@ class Vectornetworkanalyser(Device):
                 "getData": "GetTrace",
                 "getDataNB": "GetTraceNB"}
     
-    def __init__(self):
-        Device.__init__(self)
+    def __init__(self, **kw):
+        # call parent init
+        Device.__init__(self, **kw)
 
     def Init (self, ininame, channel=None):
         if channel==None:
