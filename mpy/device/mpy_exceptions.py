@@ -3,7 +3,7 @@
 """
 
 class InitError(Exception):
-        def __init__(self, message='Before Commandos can be executed, the DRIVER.Init method must be called'):
+        def __init__(self, message='Before Commands can be executed, the DRIVER.Init method must be called'):
             self.message = message
         def __str__(self):
             return self.message
