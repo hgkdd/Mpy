@@ -381,7 +381,7 @@ class MGraph(Graph):
             dct['active']=True
             try:
                 ini=dct['ini']=locate(attribs['ini'], paths=self.SearchPaths).next()   # the ini file name
-                print ini
+                #print ini
             except KeyError:    
                 ini=dct['ini']=dct['inst']=None # no ini file, no device
                 continue            
