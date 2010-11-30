@@ -42,9 +42,9 @@ class Parser(object):
             except AttributeError:
                 try:
                     #paths=get_var_from_nearest_outerframe('SearchPaths')
-                    print self.SearchPaths, self.filename, locate(self.filename, paths=self.SearchPaths).next()
+                    #print self.SearchPaths, self.filename, locate(self.filename, paths=self.SearchPaths).next()
                     data=file(locate(self.filename, paths=self.SearchPaths).next()).read() # name of an existing file
-                except IOError:
+                except (IOError, StopIteration):
                     data=eval(self.filename).read() # eval to a file like object
             self.parseresult=yacc.parse(data)
         else:
