@@ -7,7 +7,7 @@ ch=1
 masks=(2,4,8,16)
 mask=masks[ch-1]
 
-pm=instrument("GPIB::20")
+pm=instrument("GPIB::22")
 pm.write("INIT%d:CONT OFF"%ch)
 pm.write("SENS:AVER:STAT OFF")
 

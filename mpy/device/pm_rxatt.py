@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import imp
 import re
 import StringIO
 import math
+import time
 from mpy.tools.Configuration import Configuration,strbool,fstrcmp
 from scuq import *
 from mpy.device import device
@@ -957,6 +959,7 @@ class POWERMETER(PWRMTR):
         self.np20=None
         self.np0=None
         self.pfac=None
+        self.plimit=quantities.Quantity(si.WATT, 1.0)   # 1 Watt max power for the sensor
                    
     def Init(self, ininame, ch=1):
         self.conf=Configuration(ininame, self.conftmpl).conf
@@ -971,20 +974,62 @@ class POWERMETER(PWRMTR):
                    'Zero')
         for m in methods:
             setattr(self, m, getattr(self.pm_instance, m))
+        
+        sw=imp.load_source('sw', 'c:\\MpyConfig\\LargeRC\\script\\sw_rc_rx.py')
+        self.sw_instance=sw.SWController()
+        swini=format_block("""
+                        [DESCRIPTION]
+                        DESCRIPTION = RC RX Switch
+                        TYPE = Custom
+                        VENDOR = 
+                        SERIALNR = 
+                        DEVICEID = 
+                        DRIVER = sw_rc_rx
+                        CLASS = SWController
+
+                        [INIT_VALUE]
+                        FSTART = 0
+                        FSTOP = 18e9
+                        FSTEP = 0.0
+                        GPIB = 2
+                        OUTPUT = POWERMETER
+                        SWFREQ = %f
+                        VIRTUAL = 0
+                        """%(self.swfreq))
+        swini=StringIO.StringIO(swini)
+        self.sw_instance.Init(swini)
+        self.sw_instance.SetAtt(True)
         return stat
 
+    def _check(self, obj):
+        att=self.att20
+        if (obj*self.pfac).get_expectation_value() <= self.plimit: # save to remove the att
+            self.sw_instance.SetAtt(False)
+            att=self.att0
+            self.error, obj = self.pm_instance.GetData()
+        r=abs(obj/att)
+        r=r.reduce_to(obj._unit)
+        return r
+        
     def GetData(self):
+        self.sw_instance.SetAtt(True)
         self.error, obj = self.pm_instance.GetData()
+        obj=self._check(obj)
+        self.sw_instance.SetAtt(True)
         return self.error, obj
 
     def GetDataNB(self, retrigger):
+        self.sw_instance.SetAtt(True)
         self.error, obj = self.pm_instance.GetDataNB(retrigger)
         if obj:
-            pass
+            obj=self._check(obj)
+        self.sw_instance.SetAtt(True)
         return self.error, obj
 
     def SetFreq(self, freq):
         self.error, rfreq = self.pm_instance.SetFreq(freq)
+        assert rfreq==freq
+        self.error, rfreq = self.sw_instance.SetFreq(freq)
         assert rfreq==freq
         self.freq = freq
         if freq <= self.swfreq:
@@ -998,7 +1043,7 @@ class POWERMETER(PWRMTR):
         err, self.att20 = self.np20.GetData(what='S21')
         err, self.att0  = self.np0.GetData(what='S21')
         self.pfac=abs(self.att0/self.att20).get_expectation_value_as_float()
-        print freq, abs(self.att0), abs(self.att20), self.pfac
+        #print freq, abs(self.att0), abs(self.att20), self.pfac
         return self.error, freq
         
     def GetDescription(self):
@@ -1119,8 +1164,9 @@ def main():
 if __name__ == '__main__':
 #    main()
     pm1=test_init(1)
-    for f in (0, 10e8, 5e9):
-        pm1.SetFreq(f)
+    pm1.SetFreq(200e6)
+    while True:
         pm1.Trigger()
-        print f, pm1.GetData()
+        print pm1.GetData()
+        time.sleep(1)
     pm1.Quit()

@@ -251,7 +251,7 @@ class POWERMETER(PWRMTR):
     def GetDataNB(self, retrigger):
         self.err, v = self.GetData()
         if retrigger:
-            self.Trigger
+            self.Trigger()
         return self.error, v
 
     def _data_valid(self):
