@@ -20,8 +20,32 @@ class AMPLIFIER(AMP):
         self.POn()
         self.Operate()
         return self.error
+
+    def _wait(self, state=False):
+        while True:
+            ans=self.dev.ask('AMP?')
+            rstate=(ans=='AMP_ON')
+            if state == rstate:
+                break
+            time.sleep(0.1)
         
     def SetFreq(self, freq):
+        swstat=self.dev.ask('SW01?')
+        assert swstat.startswith('SW01_')
+        swstat=int(swstat[-1])
+        if freq<=2e9:
+            sw=1
+        elif freq<=6e9:
+            sw=2
+        else:
+            sw=3
+        
+        if sw!=swstat:
+            self.Standby()
+            self._wait(False)
+            self.write('SW01_%d'%sw)
+            self.Operate()
+            self._wait(True)
         self.error, freq=AMP.SetFreq(self,freq)
         return self.error, freq
 
@@ -38,7 +62,7 @@ def main():
     except IndexError:
         ini=format_block("""
                          [description]
-                         DESCRIPTION = BLMA0810 100
+                         DESCRIPTION = BLMA1018 100
                          TYPE = AMPLIFIER
                          VENDOR = Bonn
                          SERIALNR = 
@@ -46,11 +70,11 @@ def main():
                          DRIVER =
 
                          [INIT_VALUE]
-                         FSTART = 80e6
-                         FSTOP = 1e9
+                         FSTART = 1e9
+                         FSTOP = 18e9
                          FSTEP = 0.0
                          NR_OF_CHANNELS = 2
-                         GPIB = 9
+                         GPIB = 7
                          VIRTUAL = 0
 
                          [CHANNEL_1]
@@ -61,8 +85,12 @@ def main():
                                                                 FUNIT: Hz
                                                                 UNIT: dB
                                                                 ABSERROR: 0.5
-                                                                80e6 50
                                                                 1e9 50
+                                                                2e9 50
+                                                                2.001e0 44.8
+                                                                6e9 44.8
+                                                                6.001e9 43
+                                                                18e9 43
                                                                 '''))
                          [CHANNEL_2]
                          NAME = MAXIN
@@ -72,8 +100,8 @@ def main():
                                                                 FUNIT: Hz
                                                                 UNIT: dBm
                                                                 ABSERROR: 0.0
-                                                                80e6 -5
                                                                 1e9 -5
+                                                                18e9 -5
                                                                 '''))
                          """)
         ini=StringIO.StringIO(ini)
@@ -89,7 +117,8 @@ def main():
         err, uq = amp.GetData(what='S21')
         val, unc, unit=ctx.value_uncertainty_unit(uq)
         print freq, uq, val, unc, unit
-
+    amp.POff()
+        
 if __name__ == '__main__':
     main()
 
