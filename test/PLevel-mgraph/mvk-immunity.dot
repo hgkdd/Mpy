@@ -45,15 +45,16 @@ digraph {
     Amp_Output -> PmFwd_HF1 [condition="1e9<f<=18e9"]
     
     PmFwd_LF   -> PmFwd [dev=Cbl_LFamp_PmFwd what="S21"]
-    PmFwd_HF1  -> PmFwd_HF2 [dev= what="S21"]
+    PmFwd_HF1  -> PmFwd_HF2 [dev=Cbl_HFamp_PmFwd what="S21"]
     PmFwd_HF2  -> PmFwd     [dev=Cbl_HFamp_PmFwd what="S21"]
     
     TxAnt -> PmRev_LF  [condition="f<=1e9"]
-    TxAnt -> PmRev_HF  [condition="1e9<f<=18e9"]
+    TxAnt -> PmRev_HF1 [condition="1e9<f<=18e9"]
     
-    
-    
-    PmRev_HF -> PmRev [dev=Cbl_TxHFant_PmRev what="S21"]
+    PmRev_LF  -> PmRev
+    PmRev_HF1 -> PmRev_HF2
+    PmRev_HF2 -> PmRev_HF3
+    PmRev_HF3 -> PmRev     [dev=Cbl_TxHFant_PmRev what="S21"]
     
     RxAntLF -> RxAnt[condition="2e8<=f<=1e9"]
     RxAntHF -> RxAnt[condition="1e9<f<=18e9"]
