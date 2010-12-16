@@ -388,6 +388,7 @@ def extrap1d(interpolator):
 def locate(pattern, paths=None):
     '''Locate all files matching supplied filename pattern in and below
     supplied root directory.'''
+    #print pattern, paths
     if paths is None:
         paths=[os.getcwd()]
     for root in paths:

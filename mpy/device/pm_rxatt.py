@@ -961,12 +961,12 @@ class POWERMETER(PWRMTR):
         self.pfac=None
         self.plimit=quantities.Quantity(si.WATT, 1.0)   # 1 Watt max power for the sensor
                    
-    def Init(self, ininame, ch=1):
+    def Init(self, ininame, channel=1):
         self.conf=Configuration(ininame, self.conftmpl).conf
         pmini=self.conf['description']['pmini']
         pmini=locate(pmini, paths=self.SearchPaths).next()
         self.pm_instance=getattr(device, 'Powermeter')(SearchPaths=self.SearchPaths)
-        stat = self.pm_instance.Init(pmini, ch)
+        stat = self.pm_instance.Init(pmini, channel)
         methods = ('Quit',
                    'SetVirtual',
                    'GetVirtual',
@@ -1028,9 +1028,11 @@ class POWERMETER(PWRMTR):
 
     def SetFreq(self, freq):
         self.error, rfreq = self.pm_instance.SetFreq(freq)
-        assert rfreq==freq
+        #print rfreq
+        #assert rfreq==freq
         self.error, rfreq = self.sw_instance.SetFreq(freq)
-        assert rfreq==freq
+        #print rfreq
+        #assert rfreq==freq
         self.freq = freq
         if freq <= self.swfreq:
             ext='L'

@@ -12,18 +12,20 @@ class MOTORCONTROLLER(MC):
         pass
 
     def _state(self):
-        ans=self.ask('?') # ask for status
+        ans=self._ask('?') # ask for status
+        #print ans
         ans=ans.split(",")
         stopped=(ans[0]=='1')
-        ca=float(ans[1]) # current angle
-        drive_init_ok=(ans[2]=='0')
+        self.ca=float(ans[1]) # current angle
+        self.drive_init_ok=(ans[2]=='0')
         fail=(ans[3]=='1')
-        return stopped, ca, drive_init_ok, fail 
+        #print self._ask('INFO')
+        return stopped, self.ca, self.drive_init_ok, fail 
     
     def _wait(self):
         stopped=False
         while not stopped: # loop until stirrer is stopped
-            stopped, ca, drive_init_ok, fail = self._state()
+            stopped, self.ca, self.drive_init_ok, fail = self._state()
             time.sleep(0.2) # don't jam the serial bus
         return self.ca
     
@@ -59,7 +61,9 @@ class MOTORCONTROLLER(MC):
             channel=1
         #self.error=MC.Init(self, ini, channel)
         sec='channel_%d'%channel
-
+        self.conf={}
+        self.conf['init_value']={}
+        self.conf['init_value']['virtual'] = False
         port=2
         maxspeed=6
         minspeed=0.18
@@ -90,6 +94,8 @@ class MOTORCONTROLLER(MC):
         else:
             acc=min(65, acc)
             acc=max(40, acc)
+        self.maxspeed=maxspeed   # turns per minute
+        self.degpersec = self.maxspeed * 6
         cmds=('MAXSPEED:%f'%maxspeed,
               'MINSPEED:%f'%minspeed,
               'ACC:%f'%acc)
@@ -97,45 +103,126 @@ class MOTORCONTROLLER(MC):
             #print cmd
             ans=self._ask(cmd)
             #print ans
+        #print self._ask('INFO')
         return self.ca
     
     def Goto(self, pos):
         self.error=0
+        stopped, self.ca, self.drive_init_ok, fail = self._state()
+        if not stopped:
+            # stop first
+            self._write('STOP')
+            self.ca=self._wait()
+            
         # wrap angle
         pos=pos%360
-        self.ask('RMA:%f'%pos)
+        self._ask('RMA:%f'%pos)
         # _wait until stirrer stopped
         self._wait()
         return self.error, self.ca
 
     def Move(self, dir):
         self.error=0
+        err,ca,d=self.GetState()
+        if d==dir: # nothing to do
+            return self.error, dir
+        # stop first
+        self._write('STOP')
+        self.ca=self._wait()
+        
         if dir==1:
             self._write('DIR:1')
+            time.sleep(0.1)
             self._write('RMS')
+            time.sleep(0.5)
         elif dir==-1:
             self._write('DIR:0')
+            time.sleep(0.1)
             self._write('RMS')
-        else:
-            self._write('Stop')
+            time.sleep(0.5)
         return self.error, dir
 
     def GetState(self):
         self.error=0
-        stopped, ca, drive_init_ok, fail = self._state()
+        stopped, self.ca, self.drive_init_ok, fail = self._state()
+        first=time.time()
         if stopped:
-            return self.error, ca, 0
+            return self.error, self.ca, 0
         else:
-            ca2=ca
+            ca=self.ca
             d=0
-            while (not stopped) or (ca2!=ca):
+            while (self.ca==ca):
                 time.sleep(0.1)
-                stopped, ca2, drive_init_ok, fail = self._state()
-            if ca2>ca:
+                stopped, self.ca, self.drive_init_ok, fail = self._state()
+                now=time.time()
+                dt=now-first
+                upguess=(ca+self.degpersec*dt)%360
+                downguess=(ca-self.degpersec*dt)%360
+                #print self.ca, upguess, downguess
+                #print stopped, ca, self.ca
+                if stopped:
+                    break
+            if abs(self.ca-upguess)<abs(self.ca-downguess):
                 d=1
-            elif ca2<ca:
+            elif abs(self.ca-upguess)>abs(self.ca-downguess):
                 d=-1
-            return self.error, ca2, d
+            return self.error, self.ca, d
 
+    def Quit(self):
+        self.error=0
+        stopped, self.ca, self.drive_init_ok, fail = self._state()
+        if not stopped:
+            # stop first
+            self._write('STOP')
+            self.ca=self._wait()
+        return self.error
+            
+def main():
+    import sys
+    import StringIO
+    import time
+    
+    from mpy.tools.util import format_block
+    import scuq
+
+    try:
+        ini=sys.argv[1]
+    except IndexError:
+        ini=format_block("""
+                         [description]
+                         DESCRIPTION = Teseq Motor Controller
+                         TYPE = MOTORCONTROLLER
+                         VENDOR = TESEQ
+                         SERIALNR = 
+                         DEVICEID = 
+                         DRIVER = mc_teseq_stirrer.py
+
+                         [INIT_VALUE]
+                         FSTART = 0
+                         FSTOP = 100e9
+                         FSTEP = 0.0
+                         VIRTUAL = 0
+                         """)
+        ini=StringIO.StringIO(ini)
+
+    dirmap={'u': 1, 'd': -1, 's': 0}
+    mc=MOTORCONTROLLER()
+    err=mc.Init(ini)
+    while(True):
+        pos=raw_input("Pos / DEG: ")
+        if pos in 'qQ':
+            break
+        try:
+            pos=float(pos)
+            err, ang = mc.Goto(pos)
+            print '%.2f -> %.2f'%(pos, ang)
+        except ValueError:
+            pos=pos.lower()
+            if pos in dirmap:
+                err, dir = mc.Move(dirmap[pos])
+                print 'Direction: %d'%dir
+    mc.Quit()
+    
 if __name__ == '__main__':
-    pass
+    main()
+

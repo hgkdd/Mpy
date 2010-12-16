@@ -62,7 +62,7 @@ class Measure(object):
         self.__dict__.update(dct)
         self.logfile = logfile
         self.messenger=self.stdUserMessenger
-        self.logger=[self.std_logger]
+        self.logger=[self.stdLogger]
         self.UserInterruptTester=self.stdUserInterruptTester
         self.PreUserEvent=self.stdPreUserEvent
         self.PostUserEvent=self.stdPostUserEvent        

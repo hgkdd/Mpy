@@ -36,7 +36,7 @@ class MOTORCONTROLLER(DRIVER):
     def __init__(self):
         DRIVER.__init__(self)
         self._cmds={'Goto':     [("'GOTO %s DEG'%to", None)],
-                    'GetState':  [('STATE?', r'POS (?P<pos>%s) DEG, DIR (?P<dir>\d+)'%self._FP],
+                    'GetState':  [('STATE?', r'POS (?P<pos>%s) DEG, DIR (?P<dir>\d+)'%(self._FP))],
                     'SetSpeed': [("'SPEED %s'%(speed)", None)],
                     'GetSpeed': [('SPEED?', r'SPEED (?P<speed>%s)'%(self._FP))],
                     'Move':     [("'MOVE %d'%direction", None)],

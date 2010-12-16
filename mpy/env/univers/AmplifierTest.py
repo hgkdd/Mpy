@@ -17,7 +17,7 @@ def W2dBm (v):
     return 10*np.log10(v*1000)
 
 class AmplifierTest(Measure):
-    def __init__(self, SearchPath=None):
+    def __init__(self, SearchPaths=None):
         Measure.__init__(self, SearchPaths=SearchPaths)
         self.rawData= {}
         self.processedData = {}
@@ -210,7 +210,7 @@ Quit: quit measurement.
                 c_sg_amp  = mg.get_path_correction(mg.name.sg, mg.name.amp_in, POWERRATIO)
                 c_amp_out = mg.get_path_correction(mg.name.amp_out, mg.name.output, POWERRATIO)
                 c_amp_pm1 = mg.get_path_correction(mg.name.amp_out, mg.name.pm_fwd, POWERRATIO)
-                c_amp_pm2 = mg.get_path_correction(mg.name.amp_out, mg.name.pm_bwd, POWERRATIO)
+                c_out_pm2 = mg.get_path_correction(mg.name.output, mg.name.pm_bwd, POWERRATIO)
 
                 # ALL measurement start here
                 block = {}
@@ -220,14 +220,16 @@ Quit: quit measurement.
                 self.messenger(util.tstamp()+" Starting amplifier test measurement for f = %e Hz ..."%(f), [])
       
                 mg.RFOn_Devices()
+                #print levels
                 for counter, lv in enumerate(levels):
+                    #print lv
                     maxSafe=mg.MaxSafeLevel(mg.name.sg, mg.name.amp_out)
                     if maxSafe:
                         self.messenger(util.tstamp()+" Maximum safe level: %s"%(maxSafe), [])
                     isSafe, msg = mg.AmplifierProtect(mg.name.sg, mg.name.amp_out, lv)
-                    if not isSafe:
-                        self.messenger(util.tstamp()+" %s"%(msg), [])
-                        continue
+                    #if not isSafe:
+                    #    self.messenger(util.tstamp()+" %s"%(msg), [])
+                    #    continue
                     instrumentation.sg.SetLevel(lv)
                     time.sleep(delay)
                     
@@ -252,8 +254,8 @@ Quit: quit measurement.
                     self.__addLoggerBlock(block['c_sg_amp']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                     self.__addLoggerBlock(block, 'c_amp_pm1', 'Correction from amp to pm1', c_amp_pm1, {})
                     self.__addLoggerBlock(block['c_amp_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                    self.__addLoggerBlock(block, 'c_amp_pm2', 'Correction from amp to pm2', c_amp_pm2, {})
-                    self.__addLoggerBlock(block['c_amp_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
+                    self.__addLoggerBlock(block, 'c_out_pm2', 'Correction from out to pm2', c_out_pm2, {})
+                    self.__addLoggerBlock(block['c_out_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                     self.__addLoggerBlock(block, 'c_amp_out', 'Correction from amp to out', c_amp_out, {})
                     self.__addLoggerBlock(block['c_amp_out']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
  

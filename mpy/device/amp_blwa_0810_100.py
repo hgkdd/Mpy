@@ -50,7 +50,7 @@ def main():
                          FSTOP = 1e9
                          FSTEP = 0.0
                          NR_OF_CHANNELS = 2
-                         GPIB = 9
+                         GPIB = 8
                          VIRTUAL = 0
 
                          [CHANNEL_1]

@@ -1,9 +1,10 @@
 import os
 #import re
+import imp
 import inspect
 import pydot
 import ConfigParser
-from numpy import bool_
+from numpy import bool_, sqrt
 from scipy.interpolate import interp1d
 
 import mpy.device.device as device
@@ -207,9 +208,23 @@ class MGraph(Graph):
         else:
             return None
 
+    def _pr2ar(self, pr):
+        assert pr._unit == POWERRATIO
+        pr._unit = units.ONE # yes, we know what we are doing
+        ar=sqrt(pr)
+        ar._unit=AMPLITUDERATIO
+        return ar
+    def _ar2pr(self, ar):
+        assert ar._unit == AMPLITUDERATIO
+        return ar*ar
+            
     def get_path_correction (self, start, end, unit=None):
+        if unit is None:
+            unit=AMPLITUDERATIO
+        assert unit in (AMPLITUDERATIO, POWERRATIO)
         if start == end:
-            return quantities.Quantity(units.ONE, 1)
+            corr=quantities.Quantity(unit, 1)
+            return corr
     
         parent=self.get_common_parent(start, end)
         if parent==start:
@@ -268,6 +283,12 @@ class MGraph(Graph):
                     # store the values unconverted
                     #print dev, result[dev]
                     r=result[dev]  #.get_value(unit)
+                    if unit == AMPLITUDERATIO and r._unit == POWERRATIO:
+                        r=self._pr2ar(r)
+                    elif unit == POWERRATIO and r._unit == AMPLITUDERATIO:
+                        r=self._ar2pr(r)
+                    else:
+                        raise "Unit Error"
                     TotalPath *= r            
 
             # for different paths between two points, s parameters have
@@ -278,7 +299,11 @@ class MGraph(Graph):
             TotalPath=ctx.value_of(TotalPath)
             TotalPath = TotalPath.reduce_to(unit)
             Total += TotalPath
-        result['total'] = ctx.value_of(Total)        
+        #print start, end, Total
+        try:
+            result['total'] = ctx.value_of(Total)
+        except AttributeError:
+            result['total'] = Total
         return result
 
     def EvaluateConditions (self, doAction=True):
@@ -361,7 +386,7 @@ class MGraph(Graph):
                  'switch': 'Switch',
                  'fieldprobe': 'Fieldprobe',
                  'cable': 'Cable',
-                 'motorcontroller': 'MotorController',
+                 'motorcontroller': 'Motorcontroller',
                  'tuner': 'Tuner',
                  'antenna': 'Antenna',
                  'nport': 'NPort',
@@ -403,7 +428,8 @@ class MGraph(Graph):
             if dtype == 'Custom':
                 driver = dct['inidic']['description']['driver']
                 cls = dct['inidic']['description']['class']
-                m = __import__(driver)
+                drvfile=locate(driver, self.SearchPaths).next()
+                m = imp.load_source('m', drvfile)
                 d = getattr(m, cls)()
             else:    
                 d=getattr(device, dtype)(SearchPaths=self.SearchPaths)
