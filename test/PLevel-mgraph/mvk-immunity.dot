@@ -8,16 +8,16 @@ digraph {
     Pm2 [ini="ini\\.ini" ch=2]
     Pm  [ini="ini\\.ini" ch=1]
     
-    Cbl_Sg_LFamp [ini="ini\\.ini" condition="f<=18e9"]
-    Cbl_Sg_HFamp [ini="ini\\.ini" condition="f<=18e9"]
+    Cbl_Sg_LFamp [ini="MVKini\\04-sg-LFamp.ini" condition="f<=18e9"]
+    Cbl_Sg_HFamp [ini="MVKini\\05-sg-HFamp.ini" condition="f<=18e9"]
     
-    Cbl_LFamp_TxLFant[ini="ini\\.ini" condition="8e7<=f<=1e9"]
-    Cbl_HFamp_TxHFant[ini="ini\\.ini" condition="1e9<f<=18e9"]
+    Cbl_LFamp_TxLFant[ini="MVKini\\06-LFamp-LFcoup-LFant.ini" condition="8e7<=f<=1e9"]
+    Cbl_HFamp_TxHFant[ini="MVKini\\08-HFamp-HFant.ini" condition="1e9<f<=18e9"]
 
-    Cbl_LFamp_PmFwd[ini="ini\\.ini" condition="8e7<=f<=1e9"]
-    Cbl_TxLFant_PmRev[ini="ini\\.ini" condition="8e7<=f<=1e9"]
+    Cbl_LFamp_PmFwd[ini="MVKini\\10-LFamp-LFcoup-PMAfwd.ini" condition="8e7<=f<=1e9"]
+    Cbl_TxLFant_PmRev[ini="MVKini\\13-LFant-LFcoup-PMBrev.dat.ini" condition="8e7<=f<=1e9"]
     
-    Cbl_HFamp_PmFwd[ini="ini\\.ini" condition="1e9<f<=18e9"]
+    Cbl_HFamp_PmFwd[ini="MVKini\\14-HFampfwd-PMAfwd.ini" condition="1e9<f<=18e9"]
     Cbl_TxHFant_PmRev[ini="ini\\.ini" condition="1e9<f<=18e9"]
     
     Cbl_SwMatrix_RxLFant[ini="ini\\.ini" condition="f<=18e9"]
@@ -42,14 +42,19 @@ digraph {
     TxAnt_HF -> TxAnt  [dev=Cbl_HFamp_TxHFant what="S21"]
    
     Amp_Output -> PmFwd_LF  [condition="f<=1e9"]
-    Amp_Output -> PmFwd_HF  [condition="1e9<f<=18e9"]
-    TxAnt -> PmRev_LF  [condition="f<=1e9"]
-    TxAnt -> PmRev_HF  [condition="1e9<f<=18e9"]
+    Amp_Output -> PmFwd_HF1 [condition="1e9<f<=18e9"]
     
-    PmFwd_LF -> PmFwd [dev=Cbl_LFamp_PmFwd what="S21"]
-    PmFwd_HF -> PmFwd [dev=Cbl_HFamp_PmFwd what="S21"]
-    PmRev_LF -> PmRev [dev=Cbl_TxLFant_PmRev what="S21"]
-    PmRev_HF -> PmRev [dev=Cbl_TxHFant_PmRev what="S21"]
+    PmFwd_LF   -> PmFwd [dev=Cbl_LFamp_PmFwd what="S21"]
+    PmFwd_HF1  -> PmFwd_HF2 [dev=Cbl_HFamp_PmFwd what="S21"]
+    PmFwd_HF2  -> PmFwd     [dev=Cbl_HFamp_PmFwd what="S21"]
+    
+    TxAnt -> PmRev_LF  [condition="f<=1e9"]
+    TxAnt -> PmRev_HF1 [condition="1e9<f<=18e9"]
+    
+    PmRev_LF  -> PmRev
+    PmRev_HF1 -> PmRev_HF2
+    PmRev_HF2 -> PmRev_HF3
+    PmRev_HF3 -> PmRev     [dev=Cbl_TxHFant_PmRev what="S21"]
     
     RxAntLF -> RxAnt[condition="2e8<=f<=1e9"]
     RxAntHF -> RxAnt[condition="1e9<f<=18e9"]
