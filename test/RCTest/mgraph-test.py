@@ -50,7 +50,9 @@ try:
                 print "FEHLER: mehrere Pfade", paths
             elif len(paths)==1:
                 p=paths[0]
-                print ' -> '.join([' -> '.join(pi.obj_dict['points']) for pi in p])
+                for pi in p:
+                    print pi.obj_dict['points']
+                #print ' -> '.join([' -> '.join(pi.obj_dict['points']) for pi in p])
             expec=abs(pathcorr.get_expectation_value_as_float())
             print pathcorr.get_expectation_value(), expec, 20*log10(expec)
 finally:

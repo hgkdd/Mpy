@@ -1,5 +1,5 @@
 import cPickle as pickle
-from numpy import linspace,concatenate
+from numpy import linspace,concatenate,log10
 from scuq.quantities import Quantity
 from scuq.si import WATT
 import mpy.env.univers.AmplifierTest
@@ -8,14 +8,14 @@ from mpy.tools.util import locate
 def dBm2W (v):
     return 10**(v*0.1)*0.001
 def W2dBm (v):
-    return 10*np.log10(v*1000)
+    return 10*log10(v*1000)
 
 description="BLWA 0810 100"
 MpyDIRS=['\\MpyConfig\\LargeRC', '.']
 
 
 if False:
-    dot='mvk-immunity.dot'
+    dot='mvk-immunity-term.dot'
     #print dot
     # keys: names in program, values: names in graph
     names={'sg': 'Sg',
@@ -34,7 +34,8 @@ if False:
                dotfile=dot,
                names=names,
                freqs=freqs,
-               levels=levels, virtual=False)
+               levels=levels, 
+               virtual=False)
     pickle.dump (AT, file('%s.p'%description, 'wb'), 2)
 else:
     AT=pickle.load (file('%s.p'%description, 'rb'))

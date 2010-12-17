@@ -283,10 +283,14 @@ class MGraph(Graph):
                     # store the values unconverted
                     #print dev, result[dev]
                     r=result[dev]  #.get_value(unit)
+                    
                     if unit == AMPLITUDERATIO and r._unit == POWERRATIO:
                         r=self._pr2ar(r)
                     elif unit == POWERRATIO and r._unit == AMPLITUDERATIO:
                         r=self._ar2pr(r)
+                    elif (unit == POWERRATIO and r._unit == POWERRATIO) or\
+                         (unit == AMPLITUDERATIO and r._unit == AMPLITUDERATIO):
+                         pass
                     else:
                         raise "Unit Error"
                     TotalPath *= r            
