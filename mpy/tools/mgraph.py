@@ -1003,11 +1003,11 @@ class Leveler(object):
             obs=self.datafunc(obs)
             self.corr = self.mg.get_path_correction(self.observer, self.lpoint, POWERRATIO)
             lpoint = obs * self.corr
+            lpoint=lpoint.reduce_to(obs._unit)
+            lpoint=abs(lpoint)
             if not self.lpointunit:
                 self.lpointunit=lpoint._unit
             assert(self.lpointunit==lpoint._unit)
-            lpoint=lpoint.reduce_to(obs._unit)
-            lpoint=abs(lpoint)
             self.samples[pikey]=lpoint.get_expectation_value_as_float()
         self.update_interpol()
 

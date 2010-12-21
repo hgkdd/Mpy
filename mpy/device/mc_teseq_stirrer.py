@@ -167,6 +167,13 @@ class MOTORCONTROLLER(MC):
             elif abs(self.ca-upguess)>abs(self.ca-downguess):
                 d=-1
             return self.error, self.ca, d
+            
+    def SetSpeed(self, speed):
+        pass
+        return 0
+    def GetSpeed(self):
+        pass
+        return 0, 1
 
     def Quit(self):
         self.error=0

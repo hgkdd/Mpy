@@ -1,6 +1,6 @@
-from numpy import linspace,concatenate, log10
+from numpy import linspace,concatenate, log10, sqrt
 from scuq.quantities import Quantity
-from scuq.si import WATT
+from scuq.si import WATT, VOLT, METER
 from mpy.tools.util import locate
 from mpy.tools.mgraph import MGraph, Leveler
 
@@ -22,14 +22,23 @@ names={'sg': 'Sg',
        'pm_bwd': 'Pm2',
        'output': 'TxAnt',
        'input': 'RxAnt',
-       'pm_in': 'Pm'}
+       'pm_in': 'Pm',
+       'tuner': 'tuner',
+       'fp':    'FP'}
 
 
 mg=MGraph(fname_or_data=dot, map=names, SearchPaths=MpyDIRS)
 instrumentation=mg.CreateDevices()
-print instrumentation
+#print instrumentation
 
-soll=Quantity(WATT, 50)
+soll=Quantity(VOLT/METER, 3)
+def Emag(seq):
+    #print seq
+    l = [s*s for s in seq]
+    #print l
+    sqsum=sum(l, Quantity( VOLT**2/METER**2, 0))
+    #print sqsum
+    return sqrt(sqsum)
 
 try:
     mg.Init_Devices()
@@ -39,10 +48,10 @@ try:
         mg.EvaluateConditions()
         (minf, maxf) = mg.SetFreq_Devices(f)
         mg.RFOn_Devices()
-        lev=Leveler(mg, mg.name.sg, mg.name.output, mg.name.output, mg.name.pm_fwd)
-        sglv, pm_fwd_val = lev.adjust_level(soll)
-        err, pm_ref_val=instrumentation[mg.name.pm_in].GetData()
-        print f, sglv, pm_fwd_val, pm_ref_val 
+        lev=Leveler(mg, mg.name.sg, mg.name.output, mg.name.fp, mg.name.fp, datafunc=Emag)
+        sglv, e_val = lev.adjust_level(soll)
+        #err, e_val=instrumentation[mg.name.fp].GetData()
+        print f, sglv, soll, e_val 
         mg.RFOff_Devices()
 finally:
     mg.Quit_Devices()
