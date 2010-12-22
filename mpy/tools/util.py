@@ -366,6 +366,9 @@ def isiterable(obj):
 
 
 def extrap1d(interpolator):
+    """
+    Interpolation with linear exprapolation
+    """
     xs = interpolator.x
     ys = interpolator.y
 

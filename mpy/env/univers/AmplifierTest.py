@@ -3,13 +3,15 @@ import sys
 import re
 import numpy as np
 from scipy.interpolate import interp1d
-from scipy.optimize import fminbound
+from scipy.optimize import fminbound, fsolve
 
 from scuq import quantities,si,units
 from mpy.env.Measure import Measure
 from mpy.tools.mgraph import MGraph
 from mpy.tools.aunits import POWERRATIO
 from mpy.tools import util
+
+extrap1d=util.extrap1d
 
 def dBm2W (v):
     return 10**(v*0.1)*0.001
@@ -340,8 +342,8 @@ Quit: quit measurement.
         r=re.compile(r'[(Quantity)\(, \)]*')
         idx=0
         while True:
-            anyprocessed=False
-            for f in freqs:
+            allprocessed=False
+            for f in sorted(freqs):
                 pinlst=[]
                 poutlst=[]
                 pin=rd['amp_pin'][f]
@@ -363,13 +365,16 @@ Quit: quit measurement.
                 if pinlst and len(pinlst)==len(poutlst):
                     #process list
                     gain, offset, pinc1, poutc1, pinc3, poutc3 = self._get_gain_compression(pinlst, poutlst, small_signal_factor=small_signal_factor)
+                    #dbgain=10*np.log10(gain.get_expectation_value_as_float())
+                    #dbpinc1, dbpoutc1, dbpinc3, dbpoutc3 = [10*np.log10(x.get_expectation_value_as_float()*1000) for x in (pinc1, poutc1, pinc3, poutc3)]
+                    #print f, dbgain, dbpinc1, dbpoutc1, dbpinc3, dbpoutc3, dbgain-(dbpoutc1-dbpinc1), dbgain-(dbpoutc3-dbpinc3) 
                     pdg[f].append(gain)
                     pdic1[f].append(pinc1)
                     pdic3[f].append(pinc3)
                     pdoc1[f].append(poutc1)
                     pdoc3[f].append(poutc3)
-                    anyprocessed=True
-            if not anyprocessed:
+                    allprocessed=True
+            if not allprocessed:
                 del pdg[f]
                 del pdic1[f]
                 del pdic3[f]
@@ -392,11 +397,22 @@ Quit: quit measurement.
         pout_ss = pout_vals[:len(pin_ss)]
         gain, offset = np.polyfit(pin_ss, pout_ss, 1)
         ideal = lambda pi: offset+gain*pi  # linear
-        orig = interp1d(pin_vals, pout_vals)
+        orig = extrap1d(interp1d(pin_vals, pout_vals))
+        # c1func = lambda pi: abs(ideal(pi)-orig(pi)*1.259)   # 1 dB
+        # c3func = lambda pi: abs(ideal(pi)-orig(pi)*1.995)   # 3 dB
+        # pinc1 = fminbound(c1func, 0.5*pin_vals[-1], pin_vals[-1])[0]
+        # pinc3 = fminbound(c3func, pinc1, pin_vals[-1])[0]
         c1func = lambda pi: abs(ideal(pi)-orig(pi)*1.259)   # 1 dB
         c3func = lambda pi: abs(ideal(pi)-orig(pi)*1.995)   # 3 dB
-        pinc1 = fminbound(c1func, 0.5*pin_vals[-1], pin_vals[-1])[0]
-        pinc3 = fminbound(c3func, pinc1, pin_vals[-1])[0]
+        lower=pin_ss[-1]
+        for _ in range(100):
+            pinc1 = fminbound(c1func, lower, 10*pin_vals[-1], xtol=1e-7, maxfun=1000)[0]
+            if c1func(pinc1) > 0.01:
+                #print pinc1, c1func(pinc1) 
+                lower=pinc1
+            else:
+                break
+        pinc3 = fminbound(c3func, pinc1, 10*pin_vals[-1], xtol=1e-7, maxfun=1000)[0]
         poutc1=float(orig(pinc1))
         poutc3=float(orig(pinc3))
         # make quantities

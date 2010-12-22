@@ -1,5 +1,5 @@
 import cPickle as pickle
-from numpy import linspace,concatenate
+from numpy import linspace,concatenate, log10
 from scuq.quantities import Quantity
 from scuq.si import WATT
 import mpy.env.univers.AmplifierTest
@@ -7,12 +7,14 @@ import mpy.env.univers.AmplifierTest
 def dBm2W (v):
     return 10**(v*0.1)*0.001
 def W2dBm (v):
-    return 10*np.log10(v*1000)
+    return 10*log10(v*1000)
 
 description="AR-25S1G4"
+MpyDIRS=['\\MpyConfig\\LargeGTEM', '.']
+
     
-if False:
-    dot='amplifier-test.dot'
+if True:
+    dot='amplifier-test-sw800e6.dot'
     # keys: names in program, values: names in graph
     names={'sg': 'sg',
            'amp_in': 'amp_in',
@@ -21,7 +23,7 @@ if False:
            'pm_bwd': 'pm2',
            'output': 'gtem'}
 
-    AT = mpy.env.univers.AmplifierTest.AmplifierTest()
+    AT = mpy.env.univers.AmplifierTest.AmplifierTest(SearchPaths=MpyDIRS)
     AT.set_logfile('%s.log'%description)
 
     freqs=linspace(800e6, 4.2e9, 50)
@@ -30,9 +32,9 @@ if False:
                dotfile=dot,
                names=names,
                freqs=freqs,
-               levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-30, 0, 31)])
-    pickle.dump (AT, file('%s.p'%description, 'wb'), 2)
+               levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-30, 3, 34)])
+    pickle.dump (AT, file('%s-new.p'%description, 'wb'), 2)
 else:
-    AT=pickle.load (file('%s.p'%description, 'rb'))
+    AT=pickle.load (file('%s-new.p'%description, 'rb'))
     AT.GetGainAndCompression(description=description)
-    pickle.dump (AT, file('%s-processed.p'%description, 'wb'), 2)
+    pickle.dump (AT, file('%s-new-processed.p'%description, 'wb'), 2)
