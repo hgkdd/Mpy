@@ -64,6 +64,7 @@ class Graph(object):
             meth=getattr(pydot, m)
             try:
                 if m == 'graph_from_dot_file':
+                    # print self.SearchPaths, fname_or_data
                     fname_or_data = locate(fname_or_data, paths=self.SearchPaths).next()  # first hit
                     dotgraph=meth(fname_or_data)
                 else:

@@ -330,6 +330,76 @@ Quit: quit measurement.
         parent[key]['value']=val
         parent[key]['parameter']=parameter
 
+    def OutputIniFile (self, description=None, fname=None, driver="amplifier.py", gpib=1):
+        if fname==None:
+            out=sys.stdout
+        else:
+            out=file(fname, 'w')
+            
+        pd=self.processedData
+        if not pd.has_key(description):
+            #return silently
+            return 0
+        pdd=pd[description]
+        gain=pdd['gain']
+        ic1=pdd['input_compression_1dB']
+        ic3=pdd['input_compression_3dB']
+        oc1=pdd['output_compression_1dB']
+        oc3=pdd['output_compression_3dB']
+        freqs=sorted(gain.keys())
+        header="""[description]
+DESCRIPTION = %s
+TYPE = AMPLIFIER
+VENDOR = 
+SERIALNR = 
+DEVICEID = 
+DRIVER = %s
+
+[INIT_VALUE]
+FSTART = %f
+FSTOP = %f
+FSTEP = 0.0
+NR_OF_CHANNELS = 2
+GPIB = %d
+VIRTUAL = 0
+
+"""
+        gaintmpl="""[CHANNEL_1]
+NAME = S21
+UNIT = dB
+INTERPOLATION = LOG
+FILE = StringIO.StringIO(format_block('''
+                                    FUNIT: Hz
+                                    UNIT: dB
+                                    ABSERROR: 0.0
+"""
+        maxintmpl="""[CHANNEL_2]
+NAME = MAXIN
+UNIT = dBm
+INTERPOLATION = LOG
+FILE = StringIO.StringIO(format_block('''
+                                    FUNIT: Hz
+                                    UNIT: dBm
+                                    ABSERROR: 0.0
+"""
+                                    
+        out.write (header%(description, driver, freqs[0], freqs[-1], gpib))
+        out.write (gaintmpl)
+        for f in freqs:
+            g=gain[f][0].get_expectation_value_as_float()
+            g=10*np.log10(g)
+            out.write ('                                    %f %f\n'%(f,g))
+        out.write ("                                    '''))\n")
+        out.write (maxintmpl)
+        for f in freqs:
+            g=ic1[f][0].get_expectation_value_as_float()
+            g=30+10*np.log10(g)
+            out.write ('                                    %f %f\n'%(f,g))
+        out.write ("                                    '''))\n")
+        if fname:        
+            out.clse()
+
+
     def GetGainAndCompression (self, description=None, small_signal_factor=10):
         rd=self.rawData[description]
         pd={}

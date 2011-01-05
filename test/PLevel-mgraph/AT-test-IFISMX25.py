@@ -11,7 +11,9 @@ def W2dBm (v):
     return 10*log10(v*1000)
 
 description="IFI SMX25"
-MpyDIRS=['\\MpyConfig\\LargeGTEM', '.']
+MpyDIRS=['\\MpyConfig\\LargeGTEM', 
+         '/Users/hgkrauth/Documents/Development/sandbox/MpyConfig/LargeGTEM', 
+         '.']
 
 
 if False:
@@ -39,6 +41,8 @@ if False:
                levels=levels, virtual=False)
     pickle.dump (AT, file('%s-new.p'%description, 'wb'), 2)
 else:
-    AT=pickle.load (file('%s-new.p'%description, 'rb'))
-    AT.GetGainAndCompression(description=description)
-    pickle.dump (AT, file('%s-new-processed.p'%description, 'wb'), 2)
+    #AT=pickle.load (file('%s-new.p'%description, 'rb'))
+    #AT.GetGainAndCompression(description=description)
+    #pickle.dump (AT, file('%s-new-processed.p'%description, 'wb'), 2)
+    AT=pickle.load (file('%s-new-processed.p'%description, 'rb'))
+    AT.OutputIniFile(description=description)
