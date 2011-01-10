@@ -434,7 +434,7 @@ FILE = StringIO.StringIO(format_block('''
                         pass
                 if pinlst and len(pinlst)==len(poutlst):
                     #process list
-                    gain, offset, pinc1, poutc1, pinc3, poutc3 = self._get_gain_compression(pinlst, poutlst, small_signal_factor=small_signal_factor)
+                    #gain, offset, pinc1, poutc1, pinc3, poutc3 = self._get_gain_compression(pinlst, poutlst, small_signal_factor=small_signal_factor)
                     #dbgain=10*np.log10(gain.get_expectation_value_as_float())
                     #dbpinc1, dbpoutc1, dbpinc3, dbpoutc3 = [10*np.log10(x.get_expectation_value_as_float()*1000) for x in (pinc1, poutc1, pinc3, poutc3)]
                     #print f, dbgain, dbpinc1, dbpoutc1, dbpinc3, dbpoutc3, dbgain-(dbpoutc1-dbpinc1), dbgain-(dbpoutc3-dbpinc3) 
