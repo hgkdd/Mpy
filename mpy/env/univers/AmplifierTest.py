@@ -397,7 +397,7 @@ FILE = StringIO.StringIO(format_block('''
             out.write ('                                    %f %f\n'%(f,g))
         out.write ("                                    '''))\n")
         if fname:        
-            out.clse()
+            out.close()
 
 
     def GetGainAndCompression (self, description=None, small_signal_factor=10):
@@ -445,11 +445,11 @@ FILE = StringIO.StringIO(format_block('''
                     pdoc3[f].append(poutc3)
                     allprocessed=True
             if not allprocessed:
-                del pdg[f]
-                del pdic1[f]
-                del pdic3[f]
-                del pdoc1[f]
-                del pdoc3[f]
+                #del pdg[f]
+                #del pdic1[f]
+                #del pdic3[f]
+                #del pdoc1[f]
+                #del pdoc3[f]
                 break
             idx+=1
         self.processedData[description]=pd.copy()
