@@ -19,6 +19,7 @@ class AMPLIFIER(AMP):
         self.error=AMP.Init(self, ini, channel)
         self.POn()
         self.Operate()
+        time.sleep(2)
         return self.error
 
     def _wait(self, state=False):
@@ -46,7 +47,9 @@ class AMPLIFIER(AMP):
             self.write('SW01_%d'%sw)
             self.Operate()
             self._wait(True)
+            time.sleep(2)
         self.error, freq=AMP.SetFreq(self,freq)
+        time.sleep(0.2)
         return self.error, freq
 
 def main():

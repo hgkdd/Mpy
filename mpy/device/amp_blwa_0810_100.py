@@ -19,10 +19,12 @@ class AMPLIFIER(AMP):
         self.error=AMP.Init(self, ini, channel)
         self.POn()
         self.Operate()
+        time.sleep(2)
         return self.error
         
     def SetFreq(self, freq):
         self.error, freq=AMP.SetFreq(self,freq)
+        time.sleep(0.2)
         return self.error, freq
 
 def main():
