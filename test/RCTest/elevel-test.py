@@ -1,3 +1,4 @@
+import sys
 from numpy import linspace,concatenate, log10, sqrt
 from scuq.quantities import Quantity
 from scuq.si import WATT, VOLT, METER
@@ -24,14 +25,14 @@ names={'sg': 'Sg',
        'input': 'RxAnt',
        'pm_in': 'Pm',
        'tuner': 'tuner',
-       'fp':    'FP'}
+       'fp':    'Fprobe'}
 
 
 mg=MGraph(fname_or_data=dot, map=names, SearchPaths=MpyDIRS)
 instrumentation=mg.CreateDevices()
 #print instrumentation
 
-soll=Quantity(VOLT/METER, 3)
+soll=Quantity(VOLT/METER, 20)
 def Emag(seq):
     #print seq
     l = [s*s for s in seq]
@@ -42,7 +43,7 @@ def Emag(seq):
 
 try:
     mg.Init_Devices()
-    freqs=linspace(80e6, 1000e6, 20)
+    freqs=linspace(80e6, 18e9, 100)
 
     for f in freqs:
         mg.EvaluateConditions()
@@ -50,8 +51,9 @@ try:
         mg.RFOn_Devices()
         lev=Leveler(mg, mg.name.sg, mg.name.output, mg.name.fp, mg.name.fp, datafunc=Emag)
         sglv, e_val = lev.adjust_level(soll)
-        #err, e_val=instrumentation[mg.name.fp].GetData()
-        print f, sglv, soll, e_val 
+        err, e_val = instrumentation[mg.name.fp].GetData()
+        print f, W2dBm(sglv.get_expectation_value_as_float()), soll, e_val 
+        sys.stdout.flush()
         mg.RFOff_Devices()
 finally:
     mg.Quit_Devices()

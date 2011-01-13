@@ -47,6 +47,7 @@ class FIELDPROBE(FLDPRB):
         return self.error, freq
 
     def GetData(self):
+        time.sleep(0.5)
         self.error=0
         cmd="D,%d?"%self.channel
         tmpl=r"D,%d,(?P<x>[\d.]{5}),(?P<y>[\d.]{5}),(?P<z>[\d.]{5}),(?P<t>[\d.]{5})"%self.channel
