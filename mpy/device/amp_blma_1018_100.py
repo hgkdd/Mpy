@@ -31,7 +31,13 @@ class AMPLIFIER(AMP):
             time.sleep(0.1)
         
     def SetFreq(self, freq):
-        swstat=self.dev.ask('SW01?')
+        for _ in range(5):
+            try:
+                swstat=self.dev.ask('SW01?')
+            except visa.VisaIOError:
+                time.sleep(0.2)
+                continue
+            break
         assert swstat.startswith('SW01_')
         swstat=int(swstat[-1])
         if freq<=2e9:
