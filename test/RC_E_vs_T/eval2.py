@@ -1,47 +1,62 @@
-import sys
-import random
-from itertools import combinations
-import cPickle as pickle
-import pylab as pl
-import numpy as np
-import scipy as sp
 from scuq import *
-from scipy.interpolate import interp1d 
-import scipy.stats as stats
+import sys
+import cPickle as pickle
+import pylab
+import numpy
+import scipy
 
-def random_combination(iterable, r):
-    "Random selection from itertools.combinations(iterable, r)"
-    pool = tuple(iterable)
-    n = len(pool)
-    indices = sorted(random.sample(xrange(n), r))
-    return tuple(pool[i] for i in indices)
-
-
-def ECDF(seq):
-    """
-    Calculate the Empirical Cumuated Distribution Function (ecdf) from a sequence 'seq'.
-
-    A scipy interpolation object is returned.
-    """
-    N=len(seq)
-    sseq=sp.sort(seq)
-    ecdf=sp.linspace(1./N,1,N)
-    return interp1d(sseq,ecdf,bounds_error=False)
-
-class SAMPLES(object):
+class Data(object):
     def __init__(self, dct):
-        self.dct=dct                                        
-        self.freqs = sorted(dct.keys())
-        tpos = sorted(dct[self.freqs[0]].keys())
-        
-        completed_tp=set(tpos)
-        for f in self.freqs:
-            t=set([a for a in dct[f].keys() if dct[f][a] != None])
-            completed_tp=completed_tp.intersection(t)
-        self.ctp=sorted(list(completed_tp))
-        self.Ntp=len(self.ctp)
-        self.Nfreq=len(self.freqs)
-        self.Ncomponents=len(dct[self.freqs[0]][self.ctp[0]])
+        self.data        = dct
+        self.freq_freqs  = numpy.array(sorted(dct.keys()))
+        self.freq_nfreq  = len(self.freq_freqs)
+        self.freq_start  = self.freq_freqs[0]
+        self.freq_stop   = self.freq_freqs[self.freq_nfreq-1]
+        self.stir_pos    = numpy.array(sorted(dct[self.freq_freqs[0]].keys()))
+        self.stir_npos   = len(self.stir_pos)
+        self.E_ncomp     = len(dct[self.freq_freqs[0]][self.stir_pos[0]])
+        self.E_freqstir  = numpy.zeros((self.E_ncomp,self.stir_npos,self.freq_nfreq))
+        self.Emean_freq  = numpy.zeros((self.E_ncomp,self.freq_nfreq))
+        #self.Ehist       = mumpy.zeros((self.E_ncomp,self.stir_npos*self.freq_nfreq))
+        #
+        for i in range(0,self.E_ncomp,1):
+            for j in range(0,self.stir_npos,1):
+                for k in range(0,self.freq_nfreq,1):
+                    self.E_freqstir[i,j,k] = self.data[self.freq_freqs[k]][self.stir_pos[j]][i].get_expectation_value_as_float()
+        #
+        for i in range(0,self.E_ncomp,1):
+            self.Emean_freq[i,:] = numpy.mean(self.E_freqstir[i,:,:],axis=0)
+            print numpy.size(self.Emean_freq[i])
+        #
+        #for i in range(0,self.E_ncomp,1):
+                    
+    def PlotExyzOverFreqAndTunerpos(self):
+        pylab.xlabel('Frequency f in Hz')
+        pylab.ylabel('Stirrer position in degree')
+        pylab.pcolor(self.freq_freqs,self.stir_pos,self.E_freqstir[0,:,:])
+        temp=pylab.colorbar()
+        temp.set_label('Ex in V/m')
+        pylab.axis([self.freq_start,self.freq_stop,0,360])
+        pylab.savefig('001_ExOverFreqStirpos.png',dpi=200)
+        pylab.show()
+        #
+        pylab.xlabel('Frequency f in Hz')
+        pylab.ylabel('Stirrer position in degree')
+        pylab.pcolor(self.freq_freqs,self.stir_pos,self.E_freqstir[1,:,:])
+        temp=pylab.colorbar()
+        temp.set_label('Ey in V/m')
+        pylab.axis([self.freq_start,self.freq_stop,0,360])
+        pylab.savefig('001_EyOverFreqStirpos.png',dpi=200)
+        pylab.show()
+        #
+        pylab.xlabel('Frequency f in Hz')
+        pylab.ylabel('Stirrer position in degree')
+        pylab.pcolor(self.freq_freqs,self.stir_pos,self.E_freqstir[2,:,:])
+        temp=pylab.colorbar()
+        temp.set_label('Ez in V/m')
+        pylab.axis([self.freq_start,self.freq_stop,0,360])
+        pylab.savefig('001_EzOverFreqStirpos.png',dpi=200)
+        pylab.show()
     
     def average_over_tp (self, tpos, freqs, normalize=True):
         # initialize a list of arrays for the averaged samples
@@ -72,27 +87,32 @@ class SAMPLES(object):
             ecdfs.append(ECDF(sa))
         return ecdfs
  
+    
+ 
 if __name__ == '__main__':
-    import pylab as pl
+    
     infile = sys.argv[1]
     dct=pickle.load(file(infile, 'rb'))
     
+    D=Data(dct)
+    #D.PlotExyzOverFreqAndTunerpos()
     
-    S=SAMPLES(dct)
-    enorm=np.linspace(0,3,100)
+    
+    # S=SAMPLES(dct)
+    # enorm=np.linspace(0,3,100)
 
-    ecdfs_all=S.ecdf(S.ctp, S.freqs)
-    for i in range(S.Ncomponents):
-        pl.plot(enorm, ecdfs_all[i](enorm), linewidth=3)
-    ecdfs_t0=S.ecdf((S.ctp[0],), S.freqs)
-    for i in range(S.Ncomponents):
-        pl.plot(enorm, ecdfs_t0[i](enorm), '--')
-    ecdfs_f0=S.ecdf(S.ctp, (S.freqs[0],))
-    for i in range(S.Ncomponents):
-        pl.plot(enorm, ecdfs_f0[i](enorm))
+    # ecdfs_all=S.ecdf(S.ctp, S.freqs)
+    # for i in range(S.Ncomponents):
+        # pl.plot(enorm, ecdfs_all[i](enorm), linewidth=3)
+    # ecdfs_t0=S.ecdf((S.ctp[0],), S.freqs)
+    # for i in range(S.Ncomponents):
+        # pl.plot(enorm, ecdfs_t0[i](enorm), '--')
+    # ecdfs_f0=S.ecdf(S.ctp, (S.freqs[0],))
+    # for i in range(S.Ncomponents):
+        # pl.plot(enorm, ecdfs_f0[i](enorm))
 
         
-    pl.show()
+    # pl.show()
         
 # def mean_samples (dct, tpos, normalize=True):
     # freqs = sorted(dct.keys())
