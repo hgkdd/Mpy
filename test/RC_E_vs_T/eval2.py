@@ -16,29 +16,34 @@ class Data(object):
         self.stir_pos       = numpy.array(sorted(dct[self.freq_freqs[0]].keys()))
         self.stir_npos      = len(self.stir_pos)
         self.E_ncomp        = len(dct[self.freq_freqs[0]][self.stir_pos[0]])
-        self.E_freqstir     = numpy.zeros((self.E_ncomp,self.stir_npos,self.freq_nfreq))
-        self.Emean_freq     = numpy.zeros((self.E_ncomp,self.freq_nfreq))
+        self.Emeas_freqstir = numpy.zeros((self.E_ncomp,self.stir_npos,self.freq_nfreq))  # measured E-values for each frequency and stirrer position
+        self.Enorm_freqstir = numpy.zeros((self.E_ncomp,self.stir_npos,self.freq_nfreq))    
+        self.Emean_stirpos  = numpy.zeros((self.E_ncomp,self.stir_npos))                  # mean E-values over all frequencies of each stirrer position
         self.Emean_NStirpos = numpy.zeros((self.E_ncomp,self.stir_npos,self.freq_nfreq))
+        
         #
-        self.Ex_Var         = numpy.zeros((360))
+        self.Exnorm_Var     = numpy.zeros((360))
         self.Ex_mean_Var    = numpy.zeros((360)) 
         #
         for i in range(0,self.E_ncomp,1):
             for j in range(0,self.stir_npos,1):
                 for k in range(0,self.freq_nfreq,1):
-                    self.E_freqstir[i,j,k] = self.data[self.freq_freqs[k]][self.stir_pos[j]][i].get_expectation_value_as_float()
+                    self.Emeas_freqstir[i,j,k] = self.data[self.freq_freqs[k]][self.stir_pos[j]][i].get_expectation_value_as_float()
+        
         #
         for i in range(0,self.E_ncomp,1):
-            self.Emean_freq[i,:] = numpy.mean(self.E_freqstir[i,:,:],axis=0)
+            self.Emean_stirpos[i,:]=numpy.mean(self.Emeas_freqstir[i,:,:],axis=1)
+            for j in range(0,self.stir_npos,1):
+                self.Enorm_freqstir[i,j,:]=self.Emeas_freqstir[i,j,:]/self.Emean_stirpos[i,j]
         #
         for i in range(0,self.E_ncomp,1):
             for j in range(0,self.stir_npos,1):
-                self.Emean_NStirpos[i,j,:]=numpy.mean(self.E_freqstir[i,0:j+1,:],axis=0) 
-        
+                self.Emean_NStirpos[i,j,:]=numpy.mean(self.Enorm_freqstir[i,0:j+1,:],axis=0)        
+                
     def PlotExyzOverFreqAndStirpos(self):
         pylab.xlabel('Frequency f in Hz')
         pylab.ylabel('Stirrer position in degree')
-        pylab.pcolor(self.freq_freqs,self.stir_pos,self.E_freqstir[0,:,:])
+        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emeas_freqstir[0,:,:])
         temp=pylab.colorbar()
         temp.set_label('Ex in V/m')
         pylab.axis([self.freq_start,self.freq_stop,0,360])
@@ -47,7 +52,7 @@ class Data(object):
         #
         pylab.xlabel('Frequency f in Hz')
         pylab.ylabel('Stirrer position in degree')
-        pylab.pcolor(self.freq_freqs,self.stir_pos,self.E_freqstir[1,:,:])
+        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emeas_freqstir[1,:,:])
         temp=pylab.colorbar()
         temp.set_label('Ey in V/m')
         pylab.axis([self.freq_start,self.freq_stop,0,360])
@@ -56,29 +61,38 @@ class Data(object):
         #
         pylab.xlabel('Frequency f in Hz')
         pylab.ylabel('Stirrer position in degree')
-        pylab.pcolor(self.freq_freqs,self.stir_pos,self.E_freqstir[2,:,:])
+        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emeas_freqstir[2,:,:])
         temp=pylab.colorbar()
         temp.set_label('Ez in V/m')
         pylab.axis([self.freq_start,self.freq_stop,0,360])
         pylab.savefig('001_EzOverFreqStirpos.png',dpi=200)
         pylab.show()
-    
+        #
+        pylab.xlabel('Frequency f in Hz')
+        pylab.ylabel('Stirrer position in degree')
+        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Enorm_freqstir[0,:,:])
+        temp=pylab.colorbar()
+        temp.set_label('Ex_norm in V/m')
+        pylab.axis([self.freq_start,self.freq_stop,0,360])
+        pylab.savefig('001_ExnormOverFreqStirpos.png',dpi=200)
+        pylab.show()
+        
     def PlotScatterDiagram(self):
         pylab.xlabel('Ex for stirrer position 0')
         pylab.ylabel('Ex for stirrer position 1, 3 & 10')
-        pylab.plot(self.E_freqstir[0,0,:],self.E_freqstir[0,1,:].transpose(), label='1')
-        pylab.plot(self.E_freqstir[0,0,:],self.E_freqstir[0,3,:].transpose(),label='3')
-        pylab.plot(self.E_freqstir[0,0,:],self.E_freqstir[0,10,:].transpose(),label='10')
+        pylab.plot(self.Enorm_freqstir[0,0,:],self.Enorm_freqstir[0,1,:].transpose(), label='1')
+        pylab.plot(self.Enorm_freqstir[0,0,:],self.Enorm_freqstir[0,3,:].transpose(),label='3')
+        pylab.plot(self.Enorm_freqstir[0,0,:],self.Enorm_freqstir[0,10,:].transpose(),label='10')
         pylab.legend()
-        pylab.savefig('002_ExScatterDiagramStirpos.png',dpi=200)
+        pylab.savefig('002_ExnormScatterDiagramStirpos.png',dpi=200)
         pylab.show()
         #
         pearson1=numpy.zeros((360))
         pearson2=numpy.zeros((360))
         pos0=0
         for pos in self.stir_pos:
-            cc1=scipy.stats.pearsonr(self.E_freqstir[0,0,:],self.E_freqstir[0,pos,:])
-            cc2=scipy.stats.pearsonr(self.E_freqstir[0,pos0,:],self.E_freqstir[0,pos,:])
+            cc1=scipy.stats.pearsonr(self.Enorm_freqstir[0,0,:],self.Enorm_freqstir[0,pos,:])
+            cc2=scipy.stats.pearsonr(self.Enorm_freqstir[0,pos0,:],self.Enorm_freqstir[0,pos,:])
             pearson1[pos]=cc1[0]
             pearson2[pos]=cc2[0]
             if cc2[0]<0.5:
@@ -89,17 +103,19 @@ class Data(object):
         pylab.plot(self.stir_pos,pearson1)
         pylab.plot(self.stir_pos,pearson2)
         pylab.axis([0,360,-1,1])
-        pylab.savefig('002_ExPearsonCorrelation.png',dpi=200)
+        pylab.savefig('002_ExnormPearsonCorrelation.png',dpi=200)
         pylab.show()
         #
         for j in range(0,self.stir_npos):
-            self.Ex_Var[j]=scipy.stats.tvar(self.E_freqstir[0,j,:])
+            self.Exnorm_Var[j]=scipy.stats.tvar(self.Enorm_freqstir[0,j,:])
         #
-        pylab.ylabel('Variance Ex')
+        pylab.ylabel('Variance Ex_norm')
         pylab.xlabel('Stirrer position')
-        pylab.plot(self.stir_pos,self.Ex_Var)
+        pylab.plot(self.stir_pos,self.Exnorm_Var)
         pylab.savefig('002_VarExOverStirpos.png',dpi=200)
         pylab.show()
+        #
+        
         
     def PlotEmeanOverNStirpos(self):
         pylab.xlabel('Frequency f in Hz')
