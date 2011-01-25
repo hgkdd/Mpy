@@ -115,6 +115,25 @@ class Data(object):
         pylab.savefig('002_VarExOverStirpos.png',dpi=200)
         pylab.show()
         #
+        pearson1=numpy.zeros((360))
+        pearson2=numpy.zeros((360))
+        pos0=0
+        for pos in self.stir_pos:
+            cc1=scipy.stats.pearsonr(self.Enorm_freqstir[1,0,:],self.Enorm_freqstir[1,pos,:])
+            cc2=scipy.stats.pearsonr(self.Enorm_freqstir[1,pos0,:],self.Enorm_freqstir[1,pos,:])
+            pearson1[pos]=cc1[0]
+            pearson2[pos]=cc2[0]
+            if cc2[0]<0.5:
+                pos0=pos+1
+        #
+        pylab.ylabel('Pearson correlation coefficient')
+        pylab.xlabel('Stirrer position')
+        pylab.plot(self.stir_pos,pearson1)
+        pylab.plot(self.stir_pos,pearson2)
+        pylab.axis([0,360,-1,1])
+        pylab.savefig('002_EynormPearsonCorrelation.png',dpi=200)
+        pylab.show()
+        #
         
         
     def PlotEmeanOverNStirpos(self):
@@ -155,8 +174,8 @@ if __name__ == '__main__':
     D=Data(dct)
       
     #D.PlotExyzOverFreqAndStirpos()
-    #D.PlotScatterDiagram()
-    D.PlotEmeanOverNStirpos()
+    D.PlotScatterDiagram()
+    #D.PlotEmeanOverNStirpos()
      
      
   
