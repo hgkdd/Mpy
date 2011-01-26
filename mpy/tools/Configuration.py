@@ -41,9 +41,11 @@ class Configuration(object):
         self.conf={}
         self.casesensitive=casesensitive
         fp=None
+        
         try:
             # try to open file
             fp=file(os.path.normpath(ininame),'r')
+            
         except:
             # assume a file like object
             fp=ininame
@@ -56,16 +58,16 @@ class Configuration(object):
         
         self.sections_in_ini=config.sections()
         self.channel_list=[]
+        #print self.sections_in_ini
         for sec in self.sections_in_ini:
-            #print sec
+            #print sec.strip("'"), sec 
             tmplsec=fstrcmp(sec, self.cnftmpl.keys(),n=1,cutoff=0,ignorecase=True)[0]
             thesec=tmplsec
             try:
-                #print sec, tmplsec
+                #print sec,'\n', tmplsec,'\n','\n'
                 #print tmplsec.lower().split('channel_')
                 #print repr(sec.lower().split('channel_')[1])
                 thechannel=int(sec.lower().split('channel_')[1])
-                    
                 self.channel_list.append(thechannel)
                 try:
                     thesec=tmplsec%thechannel
@@ -80,12 +82,17 @@ class Configuration(object):
                 thesec_c=thesec.lower()
                 
             self.conf[thesec_c]={}
+            
             for key,val in config.items(sec):
-                #print key, val
+                #print  key, val
                 tmplkey=fstrcmp(key, self.cnftmpl[tmplsec].keys(),n=1,cutoff=0,ignorecase=True)[0]
+                #print self.cnftmpl[tmplsec].keys()
                 if self.casesensitive:
                     tmplkey_c=tmplkey
+                    
                 else:
                     tmplkey_c=tmplkey.lower()
+                    
                 self.conf[thesec_c][tmplkey_c]=self.cnftmpl[tmplsec][tmplkey](val)
+                
             
