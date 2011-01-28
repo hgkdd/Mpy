@@ -205,39 +205,14 @@ class Data(object):
         pylab.savefig('006_VarExyzmeanOverNStirpos.png',dpi=200)
         pylab.show()
         
-    
-
-    def NindependentStirrerPositions(self):
+    def CalcIndependentStirrerPositionsVariance(self):
         for i in range(0,self.E_ncomp,1):
             print 'var E: %f'%scipy.stats.tvar(self.Emeas_freqstir[i,:,:])
             print 'var <E>n: %f'%scipy.stats.tvar(self.Emean_stirpos[i,:])
             N=scipy.stats.tvar(self.Emeas_freqstir[i,:,:])/scipy.stats.tvar(self.Emean_stirpos)
-            print 'N= %f' %N
-    
-    
-    def temp(self):
-        ipos=[]
-        pos0=0
-        for pos in self.stir_pos:
-            pcc=scipy.stats.pearsonr(self.Enorm_freqstir[1,pos0,:],self.Enorm_freqstir[1,pos,:])
-            print pos, pcc
-            if pcc[0]<0.8:
-                pos0=pos
-                ipos.append(pos)
-        print ipos        
-        #
-        ipos=numpy.array(ipos)
-        nipos=len(ipos)
-        print nipos
+            print 'N= %f' %N       
         
-        ipos_pcc=numpy.zeros((nipos,nipos))
-        for i in range(0,nipos,1):
-            for j in range(0,nipos,1):
-                pcc=scipy.stats.pearsonr(self.Enorm_freqstir[1,ipos[i],:],self.Enorm_freqstir[1,ipos[j],:])
-                ipos_pcc[i,j]=pcc[0]
-        #        
-        
-    def PlotEpearsonOverStirrerposition(self):
+    def PlotPearsonCorrelationCoeffForEfieldOverStirrerposition(self):
         for i in self.stir_pos:
             for j in self.stir_pos:
                 pcc=scipy.stats.pearsonr(self.Enorm_freqstir[0,i,:],self.Enorm_freqstir[0,j,:])
@@ -246,37 +221,37 @@ class Data(object):
         pylab.xlabel('Stirrer position')
         pylab.ylabel('Stirrer position')
         pylab.pcolor(self.stir_pos,self.stir_pos,self.Epearson[0,:,:])
+        pylab.axis([0,360,0,360])
         temp=pylab.colorbar()
         temp.set_label('Ex Pearson Correction Coefficient')
         pylab.savefig('007_ExPearsonCorrectionCoeff.png',dpi=200)
         pylab.show()
-                
-    
-    def test(self):
+                    
+    def CalcIndependentStirrerPositionsPearson_draft(self):
         print 'Algorithm 1:'
         for i in range(0,3,1):
-            positions=sorted(self.data[self.freq_freqs[0]].keys())
-            #positions=[0,1,2,3,4,5,6,7,8,9,10]
+            #positions=sorted(self.data[self.freq_freqs[0]].keys())
+            positions=[0,1,2,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18,19,20]
             pos0index=0
             pos1index=1
             #
             while len(positions)>pos1index:
-                pos1index=pos0index+1
                 pcc=scipy.stats.pearsonr(self.Enorm_freqstir[i,positions[pos0index],:],self.Enorm_freqstir[i,positions[pos1index],:])
-                #print positions
-                #print len(positions), pos0index, positions[pos0index], pos1index, positions[pos1index], pcc[0]
-                if pcc[0]>0.7:
+                print positions
+                print len(positions), pos0index, positions[pos0index], pos1index, positions[pos1index], pcc[0]
+                if pcc[0]>0.6:
                     del positions[pos1index]
                 else:
                     pos0index=pos1index
+                    pos1index=pos1index+1
             #
+            print positions
             print 'E-Component %d: %d positions' %(i,len(positions))
-        
-        
+        #        
         print 'Algorithm 2:'
         for i in range(0,3,1):
-            positions=sorted(self.data[self.freq_freqs[0]].keys())
-            #positions=[0,1,2,3,4,5,6,7,8,9,10]
+            #positions=sorted(self.data[self.freq_freqs[0]].keys())
+            positions=[0,1,2,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18,19,20]
             pos0index=0
             pos1index=1
             #
@@ -284,18 +259,71 @@ class Data(object):
                 pos1index=pos0index+1
                 while len(positions)>pos1index:
                     pcc=scipy.stats.pearsonr(self.Enorm_freqstir[i,positions[pos0index],:],self.Enorm_freqstir[i,positions[pos1index],:])
-                    #print positions
-                    #print len(positions), pos0index, positions[pos0index], pos1index, positions[pos1index], pcc[0]
-                    if pcc[0]>0.7:
+                    print positions
+                    print len(positions), pos0index, positions[pos0index], pos1index, positions[pos1index], pcc[0]
+                    if pcc[0]>0.6:
                         del positions[pos1index]
                     else:
                         pos1index=pos1index+1
                 pos0index=pos0index+1
             #
             print 'E-Component %d: %d positions' %(i,len(positions))
-            
-            
-            
+                       
+    def CalcIndependentStirrerPositionsPearson(self):
+        pcorrcoeff=numpy.array([0.9,0.85,0.8,0.75,0.7,0.65,0.6,0.55,0.5])       # pearson correlation coefficient
+        algor1=numpy.zeros((self.E_ncomp,len(pcorrcoeff)))  # number of independent stirrer positions for each correlation coefficient (alorithm1)
+        algor2=numpy.zeros((self.E_ncomp,len(pcorrcoeff)))  # number of independent stirrer positions for each correlation coefficient (alorithm2)
+        #
+        for n in range(0,len(pcorrcoeff),1):
+            pearson=pcorrcoeff[n]
+            #
+            # Algorithm 1:
+            for i in range(0,3,1):
+                positions=sorted(self.data[self.freq_freqs[0]].keys())
+                pos0index=0
+                pos1index=1
+                #
+                while len(positions)>pos1index:
+                    pcc=scipy.stats.pearsonr(self.Enorm_freqstir[i,positions[pos0index],:],self.Enorm_freqstir[i,positions[pos1index],:])
+                    if pcc[0]>pearson:
+                        del positions[pos1index]
+                    else:
+                        pos0index=pos1index
+                        pos1index=pos1index+1
+                #
+                algor1[i,n]=len(positions)
+            #
+            # Algorithm 2:
+            for i in range(0,3,1):
+                positions=sorted(self.data[self.freq_freqs[0]].keys())
+                pos0index=0
+                pos1index=1
+                #
+                while len(positions)>pos0index:
+                    pos1index=pos0index+1
+                    while len(positions)>pos1index:
+                        pcc=scipy.stats.pearsonr(self.Enorm_freqstir[i,positions[pos0index],:],self.Enorm_freqstir[i,positions[pos1index],:])
+                        if pcc[0]>pearson:
+                            del positions[pos1index]
+                        else:
+                            pos1index=pos1index+1
+                    pos0index=pos0index+1
+                #
+                algor2[i,n]=len(positions)
+        #
+        print pcorrcoeff
+        print algor1
+        print algor2
+        #
+        pylab.title('Calculated for Ex-component')
+        pylab.ylabel('Number of independent stirrer positions')
+        pylab.xlabel('Pearson Correlation Coefficient')
+        pylab.plot(pcorrcoeff,algor1[0,:],label='algorithm 1')
+        pylab.plot(pcorrcoeff,algor2[0,:],label='algorithm 2')
+        pylab.axis([1,0.5,20,100])
+        pylab.legend()
+        pylab.savefig('008_CalcIndependentStirrerPositionsPearson.png',dpi=200)
+        pylab.show()
             
                     
                 
@@ -311,11 +339,10 @@ if __name__ == '__main__':
       
     #D.PlotExyzOverFreqAndStirpos()
     #D.PlotScatterDiagram()
-    D.PlotPearsonCorrelationCoefficientExyzNormalized()
+    #D.PlotPearsonCorrelationCoefficientExyzNormalized()
     #D.PlotVarianceExyzNormalized()
     #D.PlotEmeanOverNStirpos()
     #D.PlotVarianceExyzMeanOverNStirrerposition()
-    #D.NindependentStirrerPositions()
-    #D.PlotEpearsonOverStirrerposition()
-    #D.temp()
-    D.test()
+    #D.CalcIndependentStirrerPositionsVariance()
+    D.PlotPearsonCorrelationCoeffForEfieldOverStirrerposition()
+    D.CalcIndependentStirrerPositionsPearson()
