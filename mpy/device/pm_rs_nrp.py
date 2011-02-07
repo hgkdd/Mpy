@@ -106,14 +106,42 @@ class POWERMETER(PWRMTR):
         red.
         """
         
-        dct=self.query("STAT:OPER:MEAS:SUMM:COND?", r'(?P<stat>.*)')
-        stat=int(dct['stat'])
-        if  not ((stat & self.mask)| self._data_):
-            self.Trigger()
-            self._data_=1
-            self.error = -1
-            obj = None
-            return self.error, obj
+        dct=self.query("STAT:OPER:MEAS:SUMM:COND?", r'(?P<stat>.*)') #Answer if the sensor* ist measuring or 
+        stat=int(dct['stat'])                                        # it has data.
+        
+        if  not ((stat & self.mask)| self._data_):  #    When the sensor not measuring, it starts
+            self.Trigger()                          #    one measuring.
+            time.sleep(.01)
+            dct=self.query("STAT:OPER:MEAS:SUMM:COND?", r'(?P<stat>.*)')
+            stat=int(dct['stat'])
+            if  not (stat & self.mask):
+                dct=self.query("FETCH%d?"%self.channel, r'(?P<val>%s)'%self._FP)   #The last valid result  
+                v=float(dct['val'])                                                #is returned.
+                swr_err=self.get_standard_mismatch_uncertainty()    
+                self.power=v
+                dct=self.query("UNIT%d:POW?"%self.channel, r'(?P<unit>.*)')     #Ask for the unit of 
+                self._internal_unit=dct['unit']                                 #the measured values.
+                #print 'fertig'
+            
+                try:
+                    obj=quantities.Quantity(eval(self._internal_unit), 
+                                    ucomponents.UncertainInput(self.power, self.power*swr_err))
+                except (AssertionError, NameError):
+                    self.power,self.unit=self.convert.c2scuq(self._internal_unit, float(self.power))
+                    obj=quantities.Quantity(self.unit, 
+                                    ucomponents.UncertainInput(self.power, self.power*swr_err))
+                if retrigger:
+                   self.Trigger()
+                   self._data_=1
+                else:    
+                   self._data_=0   
+                return self.error, obj
+            else:
+                self._data_=1
+                self.error = -1
+                obj = None
+                return self.error, obj
+            
         else:
             dct=self.query("FETCH%d?"%self.channel, r'(?P<val>%s)'%self._FP)#The last valid result  
             v=float(dct['val'])                                                #is returned.
@@ -121,7 +149,7 @@ class POWERMETER(PWRMTR):
             self.power=v
             dct=self.query("UNIT%d:POW?"%self.channel, r'(?P<unit>.*)')     #Ask for the unit of 
             self._internal_unit=dct['unit']                                 #the measured values.
-            
+            #print 'retrigger'
         try:
             obj=quantities.Quantity(eval(self._internal_unit), 
                                     ucomponents.UncertainInput(self.power, self.power*swr_err))
@@ -266,7 +294,9 @@ if __name__ == '__main__':
     #sys.exit()
     pm1=test_init(1)
     #pm1.update_internal_unit(None,'DB')
+    print pm1.GetDataNB(1)
     print pm1.GetDataNB()
+    print pm1.GetDataNB(1)
     print pm1.GetDataNB()
     #pm1.Zero()
     #print pm1.Reset()
