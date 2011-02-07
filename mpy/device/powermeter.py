@@ -114,6 +114,7 @@ class POWERMETER(DRIVER):
         self.freq= None
         self.power=None
         self.unit=None
+        self.channel=None
         self._internal_unit='dBm'
 
     def SetFreq(self, freq):
@@ -211,8 +212,29 @@ class POWERMETER(DRIVER):
             self.Trigger()
         return self.error, obj
 
-    def update_internal_unit():
-        pass
+    def update_internal_unit(self,ch=None,unit='DBM'):
+        """
+        Selects the output unit for the measured power values.
+       
+        Parameters:
+            
+            - *ch*: an integer specifiing the channel number of multi channel devices.
+             Numbering is starting with 1.
+            - *unit*: an string specifiing the unit for the measured.the table shows the posibilities.            
+            
+                            Unit        SCPI notation
+                            Watt           W
+                            dB             DB
+                            dBm            DBM
+                            dBµV           DBUV
+        """
+        unit=unit 
+        channel=ch
+        if not channel:
+            channel =self.channel
+        dct=self._do_cmds('Unit', locals()) 
+        self._internal_unit=unit
+       
     
     def get_standard_mismatch_uncertainty (self):
         """
