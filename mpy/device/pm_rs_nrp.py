@@ -20,7 +20,10 @@ class POWERMETER(PWRMTR):
                     'ZeroOff':  [("'CAL%d:ZERO:AUTO OFF'%(self.channel)", None)],
                     'Quit':     [],
                     'Unit':[("'UNIT%d:POW %s'%(channel,unit)",None)],
-                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')],
+                    'Sensor':[{ 'Reset':[],
+                                'Test':[],
+                                'Info':[("'SENS%d:INFO?'%(self.channel)", r'(?P<inf>%s)'%self._FP)]}]}
 
     # def Zero(self, state='on'):
         # self.error=0
@@ -163,7 +166,6 @@ class POWERMETER(PWRMTR):
         else:    
             self._data_=0   
         return self.error, obj  # TODO: include other uncertainties
-        
         
         
     def Reset(self):                                
