@@ -7,12 +7,13 @@ from mpy.device.powermeter import POWERMETER as PWRMTR
     
 class POWERMETER(PWRMTR):
     """
-    Driver for the Rohde & Schwarz powermeter
+    Driver for the R&S NRP
     """
     def __init__(self, **kw):
         PWRMTR.__init__(self, **kw)
         self._internal_unit='dBm'
-        self._cmds={'SetFreq':  [("'SENS%d:FREQ:CW %f '%(self.channel, freq)", None)],
+
+        self._cmds={'SetFreq':  [("'SENS%d:FREQ:CW %f HZ'%(self.channel, freq)", None)],
                     'GetFreq':  [("'SENS%d:FREQ:CW?'%(self.channel)", r'(?P<freq>%s)'%self._FP)],
                     'Trigger': [("'INIT%d:IMM'%(self.channel)", None)],
                     'ZeroOn':  [("'CAL%d:ZERO:AUTO ON'%(self.channel)", None)],
@@ -56,7 +57,7 @@ class POWERMETER(PWRMTR):
                             self._cmds['Preset'].append(actions[idx])
             except KeyError:
                 pass
-                
+
         dct=self._do_cmds('Preset', locals())
         self._update(dct)
         return self.error 
@@ -204,8 +205,7 @@ def main():
                         name: B
                         unit: 'W'
                         """)
-        
-    ini=StringIO.StringIO(ini)
+        ini=StringIO.StringIO(ini)
 
     pm=POWERMETER()    
     ui=UI(pm,ini=ini)
