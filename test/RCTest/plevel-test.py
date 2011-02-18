@@ -49,8 +49,10 @@ try:
         lev=Leveler(mg, mg.name.sg, mg.name.output, mg.name.output, mg.name.pm_fwd)
         sglv, pm_fwd_val = lev.adjust_level(soll)
         err, pm_ref_val=instrumentation[mg.name.pm_in].GetData()
+        err, pm_fwd=instrumentation[mg.name.pm_fwd].GetData()
+        txcorr=mg.get_path_correction(mg.name.pm_fwd, mg.name.output, unit=POWERRATIO)
         rxcorr=mg.get_path_correction(mg.name.pm_in, mg.name.input, unit=POWERRATIO)
-        print f, sglv, pm_fwd_val, abs(pm_ref_val*rxcorr)
+        print f, sglv, pm_fwd_val, abs(pm_ref_val*rxcorr), abs(rxcorr), abs(txcorr)
         sys.stdout.flush()
         mg.RFOff_Devices()
 finally:
