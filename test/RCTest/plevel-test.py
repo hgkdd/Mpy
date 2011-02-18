@@ -40,7 +40,7 @@ try:
     fstop=18e9
     Nfreqs=200
     freqs=logspace(log10(fstart), log10(fstop), Nfreqs)
-
+    freqs[-1]=fstop
     for f in freqs:
         mg.EvaluateConditions()
         (minf, maxf) = mg.SetFreq_Devices(f)
