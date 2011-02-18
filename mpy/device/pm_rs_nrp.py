@@ -6,7 +6,7 @@ from mpy.device.powermeter import POWERMETER as PWRMTR
     
 class POWERMETER(PWRMTR):
     """
-    Driver for the Gigatronics 854X powermeter
+    Driver for the R&S NRP
     """
     def __init__(self, **kw):
         PWRMTR.__init__(self, **kw)
