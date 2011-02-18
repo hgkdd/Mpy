@@ -77,19 +77,21 @@ if __name__ == '__main__':
     infile = sys.argv[1]
     dct=pickle.load(file(infile, 'rb'))
     
+    ray=stats.rayleigh(loc=0,scale=1)
+    
     S=SAMPLES(dct)
     enorm=np.linspace(0,3,100)
 
-    ecdfs_all=S.ecdf(S.ctp, S.freqs)
+    ecdfs_all=S.ecdf(S.ctp, S.freqs, normalize=True)
     for i in range(S.Ncomponents):
         pl.plot(enorm, ecdfs_all[i](enorm), linewidth=3)
-    ecdfs_t0=S.ecdf((S.ctp[0],), S.freqs)
+    ecdfs_t0=S.ecdf((S.ctp[0],), S.freqs, normalize=True)
     for i in range(S.Ncomponents):
         pl.plot(enorm, ecdfs_t0[i](enorm), '--')
-    ecdfs_f0=S.ecdf(S.ctp, (S.freqs[0],))
+    ecdfs_f0=S.ecdf(S.ctp, (S.freqs[0],), normalize=True)
     for i in range(S.Ncomponents):
         pl.plot(enorm, ecdfs_f0[i](enorm))
-
+    pl.plot(enorm, ray.cdf(enorm), linewidth=5)
         
     pl.show()
         
