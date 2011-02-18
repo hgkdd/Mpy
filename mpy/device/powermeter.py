@@ -126,7 +126,7 @@ class POWERMETER(DRIVER):
         ``(self.error, self.freq)`` is returned.
         """
         self.error=0
-        print freq
+        #print freq
         dct=self._do_cmds('SetFreq', locals())
         self._update(dct)
         dct=self._do_cmds('GetFreq', locals())
@@ -159,7 +159,7 @@ class POWERMETER(DRIVER):
         (self.error, 0) is returned.
         """
         self.error=0
-        print 'aca tambien'
+        #print 'aca tambien'
         if state.lower() == 'on':
             dct=self._do_cmds('ZeroOn', locals())
             self._update(dct)
