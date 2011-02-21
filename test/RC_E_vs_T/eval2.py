@@ -55,11 +55,68 @@ class Data(object):
             for j in range(0,self.stir_npos,1):
                 self.Enorm_freqstir[i,j,:]=self.Emeas_freqstir[i,j,:]/self.Emean_stirpos[i,j]
         #
+        # Mean of normalized Efield values for N stirrer positions starting at zero position
         #
+        for i in range(0,4,1):
+            self.Emean_NStirpos[i,0,:]=self.Enorm_freqstir[i,0,:] 
+            for j in range(1,self.stir_npos,1):
+                self.Emean_NStirpos[i,j,:]=numpy.mean(self.Enorm_freqstir[i,0:j,:],axis=0)        
+    
+    def PlotExyzOverFreqAndStirpos(self):
+        # pylab.xlabel('Frequency f in Hz')
+        # pylab.ylabel('Stirrer position in degree')
+        # pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emeas_freqstir[0,:,:])
+        # temp=pylab.colorbar()
+        # temp.set_label('Ex in V/m')
+        # pylab.axis([self.freq_start,self.freq_stop,0,360])
+        # pylab.savefig('001_ExOverFreqStirpos.png',dpi=200)
+        # pylab.show()
+        
+        # pylab.xlabel('Frequency f in Hz')
+        # pylab.ylabel('Stirrer position in degree')
+        # pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emeas_freqstir[1,:,:])
+        # temp=pylab.colorbar()
+        # temp.set_label('Ey in V/m')
+        # pylab.axis([self.freq_start,self.freq_stop,0,360])
+        # pylab.savefig('001_EyOverFreqStirpos.png',dpi=200)
+        # pylab.show()
         #
-        for i in range(0,3,1):
-            for j in range(0,self.stir_npos,1):
-                self.Emean_NStirpos[i,j,:]=numpy.mean(self.Enorm_freqstir[i,0:j+1,:],axis=0)        
+        pylab.rcParams['figure.figsize']=(6,3.5) 
+        pylab.axes([0.125,0.125,0.825,0.825])
+        #
+        pylab.xlabel('Frequency f in Hz')
+        pylab.ylabel('Stirrer position in degree')
+        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emeas_freqstir[3,:,:])
+        temp=pylab.colorbar()
+        temp.set_label('Eabs in V/m')
+        pylab.axis([self.freq_start,self.freq_stop,0,360])
+        pylab.savefig('001_EabsOverFreqStirpos_250MHz.png',dpi=200)
+        pylab.show()
+        #
+        pylab.rcParams['figure.figsize']=(6,3.5) 
+        pylab.axes([0.125,0.125,0.825,0.825])
+        #
+        pylab.xlabel('Frequency f in Hz')
+        pylab.ylabel('Stirrer position in degree')
+        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Enorm_freqstir[3,:,:])
+        temp=pylab.colorbar()
+        temp.set_label('Eabs_norm')
+        pylab.axis([self.freq_start,self.freq_stop,0,360])
+        pylab.savefig('001_EabsnormOverFreqStirpos_250MHz.png',dpi=200)
+        pylab.show()
+        
+    def PlotScatterDiagram(self):
+        pylab.rcParams['figure.figsize']=(6,3.0) 
+        pylab.axes([0.125,0.125,0.825,0.825])
+        #
+        pylab.xlabel('Ex for stirrer position 0')
+        pylab.ylabel('Ex for stirrer position 1, 3 & 10')
+        pylab.plot(self.Enorm_freqstir[3,0,:],self.Enorm_freqstir[3,1,:].transpose(), label='1')
+        pylab.plot(self.Enorm_freqstir[3,0,:],self.Enorm_freqstir[3,3,:].transpose(),label='3')
+        pylab.plot(self.Enorm_freqstir[3,0,:],self.Enorm_freqstir[3,10,:].transpose(),label='10')
+        pylab.legend()
+        pylab.savefig('002_EabsnormScatterDiagramStirpos_250MHz.png',dpi=200)
+        pylab.show()
     
     def CalcAutoCorrCoeffAndNumberOfIndStirPosFromAutoCorrCoeff(self):
         for i in range(0,self.E_ncomp,1):   
@@ -89,7 +146,7 @@ class Data(object):
         #pylab.figtext(0.5,0.75,'250MHz',fontsize=12)
         pylab.grid(True)
         pylab.legend(loc='lower center', ncol=6)
-        pylab.savefig('001_AutoCorrCoeff_800MHz.png',dpi=200)
+        pylab.savefig('003_AutoCorrCoeff_250MHz.png',dpi=200)
         pylab.show()
         #
         pylab.rcParams['figure.figsize']=(6,3) 
@@ -105,21 +162,25 @@ class Data(object):
         pylab.axis([1,0.3,0,360])
         pylab.grid(True)
         pylab.legend(loc='lower center', ncol=6)
-        pylab.savefig('002_NumberOfIndStirPosFromAutoCorrCoeff_800MHz.png',dpi=200)
+        pylab.savefig('004_NumberOfIndStirPosFromAutoCorrCoeff_250MHz.png',dpi=200)
         pylab.show()
     
     def PlotPearsonCorrelationCoefficientEnormalized(self):
         for i in range(0,self.E_ncomp,1):   
             pos0=0
-            posn=0
+            posn=1
+            #temp=[0]
             for pos in self.stir_pos:
                 temp1=scipy.stats.pearsonr(self.Enorm_freqstir[i,0,:],self.Enorm_freqstir[i,pos,:])
                 temp2=scipy.stats.pearsonr(self.Enorm_freqstir[i,pos0,:],self.Enorm_freqstir[i,pos,:])
                 self.Enorm_PCC1[i,pos]=temp1[0]
                 self.Enorm_PCC2[i,pos]=temp2[0]    
-                if temp2[0]<0.37:
+                if temp2[0]<0.35:
                     pos0=pos
+                    #temp.append(pos0)
                     posn=posn+1    
+        #
+        #print temp
         #
         pylab.rcParams['figure.figsize']=(6,3.5) 
         pylab.axes([0.125,0.125,0.825,0.825])
@@ -135,20 +196,20 @@ class Data(object):
         pylab.axis([0,360,-1,1])
         pylab.xticks([0,40,80,120,160,200,240,280,320,360])
         pylab.yticks([-1.0,-0.8,-0.6,-0.4,-0.2,0,0.2,0.4,0.6,0.8,1.0])
-        pylab.savefig('003_PearsonCorrCoeff_250MHz.png',dpi=200)
+        pylab.savefig('005_PearsonCorrCoeff_250MHz.png',dpi=200)
         pylab.show()
         #
-        pylab.rcParams['figure.figsize']=(6,3.5) 
+        pylab.rcParams['figure.figsize']=(6,3.0) 
         pylab.axes([0.125,0.125,0.825,0.825])
         #
         pylab.ylabel('pearson correlation coefficient')
         pylab.xlabel('stirrer position')
-        pylab.plot(self.stir_pos,self.Enorm_PCC1[3,:])
-        pylab.plot(self.stir_pos,self.Enorm_PCC2[3,:], label='%d independent positions'%posn)
-        pylab.plot([0,360],[0.37,0.37],'k--')
+        pylab.plot(self.stir_pos,self.Enorm_PCC1[3,:],'k')
+        pylab.plot(self.stir_pos,self.Enorm_PCC2[3,:], 'g',label='%d independent positions'%posn)
+        pylab.plot([0,360],[0.35,0.35],'k--')
         pylab.axis([0,360,-1,1])
         pylab.legend(loc='lower center', ncol=6)
-        pylab.savefig('004_EabsPearsonCorrCoeff_250MHz.png',dpi=200)
+        pylab.savefig('006_EabsPearsonCorrCoeff_250MHz.png',dpi=200)
         pylab.show()
     
     def CalcIndependentStirrerPositionsPearson(self):
@@ -189,153 +250,155 @@ class Data(object):
                 #
                 self.ISP_PCC2[i,n]=len(positions)
         #
-        print self.thresholds
-        print self.ISP_PCC1
-        print self.ISP_PCC2
+        a=numpy.array((positions))
+        b=numpy.ones((len(positions)))
         #
-        # pylab.title('Calculated for Ex-component')
-        # pylab.ylabel('Number of independent stirrer positions')
-        # pylab.xlabel('Pearson Correlation Coefficient')
-        # pylab.plot(self.thresholds,self.ISP_PCC1[0,:],label='algorithm 1')
-        # pylab.plot(self.thresholds,self.ISP_PCC2[0,:],label='algorithm 2')
-        # pylab.axis([1,0.3,0,100])
-        # pylab.legend()
-        # pylab.savefig('000_CalcIndependentStirrerPositionsPearson.png',dpi=200)
-        # pylab.show()  
-        
+        #print self.thresholds
+        #print self.ISP_PCC1
+        #print self.ISP_PCC2
+        #
+        # print a
+        # print b
+        #
+        pylab.rcParams['figure.figsize']=(6,2.0) 
+        pylab.axes([0.125,0.225,0.825,0.70])
+        #
+        pylab.ylabel('PCC')
+        pylab.xlabel('stirrer position')
+        pylab.plot([0,360],[0.35,0.35],'k--',linewidth=0.5)
+        pylab.plot([0,360],[1.0,1.0],'k--',linewidth=0.5)
+        pylab.plot(self.stir_pos,self.Enorm_PCC2[3,:],'g-',label='%d independent positions'%self.ISP_PCC1[3,11])
+        pylab.plot(a,b,'ro',label='%d independent positions'%len(positions))
+        pylab.axis([0,360,0,1.2])
+        pylab.xticks([0,40,80,120,160,200,240,280,320,360])
+        pylab.yticks([0,0.4,0.8,1.2])
+        pylab.legend(loc='lower center', ncol=6)
+        pylab.savefig('008_ISP_reducedPCC_250MHz.png',dpi=200)
+        pylab.show()
+                
     def PlotIndStirPosComparisonAutoAndPearsonCorrCoeff(self):    
         pylab.rcParams['figure.figsize']=(6,3.5) 
         pylab.axes([0.125,0.125,0.825,0.825])
         #
         #pylab.title('')
-        pylab.ylabel('number of independent stirrer positions')
+        pylab.ylabel('independent stirrer positions')
         pylab.xlabel('correlation threshold')
-        pylab.plot(self.thresholds,self.ISP_ACC[3,:],label='ACC')
-        pylab.plot(self.thresholds,self.ISP_PCC1[3,:],label='PCC algor1')
-        pylab.plot(self.thresholds,self.ISP_PCC2[3,:],label='PCC algor2')
-        pylab.axis([1,0.3,0,100])
+        pylab.plot(self.thresholds,self.ISP_ACC[3,:],'b',label='ACC')
+        pylab.plot(self.thresholds,self.ISP_PCC1[3,:],'g',label='PCC algor1')
+        pylab.plot(self.thresholds,self.ISP_PCC2[3,:],'r',label='PCC algor2')
+        pylab.axis([1,0.3,0,360])
         pylab.grid(True)
         pylab.legend(loc='upper right')
-        pylab.savefig('05_ISP_ACCvcPCC_250MHz.png',dpi=200)
-        pylab.show()
-    
-    
-           
-    def PlotExyzOverFreqAndStirpos(self):
-        pylab.xlabel('Frequency f in Hz')
-        pylab.ylabel('Stirrer position in degree')
-        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emeas_freqstir[0,:,:])
-        temp=pylab.colorbar()
-        temp.set_label('Ex in V/m')
-        pylab.axis([self.freq_start,self.freq_stop,0,360])
-        pylab.savefig('001_ExOverFreqStirpos.png',dpi=200)
-        pylab.show()
-        #
-        pylab.xlabel('Frequency f in Hz')
-        pylab.ylabel('Stirrer position in degree')
-        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emeas_freqstir[1,:,:])
-        temp=pylab.colorbar()
-        temp.set_label('Ey in V/m')
-        pylab.axis([self.freq_start,self.freq_stop,0,360])
-        pylab.savefig('001_EyOverFreqStirpos.png',dpi=200)
-        pylab.show()
-        #
-        pylab.xlabel('Frequency f in Hz')
-        pylab.ylabel('Stirrer position in degree')
-        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emeas_freqstir[2,:,:])
-        temp=pylab.colorbar()
-        temp.set_label('Ez in V/m')
-        pylab.axis([self.freq_start,self.freq_stop,0,360])
-        pylab.savefig('001_EzOverFreqStirpos.png',dpi=200)
-        pylab.show()
-        #
-        pylab.xlabel('Frequency f in Hz')
-        pylab.ylabel('Stirrer position in degree')
-        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Enorm_freqstir[0,:,:])
-        temp=pylab.colorbar()
-        temp.set_label('Ex_norm (Ex / Ex_mean_stirpos')
-        pylab.axis([self.freq_start,self.freq_stop,0,360])
-        pylab.savefig('001_ExnormOverFreqStirpos.png',dpi=200)
-        pylab.show()
-        
-    def PlotScatterDiagram(self):
-        pylab.xlabel('Ex for stirrer position 0')
-        pylab.ylabel('Ex for stirrer position 1, 3 & 10')
-        pylab.plot(self.Enorm_freqstir[0,0,:],self.Enorm_freqstir[0,1,:].transpose(), label='1')
-        pylab.plot(self.Enorm_freqstir[0,0,:],self.Enorm_freqstir[0,3,:].transpose(),label='3')
-        pylab.plot(self.Enorm_freqstir[0,0,:],self.Enorm_freqstir[0,10,:].transpose(),label='10')
-        pylab.legend()
-        pylab.savefig('002_ExnormScatterDiagramStirpos.png',dpi=200)
+        pylab.savefig('07_ISP_ACCvcPCC_250MHz.png',dpi=200)
         pylab.show()
         
     def PlotVarianceExyzNormalized(self):    
-        for i in range(0,3,1):
+        for i in range(0,4,1):
             for j in range(0,self.stir_npos):
                 self.Enorm_var[i,j]=scipy.stats.tvar(self.Enorm_freqstir[i,j,:])
         #
-        pylab.ylabel('Variance of normalized Exyz')
+        pylab.rcParams['figure.figsize']=(6,3.5) 
+        pylab.axes([0.125,0.125,0.825,0.825])
+        #
+        pylab.ylabel('Variance of normalized E')
         pylab.xlabel('Stirrer position')
         pylab.plot(self.stir_pos,self.Enorm_var[0],label='Ex_norm')
         pylab.plot(self.stir_pos,self.Enorm_var[1],label='Ey_norm')
         pylab.plot(self.stir_pos,self.Enorm_var[2],label='Ez_norm')
+        pylab.plot(self.stir_pos,self.Enorm_var[3],label='Eabs_norm')
         pylab.axis([0,360,0,2])
         pylab.legend()
-        pylab.savefig('004_VarianceEnormOverStirpos.png',dpi=200)
+        pylab.savefig('009_VarianceEnormOverStirpos_250MHz.png',dpi=200)
         pylab.show()
         
     def PlotEmeanOverNStirpos(self):
-        pylab.xlabel('Frequency f in Hz')
-        pylab.ylabel('N Stirrer positions')
-        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emean_NStirpos[0,:,:])
-        temp=pylab.colorbar()
-        temp.set_label('Ex_mean over N stirrer positions in V/m')
-        pylab.axis([self.freq_start,self.freq_stop,0,360])
-        pylab.savefig('005_EmeanOverNStirpos.png',dpi=200)
-        pylab.show()
+        pylab.rcParams['figure.figsize']=(6,3.5) 
+        pylab.axes([0.125,0.125,0.825,0.825])
         #
         pylab.xlabel('Frequency f in Hz')
-        pylab.ylabel('Ex_mean over N stirrer positions in V/m')
-        pylab.plot(self.freq_freqs,self.Emean_NStirpos[0,0,:],label='1')
-        pylab.plot(self.freq_freqs,self.Emean_NStirpos[0,359,:],label='360')
+        pylab.ylabel('N Stirrer positions')
+        pylab.pcolor(self.freq_freqs,self.stir_pos,self.Emean_NStirpos[3,:,:])
+        temp=pylab.colorbar()
+        temp.set_label('Eabs_norm_mean over N stirrer positions')
+        pylab.axis([self.freq_start,self.freq_stop,0,360])
+        pylab.savefig('010_EmeanOverNStirpos.png',dpi=200)
+        pylab.show()
+        #
+        pylab.rcParams['figure.figsize']=(6,3.5) 
+        pylab.axes([0.125,0.125,0.825,0.825])
+        #
+        pylab.xlabel('Frequency f in Hz')
+        pylab.ylabel('Eabs_norm_mean over N stirrer positions')
+        pylab.plot(self.freq_freqs,self.Emean_NStirpos[3,0,:],label='1')
+        pylab.plot(self.freq_freqs,self.Emean_NStirpos[3,359,:],label='360')
         pylab.legend()
-        pylab.savefig('005_EmeanOverNStirpos_1_360.png',dpi=200)
+        pylab.savefig('010_EmeanOverNStirpos_1_360.png',dpi=200)
         pylab.show()
     
     def PlotVarianceExyzMeanOverNStirrerposition(self):
-        for i in range(0,3,1):
+        for i in range(0,4,1):
             for j in range(0,self.stir_npos):
                 self.Emean_var[i,j]=scipy.stats.tvar(self.Emean_NStirpos[i,j,:])
+        
+        pylab.rcParams['figure.figsize']=(6,3.5) 
+        pylab.axes([0.125,0.125,0.825,0.825])
         #
         pylab.ylabel('Variance Exyz_mean')
         pylab.xlabel('Stirrer position')
         pylab.plot(self.stir_pos,self.Emean_var[0,:],label='Ex_mean')
         pylab.plot(self.stir_pos,self.Emean_var[1,:],label='Ey_mean')
         pylab.plot(self.stir_pos,self.Emean_var[2,:],label='Ez_mean')
+        pylab.plot(self.stir_pos,self.Emean_var[3,:],label='Eabs_mean')
         pylab.axis([0,360,0,1])
         pylab.legend()
-        pylab.savefig('006_VarExyzmeanOverNStirpos.png',dpi=200)
+        pylab.savefig('011_VarExyzmeanOverNStirpos.png',dpi=200)
         pylab.show()
         
     def CalcIndependentStirrerPositionsVariance(self):
-        for i in range(0,3,1):
-            print 'var E: %f'%scipy.stats.tvar(self.Emeas_freqstir[i,:,:])
-            print 'var <E>n: %f'%scipy.stats.tvar(self.Emean_stirpos[i,:])
-            N=scipy.stats.tvar(self.Emeas_freqstir[i,:,:])/scipy.stats.tvar(self.Emean_stirpos)
-            print 'N= %f' %N       
+        
+        var_Emeas_n=numpy.zeros((self.E_ncomp,self.stir_npos))
+        
+        for i in range(0,4,1):
+            print i
+            #
+            var_Emeas=scipy.stats.tvar(self.Emeas_freqstir[i,:,:])
+            print 'var Emeas: %f'%var_Emeas
+            #
+            var_Emeas_sum=sum([scipy.stats.tvar(self.Emeas_freqstir[i,j,:]) for j in range(0,self.stir_npos)])
+            print 'var_Emeas_sum %f'%var_Emeas_sum
+            #
+            print 'N: %f' %(360*var_Emeas/var_Emeas_sum)
+            #
+            var_Emeas_mean_N=scipy.stats.tvar(self.Emean_stirpos[i,:])
+            print 'var Emeas_mean_N: %f'%var_Emeas_mean_N
+            #
+            N=var_Emeas/var_Emeas_mean_N
+            print 'N= %f' %N 
+            
+            
+            
+            # print 'var Emeas_mean_N' %
+            # print 'var Emeas_mean: %f'%scipy.stats.tvar(numpy.mean(self.Emeas_freqstir[i,:,:],axis=0))
+            # print 'var <E>n: %f'%scipy.stats.tvar(self.Emean_stirpos[i,:])
+            # N=scipy.stats.tvar(self.Emeas_freqstir[i,:,:])/scipy.stats.tvar(self.Emean_stirpos[i,:])
+            # print 'N= %f' %N       
         
     def PlotPearsonCorrelationCoeffForEfieldOverStirrerposition(self):
         for i in self.stir_pos:
             for j in self.stir_pos:
-                pcc=scipy.stats.pearsonr(self.Enorm_freqstir[0,i,:],self.Enorm_freqstir[0,j,:])
-                self.Epearson[0,i,j]=pcc[0]
+                pcc=scipy.stats.pearsonr(self.Enorm_freqstir[3,i,:],self.Enorm_freqstir[3,j,:])
+                self.Epearson[3,i,j]=pcc[0]
         #       
+        pylab.rcParams['figure.figsize']=(6,3.5) 
+        pylab.axes([0.125,0.125,0.825,0.825])
+        #
         pylab.xlabel('Stirrer position')
         pylab.ylabel('Stirrer position')
-        pylab.pcolor(self.stir_pos,self.stir_pos,self.Epearson[0,:,:])
+        pylab.pcolor(self.stir_pos,self.stir_pos,self.Epearson[3,:,:])
         pylab.axis([0,360,0,360])
         temp=pylab.colorbar()
-        temp.set_label('Ex Pearson Correction Coefficient')
-        pylab.savefig('007_ExPearsonCorrectionCoeff.png',dpi=200)
+        temp.set_label('Eabs Pearson Correction Coefficient')
+        pylab.savefig('012_EabsPearsonCorrectionCoeff.png',dpi=200)
         pylab.show()
                     
     def CalcIndependentStirrerPositionsPearson_draft(self):
@@ -403,19 +466,16 @@ if __name__ == '__main__':
     
     ################################################################
     
-    D.CalcAutoCorrCoeffAndNumberOfIndStirPosFromAutoCorrCoeff() 
-    #D.PlotPearsonCorrelationCoefficientEnormalized()
-    D.CalcIndependentStirrerPositionsPearson()
-    D.PlotIndStirPosComparisonAutoAndPearsonCorrCoeff()
-    
-    ################################################################
-    
     #D.PlotExyzOverFreqAndStirpos()
     #D.PlotScatterDiagram()
+    #D.CalcAutoCorrCoeffAndNumberOfIndStirPosFromAutoCorrCoeff() 
+    #D.PlotPearsonCorrelationCoefficientEnormalized()
+    #D.CalcIndependentStirrerPositionsPearson()
+    #D.PlotIndStirPosComparisonAutoAndPearsonCorrCoeff()
     #D.PlotVarianceExyzNormalized()
     #D.PlotEmeanOverNStirpos()
     #D.PlotVarianceExyzMeanOverNStirrerposition()
-    #D.CalcIndependentStirrerPositionsVariance()
+    D.CalcIndependentStirrerPositionsVariance()
     #D.PlotPearsonCorrelationCoeffForEfieldOverStirrerposition()
-    #D.CalcIndependentStirrerPositionsPearson()
+    
     
