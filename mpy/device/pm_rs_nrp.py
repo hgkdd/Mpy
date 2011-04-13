@@ -13,6 +13,7 @@ class POWERMETER(PWRMTR):
         PWRMTR.__init__(self, **kw)
         self._internal_unit='dBm'
         self._data_=0
+        self.sensor={}
         self._cmds={'SetFreq':  [("'SENS%d:FREQ:CW %f '%(self.channel, freq)", None)],
                     'GetFreq':  [("'SENS%d:FREQ:CW?'%(self.channel)", r'(?P<freq>%s)'%self._FP)],
                     'Trigger': [("'INIT%d:IMM'%(self.channel)", None)],
@@ -20,10 +21,7 @@ class POWERMETER(PWRMTR):
                     'ZeroOff':  [("'CAL%d:ZERO:AUTO OFF'%(self.channel)", None)],
                     'Quit':     [],
                     'Unit':[("'UNIT%d:POW %s'%(channel,unit)",None)],
-                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')],
-                    'Sensor':[{ 'Reset':[],
-                                'Test':[],
-                                'Info':[("'SENS%d:INFO?'%(self.channel)", r'(?P<inf>%s)'%self._FP)]}]}
+                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
     # def Zero(self, state='on'):
         # self.error=0
@@ -65,6 +63,22 @@ class POWERMETER(PWRMTR):
         self._update(dct)
         return self.error 
     
+    def InitSen(self,channel=None):
+        channel=channel
+        dct=self.query("SYST:SENS%d:INFO?" %channel, r'(?P<inf>.*)')
+        tmp=dct['inf']
+        tmp=tmp.split('","')
+        tmpt=tmp[0].split('"')
+        tmp[0]=tmpt[1]
+        
+        for i in range(0,len(tmp)-1):
+            tmp1=tmp[i]
+            tmp2=tmp1.split(':')
+            dct1={tmp2[0]:tmp2[1]}
+            self.sensor.update(dct1)
+        #print self.sensor['Manufacturer']
+    
+        return 
     
     def GetData(self):
         """
@@ -111,6 +125,13 @@ class POWERMETER(PWRMTR):
         
         dct=self.query("STAT:OPER:MEAS:SUMM:COND?", r'(?P<stat>.*)') #Answer if the sensor* ist measuring or 
         stat=int(dct['stat'])                                        # it has data.
+        retrigger=retrigger
+        if retrigger=='True':
+            retrigger=1
+        elif retrigger=='on':
+            retrigger=1
+        else:
+            retrigger=0
         
         if  not ((stat & self.mask)| self._data_):  #    When the sensor not measuring, it starts
             self.Trigger()                          #    one measuring.
@@ -124,7 +145,7 @@ class POWERMETER(PWRMTR):
                 self.power=v
                 dct=self.query("UNIT%d:POW?"%self.channel, r'(?P<unit>.*)')     #Ask for the unit of 
                 self._internal_unit=dct['unit']                                 #the measured values.
-                #print 'fertig'
+                
             
                 try:
                     obj=quantities.Quantity(eval(self._internal_unit), 
@@ -152,7 +173,7 @@ class POWERMETER(PWRMTR):
             self.power=v
             dct=self.query("UNIT%d:POW?"%self.channel, r'(?P<unit>.*)')     #Ask for the unit of 
             self._internal_unit=dct['unit']                                 #the measured values.
-            #print 'retrigger'
+
         try:
             obj=quantities.Quantity(eval(self._internal_unit), 
                                     ucomponents.UncertainInput(self.power, self.power*swr_err))
@@ -296,9 +317,10 @@ if __name__ == '__main__':
     #sys.exit()
     pm1=test_init(1)
     #pm1.update_internal_unit(None,'DB')
-    print pm1.GetDataNB(1)
+    pm1.InitSen(1)
     print pm1.GetDataNB()
-    print pm1.GetDataNB(1)
+    print pm1.GetDataNB()
+    print pm1.GetDataNB('True')
     print pm1.GetDataNB()
     #pm1.Zero()
     #print pm1.Reset()

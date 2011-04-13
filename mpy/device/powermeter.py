@@ -255,7 +255,7 @@ class POWERMETER(DRIVER):
         G2=(vswr2-1.)/(vswr2+1.)
         umax=(1.+G1*G2)**2
         umin=(1.-G1*G2)**2
-        #print G1, G2, umax, umin
+        print G1, G2, umax, umin
         width=umax-umin
         sigma=width/(2.*math.sqrt(2.))
         return sigma
