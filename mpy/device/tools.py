@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+"""This is :mod:`mpy.device.tools`:
+
+   :author: Christian Albrecht
+   :copyright: All rights reserved
+   :license: no licence yet
+
+
+"""
+
 import re
 
 from types import FunctionType
