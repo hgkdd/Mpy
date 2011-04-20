@@ -42,12 +42,18 @@ std_ini=StringIO.StringIO(std_ini)
 
 
 class UI(tapi.HasTraits):
-    CHANNEL=tapi.Int(1)
+    CHANNEL=tapi.int()      #Enum('1','2')
     Init=tapi.Button()
     INI=tapi.Str()
     TRIGGER=tapi.Button('Trigger')
     FREQ=tapi.Float(1e6)
     POWER=tapi.Str()
+    IDN=tapi.Enum('*IDN?','*RST')
+    # COMAN= tapi.Array(tapi.Button, (1,3))
+    QUERY=tapi.Button('Query')
+    WRITE=tapi.Button('Write')
+    READ=tapi.Button('Read')
+    
     
     def __init__(self, instance, ini=None):
         self.pm=instance
@@ -82,14 +88,23 @@ class UI(tapi.HasTraits):
         
     POWER_grp=tuiapi.Group(tuiapi.Item('POWER'),label='Power')
                         
-    INI_grp=tuiapi.Group(tuiapi.Item('INI', style='custom',springy=True,width=500,height=200,show_label=False),
+    INI_grp=tuiapi.Group(tuiapi.Item('INI', style='custom',springy=True,width=400,height=200,show_label=False),
                          tuiapi.Item('CHANNEL'),
                          tuiapi.Item('Init', show_label=False),
                          label='Ini')
     FREQ_grp=tuiapi.Group(tuiapi.Item('FREQ'),label='Freq')
+    
     #LEVEL_grp=tuiapi.Group(tuiapi.Item('LEVEL'), label='Level')
     
+    CMD_grp=tuiapi.Group(tuiapi.Item('IDN',label="Commands IEEE 488.2     "),
+                         # tuiapi.Item('COMAN',show_label=False),
+                         tuiapi.Item('QUERY',show_label=False), tuiapi.Item('WRITE',show_label=False),
+                         # tuiapi.Item('READ',show_label=False),
+                         label='CMD',style='simple')
+    
     traits_view=tuiapi.View(tuiapi.Group(
-                                tuiapi.Group(INI_grp, FREQ_grp,layout='tabbed'),
-                                tuiapi.Item('TRIGGER'),
-                                POWER_grp, layout='normal'), title="Powermeter", buttons=[tuim.CancelButton])
+                                tuiapi.Group(INI_grp, FREQ_grp,CMD_grp,layout='tabbed'),
+                                tuiapi.Item('TRIGGER',show_label=False,width=40,height=20),
+                                POWER_grp, layout='normal'), title="Powermeter", buttons=[tuim.CancelButton]
+                                        )
+                                        
