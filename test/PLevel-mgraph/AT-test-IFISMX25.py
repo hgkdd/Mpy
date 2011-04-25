@@ -12,7 +12,6 @@ def W2dBm (v):
 
 description="IFI SMX25"
 MpyDIRS=['\\MpyConfig\\LargeGTEM', 
-         '/Users/hgkrauth/Documents/Development/sandbox/MpyConfig/LargeGTEM', 
          '.']
 
 
@@ -41,8 +40,8 @@ if False:
                levels=levels, virtual=False)
     pickle.dump (AT, file('%s-new.p'%description, 'wb'), 2)
 else:
-    #AT=pickle.load (file('%s-new.p'%description, 'rb'))
-    #AT.GetGainAndCompression(description=description)
-    #pickle.dump (AT, file('%s-new-processed.p'%description, 'wb'), 2)
+    AT=pickle.load (file('%s-new.p'%description, 'rb'))
+    AT.GetGainAndCompression(description=description)
+    pickle.dump (AT, file('%s-new-processed.p'%description, 'wb'), 2)
     AT=pickle.load (file('%s-new-processed.p'%description, 'rb'))
-    AT.OutputIniFile(description=description)
+    AT.OutputIniFile(description=description, fname='amp_ifi_smx25.ini', driver="amp_ifi_smx25.py", gpib=9)

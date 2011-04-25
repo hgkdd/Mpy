@@ -43,6 +43,7 @@ def fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
     
     if ignorecase:
         dists=[relative(a.lower(),p) for p in rmcp(possibilities,ignorecase=ignorecase)]
+        #print rmcp(possibilities,ignorecase=ignorecase)    
     else:
         dists=[retative(a,p) for p in rmcp(possibilities,ignorecase=ignorecase)]
     #handle perfect matches
