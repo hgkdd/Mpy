@@ -32,9 +32,6 @@ from mpy_exceptions import *
 class NETWORKANALYZER(NETWORKAN):
     
     """
-    Test
-    Test
-    
     .. rubric:: Methods:
     
     .. method:: SetTrace(tracename,measParam,winNumber):
