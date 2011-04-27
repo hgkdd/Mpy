@@ -42,17 +42,18 @@ std_ini=StringIO.StringIO(std_ini)
 
 
 class UI(tapi.HasTraits):
-    CHANNEL=tapi.int()      #Enum('1','2')
+    CHANNEL=tapi.Int(1)   #Enum('1','2')
     Init=tapi.Button()
     INI=tapi.Str()
     TRIGGER=tapi.Button('Trigger')
     FREQ=tapi.Float(1e6)
     POWER=tapi.Str()
     IDN=tapi.Enum('*IDN?','*RST')
+    ANS=tapi.Str('Answer')
     # COMAN= tapi.Array(tapi.Button, (1,3))
     QUERY=tapi.Button('Query')
-    WRITE=tapi.Button('Write')
-    READ=tapi.Button('Read')
+    # WRITE=tapi.Button('Write')
+    # READ=tapi.Button('Read')
     
     
     def __init__(self, instance, ini=None):
@@ -85,8 +86,13 @@ class UI(tapi.HasTraits):
     def _CHANNEL_changed(self):
         self.pm.Quit()
         self._Init_fired()
-        
-    POWER_grp=tuiapi.Group(tuiapi.Item('POWER'),label='Power')
+    
+    def _QUERY_senden(self):
+        self.pm.query()
+        err,data=self.pm.GetData()
+        self.POWER=str(data)
+    
+    POWER_grp=tuiapi.Group(tuiapi.Item('POWER'))
                         
     INI_grp=tuiapi.Group(tuiapi.Item('INI', style='custom',springy=True,width=400,height=200,show_label=False),
                          tuiapi.Item('CHANNEL'),
@@ -96,15 +102,17 @@ class UI(tapi.HasTraits):
     
     #LEVEL_grp=tuiapi.Group(tuiapi.Item('LEVEL'), label='Level')
     
-    CMD_grp=tuiapi.Group(tuiapi.Item('IDN',label="Commands IEEE 488.2     "),
+    CMD_grp=tuiapi.Group(tuiapi.Item('IDN',label="Commands IEEE 488.2 ", style='custom'    ),
                          # tuiapi.Item('COMAN',show_label=False),
-                         tuiapi.Item('QUERY',show_label=False), tuiapi.Item('WRITE',show_label=False),
+                         tuiapi.Item('QUERY',show_label=False), 
+                         # tuiapi.Item('WRITE',show_label=False),
                          # tuiapi.Item('READ',show_label=False),
-                         label='CMD',style='simple')
+                         tuiapi.Item('ANSWER',show_label=False),
+                         label='CMD',style='simple'
+                        )
     
-    traits_view=tuiapi.View(tuiapi.Group(
-                                tuiapi.Group(INI_grp, FREQ_grp,CMD_grp,layout='tabbed'),
-                                tuiapi.Item('TRIGGER',show_label=False,width=40,height=20),
-                                POWER_grp, layout='normal'), title="Powermeter", buttons=[tuim.CancelButton]
-                                        )
+    traits_view=tuiapi.View(tuiapi.Group(tuiapi.Group(INI_grp, FREQ_grp,CMD_grp,layout='tabbed'),
+                                         tuiapi.Item('TRIGGER',show_label=False),
+                                         POWER_grp, layout='normal'), 
+                            title="Powermeter", buttons=[tuim.CancelButton])
                                         

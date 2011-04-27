@@ -116,10 +116,10 @@ class POWERMETER(PWRMTR):
         self._internal_unit=dct['unit']
         return val,self._internal_unit
         
-                                        #                                 /
-    def Unit(self,ch,unit):                #Selects the output unit          |      DBM, W,    
-        channel=ch                      #for the measured power values.    |      DBUV
-        unit=unit                        #                                 \
+                                        #                                  /
+    def Unit(self,ch,unit):             #Selects the output unit          |      DBM, W,    
+        channel=ch                      #for the measured power values.   |      DBUV
+        unit=unit                       #                                  \
         self.write("UNIT%d:POW %s"%(channel,unit))
         self._internal_unit=unit
         return 
@@ -188,7 +188,7 @@ def main():
                         fstart: 10e6
                         fstop: 18e9
                         fstep: 0
-                        gpib: 21
+                        gpib: 22
                         virtual: 0
                         nr_of_channels: 2
 
@@ -207,25 +207,26 @@ def main():
                         """)
         ini=StringIO.StringIO(ini)
 
-    pm=POWERMETER()    
+    pm=POWERMETER()
     ui=UI(pm,ini=ini)
     ui.configure_traits()
     #pm.Init(ini,ch)
     return pm
     
 if __name__ == '__main__':
-    import sys
+    
+    import sys  
     main()
     sys.exit()
-    pm1=test_init(1)
-    pm1.Zero()
-    #pm1.Unit(1,'DBM')
-    #print pm1.Reset()
+    # pm1=test_init(1)
+    # pm1.Zero()
+    # pm1.Unit(1,'DBM')
+    # print pm1.Reset()
     #print pm1.SetFreq(10.0)
     #for i in range(3):
-     #   print pm1.MEAS()
+    # print pm1.MEAS()
     #print pm1.GetDescription()
-    #print pm1.SelfTestQuery()
+    # print pm1.SelfTestQuery()
     #print pm1._cmds
     #print 'ini fertig'
     #pm2=test_init(2)
