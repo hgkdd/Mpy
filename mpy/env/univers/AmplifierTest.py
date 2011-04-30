@@ -330,6 +330,59 @@ Quit: quit measurement.
         parent[key]['value']=val
         parent[key]['parameter']=parameter
 
+    def OutputIniFile (self, description=None, fname=None, driver="amplifier.py", gpib=1):
+        pd=self.processedData
+        if not pd.haskey(description):
+            #return silently
+            return 0
+        pdd=pd[description]
+        gain=pdd['gain']
+        ic1=pdd['input_compression_1dB']
+        ic3=pdd['input_compression_3dB']
+        oc1=pdd['output_compression_1dB']
+        oc3=pdd['output_compression_3dB']
+        freqs=sorted(gain.keys())
+        header="""[description]
+DESCRIPTION = %s
+TYPE = AMPLIFIER
+VENDOR = AR
+SERIALNR = 
+DEVICEID = 
+DRIVER = %s
+
+[INIT_VALUE]
+FSTART = %f
+FSTOP = %f
+FSTEP = 0.0
+NR_OF_CHANNELS = 2
+GPIB = %d
+VIRTUAL = 0
+"""
+        gaintmpl="""[CHANNEL_1]
+NAME = S21
+UNIT = dB
+INTERPOLATION = LOG
+FILE = StringIO.StringIO(format_block('''
+                                    FUNIT: Hz
+                                    UNIT: dB
+                                    ABSERROR: 0.0
+                                    %s
+                                    '''))
+"""
+        maxintmpl="""[CHANNEL_2]
+NAME = MAXIN
+UNIT = dBm
+INTERPOLATION = LOG
+FILE = StringIO.StringIO(format_block('''
+                                    FUNIT: Hz
+                                    UNIT: dBm
+                                    ABSERROR: 0.0
+                                    %s
+                                    '''))
+"""
+        print header%(description, driver, freqs[0], freqs[-1], gpib)
+        
+
     def GetGainAndCompression (self, description=None, small_signal_factor=10):
         rd=self.rawData[description]
         pd={}
