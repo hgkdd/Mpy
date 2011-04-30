@@ -79,17 +79,17 @@ class DRIVER(object):
             gpib=self.conf['init_value']['gpib']
         if 'virtual' in self.conf['init_value']:
             virtual=self.conf['init_value']['virtual']
-        # print virtual, gpib
-        if virtual or not gpib:
+        if virtual or not gpib:               #Virtual mode
             self.dev=None
             self.write=self._debug_write
             self.read=self._debug_read
             self.query=self._debug_query
             return self.dev
-        else:
+        else:                                 #Normal mode
             import visa
+            
             if values_format is None:
-                values_format=visa.ascii
+                values_format=visa.ascii     
             if lock is None:
                 lock=visa.VI_NO_LOCK
             self.dev=visa.instrument('GPIB::%d'%gpib,
@@ -159,10 +159,9 @@ class DRIVER(object):
         if not ininame:
             self.conf['init_value']['virtual']=True
         else:
-            #print ininame, type(ininame)
-            #print self.conftmpl
             self.Configuration=Configuration(ininame, self.conftmpl)
             self.conf.update(self.Configuration.conf)
+            
         
     def Init(self, ininame=None, channel=None):
         """
@@ -183,7 +182,6 @@ class DRIVER(object):
         self.get_config(ininame, channel)
         if not self.conf['init_value']['virtual']:
             buspars={}
-            #print "Here"
             for k in ('timeout',
                       'chunk_size',
                       'values_format',
@@ -200,6 +198,7 @@ class DRIVER(object):
             if self.dev != None:
                 dct=self._do_cmds('Init', locals())
                 self._update(dct)
+        #print self.error
         return self.error
 
     def _get(self, sec, key):
@@ -208,46 +207,38 @@ class DRIVER(object):
         if '%' in sectok:
             pos=sectok.index('%')
             sectok=sectok[:pos]+sec[pos:]
-        #print sectok, keytok
-        #print self.conf.keys()
         return self.conf[sectok][keytok]
     
     def _do_cmds(self, key, callerdict=None):
-        #print self
-        dct={} # preset returned dictionary
+        dct={}                             # preset returned dictionary
         if not hasattr(self, '_cmds'): 
-            # if self._cmds is not defined we return a empty dict
-            return dct
-        #print key
-        #print self._cmds
-        #print callerdict
-        if key in self._cmds: # in key is the name of the command to excecute, e.g. 'SetFreq'
-            for cmd,tmpl in self._cmds[key]: # loop all command, template pairs for key 'key'
-                try:
-                    # try to eval cmd as a python expression in callerdict and assign result to expr
-                    # This will insert the value of variables (e.g. freq) into the command 
+            return dct                  # if self._cmds is not defined we return a empty dict
+        if key in self._cmds:           # in key is the name of the command to excecute, e.g. 'SetFreq'
+            
+            for cmd,tmpl in self._cmds[key]:      # loop all command, template pairs for key 'key'
+            
+                try:    # try to eval cmd as a python expression in callerdict and assign result to expr
+                        # This will insert the value of variables (e.g. freq) into the command 
                     expr=eval(cmd,callerdict)
-                    if expr is None:  # no substitution -> None is reutned
+                    #print expr
+                    if expr is None:                       # no substitution -> None is reutned
                         expr = cmd
                 except (SyntaxError, NameError):
-                    expr=cmd # else, expr is set to cmd
-                # tmpl is the mask for the string to read
-                if not tmpl: # no mask, no read
-                    # expr may be a function call. Let's try..
+                    expr=cmd                               # else, expr is set to cmd
+                                                        # tmpl is the mask for the string to read
+                if not tmpl:                              # no mask, no read
+                                                        # expr may be a function call. Let's try..
                     try:
                         exec expr in callerdict
                     except (SyntaxError, NameError, TypeError):
-                        self.write(expr)
-                elif not cmd: # no cmd, no write
+                        self.write(expr)                
+                elif not cmd:                           #only data read    no cmd, no write
                     dct.update(self.read(tmpl))
-                else: # both -> write and read
-                    #print expr, tmpl
+                else:                                   # both -> write and read
                     dct.update(self.query(expr, tmpl))
-                #print "key=",key,"cmd=",cmd,"tmpl=",tmpl,'expr=',expr,'dct=',dct
+        
         return dct
 
-        #print dct
-        #print self.__dict__
 
     def _update(self, dct):
         """Update the class namespace from the dictionary dct.
@@ -256,7 +247,9 @@ class DRIVER(object):
         Fuction returns 'None'.
         """
         if dct is None:
+            
             self.error |= self.errors["General Driver Error"]
+            
         else:
             self.__dict__.update(dct)
 
@@ -292,11 +285,13 @@ class DRIVER(object):
         """
         self.error=0
         dct=self._do_cmds('GetDescription', locals())
+        #print dct
         self._update(dct)
         try:
             des = self.conf['description']
         except KeyError:
             des = self.conf['description']=''
         #print self.conf['description'], self.IDN
-        return self.error, str(self.conf['description'])+self.IDN
+        return self.error, str(self.conf['description']) + self.IDN 
+
 

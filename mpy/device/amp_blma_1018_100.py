@@ -19,6 +19,7 @@ class AMPLIFIER(AMP):
         self.error=AMP.Init(self, ini, channel)
         self.POn()
         self.Operate()
+        time.sleep(2)
         return self.error
 
     def _wait(self, state=False):
@@ -30,7 +31,13 @@ class AMPLIFIER(AMP):
             time.sleep(0.1)
         
     def SetFreq(self, freq):
-        swstat=self.dev.ask('SW01?')
+        for _ in range(5):
+            try:
+                swstat=self.dev.ask('SW01?')
+            except visa.VisaIOError:
+                time.sleep(0.2)
+                continue
+            break
         assert swstat.startswith('SW01_')
         swstat=int(swstat[-1])
         if freq<=2e9:
@@ -46,7 +53,9 @@ class AMPLIFIER(AMP):
             self.write('SW01_%d'%sw)
             self.Operate()
             self._wait(True)
+            time.sleep(2)
         self.error, freq=AMP.SetFreq(self,freq)
+        time.sleep(0.2)
         return self.error, freq
 
 def main():

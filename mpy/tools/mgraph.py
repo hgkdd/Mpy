@@ -64,6 +64,7 @@ class Graph(object):
             meth=getattr(pydot, m)
             try:
                 if m == 'graph_from_dot_file':
+                    # print self.SearchPaths, fname_or_data
                     fname_or_data = locate(fname_or_data, paths=self.SearchPaths).next()  # first hit
                     dotgraph=meth(fname_or_data)
                 else:
@@ -264,7 +265,10 @@ class MGraph(Graph):
                     dev = str(n_attr['dev'])
                     # edge device instance
                     inst = self.nodes[dev]['inst']
-                    what = _stripstr(str(n_attr['what']))
+                    try:
+                        what = _stripstr(str(n_attr['what']))
+                    except KeyError:
+                        continue
                     try:
                         stat = -1
                         for cmd in ['getData', 'GetData']:
@@ -959,7 +963,7 @@ class MGraph(Graph):
         return makeDict(v)
 
 class Leveler(object):
-    def __init__(self, mg, actor, output, lpoint, observer, pin=None, datafunc=None):
+    def __init__(self, mg, actor, output, lpoint, observer, pin=None, datafunc=None, min_actor=None):
         """
         mg: MGraph instance
         actor: name of device in mg. device instance has to have SetLevel method
@@ -967,6 +971,8 @@ class Leveler(object):
         lpoint: name of point where a specific value has to be reached
         observer: name of device where lpoint is observed
         """
+        if min_actor==None:
+            self.min_actor=quantities.Quantity(si.WATT, 1e-13)    # -100 dBm
         self.mg=mg
         self.actor=actor
         self.sg=getattr(mg, actor)
@@ -992,9 +998,13 @@ class Leveler(object):
     def add_samples(self, pin):
         if not hasattr(pin, '__iter__'):
             pin=[pin]
+        pinr=[]
         for pi in pin:
             if pi > self.MaxSafe:
                 continue
+            if pi < self.min_actor:
+                pi=self.min_actor
+            pinr.append(pi)
             self.sg.SetLevel(pi)
             pikey=abs(pi)
             pikey=pikey.get_expectation_value_as_float()
@@ -1010,6 +1020,7 @@ class Leveler(object):
             assert(self.lpointunit==lpoint._unit)
             self.samples[pikey]=lpoint.get_expectation_value_as_float()
         self.update_interpol()
+        return pinr
 
     def update_interpol(self):
         x=sorted(self.samples)
@@ -1029,7 +1040,7 @@ class Leveler(object):
         for i in range(maxiter):
             inval=self.i_extrap(sf)[0]
             pin=quantities.Quantity(self.actorunit, min(inval, safemax))
-            self.add_samples(pin)
+            pin=self.add_samples(pin)[0]
             pout=quantities.Quantity(self.lpointunit, self.samples[pin.get_expectation_value_as_float()])
             re=abs(pout-soll)/soll
             re=re.reduce_to(units.ONE)

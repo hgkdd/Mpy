@@ -1,0 +1,51 @@
+import cPickle as pickle
+import sys
+from numpy import linspace,concatenate, log10
+from scuq.quantities import Quantity
+from scuq.si import WATT
+import mpy.env.univers.AmplifierTest
+from mpy.tools.util import locate
+
+def dBm2W (v):
+    return 10**(v*0.1)*0.001
+def W2dBm (v):
+    return 10*log10(v*1000)
+
+description="AR 25S1G4"
+MpyDIRS=['\\MpyConfig\\LargeGTEM', 
+         '.']
+
+arg='evaluate'
+try:
+    arg=sys.argv[1]
+except:
+    pass
+
+if arg.startswith('m'):
+    dot='amplifier-test-sw800e6.dot'
+    #print dot
+    # keys: names in program, values: names in graph
+    names={'sg': 'sg',
+           'amp_in': 'amp_in',
+           'amp_out': 'amp_out',
+           'pm_fwd': 'pm1',
+           'pm_bwd': 'pm2',
+           'output': 'gtem'}
+
+    AT = mpy.env.univers.AmplifierTest.AmplifierTest(SearchPaths=MpyDIRS)
+    AT.set_logfile('%s.log'%description)
+
+    freqs=linspace(800e6, 4.2e9, 50)
+    levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-30, 3, 34)]
+    AT.Measure(description=description,
+               dotfile=dot,
+               names=names,
+               freqs=freqs,
+               levels=levels, virtual=False, delay=1)
+    pickle.dump (AT, file('%s.p'%description, 'wb'), 2)
+else:
+    AT=pickle.load (file('%s.p'%description, 'rb'))
+    AT.GetGainAndCompression(description=description)
+    pickle.dump (AT, file('%s-processed.p'%description, 'wb'), 2)
+    AT=pickle.load (file('%s-processed.p'%description, 'rb'))
+    AT.OutputIniFile(description=description, fname='amp_ar_25s1g4.ini', driver="amp_ar_25s1g4.py", gpib=1)
