@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+"""This is :mod:`mpy.device.tools`:
+
+   :author: Christian Albrecht
+   :copyright: All rights reserved
+   :license: no licence yet
+
+
+"""
+
 import re
 
 from types import FunctionType
@@ -14,33 +23,45 @@ import copy
 
 class Meta_Driver(type):
     """ Meta-Klasse für Driver.
-        Die Meta-Klasse hat mehrere Aufgaben: 
+        
+        In der Beschreibung wird von Driver-Klassen und Super-Klassen gesprochen.
+        Mit Dirver-Klasse ist eine konkrete Implemntiereung eines Drivers gemeint, wie z.B. die Klasse nw_rs_zlv.py.
+        Mit Super-Klasse ist somit die dazugehörende Super-Kasse bezeichnet, im falle des nw_rs_zlv.py wäre das die Klasse networkanalyzer.py. 
+    
+        Die Meta-Klasse hat mehrere Aufgaben:
 
-        Sie Baut anhand _cmds Dict der Driver Klasse, Methoden für diese Klasse. 
+        Sie baut anhand des _cmds dict der Driver Klasse Methoden für diese Klasse. 
 
-        Die Methoden haben den gleichen Namen wie das jeweilige Command bzw. wie die 
-        jeweilige Function. Als Parameter sind diejenigen vorhanden, welche in der Function 
-        bzw. in dem Command definiert wurden. Eine Methode ruft im Grund nur das ihr 
-        zugewiesene Command oder Function Objekt auf.
+        Die geschaffenen Methoden haben den gleichen Namen wie das jeweilige "Command" bzw. die 
+        jeweilige "Function" im _cmds dict. Als Parameter sind diejenigen vorhanden, welche in der "Function" 
+        bzw. in dem "Command" definiert wurden. (Eine Methode, welche durch die Meta-Klasse gebaut wurde, 
+        ruft im Grund nur das ihr zugewiesene Command oder Function Objekt auf).
 
 
-        Weiterhin führt die Meta-Klasse einen Syntax Check für Methoden durch, die im 
+        Weiterhin führt die Meta-Klasse einen Syntax Check für Methoden durch, die auch im 
         _commands dict der Super Klasse definiert wurden. Die Parameter einer Driver-Methode,
-        deren Name ebenfalls im _commands dict vorhanden ist, müssen mit den dort 
-        angegeben Parameter-Namen übereinstimmen! Sind in _commands Methoden definiert welche 
-        nicht in der Klasse implementiert sind, wird eine Methode gebaut die eine 
-        NotImplementedError Exception wirft. 
+        deren Name ebenfalls im _commands dict der Super-Klasse vorhanden ist, müssen mit den dort 
+        angegeben Parametern übereinstimmen! 
+        Sind in _commands Methoden definiert, welche nicht in der Klasse implementiert sind, 
+        wird eine Methode gebaut die eine NotImplementedError Exception wirft.
 
 
 
-        Durch die Meta-Klasse ist es auch möglich, globale return_maps für commands und globale possibilities,
-        possibilities_maps für Parameter zu definieren.
 
-        *possibilities:
 
-        Possibilities dürfen sowohl in der Super Klasse des Driver als auch in der Klasse selbst definiert werden.
+        Durch die Meta-Klasse ist es auch möglich, globale return_maps für commands und globale 
+        possibilities_maps für Parameter zu definieren. 
+        Für eine genaure Beschreibung zu return_maps, siehe Command().
+        Für eine genaure Beschreibung zu possibilities, siehe Parameter()
+
+        * possibilities:
+        
+        Possibilities sind mögliche Werte für einen Parameter. Werden andere Werte übergeben, wird mit Hilfe eines
+        Fuzzy-string-compares, der übergebene Wert auf einen den in der Posssibilites-Liste vorhandenen zurückgeführt. 
+
+        Possibilities dürfen sowohl in der Super-Klasse des Driver als auch in der Driver-Klasse selbst definiert werden.
         Wird in beiden Klassen eine Possibilities-Liste  erzeugt, welche den gleichen Parameter anspricht, wird die 
-        diejenige, der Superklasse verwendet.
+        diejenige der Superklasse verwendet.
         Beispiel:
             _cmds= CommandsStorage( NETWORKAN,
                             Command('SetSparameter',"VISA Command String",(
@@ -49,7 +70,7 @@ class Meta_Driver(type):
                                          )   ),
 
         Will man für den Parameter 'measParam' eine Possibilites-Liste erzeugen, dann muss diese folgenden Namen 
-        besitzen: Name_des_Parameters_possib (unabhängig davon ob die Liste in der Super Klasse oder in der Klasse 
+        besitzen: Name-des-Parameters_possib (unabhängig davon ob die Liste in der Super-Klasse oder in der Driver-Klasse 
         selbst definiert wurde):
         Beispiel:
             measParam_possib=('S11', 'S12', 'S21', 'S22')
@@ -59,14 +80,14 @@ class Meta_Driver(type):
 
         *possibilities_maps:
 
-        possibilities_maps können nur in der Klasse selbst nicht in der Superklasse definiert werden.
+        possibilities_maps können nur in der Driver-Klasse selbst, nicht in der Superklasse definiert werden.
         Beispiel:
                 Command('SetSweepType','VISA Command String'),
                             Parameter('sweepType',ptype=str)
                             )),
 
         Will man für den Parameter 'sweepType' eine Possibilites_Map erzeugen, dann muss diese folgenden Namen 
-        besitzen: Name_des_Parameters_possib_map
+        besitzen: Name-des-Parameters_possib_map
         Beispiel:
     
             sweepType_possib_map={'LOGARITHMIC'  :   'LOGARITHMIC_map',
@@ -78,7 +99,7 @@ class Meta_Driver(type):
 
         * return_maps
 
-        return_maps können nur in der Klasse selbst nicht in der Superklasse definiert werden.
+        return_maps können nur in der Klasse selbst, nicht in der Super-Klasse, definiert werden.
         Beispiel:
 
             Command('SetSweepType','VISA Command String'),
@@ -227,10 +248,10 @@ class Meta_Driver(type):
 class CommandsStorage(dict):
     """ CommandStorage ist im Grunde ein dict. Es ermöglicht die Übergabe der Werte als Argument an 
         die __init__ Methode. 
-        Jedes Argument muss eine Methode .getName() besitzen.
+        Jedes Argument muss eine Methode .getName() besitzen über die der Name des Arguments abgerufen werden kann.
         
-        CommandStorage fügt jedes Argument, mit dessen Namen als key, sich selbst hinzu, 
-        weiterhin wird für jedes Argument ein Attribut mit dessen Namen angelegt.
+        CommandStorage fügt jedes Argument, mit dessen Namen als key, sich selbst hinzu. 
+        Weiterhin wird für jedes Argument ein Attribut mit dessen Namen angelegt.
 
         Das ermöglicht einen Zugriff auf zwei Arten:
         CommandS['key']
@@ -261,8 +282,8 @@ class Function(dict):
 
         **Verwendung:
         
-        Die Commands werden der Function beim initialisieren des Objekts
-        übergeben. Will man mehr als ein Command angeben muss man eine List/Tuple von Commands übergeben. 
+        Die Commands werden der Function beim initialisieren des Function-Objekts
+        übergeben. Will man mehr als ein Command angeben, muss man eine List/Tuple von Commands übergeben. 
         Das erste Argument von Funktion muss immer der name der Function sein:
  
            f=Function(name_der_Function,(
@@ -279,15 +300,15 @@ class Function(dict):
     
             f(self,Parameter_1,Parameter_2)
 
-        Der Parameter_1 kommt bei den Commands doppelt vor, wird aber bei Function nur einmal verwendend, 
+        Der Parameter_1 kommt bei den Commands doppelt vor, wird aber bei Function nur einmal verwendet, 
         und zwar an der Stelle wo er zuerst auftritt. 
 
 
-        WICHITG: Das erste Argument für Function muss immer die aktuelle Dirver Instanz sein! 
+        WICHITG: Das erste Argument beim Aufruf einer Function muss immer die aktuelle Dirver Instanz sein! 
 
-        HINWEISS:  Es ist nicht empfohlen die  Function Objekt direkt zu verwenden, man sollte immer über die, 
-                   durch die Meta-Klasse erzeugten, Methoden gehen. Dort wird die Driver Instanz dann automatisch 
-                   übergeben. 
+        HINWEIS:   Es ist nicht empfohlen die  Function Objekt direkt zu verwenden, man sollte immer über die
+                   durch die Meta-Klasse erzeugten Methoden gehen. Dort wird die Driver Instanz dann automatisch 
+                   übergeben.
 
 
         **Rückgabe:
@@ -311,7 +332,7 @@ class Function(dict):
                    'command_2': irgendwas_str}
  
  
-        * Um die Rückgabe besser zu kontrollieren ist es möglich ein Template anzugeben:
+        * Um die Rückgabe besser kontrollieren zu können ist es möglich ein Template anzugeben:
          
          f=Function('bsp',(
                 Command('command_1','command_str',(Parameter),rtype=float)
@@ -339,10 +360,10 @@ class Function(dict):
               ->  <type 'float'>
 
         Es kann entweder ein Python Standard Typ angehen werden, oder ein Objekt welches von R_TYPES() 
-        abgeleitet wurde. Was für R_TYPES() Objekte existieren, siehe r_types.py. Die Klassen dieses Moduls 
-        müssen natürlich auch importiert sein. Intern wird float auf R_FLOAT() gemappt.
+        abgeleitet wurde. Was für R_TYPES() Objekte existieren, siehe dazu r_types.py. Die Klassen dieses Moduls 
+        müssen natürlich auch importiert sein.
         Es kann auch der Platzhalter '<default>' verwendet werden. Dann wird in dem _commands dict 
-        der Super Klasse des Driver, nach dem returntype, unter dem Namen der Function, gesucht und dieser Verwendet. 
+        der Super Klasse des Driver nach dem returntype, unter dem Namen der Function, gesucht und dieser Verwendet. 
 
         WICHTIG: rtype wird nur beachtet, wenn auch rtmpl definiert wurde.
     """
@@ -516,8 +537,9 @@ class Command(object):
         Das erste Argument für ein Command muss immer die aktuelle Driver Instanz sein, 
         alle weiteren Argumente sind für die Parameter. Die Reihenfolge der Parameter entspricht 
         der Reihenfolge bei der Initialisierung des Objekts. Ist allerdings ein Parameter an eine Attribut der 
-        Driver-Instanz gebunden, dann kann der Wert nicht beim Aufruf des Objektes übergeben werden. 888 ist also der
-         Wert für cfreq (im obigen Beispiel).
+        Driver-Instanz gebunden, dann kann der Wert nicht beim Aufruf des Objektes übergeben werden (siehe dazu
+        auch die Beschreibung von Parameter()). 
+        888 ist also der Wert für cfreq (im obigen Beispiel).
 
 
         **Rückgabe:
@@ -548,7 +570,7 @@ class Command(object):
                          Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
                          ),rtype=float)
-            oder:
+            oder gleichbedeutend:
             c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
                          Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
@@ -564,7 +586,7 @@ class Command(object):
         abgeleitet wurde. Was für R_TYPES() Objekte existieren, siehe r_types.py. Die Klassen dieses Moduls 
         müssen natürlich auch importiert sein. Intern wird float auf R_FLOAT() gemappt.
         Es kann auch der Platzhalter '<default>' verwendet werden. Dann wird in dem _commands dict 
-        der Super Klasse des Driver, nach dem returntype, unter dem Namen des Commands, gesucht und dieser Verwendet.
+        der Super Klasse des Driver nach dem returntype, unter dem Namen des Commands, gesucht und dieser Verwendet.
         '<default>' darf nicht verwendet werden, wenn Command in einer Function definiert wurde.
 
 
@@ -633,7 +655,7 @@ class Command(object):
         #Parameter in einem Dict speichern. 
         for para in parameter:
             self.parameter[para.getName()] = para
-            if not para.isGlobal():
+            if not para.isClass_attr():
                 ParameterTuple.append(para.getName())
         
         self.parameterTuple=tuple(ParameterTuple)
@@ -643,7 +665,7 @@ class Command(object):
         
     def init(self,driver_super,f_name=None):
         """Init() führt einige, für die Initialisierung des Commands, nötigen Schritte durch, 
-           sie muss aufgerufen werden, bevor das Command Objekt verwendet werden kann.
+           sie muss aufgerufen werden bevor das Command Objekt verwendet werden kann.
 
            Wird durch ein CommandStorage oder durch eine Function Objekt automatisch erledigt.
            
@@ -720,8 +742,8 @@ class Command(object):
 
            Nähre Infos zur Verwendung von Command siehe Klassen Beschreibung 
 
-           :param driver:      Eine Instanze eines Drivers
-           :param parameters:        Paramter für den VISA Kommando String  
+           :param driver:       Eine Instanze eines Drivers
+           :param parameters:   Paramter für den VISA Kommando String  
         """
 
         #Prüfen, ob von Driver schon die init() Methode aufgerufen wurde.
@@ -806,10 +828,14 @@ class Command(object):
     def Rfunction(self):
         return self.rfunction
 
+
+
+
+
 class Parameter(object):
     """ Parameter verwaltet und speichert die Argumente für die VISA Kommandos. 
 
-        HINWEIß! Es ist nie nötig den Parametern direkt Werte zu übergeben, das wird 
+        HINWEIS! Es ist nie nötig den Parametern direkt Werte zu übergeben, das wird 
                  immer durch ein Function bzw. Command Objekt erledigt! 
 
         **Verwendung:
@@ -833,17 +859,17 @@ class Parameter(object):
             p=Parameter('name', possibilities=('LINEAR','LOGARITHMIC'))
 
         Dies ist eine Liste oder Tuple mit möglichen Werte des Parameters. 
-        Wird dem Parameter keiner der der möglichen Werte übergeben, verwendet er einen, 
-        zu dem übergebene Wert ähnlichen, aus der Liste. 
+        Wird dem Parameter keiner der der möglichen Werte übergeben verwendet er einen, 
+        zu dem übergebenen Wert ähnlichen, aus der Liste. 
         Possibilities ist also kein strickte Prüfung, dies ist aber mit Validatoren möglich 
         (siehe weiter unten).
 
 
-        * Mit Possibilities_Map ist es möglich, übergebene Werte auf für den VISA Befehl 
-          brauchbar zu mappen:
+        * Mit Possibilities_Map ist es möglich, übergebene Werte, auf einen für den VISA Befehl 
+          brauchbaren Werte, zu mappen:
 
             p=Parameter('name', possibilities_map={'LOGARITHMIC'  :   'LOGARITHMIC_map',
-                                      'LINEAR'  :   'LINEAR_map'})
+                                                   'LINEAR'  :   'LINEAR_map'})
                             
         In diesem Beispiel wird dem Parameter z.B. LOGARITHMIC übergeben, dieser würde 
         LOGARITHMIC_map daraus machen.
@@ -869,17 +895,26 @@ class Parameter(object):
         * Validatoren haben die höchste Priorität, erst danach werden possibilities und danach possibilities_map verarbeitet.  
 
         
-        * Man kann aber ein Parameter aber auch an ein Attribut der Driver Instanz binden: 
+        * Man kann ein Parameter aber auch an ein Attribut der Driver Instanz binden: 
     
             p=Parameter('name', class_attr='Attribut der Instanz')
 
         Der Werte für den Parameter wird dann immer aus diesem Attribut genommen.
-        Wird class_attr definiert, haben  ptype, possibilities und possibilities_map keine Wirkung mehr.
+        Wird class_attr definiert, haben  ptype, possibilities und possibilities_map keine Wirkung.
     """
     
     
     
     def __init__(self,name,class_attr=None,ptype=None,requires=None,possibilities_map=None,possibilities=None):
+        """Zur Verwendung von Parameters, siehe Klassen Beschreibung
+        
+        :param name:                Der Name des Parameters
+        :param class_attr:          Bindet den Parameter an einen Klassen Attribut  (siehe Klassen Beschreibung)
+        :param ptype:               Typ des Parameters (siehe Klassen Beschreibung)
+        :param requires:            Liste von Validatoren  (siehe Klassen Beschreibung)
+        :param possibilities_map:   Possibilities_map für den Parameter (siehe Klassen Beschreibung) 
+        :param possibilities:       Rossibilities für den Parameter (siehe Klassen Beschreibung)
+        """
         self.name=name
         self.class_attr=class_attr
         self.ptype=ptype
@@ -892,12 +927,21 @@ class Parameter(object):
     
     
     def init(self,cmd,driver):
+        """Init() führt einige, für die Initialisierung des Parameters, nötigen Schritte durch, 
+           sie muss aufgerufen werden bevor das Parameter Objekt verwendet werden kann.
+
+           Wird durch ein Command automatisch erledigt.
+           
+           :param cmd: Command Instanz zu dem der Parameter gehört. 
+           :param driver: Driver Instanz zu dem der Parameter gehört.
+        """
         self.command=cmd
         self.driver=driver
     
     
     def getValue(self):
-        
+        """Gibt den aktuellen Wert des Parametes zurück.
+        """
         if self.class_attr:
             return getattr(self.driver,self.class_attr)
         return self.value
@@ -905,6 +949,11 @@ class Parameter(object):
 
 
     def __call__(self,value):
+        """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
+           Nähre Infos zur Verwendung des Parameters Objekt siehe Klassen Beschreibung
+
+        :param para: Neuer Wert für den Parameter
+        """         
                 
         if self.ptype:
             if not isinstance(value,self.ptype):
@@ -913,7 +962,7 @@ class Parameter(object):
                 except:
                     raise TypeError('Attribute %s of %s must be of type %s'%(self.name,self.command.getName(),str(self.ptype)))
         
-        self.validate(value)
+        self._validate(value)
         
         if self.possib and isinstance(value,basestring):
             value =fstrcmp(value, self.possib, n=1,cutoff=0,ignorecase=True)[0]
@@ -934,6 +983,8 @@ class Parameter(object):
     #    return self.getValue()
         
     def __str__(self):
+        """Dieser Slot wird verwendet wenn der Parameter in einen String umgewandelt werden soll.
+        """
         #print 'str'
         try:     
             return str(self.getValue())
@@ -942,6 +993,8 @@ class Parameter(object):
                   %s"""%(self.getValue(),self.name,self.command.getName(),e))
     
     def __int__(self):
+        """Dieser Slot wird verwendet wenn der Parameter in ein Int umgewandelt werden soll.
+        """
         #print 'to init',self.getValue()
         try:
             return int(self.getValue())
@@ -950,6 +1003,8 @@ class Parameter(object):
                   %s"""%(self.getValue(),self.name,self.command.getName(),e))
     
     def __float__(self):
+        """Dieser Slot wird verwendet wenn der Parameter in ein Float umgewandelt werden soll.
+        """
         #print 'float'
         try:
             return float(self.getValue())
@@ -958,9 +1013,11 @@ class Parameter(object):
                   %s"""%(self.getValue(),self.name,self.command.getName(),e))
             
     def getName(self):
+        """Gibt den Namen des Parameters zurück.
+        """
         return self.name
     
-    def validate(self, value):
+    def _validate(self, value):
         #print self.requires
         if not self.requires:
             return value
@@ -973,18 +1030,30 @@ class Parameter(object):
                 raise ValidateError(error,parameter=self.name,command=self.command.getName())
         return value
 
-    def isGlobal(self):
+    def isClass_attr(self):
+        """Diese Methode prüft, ob der Parameters an ein Klassen-Attribut gebunden ist.
+           Sie gibt true zurück falls er gebunden ist, falls nicht wird false zurückgegeben.
+        """
         r = False
         if self.class_attr:
             r = True
         return r
     
     def setPossibilities_map(self,map):
-            self.possib_map=map
+        """ Diese Methode ermöglicht das nachträgliche setzen einer Possibilities_map.
+            Nähre Infos zur Verwendung des Parameters Objekt siehe Klassen Beschreibung
+        """
+        self.possib_map=map
     
     def setPossibilities(self,possib):
+        """ Diese Methode ermöglicht das nachträgliche setzen von Possibilities.
+            Nähre Infos zur Verwendung des Parameters Objekt siehe Klassen Beschreibung
+        """
         self.possib=possib
         
     def Getptype(self):
+        """ Gibt den Typ des Parameters zurück.
+            (siehe Klassen Beschreibung)
+        """
         return self.ptype
     

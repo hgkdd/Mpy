@@ -7,7 +7,7 @@ from mpy.device.powermeter import POWERMETER as PWRMTR
     
 class POWERMETER(PWRMTR):
     """
-    Driver for the Rohde & Schwarz powermeter
+    Driver for the R&S NRP
     """
     def __init__(self, **kw):
         PWRMTR.__init__(self, **kw)
@@ -51,6 +51,7 @@ class POWERMETER(PWRMTR):
             try:
                 v=self.conf[sec][k]
                 if (vals is None):  # no comparision
+                    #print actions[0], self.convert.c2c(self.levelunit, self._internal_unit, float(v)), float(v), self.levelunit
                     self._cmds['Preset'].append((eval(actions[0]),actions[1]))
                 else:
                     for idx,vi in enumerate(vals):
@@ -58,7 +59,7 @@ class POWERMETER(PWRMTR):
                             self._cmds['Preset'].append(actions[idx])
             except KeyError:
                 pass
-                
+
         dct=self._do_cmds('Preset', locals())
         self._update(dct)
         return self.error 
@@ -222,6 +223,15 @@ class POWERMETER(PWRMTR):
         self._internal_unit=dct['unit']
         return val,self._internal_unit   
     
+                                        #                                  /
+    def Unit(self,ch,unit):             #Selects the output unit          |      DBM, W,    
+        channel=ch                      #for the measured power values.   |      DBUV
+        unit=unit                       #                                  \
+        self.write("UNIT%d:POW %s"%(channel,unit))
+        self._internal_unit=unit
+        return 
+    
+    
     
 def test_init(ch):
     import StringIO
@@ -305,7 +315,7 @@ def main():
         
     ini=StringIO.StringIO(ini)
 
-    pm=POWERMETER()    
+    pm=POWERMETER()
     ui=UI(pm,ini=ini)
     ui.configure_traits()
     #pm.Init(ini,ch)

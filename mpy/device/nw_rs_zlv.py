@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
 #
+"""This is :mod:`mpy.device.nw_rs_zlv`:
+
+   :author: Christian Albrecht
+   :copyright: All rights reserved
+   :license: no licence yet
+"""
+
+
 import functools
 import re,time
 import sys
@@ -24,9 +32,6 @@ from mpy_exceptions import *
 class NETWORKANALYZER(NETWORKAN):
     
     """
-    Test
-    Test
-    
     .. rubric:: Methods:
     
     .. method:: SetTrace(tracename,measParam,winNumber):

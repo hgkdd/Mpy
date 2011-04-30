@@ -18,10 +18,10 @@ def Emag(seq):
     #print sqsum
     return sqrt(sqsum)
 
-outname="e_vs_t.p"  # Pickle File (Ausgabe)
+outname="e_vs_t_800MHz.p"  # Pickle File (Ausgabe)
 soll=Quantity(WATT, 20)   # Leistung am Fusspunkt Tx
 tpos=range(360)  # Tuner Positionen
-fcenter=250e6 
+fcenter=150e6 
 fspan=5e6
 Nf=200    
 freqs=linspace(fcenter-0.5*fspan, fcenter+0.5*fspan, Nf)  # Frequenzliste
