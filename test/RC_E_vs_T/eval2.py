@@ -5,6 +5,7 @@ import pylab
 import numpy
 import scipy
 import scipy.stats
+from scipy.stats import rayleigh
 import scipy.interpolate
 import ac
 
@@ -494,10 +495,19 @@ class Data(object):
             y=scipy.linspace(1./N,1,N)
             pylab.plot(x,y,'--',label='position %d'%j)
         #
+        x=rayleigh.rvs(size=10000)
+        x0=numpy.sort(x[:],axis=None)
+        N=len(x0)
+        y=scipy.linspace(1./N,1,N)
+        pylab.plot(x0,y)
+        
+        
+        
+        
         pylab.axis([0,3,0,1])
         pylab.grid(True)
         pylab.legend(loc='lower right')
-        pylab.savefig('013_ECDF_250MHz.png',dpi=200)
+        pylab.savefig('013_ECDF_800MHz.png',dpi=200)
         pylab.show()               
     
     
