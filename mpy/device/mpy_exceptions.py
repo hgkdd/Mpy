@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
+"""This is :mod:`mpy.device.mpy_exceptions`: 
+    In diesem Modul werden verschiedene Exceptions definiert welche in dem myp.device Modul verwendet werden.
 """
 
 class InitError(Exception):
-        def __init__(self, message='Before Commands can be executed, the DRIVER.Init method must be called'):
-            self.message = message
-        def __str__(self):
-            return self.message
+    def __init__(self, message='Before Commands can be executed, the DRIVER.Init method must be called'):
+        self.message = message
+    def __str__(self):
+        return self.message
 
     
     
@@ -26,6 +27,8 @@ class ValidateError(Exception):
             m=m+"    Command: %s"%self.command
         return "%s \n%s"%(self.message,m)
     
+    
+    
 class Return_TypesError(Exception):
     def __init__(self,message=''):
         self.message=message
@@ -33,11 +36,15 @@ class Return_TypesError(Exception):
         return self.message
 
     
+    
+    
 class DriverImplementedError(Exception):
     def __init__(self,message=''):
         self.message=message
     def __str__(self):
         return self.message
+    
+    
     
 class  GeneralDriverError(Exception):
     def __init__(self,message=''):
