@@ -12,10 +12,12 @@ class MOTORCONTROLLER(MC):
         pass
 
     def _state(self):
+        time.sleep(0.5)
         ans=self._ask('?') # ask for status
         #print ans
         ans=ans.split(",")
         stopped=(ans[0]=='1')
+        #print ans,' --> ', ans[0], ans[1], ' --> ', stopped
         self.ca=float(ans[1]) # current angle
         self.drive_init_ok=(ans[2]=='0')
         fail=(ans[3]=='1')

@@ -8,6 +8,7 @@ from scuq.quantities import Quantity
 from scuq.si import WATT, VOLT, METER
 from mpy.tools.util import locate
 from mpy.tools.mgraph import MGraph, Leveler
+from mpy.tools.aunits import * 
 
 def dBm2W (v):
     return 10**(v*0.1)*0.001
@@ -18,7 +19,7 @@ def W2dBm (v):
     
 MpyDIRS=['\\MpyConfig\\LargeRC', '.']  # Suchpfad fuer dot, ini, dat 
 
-dot='mvk-immunity-pmm.dot' # Messaufbau mit PMM Feldsonde ohne BLWA Verstaerker
+dot='mvk-immunity-src.dot' # Messaufbau mit PMM Feldsonde ohne BLWA Verstaerker (Small RC)
     
 names={'sg': 'Sg',
        'amp_in': 'Amp_Input',
@@ -35,18 +36,21 @@ mg=MGraph(fname_or_data=dot, map=names, SearchPaths=MpyDIRS)    # Graph initiali
 instrumentation=mg.CreateDevices()                              # Geraete Instanzen
 tuner=instrumentation[mg.name.tuner]                            # Tuner
 fp=instrumentation[mg.name.fp]                                  # Feldsonde
+pm=instrumentation[mg.name.pm_in] 
 #
 outname="FieldProbeTest.p" 
 #
-freq=[1e9,3e9,5e9,7e9,9e9] # Liste der zu messenden Frequenzen
+freq=[1.5e9,3e9,5e9,7e9,10e9] # Liste der zu messenden Frequenzen
 #  
 Pmax1=80                    # Leistungsbegrenzung f-Bereich 1 (Verstaerker BLWA & BLMA, max 100W)
 Pmax2=24                    # Leistungsbegrenzung f-Bereich 2 (Verstaerker BLMA, max 30W)   
 Pmax3=16                    # Leistungsbegrenzung f-Bereich 3 (Verstaerker BLMA, max 20W)
 Pmin=0.01                   
-PPoints=30                  # max Anzahl der Punkte fuer den jeweiligen Leistungsbereich
+Ppoints1=90*2
+Ppoints2=50*2
+Ppoints3=40*2               # max Anzahl der Punkte fuer den jeweiligen Leistungsbereich
 Emax=400                    # max Feldstaerke der verwendeten Feldsonde
-T_stirrer=5 #               # Periodendauer Ruehrerdrehung
+T_stirrer=10 #              # Periodendauer Ruehrerdrehung
 #
 try:
     print ' '
@@ -66,12 +70,18 @@ try:
         mg.RFOn_Devices()
         lev=Leveler(mg, mg.name.sg, mg.name.output, mg.name.output, mg.name.pm_fwd)
         #        
-        if (f>=8e7) and (f<=2e9):   
-            power=scipy.logspace(scipy.log10(Pmin),scipy.log10(Pmax1),PPoints)
+        if (f>1e7) and (f<=2e9):   
+            #power=scipy.logspace(scipy.log10(Pmin),scipy.log10(Pmax1),PPoints)
+            p=scipy.linspace(scipy.sqrt(Pmin),scipy.sqrt(Pmax1),Ppoints1)
+            power=p**2
         elif (f>2e9) and (f<=6e9):
-            power=scipy.logspace(scipy.log10(Pmin),scipy.log10(Pmax2),PPoints)
+            #power=scipy.logspace(scipy.log10(Pmin),scipy.log10(Pmax2),PPoints)
+            p=scipy.linspace(scipy.sqrt(Pmin),scipy.sqrt(Pmax2),Ppoints2)
+            power=p**2
         elif (f>6e9) and (f<18e9):
-            power=scipy.logspace(scipy.log10(Pmin),scipy.log10(Pmax3),PPoints)
+            #power=scipy.logspace(scipy.log10(Pmin),scipy.log10(Pmax3),PPoints)
+            p=scipy.linspace(scipy.sqrt(Pmin),scipy.sqrt(Pmax3),Ppoints3)
+            power=p**2
         else:
             break
         #
@@ -83,6 +93,11 @@ try:
             sglv, p_val = lev.adjust_level(Ptarget)
             Preal=p_val.get_expectation_value_as_float()
             #
+            err, p_rx = pm.GetData()
+            rxcorr    = mg.get_path_correction(mg.name.pm_in, mg.name.input, unit=POWERRATIO)
+            #
+            # print 10*scipy.log10(1000*p_rx.get_expectation_value_as_float())
+            #
             if P*0.8 < Preal:
                 DataDct[f][Preal]={}
             else:
@@ -90,9 +105,14 @@ try:
             #
             t0=time.time()
             e_vals=[]
+            p_rx_vals=[]
             while True: # Mehrfachmessung Feldstaerke ueber Ruehrerdrehung fuer anschl Mittelwertbildung
                 err, e_val = fp.GetData()
                 e_vals.append(e_val)
+                #
+                err, p_rx = pm.GetData()
+                p_rx_vals.append(p_rx)
+                #
                 t=time.time()
                 if t-t0 > T_stirrer:
                     break
@@ -103,8 +123,9 @@ try:
             ey=DataDct[f][Preal]['Ey'] =sum([e[1].get_expectation_value_as_float() for e in e_vals])/N
             ez=DataDct[f][Preal]['Ez'] =sum([e[2].get_expectation_value_as_float() for e in e_vals])/N        
             et=DataDct[f][Preal]['Emag']=scipy.sqrt(ex**2+ey**2+ez**2)
+            pr=DataDct[f][Preal]['Prx']=sum([p.get_expectation_value_as_float() for p in p_rx_vals])/N*1000 
             #             
-            print 'freq:  %.2f GHZ  power:  %.3f W real Power %.3f W Ex: %.2f  Ey: %.2f  Ez:  %.2f  Emag: %.2f  N: %.2f'%(f/1e9,P,p_val.get_expectation_value_as_float(),ex,ey,ez,et,N) 
+            print 'freq:  %.2f GHZ  power:  %.3f W real Power %.3f W Ex: %.2f  Ey: %.2f  Ez:  %.2f  Emag: %.2f  N: %.2f  Prx: %.2f'%(f/1e9,P,Preal,ex,ey,ez,et,N,pr) 
             # 
             if DataDct[f][Preal]['Emag']>Emax:
                 break
@@ -126,31 +147,69 @@ params = {'backend': 'ps',
             'xtick.labelsize': 10,
             'ytick.labelsize': 10,
             'text.usetex': False,   
-            'figure.figsize': (6,4)}
+            'figure.figsize': (6,8)}
 pylab.rcParams.update(params) 
 #
-pylab.axes([0.125,0.125,0.825,0.825])
+pylab.axes([0.125,0.05,0.825,0.9]) # pylab.axes([0.125,0.125,0.825,0.825])
 #
-pylab.xlabel('square root of input power P in sqrt(W)')
-pylab.ylabel('field strength E in V/m')
+pylab.subplot(211)            
+pylab.xlabel('Square root of input power P in W^(-1/2)')
+pylab.ylabel('Field strength E in V/m')
+#  
+for f in freq: 
+    power       = sorted(DataDct[f].keys())
+    Plot_P      = numpy.sqrt(numpy.array(power)) 
+    Plot_Emag   = numpy.zeros((len(Plot_P))) 
+    #
+    for i in range(len(power)): 
+        if DataDct[f][power[i]]['Emag']==None:
+            Plot_Emag[i]=None
+        else:    
+            Plot_Emag[i]=DataDct[f][power[i]]['Emag']
+    #
+    pylab.plot(Plot_P, Plot_Emag,'.',label='%.1f GHz'%(f/1e9))
+    #
+    xdata = Plot_P[0:10]
+    ydata = Plot_Emag[0:10]
+    #
+    polycoeffs = scipy.polyfit(xdata, ydata, 1)
+    yfit = scipy.polyval(polycoeffs, xdata)
+    pylab.plot(xdata, yfit,color='grey')
+    #
+    yfit = scipy.polyval(polycoeffs, Plot_P)
+    pylab.plot(Plot_P, yfit,color='grey', linestyle='dotted')
+#
+pylab.grid(True)
+pylab.legend(loc='upper left')
+#   
+pylab.subplot(212)
+pylab.xlabel('Input power P in W')
+pylab.ylabel('Received power P in mW')
 #
 for f in freq:
     power       = sorted(DataDct[f].keys())
-    Plot_power  = numpy.sqrt(numpy.array(power)) # Plot_power  = 10*numpy.log10(numpy.array(power)*1e3)
-    Plot_Emag2  = numpy.zeros((len(Plot_power))) 
+    Plot_Pin    = numpy.array(power) 
+    Plot_Prx    = numpy.zeros((len(Plot_Pin)))
+    #
     for i in range(len(power)): 
         if DataDct[f][power[i]]['Emag']==None:
-            Plot_Emag2[i]=None
+            Plot_Prx[i]=None
         else:    
-            Plot_Emag2[i]=(DataDct[f][power[i]]['Emag'])
+            Plot_Prx[i]=DataDct[f][power[i]]['Prx']
     #
-    pylab.plot(Plot_power, Plot_Emag2,'.',label='%.1f GHz'%(f/1e9))
+    pylab.plot(Plot_Pin, Plot_Prx,'.',label='%.1f GHz'%(f/1e9))
+    #
+    xdata = Plot_Pin
+    ydata = Plot_Prx
+    #
+    polycoeffs = scipy.polyfit(xdata, ydata, 1)
+    yfit = scipy.polyval(polycoeffs, xdata)
+    pylab.plot(xdata, yfit, color='grey')
 #
-#pylab.ylim(1e-5,1e1)
-#pylab.xlim(0,50)
 pylab.grid(True)
 pylab.legend(loc='upper left')
-pylab.savefig('FieldProbeTest.png',dpi=200)
-pylab.show()        
+#
+pylab.savefig('FieldProbeTest_SmallRC.png',dpi=200)
+pylab.show()    
     
     
