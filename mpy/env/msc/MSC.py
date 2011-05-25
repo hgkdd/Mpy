@@ -19,6 +19,7 @@ import pprint
 from mpy.device import device
 from mpy.tools import util,mgraph,spacing,distributions,correlation
 from mpy.env import Measure
+from mpy.tools.aunits import *
 
 from scuq.quantities import Quantity
 from scuq.si import WATT, VOLT, METER
@@ -1242,7 +1243,7 @@ class MSC(Measure.Measure):
         self.pre_user_event()
         if kernel[0] is None:
             if kernel[1] is None:
-                kernel=(stdImmunityKernel,{'field': Quantity(VOLT/METER, 10),
+                kernel=(stdImmunityKernel,{'field': Quantity(EFIELD, 10),
                                             'dwell': 1,
                                             'keylist': 'sS'})
             else:
@@ -2369,9 +2370,9 @@ Quit: quit measurement.
             self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
             
-        zeroPR = Quantity(WATT/WATT, 0.0)
-        zeroVm = Quantity(VOLT/METER, 0.0)            
-        zeroVmoversqrtW = QUANTITY(VOLT/METER/WATT**0.5,0.0)            
+        zeroPR = Quantity(POWERRATIO, 0.0)
+        zeroVm = Quantity(EFIELD, 0.0)            
+        zeroVmoversqrtW = QUANTITY(EFIELDPNORM,0.0)            
 
         efields = self.rawData_MainCal[description]['efield']
         pref = self.rawData_MainCal[description]['pref']
@@ -2606,7 +2607,7 @@ Quit: quit measurement.
             self.messenger(util.tstamp()+" EUT cal not found. Description: %s"%EUT_cal, [])
             return -1
 	
-        zeroPR = Quantity (WATT/WATT, 0.0)
+        zeroPR = Quantity (POWERRATIO, 0.0)
         
         pref = self.rawData_Emission[description]['pref']
         noise= self.rawData_Emission[description]['noise']
@@ -2671,7 +2672,7 @@ Quit: quit measurement.
         for i,f in enumerate(freqs):
             if callable(directivity):
                 dmax_f=directivity(f)
-            self.processedData_Emission[description]['Asumed_Directivity'][f]=Quantity(WATT/WATT, dmax_f)
+            self.processedData_Emission[description]['Asumed_Directivity'][f]=Quantity(POWERRATIO, dmax_f)
             i = freqs.index(f)
             tees = pref[f].keys()
             prees = pref[f][tees[0]].keys()
@@ -2763,7 +2764,7 @@ Quit: quit measurement.
         if EUT_OK==None:
             EUT_OK = self.std_eut_status_checker
 
-        zeroPR = Quantity (WATT/WATT, 0.0)
+        zeroPR = Quantity (POWERRATIO, 0.0)
         
         testfield_from_pfwd = TestField(self, maincal=empty_cal, eutcal=EUT_cal)
         
@@ -3114,9 +3115,9 @@ Quit: quit measurement.
             self.messenger(util.tstamp()+" Calibration %s not found."%calibration, [])
             return -1
             
-        zeroPR = Quantity(WATT/WATT, 0.0)
-        zeroVm = Quantity(VOLT/METER, 0.0)            
-        zeroVmoversqrtW = Quantity (VOLT/METER/math.sqrt(WATT), 0.0)            
+        zeroPR = Quantity(POWERRATIO, 0.0)
+        zeroVm = Quantity(EFIELD, 0.0)            
+        zeroVmoversqrtW = Quantity (EFIELDPNORM, 0.0)            
 
         efields = self.rawData_EUTCal[description]['efield']
         pref = self.rawData_EUTCal[description]['pref']
@@ -3429,7 +3430,7 @@ class TestField:
         try:
             self.clf=util.MResult_Interpol(instance.processedData_EUTCal[eutcal]['CLF'].copy())
         except:
-            self.clf=(lambda _f: Quantity (WATT/WATT, 1.0))
+            self.clf=(lambda _f: Quantity (POWERRATIO, 1.0))
         
     def __call__(self, f=None, power=None):
         if f is None:
@@ -3476,7 +3477,7 @@ class TestPower:
         try:
             self.clf=util.MResult_Interpol(instance.processedData_EUTCal[eutcal]['CLF'].copy())
         except:
-            self.clf=(lambda _f: Quantity(WATT/WATT, 1.0)) 
+            self.clf=(lambda _f: Quantity(POWERRATIO, 1.0)) 
         
     def __call__(self, f=None, etest=None):
         if f is None:
