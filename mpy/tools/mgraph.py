@@ -989,7 +989,7 @@ class Leveler(object):
         self.corr=None
         self.samples={}
         if pin is None:
-            pin=[fac*self.MaxSafe for fac in (0.001, 0.01)]
+            pin=[fac*self.MaxSafe for fac in (0.001, 0.01, 0.1)]#[quantities.Quantity(si.WATT, 1e-6),quantities.Quantity(si.WATT, 1e-4)]#
         if datafunc is None:
             self.datafunc = lambda x: x
         else:
