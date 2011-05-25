@@ -180,6 +180,7 @@ class MGraph(Graph):
         self.bimap=self.map
         for k,v in map.items():
             self.bimap[v]=k
+        self.instrumentation=None
 
     def __setstate__(self, dct):
         """used instead of __init__ when instance is created from pickle file""" 
@@ -449,6 +450,7 @@ class MGraph(Graph):
             for k,v in ddict.items():
                 if k in self.bimap:
                     ddict[self.bimap[k]]=v
+            self.instrumentation=ddict
         return ddict
 
     def NBTrigger (self, list):

@@ -399,3 +399,88 @@ def locate(pattern, paths=None):
             for filename in fnmatch.filter(files, pattern):
                 yield os.path.join(path, filename)
 
+def CalcSigma (lst, av=None):
+    n = len(lst)
+    if av is None:
+        av=sum(lst)/float(n)
+    s2=sum([(x-av)**2 for x in lst])/float(n-1)
+    s=math.sqrt(s2)
+    return s
+
+def InterpolateMResults(y, x, interpolation=None):
+    if interoplation is None:
+        interpolation='linxliny'
+    if 'logx' in interpolation:
+        x=scipy.log10(x)
+    if 'logy' in interpolation:
+        y=scipy.log10(y)
+    inter = scipy.interpolate.interp1d(x,y)
+    return inter
+
+def CalcPsi(n, rho,eps=0.01):
+    def calc_psi_int(r,n,rho):
+        def kern(x):
+            return x**(n-2)/((1-rho*r*x)**(n-1)*math.sqrt(1-x*x))
+        fac=(n-2)/math.pi*(1-rho**2)**(0.5*(n-1))*(1-r**2)**(0.5*(n-4))
+        return scipy.integrate.quad(kern, 0, 1)[0]*fac
+    def calc_psi_exact(r,n,rho):
+        ga = scipy.special.gamma
+        tmp = ga(n-0.5)
+        if scipy.isfinite(tmp):
+            gafac = ga(n-1)/tmp
+        else:
+            gafac = 1.0/math.sqrt(n-0.5) * (1+3.0/(8*n-4))
+        psi= (n-2)/math.sqrt(2*math.pi) * gafac\
+             * math.pow(1-r*r,0.5*(n-4)) * math.pow(1-rho*rho,0.5*(n-1))\
+             * math.pow(1-rho*r, 1.5-n) * scipy.special.hyp2f1(0.5,0.5,n-0.5,0.5*(1+rho*r))
+        return psi
+    def calc_psi_norm_transform(r,n,rho):
+        def atanh (x):
+            if x<-0.99:
+                return -1e300
+            elif x>0.99:
+                return 1e300
+            else:
+                return 0.5*math.log((1+x)/(1-x))
+        s=math.sqrt(1.0/(n-3))
+        mu=atanh(rho)
+        z=atanh(r)
+        psi=scipy.stats.norm.pdf(z,mu,s)
+        return psi
+    def calc_psi(r,n,rho):
+        #return calc_psi_int(r,n,rho)
+        try:
+            return calc_psi_exact(r,n,rho)
+        except (OverflowError):
+            return calc_psi_norm_transform(r,n,rho)
+
+    psi=[]
+    psi2=[]
+    r = []
+    cpsi = []
+    for i in range(int(2.0/eps+1)):
+        r.append(round(-1.0+i*eps,3))
+        psi.append(calc_psi(r[i],n,rho))
+        cpsi.append(scipy.integrate.quad(calc_psi,-1,r[-1],(n,rho))[0])
+    #tmp = scipy.integrate.cumtrapz(psi,r).tolist()
+    #cpsi.extend(tmp)
+    factor=1.0/cpsi[-1]
+    #print factor
+    psi = [x*factor for x in psi]
+    cpsi = [x*factor for x in cpsi]
+    #print r[-1], cpsi[-1]
+    return r, psi, cpsi
+
+def CalcRho0 (r, cpsi, alpha):
+    if not hasattr (alpha, 'sort'):
+        alpha = [alpha]
+    alpha.sort()              
+    f = scipy.interpolate.interp1d(cpsi, r)  # the inverse of the cum integral
+    dct={}
+    for a in alpha:
+        rho0 = f(a)
+        dct[a] = rho0.tolist()[0]
+    return dct
+
+    
+        
