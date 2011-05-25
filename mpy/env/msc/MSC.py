@@ -2518,7 +2518,7 @@ Quit: quit measurement.
             self.processedData_MainCal[description]['EnormT'][f]={}
             for pos,Em in EMaxL.items():
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos] 
-                v = math.sqrt(pin)
+                v = pin.sqrt()
                 #sqrtv=math.sqrt(v)
                 #u = pin.get_u()
                 #l = pin.get_l()
@@ -2531,7 +2531,7 @@ Quit: quit measurement.
             AvT = zeroVmoversqrtW
             for pos,Em in EMaxTL.items():
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos]
-                v = math.sqrt(pin)
+                v = pin.sqrt()
                 #sqrtv=math.sqrt(v)
                 #u = pin.get_u()
                 #l = pin.get_l()
@@ -2560,8 +2560,8 @@ Quit: quit measurement.
             
             self.processedData_MainCal[description]['SigmaXYZ'][f]=Sxyz
             self.processedData_MainCal[description]['Sigma24'][f]=S24
-            SdBxyz = [20 * math.log10( (Sxyz[k]+Avxyz[k])/Avxyz[k] ) for k in (0,1,2)] #umddevice.stdVectorUMDMResult()
-            SdB24 =   20 * math.log10( (S24+Av24) / Av24 )
+            SdBxyz = [20 * ((Sxyz[k]+Avxyz[k])/Avxyz[k] ).log10() for k in (0,1,2)] #umddevice.stdVectorUMDMResult()
+            SdB24 =   20 * ( (S24+Av24) / Av24 ).log10()
             self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = SdBxyz
             self.processedData_MainCal[description]['Sigma24_dB'][f] = SdB24
 
@@ -2688,7 +2688,7 @@ Quit: quit measurement.
             gmax_f=gmax(f,s=distance,hg=hg,RH=RH)
             #print gmax_f['h'], gmax_f['v']
             gm=max(gmax_f['h'], gmax_f['v'])
-            neccf_v = math.sqrt(dmax_f*npr*30)*gm
+            neccf_v = (dmax_f*npr*30).sqrt()*gm
             #neccf_u = math.sqrt(dmax_f*npr.get_u()*30)*gm
             #print dmax_f*npr.get_l()*30
             #neccf_l = math.sqrt(max(0,dmax_f*npr.get_l()*30))*gm
@@ -2720,11 +2720,11 @@ Quit: quit measurement.
                 PRadCLFL[p]=PMaxRec*etaTx_inter(i)/(clf_inter(i)*il_inter(i))
                 prccf = PRadCCFL[p] # .convert(umddevice.UMD_W)
                 prclf = PRadCLFL[p] # .convert(umddevice.UMD_W)
-                eccf_v = math.sqrt(dmax_f*prccf*30)*gm
+                eccf_v = (dmax_f*prccf*30).sqrt()*gm
                 #eccf_u = math.sqrt(dmax_f*prccf.get_u()*30)*gm
                 #eccf_l = math.sqrt(max(0,dmax_f*prccf.get_l()*30))*gm
                 ERadCCFL[p] = eccf_v
-                eclf_v = math.sqrt(dmax_f*prclf*30)*gm
+                eclf_v = (dmax_f*prclf*30).sqrt()*gm
                 #eclf_u = math.sqrt(dmax_f*prclf.get_u()*30)*gm
                 #eclf_l = math.sqrt(max(0,dmax_f*prclf.get_l()*30))*gm
                 ERadCLFL[p] = eclf_v
@@ -3243,7 +3243,7 @@ Quit: quit measurement.
                 for pos,Em in EMaxL.items():
                     pin = self.processedData_EUTCal[description]['PInputForEField'][f][pos] 
                     v = pin#.get_v()
-                    sqrtv=math.sqrt(v)
+                    sqrtv=v.sqrt()
                     #u = pin.get_u()
                     #l = pin.get_l()
                     sqrtPInput = sqrtv
@@ -3280,11 +3280,11 @@ Quit: quit measurement.
                 SdBxyz = []
                 for k in range(3):
                     try:
-                        SdBxyz.append(20*scipy.log10( (Sxyz[k]+Avxyz[k]) / Avxyz[k] ))
+                        SdBxyz.append(20*( (Sxyz[k]+Avxyz[k]) / Avxyz[k] ).log10())
                     except:
                         util.LogError (self.messenger)            
                 try:
-                    SdB24 =  20*scipy.log10((S24+Av24) / Av24)
+                    SdB24 =  20* ( (S24+Av24) / Av24 ).log10()
                 except:
                     SdB24 = None
                 self.processedData_EUTCal[description]['SigmaXYZ_dB'][f] = SdBxyz
@@ -3450,7 +3450,7 @@ class TestField:
         #print clf
         #print enorm
         etest2 = power * clf * enorm * enorm                    
-        etest_v = math.sqrt(etest2)
+        etest_v = etest2.sqrt()
         #dp = 0.5*(power.get_u()-power.get_l())
         #dc = 0.5*(clf.get_u()-clf.get_l())
         #de = 0.5*(enorm.get_u()-enorm.get_l())
