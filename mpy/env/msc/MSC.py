@@ -121,6 +121,7 @@ class MSC(Measure.Measure):
                            tofftab=[[7,14,28,28,28]],
                            nprbpostab=[8,8,8,8,8],
                            nrefantpostab=[8,8,8,8,8],
+                           SearchPaths=None,
                            names={'sg': 'sg',
                                   'a1': 'a1',
                                   'a2': 'a2',
@@ -158,7 +159,7 @@ class MSC(Measure.Measure):
         ntuner = min(len(ntuntab),len(tofftab),len(names['tuner']))
         ftab=FStart*numpy.array(ftab)
 
-        mg=mgraph.MGraph(dotfile)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=None)
 
         if leveler is None:
             self.leveler=mgraph.Leveler
@@ -566,6 +567,7 @@ class MSC(Measure.Measure):
                            freqs=None,
                            toffsets=[1],
                            ntunerpos=[360],     
+                          SearchPaths=None,
                            names={'sg': 'sg',
                                   'a1': 'a1',
                                   'a2': 'a2',
@@ -597,7 +599,7 @@ class MSC(Measure.Measure):
         nprb = len(names['fp'])
         ntuner = min(len(toffsets),len(ntunerpos),len(names['tuner']))
 
-        mg=mgraph.MGraph(dotfile)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=None)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
@@ -898,6 +900,7 @@ class MSC(Measure.Measure):
                            SGLevel=-20,
                             leveling=None,
                            calibration = 'empty',
+                          SearchPaths=None,
                            names={'sg': 'sg',
                                   'a1': 'a1',
                                   'a2': 'a2',
@@ -935,7 +938,7 @@ class MSC(Measure.Measure):
         nrefant = min(len(names['refant']),len(names['pmref']))
         ntuner = len(names['tuner'])
 
-        mg=mgraph.MGraph(dotfile)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=None)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
@@ -1227,6 +1230,7 @@ class MSC(Measure.Measure):
                           kernel=(None,None),
                           leveling=None,
                           freqs=None,
+                          SearchPaths=None,
                           names={'sg': 'sg',
                                   'a1': 'a1',
                                   'a2': 'a2',
@@ -1273,7 +1277,7 @@ class MSC(Measure.Measure):
         ntuner = len(names['tuner'])
         nprb = len(names['fp'])
 
-        mg=mgraph.MGraph(dotfile)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=None)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
@@ -1750,6 +1754,7 @@ class MSC(Measure.Measure):
                            delay=1.0,
                            freqs=None,
                           receiverconf = None,
+                          SearchPaths=None,
                            names={'tuner': ['tuner1'],
                                    'refant': ['refant1'],
                                   'receiver': ['saref1']}):
@@ -1768,7 +1773,7 @@ class MSC(Measure.Measure):
         nrefant = min(len(names['refant']),len(names['receiver']))
         ntuner = len(names['tuner'])
 
-        mg=mgraph.MGraph(dotfile)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=None)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
