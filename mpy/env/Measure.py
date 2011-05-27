@@ -465,19 +465,19 @@ class Measure(object):
         """
         """
 
-        sg = mg.instrumentaion[mg.name.sg]
+        sg = mg.instrumentation[mg.name.sg]
         # l is in dBm -> convert to WATT
         l=Quantity(WATT, 10**(0.1*l)*0.001)
         
         if leveler is None: # try to use instance leveler
             try:
-                leveler=self.leveler(**self.leveler_par)
+                leveler=self.leveler_inst#(**self.leveler_par)
             except AttributeError:
                 pass  # stay with None
 
         if leveler: #use MaxSafe
             l = min(l, leveler.MaxSafe)
-        lv = sg.SetLevel (l)
+        err, lv = sg.SetLevel (l)
         
         #is_save, message = mg.AmplifierProtect (names['sg'], names['a2'], l, sg_unit, typ='lasy')
         #if not is_save:

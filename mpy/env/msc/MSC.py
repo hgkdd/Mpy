@@ -110,18 +110,20 @@ class MSC(Measure.Measure):
                            description="empty",
                            dotfile='msc-calibration.dot',
                            delay=1.0,
+                           LUF=250e6,                           
                            FStart=150e6,
                            FStop=1e9,
                            SGLevel=-20,
                            leveler=None,
                            leveler_par=None,
-                           ftab=[3,6,10,100,1000],
+                           ftab=[1,3,6,10,100,1000],
                            nftab=[20,15,10,20,20],
                            ntuntab=[[50,18,12,12,12]],
                            tofftab=[[7,14,28,28,28]],
                            nprbpostab=[8,8,8,8,8],
                            nrefantpostab=[8,8,8,8,8],
                            SearchPaths=None,
+                           leveling=None,
                            names={'sg': 'sg',
                                   'a1': 'a1',
                                   'a2': 'a2',
@@ -134,8 +136,9 @@ class MSC(Measure.Measure):
                                   'pmref': ['pmref1']}):
         """Performs a msc main calibration according to IEC 61000-4-21
         """
-        self.pre_user_event()
-
+        self.PreUserEvent()
+        ftab=LUF*scipy.array(ftab)
+        
         if self.autosave:
             self.messenger(util.tstamp()+" Resume main calibration measurement from autosave...", [])
         else:
@@ -143,23 +146,22 @@ class MSC(Measure.Measure):
 
         self.rawData_MainCal.setdefault(description, {})
 
-#        if leveling is None:
-#            leveling = [{'condition': 'False',
-#                         'actor': None,
-#                         'actor_min': None,
-#                         'actor_max': None,
-#                         'watch': None,
-#                         'nominal': None,
-#                         'reader': None,
-#                         'path': None}]
+        if leveling is None:
+            leveling = [{'condition': 'False',
+                        'actor': None,
+                        'actor_min': None,
+                        'actor_max': None,
+                        'watch': None,
+                        'nominal': None,
+                        'reader': None,
+                        'path': None}]
                     
         # number of probes, ref-antenna and tuners
         nprb = len(names['fp'])
         nrefant = min(len(names['refant']),len(names['pmref']))
         ntuner = min(len(ntuntab),len(tofftab),len(names['tuner']))
-        ftab=FStart*numpy.array(ftab)
-
-        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=None)
+        
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
 
         if leveler is None:
             self.leveler=mgraph.Leveler
@@ -325,7 +327,12 @@ class MSC(Measure.Measure):
                         # set frequency for all devices
                         (minf, maxf) = mg.SetFreq_Devices (f)
                         
-                        Leveler=self.leveler(**self.leveler_par)
+                        self.messenger(util.tstamp()+" RF On for leveler init ...", [])
+                        stat = mg.RFOn_Devices()
+                        self.leveler_inst=self.leveler(**self.leveler_par)
+                        self.messenger(util.tstamp()+" RF Off after leveler init ...", [])
+                        stat = mg.RFOff_Devices()
+                        
                         try:
                             level = self.set_level(mg, SGLevel)
                         except AmplifierProtectionError, _e:
@@ -554,7 +561,7 @@ class MSC(Measure.Measure):
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
         self.messenger(util.tstamp()+" End of msc main calibration. Status: %d"%stat, [])
-        self.post_user_event()
+        self.PostUserEvent()
         return stat
 
 
@@ -578,7 +585,7 @@ class MSC(Measure.Measure):
                                   'tuner': ['tuner1']}):
         """Performs a msc autocorrelation measurement
         """
-        self.pre_user_event()
+        self.PreUserEvent()
         if self.autosave:
             self.messenger(util.tstamp()+" Resume autocorrelation measurement from autosave...", [])
         else:
@@ -599,7 +606,7 @@ class MSC(Measure.Measure):
         nprb = len(names['fp'])
         ntuner = min(len(toffsets),len(ntunerpos),len(names['tuner']))
 
-        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=None)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
@@ -795,7 +802,7 @@ class MSC(Measure.Measure):
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
         self.messenger(util.tstamp()+" End of msc autocorelation measurement. Status: %d"%stat, [])
-        self.post_user_event()
+        self.PostUserEvent()
         return stat
 
     def __HandleUserInterrupt(self, dct, ignorelist='', handler=None):
@@ -805,12 +812,12 @@ class MSC(Measure.Measure):
             return self.stdUserInterruptHandler(dct,ignorelist=ignorelist)
     
     def stdUserInterruptHandler(self, dct, ignorelist=''):
-        key = self.user_interrupt_tester() 
+        key = self.UserInterruptTester() 
         if key and not chr(key) in ignorelist:
             # empty key buffer
-            _k = self.user_interrupt_tester()
+            _k = self.UserInterruptTester()
             while not _k is None:
-                _k = self.user_interrupt_tester()
+                _k = self.UserInterruptTester()
 
             mg = dct['mg']
             names = dct['names']
@@ -913,7 +920,7 @@ class MSC(Measure.Measure):
         """Performs a msc EUT calibration according to IEC 61000-4-21
         """
 
-        self.pre_user_event()
+        self.PreUserEvent()
         if self.autosave:
             self.messenger(util.tstamp()+" Resume EUT calibration measurement from autosave...", [])
         else:
@@ -938,7 +945,7 @@ class MSC(Measure.Measure):
         nrefant = min(len(names['refant']),len(names['pmref']))
         ntuner = len(names['tuner'])
 
-        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=None)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
@@ -1220,7 +1227,7 @@ class MSC(Measure.Measure):
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
         self.messenger(util.tstamp()+" End of EUT main calibration. Status: %d"%stat, [])
-        self.post_user_event()
+        self.PostUserEvent()
         return stat
 
     def Measure_Immunity (self,
@@ -1244,7 +1251,7 @@ class MSC(Measure.Measure):
         """Performs a msc immunity measurement according to IEC 61000-4-21
         """
 
-        self.pre_user_event()
+        self.PreUserEvent()
         if kernel[0] is None:
             if kernel[1] is None:
                 kernel=(stdImmunityKernel,{'field': Quantity(EFIELD, 10),
@@ -1277,7 +1284,7 @@ class MSC(Measure.Measure):
         ntuner = len(names['tuner'])
         nprb = len(names['fp'])
 
-        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=None)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
@@ -1634,7 +1641,7 @@ class MSC(Measure.Measure):
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
         self.messenger(util.tstamp()+" End of Immunity mesurement. Status: %d"%stat, [])
-        self.post_user_event()
+        self.PostUserEvent()
         return stat
                           
 
@@ -1761,7 +1768,7 @@ class MSC(Measure.Measure):
         """Performs a msc emission measurement according to IEC 61000-4-21
         """
 
-        self.pre_user_event()
+        self.PreUserEvent()
         if self.autosave:
             self.messenger(util.tstamp()+" Resume MSC emission measurement from autosave...", [])
         else:
@@ -1773,7 +1780,7 @@ class MSC(Measure.Measure):
         nrefant = min(len(names['refant']),len(names['receiver']))
         ntuner = len(names['tuner'])
 
-        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=None)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
@@ -2077,7 +2084,7 @@ Quit: quit measurement.
             self.messenger(util.tstamp()+" Quit...", [])
             stat = mg.Quit_Devices()
         self.messenger(util.tstamp()+" End of Emission mesurement. Status: %d"%stat, [])
-        self.post_user_event()
+        self.PostUserEvent()
         return stat
 
     def GetAllTPos (self, description):

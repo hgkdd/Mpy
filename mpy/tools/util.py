@@ -89,7 +89,11 @@ def getIndex(val,tab):
     if not len(l):
         index = 0
     else:
-        index = tab.index(l[-1])+1
+        try:
+            index = tab.index(l[-1]) + 1
+        except AttributeError:
+            index=np.where(tab==l[-1])[0][0] + 1 
+
     try:
         tab[index]
     except KeyError:

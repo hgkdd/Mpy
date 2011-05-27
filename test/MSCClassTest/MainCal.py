@@ -15,17 +15,18 @@ cdict = {"autosave_filename": 'msc-autosave.p',
          "rawdata_output_filename": 'out_raw_maincal-%s.dat',
          "processeddata_output_filename": 'out_processed_maincal-%s.dat',
          "log_filename": 'msc.log',
-         "logger": ['stdlogger'],
+         "logger": ['stdLogger'],
          "minimal_autosave_interval": 3600,
          "descriptions": ['empty', 'loaded'],
          "measure_parameters": [{'dotfile': 'mvk-immunity.dot',
                                  'SearchPaths': None,
                                  'delay': 1,
+                                 'LUF': 250e6,                                 
                                  'FStart': 150e6,
                                  'FStop': 4.2e9,
                                  'SGLevel': -20,
                                  'leveling': None,
-                                 'ftab': [3,6,10,100,1000],
+                                 'ftab': [1,3,6,10,100,1000],
                                  'nftab': [20,15,10,20,20],
                                  'ntuntab': [[50,18,12,12,12]],
                                  'tofftab': [[7,14,28,28,28]],
@@ -126,7 +127,7 @@ def make_logger_list(msc, clogger):
             except AttributeError, m:
                 msc.messenger("Logger not found: %s"%m, [])
     if not len(logger):  #empty
-        logger=[msc.stdlogger] # fall back to stdlogger
+        logger=[msc.stdLogger] # fall back to stdlogger
     return logger[:]
 
 
@@ -147,12 +148,12 @@ if __name__ == '__main__':
             pfile.close()
             print "...done"
         else:
-            msc=MSC.MSC()
-        msc.setLogFile(cdict['log_filename'])   
+            msc=MSC()
+        msc.set_logfile(cdict['log_filename'])   
         logger = make_logger_list(msc,cdict['logger'])
-        msc.setLogger(logger)
-        msc.setAutoSave(cdict['autosave_filename'])
-        msc.SetAutoSaveInterval(cdict['minimal_autosave_interval'])
+        msc.set_logger(logger)
+        msc.set_autosave(cdict['autosave_filename'])
+        msc.set_autosave_interval(cdict['minimal_autosave_interval'])
     
         descriptions = cdict['descriptions'][:]
         for _i,_des in enumerate(cdict['descriptions']):

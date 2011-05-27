@@ -179,7 +179,11 @@ class MGraph(Graph):
         # make map bijective
         self.bimap=self.map
         for k,v in map.items():
-            self.bimap[v]=k
+            try:
+                self.bimap[v]=k
+            except TypeError:  # this happens if v is a list
+                for _v in v:
+                    self.bimap[_v]=k
         self.instrumentation=None
 
     def __setstate__(self, dct):
@@ -449,7 +453,11 @@ class MGraph(Graph):
             self.__dict__.update(ddict)
             for k,v in ddict.items():
                 if k in self.bimap:
-                    ddict[self.bimap[k]]=v
+                    try:
+                        ddict[self.bimap[k]]=v
+                    except TypeError:  # this happens if v is a list
+                        for _k in self.bimap[k]:
+                            ddict[_k]=v
             self.instrumentation=ddict
         return ddict
 
