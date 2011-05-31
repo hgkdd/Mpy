@@ -178,6 +178,7 @@ class MSC(Measure.Measure):
                                 'min_actor': None}
         else:
             self.leveler_par=leveler_par
+        self.leveler_inst=None
         
         ddict=mg.CreateDevices()  # ddict -> instrumentation
         #for k,v in ddict.items():
@@ -275,8 +276,10 @@ class MSC(Measure.Measure):
                 msg = "List of probe positions from autosave file:\n%s\nList of ref antenna positions from autosave file:\n%s\n"%(str(range(maxnprbpos-max(0,prbposleft))), str(range(maxnrefantpos-max(0,refantposleft))))
                 but = []
                 self.messenger(msg, but)
-            self.autosave=False    
+            self.autosave=False
+            ##################################################
             # for all probe/refant positions
+            ##################################################
             while prbposleft > 0 or refantposleft > 0:
                 stat = mg.RFOff_Devices()
                 msg = """Position E field probes and reference antenna...\nAre you ready to start the measurement?\n\nStart: start measurement.\nQuit: quit measurement."""
@@ -287,7 +290,9 @@ class MSC(Measure.Measure):
                     raise UserWarning      # to reach finally statement
                 p = maxnprbpos - prbposleft + 1 # current probe pos 
                 pra = maxnrefantpos - refantposleft + 1 # current refant pos
+                ##############################################
                 # loop tuner positions
+                ################################################
                 for t in alltpos:
                     ast=as_i['LastMeasuredTpos']
                     if ast:
@@ -303,7 +308,9 @@ class MSC(Measure.Measure):
                         TPos = t[i]
                         IsPos = ddict[names['tuner'][i]].Goto (TPos)
                     self.messenger(util.tstamp()+" ...done", [])
+                    ########################################################
                     # loop freqs
+                    ########################################################
                     for f in freqs:
                         asf=as_i['LastMeasuredFreq']
                         if asf:
@@ -326,29 +333,17 @@ class MSC(Measure.Measure):
                         mg.EvaluateConditions()
                         # set frequency for all devices
                         (minf, maxf) = mg.SetFreq_Devices (f)
-                        
-                        self.messenger(util.tstamp()+" RF On for leveler init ...", [])
-                        stat = mg.RFOn_Devices()
-                        self.leveler_inst=self.leveler(**self.leveler_par)
-                        self.messenger(util.tstamp()+" RF Off after leveler init ...", [])
-                        stat = mg.RFOff_Devices()
-                        
-                        try:
-                            level = self.set_level(mg, SGLevel)
-                        except AmplifierProtectionError, _e:
-                            self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
-                            raise  # re raise to reach finaly clause
-                        
+                                                
                                             
                         # cable corrections
-                        c_sg_amp = mg.get_path_correction(mg.name.sg, mg.name.a1)
-                        c_sg_ant = mg.get_path_correction(mg.name.sg, mg.name.ant)
-                        c_a2_pm1 = mg.get_path_correction(mg.name.a2, mg.name.pmfwd)
-                        c_a2_ant = mg.get_path_correction(mg.name.a2, mg.name.ant)
-                        c_ant_pm2 = mg.get_path_correction(mg.name.ant, mg.name.pmbwd)
+                        c_sg_amp = mg.get_path_correction(mg.name.sg, mg.name.a1, POWERRATIO)
+                        c_sg_ant = mg.get_path_correction(mg.name.sg, mg.name.ant, POWERRATIO)
+                        c_a2_pm1 = mg.get_path_correction(mg.name.a2, mg.name.pmfwd, POWERRATIO)
+                        c_a2_ant = mg.get_path_correction(mg.name.a2, mg.name.ant, POWERRATIO)
+                        c_ant_pm2 = mg.get_path_correction(mg.name.ant, mg.name.pmbwd, POWERRATIO)
                         c_refant_pmref = []
                         for i in range(nrefant):
-                            c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i]))
+                            c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i], POWERRATIO))
                         c_fp = 1.0
                         if not f in etaTx:
                             eta = mg.GetAntennaEfficiency(mg.name.ant)
@@ -409,7 +404,7 @@ class MSC(Measure.Measure):
                                     self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                     self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                     self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                    PRef /= c_refant_pmref[i]
+                                    PRef = abs((PRef / c_refant_pmref[i]).reduce_to(WATT))
                                     self.__addLoggerBlock(block, nn+'_corrected', 'Noise: Pref/c_refant_pmref', PRef, {})
                                     self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                     self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -419,10 +414,18 @@ class MSC(Measure.Measure):
 
                         self.messenger(util.tstamp()+" RF On...", [])
                         stat = mg.RFOn_Devices()   # switch on just before measure
+                        if not self.leveler_inst:
+                            self.leveler_inst=self.leveler(**self.leveler_par)
 
-                        level2 = self.do_leveling(leveling, mg, names, locals())
-                        if level2:
-                            level=level2
+                        try:
+                            level = self.set_level(mg, SGLevel)
+                        except AmplifierProtectionError, _e:
+                            self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
+                            raise  # re raise to reach finaly clause
+
+                        #level2 = self.do_leveling(leveling, mg, names, locals())
+                        #if level2:
+                        #    level=level2
 
                         # wait delay seconds
                         self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
@@ -454,12 +457,12 @@ class MSC(Measure.Measure):
                             self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                            PFwd *= c_a2_ant
+                            PFwd = abs((PFwd * c_a2_ant).reduce_to(WATT))
                             self.__addLoggerBlock(block, 'c_a2_ant', 'Correction from amplifier output to antenna', c_a2_ant, {})
                             self.__addLoggerBlock(block['c_a2_ant']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter', c_a2_pm1, {})
                             self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PFwd /= c_a2_pm1
+                            PFwd = abs((PFwd / c_a2_pm1).reduce_to(WATT))
                             self.__addLoggerBlock(block, n+'_corrected', 'Pfwd*c_a2_ant/c_a2_pm1', PFwd, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -472,7 +475,7 @@ class MSC(Measure.Measure):
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             self.__addLoggerBlock(block, 'c_ant_pm2', 'Correction from antenna feed to bwd power meter', c_ant_pm2, {})
                             self.__addLoggerBlock(block['c_ant_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PBwd /= c_ant_pm2
+                            PBwd = abs((PBwd / c_ant_pm2).reduce_to(WATT))
                             self.__addLoggerBlock(block, n+'_corrected', 'Pbwd/c_ant_pm2', PBwd, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -490,7 +493,7 @@ class MSC(Measure.Measure):
                                 self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                                 self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                 self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                PRef /= c_refant_pmref[i]
+                                PRef = abs((PRef / c_refant_pmref[i]).reduce_to(WATT))
                                 prefant = self.__insert_it (prefant, PRef, PFwd, PBwd, f, t, pra+i-1)
                                 self.__addLoggerBlock(block, n+'_corrected', 'Pref/c_refant_pmref', PRef, {})
                                 self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -531,8 +534,9 @@ class MSC(Measure.Measure):
                             self.messenger(util.tstamp()+" autosave ...", [])
                             self.do_autosave()
                             self.messenger(util.tstamp()+" ... done", [])
-
+                        self.leveler_inst=None
                         # END OF f LOOP
+                    
                     # test for low battery
                     lowBatList = mg.getBatteryLow_Devices()
                     if len(lowBatList):
@@ -556,6 +560,8 @@ class MSC(Measure.Measure):
 
                 
         finally:
+            self.leveler_inst=None
+
             # finally is executed if and if not an exception occur -> save exit
             self.messenger(util.tstamp()+" RF Off and Quit...", [])
             stat = mg.RFOff_Devices()
@@ -684,11 +690,11 @@ class MSC(Measure.Measure):
                     # set frequency for all devices
                     (minf, maxf) = mg.SetFreq_Devices (f)
                     # cable corrections
-                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'])
-                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'])
-                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'])
-                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'])
-                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'])
+                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], POWERRATIO)
+                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'], POWERRATIO)
+                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], POWERRATIO)
+                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'], POWERRATIO)
+                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'], POWERRATIO)
                     c_fp = 1.0
 
 
@@ -744,12 +750,12 @@ class MSC(Measure.Measure):
                         self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                        PFwd *= c_a2_ant
+                        PFwd = PFwd * c_a2_ant
                         self.__addLoggerBlock(block, 'c_a2_ant', 'Correction from amplifier output to antenna', c_a2_ant, {})
                         self.__addLoggerBlock(block['c_a2_ant']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter', c_a2_pm1, {})
                         self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PFwd /= c_a2_pm1
+                        PFwd = PFwd / c_a2_pm1
                         self.__addLoggerBlock(block, n+'_corrected', 'Pfwd*c_a2_ant/c_a2_pm1', PFwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -762,7 +768,7 @@ class MSC(Measure.Measure):
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                         self.__addLoggerBlock(block, 'c_ant_pm2', 'Correction from antenna feed to bwd power meter', c_ant_pm2, {})
                         self.__addLoggerBlock(block['c_ant_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PBwd /= c_ant_pm2
+                        PBwd = PBwd / c_ant_pm2
                         self.__addLoggerBlock(block, n+'_corrected', 'Pbwd/c_ant_pm2', PBwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1043,14 +1049,14 @@ class MSC(Measure.Measure):
                     # set frequency for all devices
                     (minf, maxf) = mg.SetFreq_Devices (f)
                     # cable corrections
-                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'])
-                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'])
-                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'])
-                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'])
-                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'])
+                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], POWERRATIO)
+                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'], POWERRATIO)
+                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], POWERRATIO)
+                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'], POWERRATIO)
+                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'], POWERRATIO)
                     c_refant_pmref = []
                     for i in range(nrefant):
-                        c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i]))
+                        c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i], POWERRATIO))
                     c_fp = 1.0
                     if not etaTx.has_key(f):
                         eta = mg.GetAntennaEfficiency(names['ant'])
@@ -1107,7 +1113,7 @@ class MSC(Measure.Measure):
                                 self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                 self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                PRef /= c_refant_pmref[i]
+                                PRef = PRef / c_refant_pmref[i]
                                 self.__addLoggerBlock(block, nn+'_corrected', 'Noise: Pref/c_refant_pmref', PRef, {})
                                 self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1154,12 +1160,12 @@ class MSC(Measure.Measure):
                         self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                        PFwd *= c_a2_ant
+                        PFwd = PFwd * c_a2_ant
                         self.__addLoggerBlock(block, 'c_a2_ant', 'Correction from amplifier output to antenna', c_a2_ant, {})
                         self.__addLoggerBlock(block['c_a2_ant']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter', c_a2_pm1, {})
                         self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PFwd /= c_a2_pm1
+                        PFwd = PFwd / c_a2_pm1
                         self.__addLoggerBlock(block, n+'_corrected', 'Pfwd*c_a2_ant/c_a2_pm1', PFwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1172,7 +1178,7 @@ class MSC(Measure.Measure):
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                         self.__addLoggerBlock(block, 'c_ant_pm2', 'Correction from antenna feed to bwd power meter', c_ant_pm2, {})
                         self.__addLoggerBlock(block['c_ant_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PBwd /= c_ant_pm2
+                        PBwd = PBwd / c_ant_pm2
                         self.__addLoggerBlock(block, n+'_corrected', 'Pbwd/c_ant_pm2', PBwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1188,7 +1194,7 @@ class MSC(Measure.Measure):
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                             self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PRef /= c_refant_pmref[i]
+                            PRef = PRef / c_refant_pmref[i]
                             prefant = self.__insert_it (prefant, PRef, PFwd, PBwd, f, t, i)
                             self.__addLoggerBlock(block, n+'_corrected', 'Pref/c_refant_pmref', PRef, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -1412,14 +1418,14 @@ class MSC(Measure.Measure):
                     # set frequency for all devices
                     (minf, maxf) = mg.SetFreq_Devices (f)
                     # cable corrections
-                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'])
-                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'])
-                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'])
-                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'])
-                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'])
+                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], POWERRATIO)
+                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'], POWERRATIO)
+                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], POWERRATIO)
+                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'], POWERRATIO)
+                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'], POWERRATIO)
                     c_refant_pmref = []
                     for i in range(nrefant):
-                        c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i]))
+                        c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i], POWERRATIO))
                     c_fp = 1.0
                     #print "Got all Cable corrections"
                     #for i in range(nrefant):
@@ -1475,7 +1481,7 @@ class MSC(Measure.Measure):
                                 self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                 self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                PRef /= c_refant_pmref[i]
+                                PRef = PRef / c_refant_pmref[i]
                                 self.__addLoggerBlock(block, nn+'_corrected', 'Noise: Pref/c_refant_pmref', PRef, {})
                                 self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1558,12 +1564,12 @@ class MSC(Measure.Measure):
                         self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                        PFwd *= c_a2_ant
+                        PFwd = PFwd * c_a2_ant
                         self.__addLoggerBlock(block, 'c_a2_ant', 'Correction from amplifier output to antenna', c_a2_ant, {})
                         self.__addLoggerBlock(block['c_a2_ant']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter', c_a2_pm1, {})
                         self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PFwd /= c_a2_pm1
+                        PFwd = PFwd / c_a2_pm1
                         self.__addLoggerBlock(block, n+'_corrected', 'Pfwd*c_a2_ant/c_a2_pm1', PFwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1576,7 +1582,7 @@ class MSC(Measure.Measure):
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                         self.__addLoggerBlock(block, 'c_ant_pm2', 'Correction from antenna feed to bwd power meter', c_ant_pm2, {})
                         self.__addLoggerBlock(block['c_ant_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PBwd /= c_ant_pm2
+                        PBwd = PBwd / c_ant_pm2
                         self.__addLoggerBlock(block, n+'_corrected', 'Pbwd/c_ant_pm2', PBwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1592,7 +1598,7 @@ class MSC(Measure.Measure):
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                             self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PRef /= c_refant_pmref[i]
+                            PRef = PRef / c_refant_pmref[i]
                             prefant = self.__insert_it (prefant, PRef, PFwd, PBwd, f, t, i)
                             self.__addLoggerBlock(block, n+'_corrected', 'Pref/c_refant_pmref', PRef, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -1697,7 +1703,7 @@ class MSC(Measure.Measure):
 #                                    maxstart=umddevice.UMDMResult(sglevel)
 #            
         sglv=mg.MaxSafe
-        pathcorr=mg.get_path_correction(mg.name.start, mg.name.ant)
+        pathcorr=mg.get_path_correction(mg.name.start, mg.name.ant, POWERRATIO)
         pfwd=sglv*pathcorr
         Emax = etest(f,pfwd)
         if rfac is None: # assume 1dB compression -> rfac=0.891  (1/ 10**(1/20))
@@ -1905,7 +1911,7 @@ Quit: quit measurement.
                     # cable corrections
                     c_refant_receiver = []
                     for i in range(nrefant):
-                        c_refant_receiver.append(mg.get_path_correction(names['refant'][i], names['receiver'][i]))
+                        c_refant_receiver.append(mg.get_path_correction(names['refant'][i], names['receiver'][i], POWERRATIO))
 
                     # ALL measurement start here
                     block = {}
@@ -1939,7 +1945,7 @@ Quit: quit measurement.
                             self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block, 'c_refant_receiver'+str(i), 'Correction from ref antenna feed to ref receiver', c_refant_receiver[i], {})
                             self.__addLoggerBlock(block['c_refant_receiver'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PRef /= c_refant_receiver[i]
+                            PRef = abs((PRef / c_refant_receiver[i]).reduce_to(WATT))
                             self.__addLoggerBlock(block, nn+'_corrected', 'Noise: Pref/c_refant_receiver', PRef, {})
                             self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -2014,7 +2020,7 @@ Quit: quit measurement.
                     # cable corrections
                     c_refant_receiver = []
                     for i in range(nrefant):
-                        c_refant_receiver.append(mg.get_path_correction(names['refant'][i], names['receiver'][i]))
+                        c_refant_receiver.append(mg.get_path_correction(names['refant'][i], names['receiver'][i], POWERRATIO))
 
                     # ALL measurement start here
                     block = {}
@@ -2057,7 +2063,7 @@ Quit: quit measurement.
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             self.__addLoggerBlock(block, 'c_refant_receiver'+str(i), 'Correction from ref antenna feed to ref receiver', c_refant_receiver[i], {})
                             self.__addLoggerBlock(block['c_refant_receiver'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PRef /= c_refant_receiver[i]
+                            PRef = PRef / c_refant_receiver[i]
                             prefant = self.__insert_it (prefant, PRef, None, None, f, t, i)
                             self.__addLoggerBlock(block, n+'_corrected', 'Pref/c_refant_receiver', PRef, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -2383,8 +2389,9 @@ Quit: quit measurement.
             return -1
             
         zeroPR = Quantity(POWERRATIO, 0.0)
+        onePR = Quantity(POWERRATIO, 1.0)
         zeroVm = Quantity(EFIELD, 0.0)            
-        zeroVmoversqrtW = QUANTITY(EFIELDPNORM,0.0)            
+        zeroVmoversqrtW = Quantity(EFIELDPNORM,0.0)            
 
         efields = self.rawData_MainCal[description]['efield']
         pref = self.rawData_MainCal[description]['pref']
@@ -2448,7 +2455,7 @@ Quit: quit measurement.
                         #print len(ef), ef[0], ef[1], ef[2]
                         for k in range(3): # max for each component
                             EMax[k] = max(EMax[k], ef[k])
-                        et=(sum([e**2 for e in ef])).sqrt() # max of rss (E_T)
+                        et=(sum([e**2 for e in ef], zeroVm**2)).sqrt() # max of rss (E_T)
                         EMaxT=max(EMaxT, et)
                         
                         pf = efields[f][t][p][i]['pfwd']
@@ -2514,12 +2521,12 @@ Quit: quit measurement.
             # calc ACF and IL
             IL = zeroPR
             for pos,Pmax in PMaxRecL.items():            
-                IL += Pmax/PInputAL[pos]
-            IL /= len(PMaxRecL.keys())
+                IL = IL + onePR*Pmax/PInputAL[pos]
+            IL = IL / len(PMaxRecL.keys())
             ACF = zeroPR
             for pos,Pav in PAveRecL.items():            
-                ACF += Pav/PInputAL[pos]
-            ACF /= len(PAveRecL.keys())
+                ACF = ACF + onePR*Pav/PInputAL[pos]
+            ACF = ACF / len(PAveRecL.keys())
             self.processedData_MainCal[description]['ACF'][f] = ACF
             self.processedData_MainCal[description]['IL'][f] = IL
 
@@ -2565,7 +2572,7 @@ Quit: quit measurement.
             list24 = []
             for k in range(3):
                 lst = [enorm[p][k] for p in enorm.keys()]
-                list24+=lst
+                list24 = list24 + lst
                 S = util.CalcSigma(lst, Avxyz[k])
                 Sxyz.append(S)            
             S24 = util.CalcSigma(list24, Av24)
@@ -2695,7 +2702,7 @@ Quit: quit measurement.
 
             npr = noise[f][tees[0]][prees[0]][0]  # ['value'].convert(umddevice.UMD_W)
             #npr = npr.mag()
-            npr *= etaTx_inter(i)/ccf_inter(i)
+            npr = npr *   etaTx_inter(i)/ccf_inter(i)
             #npr = npr.convert(umddevice.UMD_W)
             gmax_f=gmax(f,s=distance,hg=hg,RH=RH)
             #print gmax_f['h'], gmax_f['v']

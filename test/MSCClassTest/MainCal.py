@@ -2,10 +2,12 @@ import os
 import sys
 import gzip
 import pprint
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+#try:
+#    import cPickle as pickle
+#except ImportError:
+#    import pickle
+import pickle
+
 from mpy.env.msc.MSC import MSC
 
 
@@ -193,13 +195,14 @@ if __name__ == '__main__':
                     continue
             if domeas:        
                 msc.Measure_MainCal(**mp)
+                pickle.dump(msc, file('AfterMeasure.p', 'wb') , 2)
             if doeval:
                 msc.OutputRawData_MainCal(fname=cdict["rawdata_output_filename"]%_des)
                 msc.Evaluate_MainCal(description=_des)
             for _passedcal in cdict['descriptions'][:cdict['descriptions'].index(_des)]:
                 msc.CalculateLoading_MainCal (empty_cal=_passedcal, loaded_cal=_des)
-                descriptions.append("%s+%s"%(_passedcal,_des))
-        msc.OutputProcessedData_MainCal(fname=cdict["processeddata_output_filename"]%("_".join(descriptions)))
+                descriptions.append( "%s+%s"%(_passedcal,_des) )
+        msc.OutputProcessedData_MainCal(fname = (cdict["processeddata_output_filename"])%('_'.join(descriptions)) )
     else:
         msg="Select description to use.\n"
         but = []

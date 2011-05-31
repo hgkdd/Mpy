@@ -15,6 +15,11 @@ import os, fnmatch
 import traceback
 import numpy as np
 
+import scipy
+from scipy.interpolate import interp1d
+
+from scuq.quantities import Quantity
+
 from mpy.tools.getch import getch
 from mpy.tools.kbhit import kbhit
 
@@ -405,22 +410,36 @@ def locate(pattern, paths=None):
 
 def CalcSigma (lst, av=None):
     n = len(lst)
+    try:
+        unit=lst[0]._unit
+        zero=Quantity( unit, 0.0)
+    except AttributeError:
+        zero=0.0
+    
     if av is None:
-        av=sum(lst)/float(n)
-    s2=sum([(x-av)**2 for x in lst])/float(n-1)
-    s=math.sqrt(s2)
+        av=sum(lst, zero)/float(n)
+    s2=sum([(x-av)**2 for x in lst], zero*zero)/float(n-1)
+    try:
+        s=s2.sqrt()
+    except AttributeError:
+        s=math.sqrt(s2)
     return s
 
 def InterpolateMResults(y, x, interpolation=None):
-    if interoplation is None:
+    if interpolation is None:
         interpolation='linxliny'
     if 'logx' in interpolation:
         x=scipy.log10(x)
     if 'logy' in interpolation:
         y=scipy.log10(y)
-    inter = scipy.interpolate.interp1d(x,y)
+    inter = interp1d(x,y)
     return inter
 
+def MResult_Interpol (dct, interpolation):
+    x=sorted(dct.keys())
+    y=[dct[xi] for xi in x]
+    return InterpolateMResults(y,x,interpolation)
+    
 def CalcPsi(n, rho,eps=0.01):
     def calc_psi_int(r,n,rho):
         def kern(x):
@@ -479,7 +498,7 @@ def CalcRho0 (r, cpsi, alpha):
     if not hasattr (alpha, 'sort'):
         alpha = [alpha]
     alpha.sort()              
-    f = scipy.interpolate.interp1d(cpsi, r)  # the inverse of the cum integral
+    f = interp1d(cpsi, r)  # the inverse of the cum integral
     dct={}
     for a in alpha:
         rho0 = f(a)
