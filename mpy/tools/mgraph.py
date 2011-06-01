@@ -60,13 +60,29 @@ class Graph(object):
         methods=('graph_from_dot_file','graph_from_dot_data','graph_from_edges',
                  'graph_from_adjacency_matrix','graph_from_incidence_matrix')             
         dotgraph=None
+        #self.dotcontents=None
         for m in methods:
             meth=getattr(pydot, m)
             try:
                 if m == 'graph_from_dot_file':
                     # print self.SearchPaths, fname_or_data
-                    fname_or_data = locate(fname_or_data, paths=self.SearchPaths).next()  # first hit
-                    dotgraph=meth(fname_or_data)
+                    try:
+                        #print "Hey", self.instance_from_pickle
+                        fname_or_data = locate(fname_or_data, paths=self.SearchPaths).next()  # first hit
+                        """
+                        if file was found update dotcontets from this file.
+                        if not we maybe come from a pickle file and haven't found the graph
+                        in this case we restore the graph from self.dotcontets -> except clause
+                        """
+                        self.dotcontents=(file(fname_or_data, 'r')).read()  # 
+                        dotgraph=meth(fname_or_data)
+                    except StopIteration: # not found
+                        #print "Hey", self.instance_from_pickle
+                        if hasattr(self, 'instance_from_pickle') and self.instance_from_pickle: 
+                            self.graph=dotgraph=pydot.graph_from_dot_data(self.dotcontents)  #TODO
+                            return
+                        else:  
+                            raise # reraise
                 else:
                     dotgraph=meth(fname_or_data)
             except (IOError, IndexError):
@@ -187,14 +203,19 @@ class MGraph(Graph):
         self.instrumentation=None
 
     def __setstate__(self, dct):
-        """used instead of __init__ when instance is created from pickle file""" 
-        self.__init__(**dct)
+        """used instead of __init__ when instance is created from pickle file"""
+        self.instance_from_pickle=True
+        if 'dotcontents' not in dct:
+            dct['dotcontents']="digraph {sg->ant}"
+        self.dotcontents=dct['dotcontents']
+        self.__init__(fname_or_data=dct['fname_or_data'], map=dct['map'], SearchPaths=dct['SearchPaths'])
 
     def __getstate__(self):
         """prepare a dict for pickling"""
         odict = {'fname_or_data': self.fname_or_data, 
-                'map': self.map, 
-                'SearchPaths': self.SearchPaths}
+                 'map': self.map, 
+                 'SearchPaths': self.SearchPaths,
+                'dotcontents': self.dotcontents}
         return odict
         
     # def __getattribute__(self, name):

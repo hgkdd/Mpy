@@ -22,6 +22,7 @@ from mpy.env import Measure
 from mpy.tools.aunits import *
 
 from scuq.quantities import Quantity
+from scuq.ucomponents import Context
 from scuq.si import WATT, VOLT, METER
 
 
@@ -113,7 +114,7 @@ class MSC(Measure.Measure):
                            LUF=250e6,                           
                            FStart=150e6,
                            FStop=1e9,
-                           SGLevel=-20,
+                           InputLevel=None,
                            leveler=None,
                            leveler_par=None,
                            ftab=[1,3,6,10,100,1000],
@@ -123,7 +124,6 @@ class MSC(Measure.Measure):
                            nprbpostab=[8,8,8,8,8],
                            nrefantpostab=[8,8,8,8,8],
                            SearchPaths=None,
-                           leveling=None,
                            names={'sg': 'sg',
                                   'a1': 'a1',
                                   'a2': 'a2',
@@ -136,6 +136,7 @@ class MSC(Measure.Measure):
                                   'pmref': ['pmref1']}):
         """Performs a msc main calibration according to IEC 61000-4-21
         """
+        ctx=Context()
         self.PreUserEvent()
         ftab=LUF*scipy.array(ftab)
         
@@ -145,16 +146,6 @@ class MSC(Measure.Measure):
             self.messenger(util.tstamp()+" Start new main calibration measurement...", [])
 
         self.rawData_MainCal.setdefault(description, {})
-
-        if leveling is None:
-            leveling = [{'condition': 'False',
-                        'actor': None,
-                        'actor_min': None,
-                        'actor_max': None,
-                        'watch': None,
-                        'nominal': None,
-                        'reader': None,
-                        'path': None}]
                     
         # number of probes, ref-antenna and tuners
         nprb = len(names['fp'])
@@ -178,7 +169,13 @@ class MSC(Measure.Measure):
                                 'min_actor': None}
         else:
             self.leveler_par=leveler_par
+        if InputLevel is None:
+            self.InputLevel=Quantity(WATT, 1e-3)   # 1 mW default
+        else:
+            self.InputLevel=InputLevel
+        
         self.leveler_inst=None
+        
         
         ddict=mg.CreateDevices()  # ddict -> instrumentation
         #for k,v in ddict.items():
@@ -235,16 +232,14 @@ class MSC(Measure.Measure):
                   'refantposleft': refantposleft,
                   'LastMeasuredFreq': None,
                   'LastMeasuredTpos': None}
+            # restore from auto save
             if self.autosave:
                 efields=self.rawData_MainCal[description]['efield'].copy()
                 prefant=self.rawData_MainCal[description]['pref'].copy()
                 noise=self.rawData_MainCal[description]['noise'].copy()
                 
                 as_i=self.autosave_info.copy()
-                #try:
-                #    as_i['LastMeasuredTpos']=as_i['LastMeasuredTPos']  # Greding special (black magic)
-                #except KeyError:
-                #    pass
+
                 prbposleft=as_i['prbposleft']
                 refantposleft=as_i['refantposleft']
                 if 'PrbPosCounter' in as_i:
@@ -404,7 +399,7 @@ class MSC(Measure.Measure):
                                     self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                     self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                     self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                    PRef = abs((PRef / c_refant_pmref[i]).reduce_to(WATT))
+                                    PRef = ctx.value_of(abs((PRef / c_refant_pmref[i]).reduce_to(WATT)))
                                     self.__addLoggerBlock(block, nn+'_corrected', 'Noise: Pref/c_refant_pmref', PRef, {})
                                     self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                     self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -417,11 +412,11 @@ class MSC(Measure.Measure):
                         if not self.leveler_inst:
                             self.leveler_inst=self.leveler(**self.leveler_par)
 
-                        try:
-                            level = self.set_level(mg, SGLevel)
-                        except AmplifierProtectionError, _e:
-                            self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
-                            raise  # re raise to reach finaly clause
+                        #try:
+                        level = self.leveler_inst.adjust_level (self.InputLevel)
+                        #except AmplifierProtectionError, _e:
+                        #    self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
+                        #    raise  # re raise to reach finaly clause
 
                         #level2 = self.do_leveling(leveling, mg, names, locals())
                         #if level2:
@@ -457,12 +452,12 @@ class MSC(Measure.Measure):
                             self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                            PFwd = abs((PFwd * c_a2_ant).reduce_to(WATT))
+                            PFwd = ctx.value_of(abs((PFwd * c_a2_ant).reduce_to(WATT)))
                             self.__addLoggerBlock(block, 'c_a2_ant', 'Correction from amplifier output to antenna', c_a2_ant, {})
                             self.__addLoggerBlock(block['c_a2_ant']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter', c_a2_pm1, {})
                             self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PFwd = abs((PFwd / c_a2_pm1).reduce_to(WATT))
+                            PFwd = ctx.value_of(abs((PFwd / c_a2_pm1).reduce_to(WATT)))
                             self.__addLoggerBlock(block, n+'_corrected', 'Pfwd*c_a2_ant/c_a2_pm1', PFwd, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -475,7 +470,7 @@ class MSC(Measure.Measure):
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             self.__addLoggerBlock(block, 'c_ant_pm2', 'Correction from antenna feed to bwd power meter', c_ant_pm2, {})
                             self.__addLoggerBlock(block['c_ant_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PBwd = abs((PBwd / c_ant_pm2).reduce_to(WATT))
+                            PBwd = ctx.value_of(abs((PBwd / c_ant_pm2).reduce_to(WATT)))
                             self.__addLoggerBlock(block, n+'_corrected', 'Pbwd/c_ant_pm2', PBwd, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -493,7 +488,7 @@ class MSC(Measure.Measure):
                                 self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                                 self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                 self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                PRef = abs((PRef / c_refant_pmref[i]).reduce_to(WATT))
+                                PRef = ctx.value_of(abs((PRef / c_refant_pmref[i]).reduce_to(WATT)))
                                 prefant = self.__insert_it (prefant, PRef, PFwd, PBwd, f, t, pra+i-1)
                                 self.__addLoggerBlock(block, n+'_corrected', 'Pref/c_refant_pmref', PRef, {})
                                 self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -509,7 +504,7 @@ class MSC(Measure.Measure):
                                 self.__addLoggerBlock(block, n, 'Reading of the e-field probe for position %d'%i, nbresult[n], {})
                                 self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                                efields = self.__insert_it (efields, nbresult[n], PFwd, PBwd, f, t, p+i-1)
+                                efields = self.__insert_it (efields, ctx.value_of(nbresult[n]), PFwd, PBwd, f, t, p+i-1)
                         for log in self.logger:
                             log(block)
 
@@ -2135,6 +2130,7 @@ Quit: quit measurement.
     def OutputRawData_MainCal (self, description=None, what=None, fname=None):
         thedata = self.rawData_MainCal
         stdout = sys.stdout
+        fp=None
         if fname:
             fp = file(fname,"w")
             sys.stdout = fp
@@ -2142,7 +2138,8 @@ Quit: quit measurement.
             self.__OutputRawData(thedata, description, what)
         finally:
             try:
-                fp.close()
+                if fp:
+                    fp.close()
             except:
                 util.LogError (self.messenger)            
             sys.stdout=stdout
@@ -2150,6 +2147,7 @@ Quit: quit measurement.
     def OutputRawData_Emission (self, description=None, what=None, fname=None):
         thedata = self.rawData_Emission
         stdout = sys.stdout
+        fp=None
         if fname:
             fp = file(fname,"w")
             sys.stdout = fp
@@ -2157,7 +2155,8 @@ Quit: quit measurement.
             self.__OutputRawData(thedata, description, what)
         finally:
             try:
-                fp.close()
+                if fp:
+                    fp.close()
             except:
                 util.LogError (self.messenger)            
             sys.stdout=stdout
@@ -2165,6 +2164,7 @@ Quit: quit measurement.
     def OutputRawData_AutoCorr (self, description=None, what=None, fname=None):
         thedata = self.rawData_AutoCorr
         stdout = sys.stdout
+        fp=None
         if fname:
             fp = file(fname,"w")
             sys.stdout = fp
@@ -2172,7 +2172,8 @@ Quit: quit measurement.
             self.__OutputRawData(thedata, description, what)
         finally:
             try:
-                fp.close()
+                if fp:
+                    fp.close()
             except:
                 util.LogError (self.messenger)            
             sys.stdout=stdout
@@ -2199,6 +2200,7 @@ Quit: quit measurement.
     def OutputRawData_EUTCal (self, description=None, what=None, fname=None):
         thedata = self.rawData_EUTCal
         stdout = sys.stdout
+        fp=None
         if fname:
             fp = file(fname,"w")
             sys.stdout = fp
@@ -2206,7 +2208,8 @@ Quit: quit measurement.
             self.__OutputRawData(thedata, description, what)
         finally:
             try:
-                fp.close()
+                if fp:
+                    fp.close()
             except:
                 util.LogError (self.messenger)            
             sys.stdout=stdout
@@ -2214,6 +2217,7 @@ Quit: quit measurement.
     def OutputRawData_Immunity (self, description=None, what=None, fname=None):
         thedata = self.rawData_Immunity
         stdout = sys.stdout
+        fp=None
         if fname:
             fp = file(fname,"w")
             sys.stdout = fp
@@ -2221,7 +2225,8 @@ Quit: quit measurement.
             self.__OutputRawData(thedata, description, what)
         finally:
             try:
-                fp.close()
+                if fp:
+                    fp.close()
             except:
                 util.LogError (self.messenger)            
             sys.stdout=stdout

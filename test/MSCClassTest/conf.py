@@ -1,9 +1,16 @@
 import os
 
+from scuq.quantities import Quantity
+from scuq.si import WATT
+
+from mpy.mgraph import Leveler
+
 SearchPaths=['\\MpyConfig\\LargeRC', '.']
 dotfile = 'mvk-immunity.dot'
 
 #print dotfile
+
+soll=Quantity(WATT, 1.0)
 
 cdict = {"autosave_filename": 'msc-autosave.p',
          "pickle_output_filename": 'msc-maincal.p',
@@ -12,7 +19,7 @@ cdict = {"autosave_filename": 'msc-autosave.p',
          "processeddata_output_filename": 'out_processed_maincal.dat',
          "log_filename": 'msc.log',
          "logger": ['stdLogger'],
-         "minimal_autosave_interval": 3600,
+         "minimal_autosave_interval": 60,
          "descriptions": ['empty', 'loaded'],
          "measure_parameters": [{'dotfile': dotfile,
                                  'SearchPaths': SearchPaths,
@@ -20,8 +27,9 @@ cdict = {"autosave_filename": 'msc-autosave.p',
                                  'LUF': 250e6,
                                  'FStart': 2e9,
                                  'FStop': 3e9,
-                                 'SGLevel': -20,
-                                 'leveling': None,
+                                 'InputLevel': soll,
+                                 'leveler': None,
+                                 'leveler_par': None,
                                  'ftab': [1,3,6,10,100,1000],
                                  'nftab': [20,15,10,20,20],
                                  'ntuntab': [[3,3,3,3,3]],
