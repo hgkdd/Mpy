@@ -3,7 +3,7 @@ import os
 from scuq.quantities import Quantity
 from scuq.si import WATT
 
-from mpy.mgraph import Leveler
+from mpy.tools.mgraph import Leveler
 
 SearchPaths=['\\MpyConfig\\LargeRC', '.']
 dotfile = 'mvk-immunity.dot'
@@ -14,7 +14,7 @@ soll=Quantity(WATT, 1.0)
 
 cdict = {"autosave_filename": 'msc-autosave.p',
          "pickle_output_filename": 'msc-maincal.p',
-         "pickle_input_filename": 'AfterMeasure.p',
+         "pickle_input_filename": None, #'AfterMeasure.p',
          "rawdata_output_filename": 'out_raw_maincal-%s.dat',
          "processeddata_output_filename": 'out_processed_maincal.dat',
          "log_filename": 'msc.log',

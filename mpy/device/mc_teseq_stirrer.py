@@ -70,12 +70,20 @@ class MOTORCONTROLLER(MC):
         maxspeed=6
         minspeed=0.18
         acc=65
-        self.dev=serial.Serial(port=port, # 2 -> COM3 
-                            baudrate=9600,
-                            bytesize=serial.EIGHTBITS,
-                            parity=serial.PARITY_NONE,
-                            stopbits=serial.STOPBITS_ONE,
-                            timeout=None)
+        for i in range(5):
+            try:
+                self.dev=serial.Serial(port=port, # 2 -> COM3 
+                                baudrate=9600,
+                                bytesize=serial.EIGHTBITS,
+                                parity=serial.PARITY_NONE,
+                                stopbits=serial.STOPBITS_ONE,
+                                timeout=None)
+                break
+            except:
+                time.sleep(0.5)
+        else:
+            raise
+        
         ans=self._ask('INIT')
         self._wait()
         if not self.drive_init_ok:
@@ -184,6 +192,7 @@ class MOTORCONTROLLER(MC):
             # stop first
             self._write('STOP')
             self.ca=self._wait()
+        self.dev.close()
         return self.error
             
 def main():

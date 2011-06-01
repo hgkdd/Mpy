@@ -29,7 +29,13 @@ from scuq.si import WATT
 try:
     import pyttsx
     _tts=pyttsx.init()
+    _tts.setProperty('volume', 1.0)
+    vs=_tts.getProperty('voices')
+    #for v in vs:
+    #    if v.name == 'Microsoft Mary':
+    #        _tts.setProperty('voice', v.id)
     #_tts.SetVoiceByName('MSMary')
+    raise ImportError
 except ImportError:
     _tts=None
 
@@ -501,7 +507,7 @@ class Measure(object):
 
     def make_deslist(self, thedata, description):
         if description is None:
-            description = []
+            description = thedata.keys()
         if util.issequence(description): # a sequence
             deslist = [des for des in description if des in thedata]
         else:

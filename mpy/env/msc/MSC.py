@@ -152,7 +152,7 @@ class MSC(Measure.Measure):
         nrefant = min(len(names['refant']),len(names['pmref']))
         ntuner = min(len(ntuntab),len(tofftab),len(names['tuner']))
         
-        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
+        mg=mgraph.MGraph(dotfile, map=names.copy(), SearchPaths=SearchPaths)
 
         if leveler is None:
             self.leveler=mgraph.Leveler
@@ -174,7 +174,7 @@ class MSC(Measure.Measure):
         else:
             self.InputLevel=InputLevel
         
-        self.leveler_inst=None
+        leveler_inst=None
         
         
         ddict=mg.CreateDevices()  # ddict -> instrumentation
@@ -299,9 +299,9 @@ class MSC(Measure.Measure):
                     self.messenger(util.tstamp()+" Tuner position %s"%(repr(t)), [])
                     # position tuners
                     self.messenger(util.tstamp()+" Move tuner(s)...", [])
-                    for i in range(ntuner):
+                    for i, tname in enumerate(names['tuner']):
                         TPos = t[i]
-                        IsPos = ddict[names['tuner'][i]].Goto (TPos)
+                        IsPos = ddict[tname].Goto (TPos)
                     self.messenger(util.tstamp()+" ...done", [])
                     ########################################################
                     # loop freqs
@@ -409,11 +409,11 @@ class MSC(Measure.Measure):
 
                         self.messenger(util.tstamp()+" RF On...", [])
                         stat = mg.RFOn_Devices()   # switch on just before measure
-                        if not self.leveler_inst:
-                            self.leveler_inst=self.leveler(**self.leveler_par)
+                        if not leveler_inst:
+                            leveler_inst=self.leveler(**self.leveler_par)
 
                         #try:
-                        level = self.leveler_inst.adjust_level (self.InputLevel)
+                        level = leveler_inst.adjust_level (self.InputLevel)
                         #except AmplifierProtectionError, _e:
                         #    self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                         #    raise  # re raise to reach finaly clause
@@ -529,7 +529,7 @@ class MSC(Measure.Measure):
                             self.messenger(util.tstamp()+" autosave ...", [])
                             self.do_autosave()
                             self.messenger(util.tstamp()+" ... done", [])
-                        self.leveler_inst=None
+                        leveler_inst=None
                         # END OF f LOOP
                     
                     # test for low battery
@@ -555,7 +555,7 @@ class MSC(Measure.Measure):
 
                 
         finally:
-            self.leveler_inst=None
+            leveler_inst=None
 
             # finally is executed if and if not an exception occur -> save exit
             self.messenger(util.tstamp()+" RF Off and Quit...", [])

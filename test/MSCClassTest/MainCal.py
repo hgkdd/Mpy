@@ -159,7 +159,7 @@ if __name__ == '__main__':
         msc.set_autosave_interval(cdict['minimal_autosave_interval'])
     
         descriptions = cdict['descriptions'][:]
-        for _i,_des in enumerate(cdict['descriptions']):
+        for _i,_des in enumerate(descriptions):
             try:
                 mp = cdict['measure_parameters'][_i]
             except IndexError:
@@ -198,12 +198,13 @@ if __name__ == '__main__':
                 msc.Measure_MainCal(**mp)
                 pickle.dump(msc, file('AfterMeasure.p', 'wb') , 2)
             if doeval:
-                msc.OutputRawData_MainCal(fname=cdict["rawdata_output_filename"]%_des)
+                msc.OutputRawData_MainCal(description=_des, fname=cdict["rawdata_output_filename"]%_des)
                 msc.Evaluate_MainCal(description=_des)
             for _passedcal in cdict['descriptions'][:cdict['descriptions'].index(_des)]:
                 msc.CalculateLoading_MainCal (empty_cal=_passedcal, loaded_cal=_des)
                 descriptions.append( "%s+%s"%(_passedcal,_des) )
-        msc.OutputProcessedData_MainCal(fname = (cdict["processeddata_output_filename"])%('_'.join(descriptions)) )
+        dest_str='_'.join(descriptions)        
+        msc.OutputProcessedData_MainCal(fname = (cdict["processeddata_output_filename"])%(dest_str) )
     else:
         msg="Select description to use.\n"
         but = []
