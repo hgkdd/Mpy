@@ -14,9 +14,9 @@ soll=Quantity(WATT, 1.0)
 
 cdict = {"autosave_filename": 'msc-autosave.p',
          "pickle_output_filename": 'msc-maincal.p',
-         "pickle_input_filename": None, #'AfterMeasure.p',
+         "pickle_input_filename": 'AfterMeasure.p',
          "rawdata_output_filename": 'out_raw_maincal-%s.dat',
-         "processeddata_output_filename": 'out_processed_maincal.dat',
+         "processeddata_output_filename": 'out_processed_maincal-%s.dat',
          "log_filename": 'msc.log',
          "logger": ['stdLogger'],
          "minimal_autosave_interval": 60,

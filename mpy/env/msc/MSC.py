@@ -2387,6 +2387,7 @@ Quit: quit measurement.
         return scipy.interpolate.interp1d(t,r)
 
     def Evaluate_MainCal(self, description="empty", standard=None):
+        ctx=Context()
         standard = self.getStandard(standard)
         self.messenger(util.tstamp()+" Start of evaluation of main calibration with description %s"%description, [])
         if not self.rawData_MainCal.has_key(description):
@@ -2469,10 +2470,10 @@ Quit: quit measurement.
                         PInput += pf # av 
                         InCounter += 1
                 PInput /= InCounter
-                EMaxL[p]=EMax  # for each probe pos: Max over tuner positions
-                EMaxTL[p]=EMaxT
-                PInputVariation = PInputMax / PInputMin
-                PInputEL[p]=PInput
+                EMaxL[p]=ctx.value_of(EMax)  # for each probe pos: Max over tuner positions
+                EMaxTL[p]=ctx.value_of(EMaxT)
+                PInputVariation = ctx.value_of(PInputMax / PInputMin)
+                PInputEL[p]=ctx.value_of(PInput)
                 PInputVariationEL[p] = PInputVariation
 
             # receive antenna calibration
@@ -2506,11 +2507,11 @@ Quit: quit measurement.
                         PInput += pf
                         InCounter += 1
                 PAveRec  /= RecCounter
-                PMaxRecL[p]=PMaxRec
-                PAveRecL[p]=PAveRec    # for each receive antenna pos: Max and Av over tuner positions
+                PMaxRecL[p]=ctx.value_of(PMaxRec)
+                PAveRecL[p]=ctx.value_of(PAveRec)    # for each receive antenna pos: Max and Av over tuner positions
                 PInput  /=InCounter
-                PInputVariation = PInputMax / PInputMin
-                PInputAL[p]=PInput
+                PInputVariation = ctx.value_of(PInputMax / PInputMin)
+                PInputAL[p]=ctx.value_of(PInput)
                 PInputVariationAL[p] = PInputVariation
                     
                 
@@ -2527,11 +2528,11 @@ Quit: quit measurement.
             IL = zeroPR
             for pos,Pmax in PMaxRecL.items():            
                 IL = IL + onePR*Pmax/PInputAL[pos]
-            IL = IL / len(PMaxRecL.keys())
+            IL = ctx.value_of(IL / len(PMaxRecL.keys()))
             ACF = zeroPR
             for pos,Pav in PAveRecL.items():            
                 ACF = ACF + onePR*Pav/PInputAL[pos]
-            ACF = ACF / len(PAveRecL.keys())
+            ACF = ctx.value_of(ACF / len(PAveRecL.keys()))
             self.processedData_MainCal[description]['ACF'][f] = ACF
             self.processedData_MainCal[description]['IL'][f] = IL
 
@@ -2551,7 +2552,7 @@ Quit: quit measurement.
                 for k in range(len(Em)):
                     en.append(Em[k]/sqrtPInput)
                     Avxyz[k] += en[k]
-                self.processedData_MainCal[description]['Enorm'][f][pos]=en
+                self.processedData_MainCal[description]['Enorm'][f][pos]=ctx.value_of(en)
             AvT = zeroVmoversqrtW
             for pos,Em in EMaxTL.items():
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos]
@@ -2561,7 +2562,7 @@ Quit: quit measurement.
                 #l = pin.get_l()
                 sqrtPInput = v # umddevice.UMDMResult(sqrtv, sqrtv+(u-l)/(4.0*sqrtv), sqrtv-(u-l)/(4.0*sqrtv), umddevice.UMD_sqrtW)
                 en=Em/sqrtPInput
-                self.processedData_MainCal[description]['EnormT'][f][pos]=en
+                self.processedData_MainCal[description]['EnormT'][f][pos]=ctx.value_of(en)
                 AvT+=en
             AvT /= len(EMaxTL)
             Av24 = zeroVmoversqrtW
@@ -2569,9 +2570,9 @@ Quit: quit measurement.
                 Avxyz[k] /= len(EMaxL.keys())
                 Av24 += Avxyz[k]
             Av24 /= 3.0
-            self.processedData_MainCal[description]['EnormAveXYZ'][f]=Avxyz
-            self.processedData_MainCal[description]['EnormAve'][f]=Av24
-            self.processedData_MainCal[description]['EnormTAve'][f]=AvT
+            self.processedData_MainCal[description]['EnormAveXYZ'][f]=ctx.value_of(Avxyz)
+            self.processedData_MainCal[description]['EnormAve'][f]=ctx.value_of(Av24)
+            self.processedData_MainCal[description]['EnormTAve'][f]=ctx.value_of(AvT)
             enorm = self.processedData_MainCal[description]['Enorm'][f]
             Sxyz = [] # umddevice.stdVectorUMDMResult()
             list24 = []
@@ -2582,12 +2583,12 @@ Quit: quit measurement.
                 Sxyz.append(S)            
             S24 = util.CalcSigma(list24, Av24)
             
-            self.processedData_MainCal[description]['SigmaXYZ'][f]=Sxyz
-            self.processedData_MainCal[description]['Sigma24'][f]=S24
+            self.processedData_MainCal[description]['SigmaXYZ'][f]=ctx.value_of(Sxyz)
+            self.processedData_MainCal[description]['Sigma24'][f]=ctx.value_of(S24)
             SdBxyz = [20 * ((Sxyz[k]+Avxyz[k])/Avxyz[k] ).log10() for k in (0,1,2)] #umddevice.stdVectorUMDMResult()
             SdB24 =   20 * ( (S24+Av24) / Av24 ).log10()
-            self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = SdBxyz
-            self.processedData_MainCal[description]['Sigma24_dB'][f] = SdB24
+            self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = ctx.value_of(SdBxyz)
+            self.processedData_MainCal[description]['Sigma24_dB'][f] = ctx.value_of(SdB24)
 
         self.messenger(util.tstamp()+" End of evaluation of main calibration", [])
         return 0

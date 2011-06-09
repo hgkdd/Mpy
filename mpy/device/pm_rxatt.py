@@ -240,7 +240,7 @@ ini20dBLF=format_block("""
                                                         1.800000e+10 [-28.93, 167.97] [-28.73, 168.97] [-28.53, 169.97]
                                                         '''))
                     """)
-ini20dBLF=StringIO.StringIO(ini20dBLF)
+
 
 ini20dBHF=format_block("""
                     [description]
@@ -469,7 +469,6 @@ ini20dBHF=format_block("""
                                                         1.800000e+10 [-29.74, 149.24] [-29.54, 150.24] [-29.34, 151.24]
                                                         '''))
                     """)
-ini20dBHF=StringIO.StringIO(ini20dBHF)
 
 ini0dBHF=format_block("""
                     [description]
@@ -698,7 +697,6 @@ ini0dBHF=format_block("""
                                                         1.800000e+10 [-6.97, 153.53] [-6.77, 154.53] [-6.57, 155.53]
                                                         '''))
                     """)
-ini0dBHF=StringIO.StringIO(ini0dBHF)
 
 ini0dBLF=format_block("""
                     [description]
@@ -927,7 +925,6 @@ ini0dBLF=format_block("""
                                                         1.800000e+10 [-6.98, 172.65] [-6.78, 173.65] [-6.58, 174.65]
                                                         '''))
                     """)
-ini0dBLF=StringIO.StringIO(ini0dBLF)
 
 
 class POWERMETER(PWRMTR):
@@ -937,6 +934,11 @@ class POWERMETER(PWRMTR):
     _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
         
     def __init__(self, **kw):
+        self.ini20dBLF=StringIO.StringIO(ini20dBLF)
+        self.ini20dBHF=StringIO.StringIO(ini20dBHF)
+        self.ini0dBHF=StringIO.StringIO(ini0dBHF)
+        self.ini0dBLF=StringIO.StringIO(ini0dBLF)
+
         self.SearchPaths=kw.get('SearchPaths', ['.'])
         if self.SearchPaths == None:
             self.SearchPaths=['.']
@@ -946,13 +948,13 @@ class POWERMETER(PWRMTR):
         self.unit=None
         self._internal_unit='dBm'
         self.np20L=NPORT()
-        self.np20L.Init(ini20dBLF)
+        self.np20L.Init(self.ini20dBLF)
         self.np20H=NPORT()
-        self.np20H.Init(ini20dBHF)
+        self.np20H.Init(self.ini20dBHF)
         self.np0L=NPORT()
-        self.np0L.Init(ini0dBLF)
+        self.np0L.Init(self.ini0dBLF)
         self.np0H=NPORT()
-        self.np0H.Init(ini0dBHF)
+        self.np0H.Init(self.ini0dBHF)
         self.swfreq=1e9
         self.att20=None
         self.att0=None
@@ -1051,10 +1053,19 @@ class POWERMETER(PWRMTR):
     def GetDescription(self):
         self.error, pm_des = self.pm_instance.GetDescription()  
         return self.error, str(self.conf['description'])+pm_des
-        
+    
+    def Quit(self):
+        #self.np20.Quit()
+        #self.np0.Quit()
+        self.np0L.Quit()
+        self.np0H.Quit()
+        self.np20L.Quit()
+        self.np20H.Quit()
 
-        
-        
+        self.pm_instance.Quit()
+        self.sw_instance.Quit()
+        return 0
+                
 def test_init(ch):
     import StringIO
     from mpy.tools.util import format_block
