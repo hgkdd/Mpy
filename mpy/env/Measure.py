@@ -122,7 +122,7 @@ class Measure(object):
                 print str(k)+":",
                 self.out(item[k])
             print "}",
-        elif hasattr(item, 'index'):  # a list like object
+        elif hasattr(item, 'append'):  # a list like object
             print "[",
             for i in item:
                 self.out(i)
@@ -355,8 +355,11 @@ class Measure(object):
                 self.ascmd=calling_sequence[-1]
             if self.ascmd.startswith('exec'):
                 # print self.ascmd
-                self.ascmd = str(re.match( r'exec.*\(.*[\'\"](.*)[\'\"].*\)', self.ascmd ).groups()[0]) # extrace arg of exec
-
+                try:
+                    self.ascmd = str(re.match( r'exec.*\(.*[\'\"](.*)[\'\"].*\)', self.ascmd ).groups()[0]) # extrace arg of exec
+                except AttributeError:
+                    pass
+                    
             # now, we can serialize 'self'
             pfile=None
             if isinstance(name_or_obj, basestring):   # it's a string (filename)

@@ -93,7 +93,7 @@ def logspaceTab(start, end, ftab=[1,3,6,10,100,1000], nftab=[20,15,10,20,20], en
     s = ftab[0]
     finished = False
     for i,ft in enumerate(ftab[1:]):
-        e = start*ft
+        e = ft
         f = logspaceN(s,e,nftab[i],endpoint=False)
         while len(f) and f[-1]>end:  # More points as we need
             f.pop()

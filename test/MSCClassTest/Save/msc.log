@@ -1,0 +1,518 @@
+06/14/11 13:38:44 Start new main calibration measurement...
+06/14/11 13:38:45 Init devices...
+06/14/11 13:39:02 ...done
+06/14/11 13:39:02 Zero devices...
+06/14/11 13:39:02 ...done
+Position E field probes and reference antenna...
+Are you ready to start the measurement?
+
+Start: start measurement.
+Quit: quit measurement.
+06/14/11 13:39:03 Tuner position [0]
+06/14/11 13:39:03 Move tuner(s)...
+06/14/11 13:39:05 ...done
+06/14/11 13:39:05 Frequency 2.375501e+09 Hz
+06/14/11 13:39:08 Eta_Tx for f = 2.375501e+09 Hz is 0.9 +/- 0.2 (V/V)^(2)
+06/14/11 13:39:08 Eta_Rx(0) for f = 2.375501e+09 Hz is 0.9 +/- 0.2 (V/V)^(2)
+06/14/11 13:39:08 Starting noise floor measurement for f = 2.375501e+09 Hz ...
+06/14/11 13:39:08 Got answer from: ['Pm']
+06/14/11 13:39:08 Noise floor measurement done.
+06/14/11 13:39:08 RF On...
+06/14/11 13:39:08 Going to sleep for 1 seconds ...
+06/14/11 13:39:09 ... back.
+06/14/11 13:39:10 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:39:10 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0183675160752 +/- 0.00175278126167 W
+06/14/11 13:39:10 Noise Pm_corrected 'Noise: Pref/c_refant_pmref' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 1.45062634233e-07 +/- 9.79509915319e-09 W
+06/14/11 13:39:10 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 6.30822245479e-07 +/- 2.02294189343e-09 W
+06/14/11 13:39:10 Pm_corrected 'Pref/c_refant_pmref' 1.45062634233e-07 +/- 9.79509915319e-09 W
+06/14/11 13:39:10 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 8.68369999714e-08 +/- 4.28690720572e-09 [NC] W
+06/14/11 13:39:10 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:39:10 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:39:10 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] [ 20.618724823 +/- 2.0618724823 V*m^(-1) 44.829120636 +/- 4.4829120636 V*m^(-1) 7.84475898743 +/- 0.784475898743 V*m^(-1) ]
+06/14/11 13:39:10 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:39:10 Noise Pm 'Noise reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 8.68369999714e-08 +/- 4.28690720572e-09 [NC] W
+06/14/11 13:39:10 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:39:10 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.980939815768 +/- 0.105213645046 W
+06/14/11 13:39:10 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 0.000135518348353 +/- 4.34584775944e-07 W
+06/14/11 13:39:10 RF Off...
+06/14/11 13:39:10 Frequency 3.000000e+09 Hz
+06/14/11 13:39:10 Eta_Tx for f = 3.000000e+09 Hz is 0.9 +/- 0.2 (V/V)^(2)
+06/14/11 13:39:10 Eta_Rx(0) for f = 3.000000e+09 Hz is 0.9 +/- 0.2 (V/V)^(2)
+06/14/11 13:39:10 Starting noise floor measurement for f = 3.000000e+09 Hz ...
+06/14/11 13:39:10 Got answer from: ['Pm']
+06/14/11 13:39:10 Noise floor measurement done.
+06/14/11 13:39:10 RF On...
+06/14/11 13:39:11 Going to sleep for 1 seconds ...
+06/14/11 13:39:12 ... back.
+06/14/11 13:39:12 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:39:12 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0538431199567 +/- 0.00488332268949 W
+06/14/11 13:39:12 Noise Pm_corrected 'Noise: Pref/c_refant_pmref' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 1.97958306146e-07 +/- 1.33667863344e-08 W
+06/14/11 13:39:12 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 1.78085680439e-06 +/- 5.71091121408e-09 W
+06/14/11 13:39:12 Pm_corrected 'Pref/c_refant_pmref' 1.97958306146e-07 +/- 1.33667863344e-08 W
+06/14/11 13:39:12 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 1.10824531979e-07 +/- 5.47110661199e-09 [NC] W
+06/14/11 13:39:12 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:39:12 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:39:12 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] [ 11.7375774384 +/- 1.17375774384 V*m^(-1) 39.1316261292 +/- 3.91316261292 V*m^(-1) 5.7260389328 +/- 0.57260389328 V*m^(-1) ]
+06/14/11 13:39:12 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:39:12 Noise Pm 'Noise reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 1.10824531979e-07 +/- 5.47110661199e-09 [NC] W
+06/14/11 13:39:12 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:39:12 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 1.00156612367 +/- 0.107209843165 W
+06/14/11 13:39:12 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 0.000160919398295 +/- 5.16041713191e-07 W
+06/14/11 13:39:12 RF Off...
+06/14/11 13:39:12 Tuner position [28]
+06/14/11 13:39:12 Move tuner(s)...
+06/14/11 13:39:17 ...done
+06/14/11 13:39:17 Frequency 2.375501e+09 Hz
+06/14/11 13:39:17 RF On...
+06/14/11 13:39:18 Going to sleep for 1 seconds ...
+06/14/11 13:39:19 ... back.
+06/14/11 13:39:19 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:39:19 Pm2_corrected 'Pbwd/c_ant_pm2' 0.047231248809 +/- 0.00450719887972 W
+06/14/11 13:39:19 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 0.000135841916467 +/- 4.35622405004e-07 W
+06/14/11 13:39:19 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 1.62213128375e-06 +/- 5.20190490121e-09 W
+06/14/11 13:39:19 Pm_corrected 'Pref/c_refant_pmref' 0.0022770986702 +/- 0.000153757081375 W
+06/14/11 13:39:19 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:39:19 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:39:19 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] [ 40.879486084 +/- 4.0879486084 V*m^(-1) 17.7791481018 +/- 1.77791481018 V*m^(-1) 2.5143802166 +/- 0.25143802166 V*m^(-1) ]
+06/14/11 13:39:19 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:39:19 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:39:19 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.983281940286 +/- 0.105464856643 W
+06/14/11 13:39:19 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 0.00136311061911 +/- 6.72930748088e-05 [NC] W
+06/14/11 13:39:19 RF Off...
+06/14/11 13:39:19 Frequency 3.000000e+09 Hz
+06/14/11 13:39:20 RF On...
+06/14/11 13:39:20 Going to sleep for 1 seconds ...
+06/14/11 13:39:21 ... back.
+06/14/11 13:39:22 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:39:22 Pm2_corrected 'Pbwd/c_ant_pm2' 0.037856217423 +/- 0.00343338435121 W
+06/14/11 13:39:22 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 0.000160790135057 +/- 5.15627187515e-07 W
+06/14/11 13:39:22 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 1.25209130601e-06 +/- 4.01524831357e-09 W
+06/14/11 13:39:22 Pm_corrected 'Pref/c_refant_pmref' 0.00277182124442 +/- 0.000187162352783 W
+06/14/11 13:39:22 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:39:22 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:39:22 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] [ 17.9669113159 +/- 1.79669113159 V*m^(-1) 38.3581008911 +/- 3.83581008911 V*m^(-1) 38.3207473755 +/- 3.83207473755 V*m^(-1) ]
+06/14/11 13:39:22 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:39:22 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:39:22 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 1.00076158624 +/- 0.107123723707 W
+06/14/11 13:39:22 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 0.00155177015869 +/- 7.66066846744e-05 [NC] W
+06/14/11 13:39:22 RF Off...
+06/14/11 13:39:22 Tuner position [56]
+06/14/11 13:39:22 Move tuner(s)...
+06/14/11 13:39:26 ...done
+06/14/11 13:39:26 Frequency 2.375501e+09 Hz
+06/14/11 13:39:27 RF On...
+06/14/11 13:39:28 Going to sleep for 1 seconds ...
+06/14/11 13:39:29 ... back.
+06/14/11 13:39:29 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:39:29 Pm2_corrected 'Pbwd/c_ant_pm2' 0.049916304876 +/- 0.00476342927808 W
+06/14/11 13:39:29 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 0.000137474674477 +/- 4.40858388046e-07 W
+06/14/11 13:39:29 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 1.71434805877e-06 +/- 5.49762874226e-09 W
+06/14/11 13:39:29 Pm_corrected 'Pref/c_refant_pmref' 0.0047248753944 +/- 0.000319038898054 W
+06/14/11 13:39:29 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:39:29 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:39:29 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] [ 43.4921951294 +/- 4.34921951294 V*m^(-1) 31.0072479248 +/- 3.10072479248 V*m^(-1) 25.8585472107 +/- 2.58585472107 V*m^(-1) ]
+06/14/11 13:39:29 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:39:29 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:39:29 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.995100541685 +/- 0.106732496219 W
+06/14/11 13:39:29 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 0.00282839207117 +/- 0.000139630046576 [NC] W
+06/14/11 13:39:29 RF Off...
+06/14/11 13:39:29 Frequency 3.000000e+09 Hz
+06/14/11 13:39:30 RF On...
+06/14/11 13:39:30 Going to sleep for 1 seconds ...
+06/14/11 13:39:31 ... back.
+06/14/11 13:39:32 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:39:32 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0593346270967 +/- 0.0053813770637 W
+06/14/11 13:39:32 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 0.000160847975848 +/- 5.15812673299e-07 W
+06/14/11 13:39:32 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 1.96248795549e-06 +/- 6.29337206949e-09 W
+06/14/11 13:39:32 Pm_corrected 'Pref/c_refant_pmref' 0.00415539419804 +/- 0.000280585682216 W
+06/14/11 13:39:32 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:39:32 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:39:32 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] [ 25.1532688141 +/- 2.51532688141 V*m^(-1) 32.2304878235 +/- 3.22304878235 V*m^(-1) 10.7599649429 +/- 1.07599649429 V*m^(-1) ]
+06/14/11 13:39:32 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:39:32 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:39:32 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 1.00112158868 +/- 0.107162259161 W
+06/14/11 13:39:32 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 0.00232634652291 +/- 0.000114845419295 [NC] W
+06/14/11 13:39:32 RF Off...
+Position E field probes and reference antenna...
+Are you ready to start the measurement?
+
+Start: start measurement.
+Quit: quit measurement.
+06/14/11 13:39:36 Tuner position [0]
+06/14/11 13:39:36 Move tuner(s)...
+06/14/11 13:39:41 ...done
+06/14/11 13:39:41 Frequency 2.375501e+09 Hz
+06/14/11 13:39:42 RF On...
+06/14/11 13:39:42 Going to sleep for 1 seconds ...
+06/14/11 13:39:43 ... back.
+06/14/11 13:39:44 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:39:44 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0221451399185 +/- 0.00211327357097 W
+06/14/11 13:39:44 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 0.000135949902357 +/- 4.35968697769e-07 W
+06/14/11 13:39:44 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 7.60562660331e-07 +/- 2.43899779881e-09 W
+06/14/11 13:39:44 Pm_corrected 'Pref/c_refant_pmref' 0.00189003549214 +/- 0.000127621321275 W
+06/14/11 13:39:44 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:39:44 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:39:44 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] [ 20.8686008453 +/- 2.08686008453 V*m^(-1) 39.0910072327 +/- 3.90910072327 V*m^(-1) 8.69160175323 +/- 0.869160175323 V*m^(-1) ]
+06/14/11 13:39:44 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:39:44 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:39:44 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.984063588378 +/- 0.105548694656 W
+06/14/11 13:39:44 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 0.0011314079111 +/- 5.58545404413e-05 [NC] W
+06/14/11 13:39:44 RF Off...
+06/14/11 13:39:44 Frequency 3.000000e+09 Hz
+06/14/11 13:39:44 RF On...
+06/14/11 13:39:45 Going to sleep for 1 seconds ...
+06/14/11 13:39:46 ... back.
+06/14/11 13:39:46 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:39:46 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0506443751614 +/- 0.00459321128715 W
+06/14/11 13:39:46 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 0.000160749451602 +/- 5.15496722448e-07 W
+06/14/11 13:39:46 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 1.67505858098e-06 +/- 5.37163392968e-09 W
+06/14/11 13:39:46 Pm_corrected 'Pref/c_refant_pmref' 0.00092926617459 +/- 6.2747063487e-05 W
+06/14/11 13:39:46 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:39:46 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:39:46 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] [ 12.2573518753 +/- 1.22573518753 V*m^(-1) 37.6085166931 +/- 3.76085166931 V*m^(-1) 6.23965835571 +/- 0.623965835571 V*m^(-1) ]
+06/14/11 13:39:46 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:39:46 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:39:46 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 1.00050837145 +/- 0.107096619039 W
+06/14/11 13:39:46 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 0.000520238280916 +/- 2.56827531569e-05 [NC] W
+06/14/11 13:39:46 RF Off...
+06/14/11 13:39:46 autosave ...
+06/14/11 13:39:46 ... done
+06/14/11 13:39:46 Tuner position [28]
+06/14/11 13:39:46 Move tuner(s)...
+06/14/11 13:39:51 ...done
+06/14/11 13:39:51 Frequency 2.375501e+09 Hz
+06/14/11 13:39:52 RF On...
+06/14/11 13:39:52 Going to sleep for 1 seconds ...
+06/14/11 13:39:53 ... back.
+06/14/11 13:39:54 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:39:54 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0445449451606 +/- 0.00425084942676 W
+06/14/11 13:39:54 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 0.000137512570392 +/- 4.40979913933e-07 W
+06/14/11 13:39:54 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 1.52987166124e-06 +/- 4.90604365538e-09 W
+06/14/11 13:39:54 Pm_corrected 'Pref/c_refant_pmref' 0.00208549503225 +/- 0.00014081938283 W
+06/14/11 13:39:54 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:39:54 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:39:54 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] [ 38.5663909912 +/- 3.85663909912 V*m^(-1) 18.4515781403 +/- 1.84515781403 V*m^(-1) 4.96450662613 +/- 0.496450662613 V*m^(-1) ]
+06/14/11 13:39:54 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:39:54 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:39:54 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.995374848535 +/- 0.106761917824 W
+06/14/11 13:39:54 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 0.00124841336994 +/- 6.16307826513e-05 [NC] W
+06/14/11 13:39:54 RF Off...
+06/14/11 13:39:54 Frequency 3.000000e+09 Hz
+06/14/11 13:39:54 RF On...
+06/14/11 13:39:55 Going to sleep for 1 seconds ...
+06/14/11 13:39:56 ... back.
+06/14/11 13:39:56 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:39:56 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0382824934844 +/- 0.00347204562426 W
+06/14/11 13:39:56 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 0.00016073135281 +/- 5.15438682635e-07 W
+06/14/11 13:39:56 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 1.266190352e-06 +/- 4.06046160621e-09 W
+06/14/11 13:39:56 Pm_corrected 'Pref/c_refant_pmref' 0.00273359064203 +/- 0.00018458089862 W
+06/14/11 13:39:56 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:39:56 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:39:56 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] [ 19.1117362976 +/- 1.91117362976 V*m^(-1) 35.9088783264 +/- 3.59088783264 V*m^(-1) 38.1348304749 +/- 3.81348304749 V*m^(-1) ]
+06/14/11 13:39:56 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:39:56 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:39:56 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 1.00039572414 +/- 0.107084561023 W
+06/14/11 13:39:56 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 0.0015303672244 +/- 7.5550079849e-05 [NC] W
+06/14/11 13:39:56 RF Off...
+06/14/11 13:39:56 Tuner position [56]
+06/14/11 13:39:56 Move tuner(s)...
+06/14/11 13:40:01 ...done
+06/14/11 13:40:01 Frequency 2.375501e+09 Hz
+06/14/11 13:40:01 RF On...
+06/14/11 13:40:02 Going to sleep for 1 seconds ...
+06/14/11 13:40:03 ... back.
+06/14/11 13:40:03 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:40:03 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0489089600594 +/- 0.00466730005128 W
+06/14/11 13:40:03 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 0.000135565256462 +/- 4.34735202437e-07 W
+06/14/11 13:40:03 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 1.67975135464e-06 +/- 5.38668287335e-09 W
+06/14/11 13:40:03 Pm_corrected 'Pref/c_refant_pmref' 0.0048423330865 +/- 0.000326970022058 W
+06/14/11 13:40:03 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:40:03 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:40:03 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] [ 42.6525382996 +/- 4.26525382996 V*m^(-1) 30.9062671661 +/- 3.09062671661 V*m^(-1) 25.7828197479 +/- 2.57828197479 V*m^(-1) ]
+06/14/11 13:40:03 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:40:03 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:40:03 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.981279356737 +/- 0.105250063532 W
+06/14/11 13:40:03 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 0.00289870427569 +/- 0.000143101169441 [NC] W
+06/14/11 13:40:03 RF Off...
+06/14/11 13:40:03 Frequency 3.000000e+09 Hz
+06/14/11 13:40:04 RF On...
+06/14/11 13:40:04 Going to sleep for 1 seconds ...
+06/14/11 13:40:05 ... back.
+06/14/11 13:40:06 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:40:06 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0587564052131 +/- 0.00532893500526 W
+06/14/11 13:40:06 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 0.000160603460971 +/- 5.15028554807e-07 W
+06/14/11 13:40:06 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 1.94336331381e-06 +/- 6.23204252838e-09 W
+06/14/11 13:40:06 Pm_corrected 'Pref/c_refant_pmref' 0.00417440064694 +/- 0.000281869059238 W
+06/14/11 13:40:06 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:40:06 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:40:06 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] [ 25.3865470886 +/- 2.53865470886 V*m^(-1) 31.8951244354 +/- 3.18951244354 V*m^(-1) 10.6809558868 +/- 1.06809558868 V*m^(-1) ]
+06/14/11 13:40:06 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:40:06 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:40:06 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.999599722329 +/- 0.106999355236 W
+06/14/11 13:40:06 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 0.00233698705043 +/- 0.000115370713284 [NC] W
+06/14/11 13:40:06 RF Off...
+06/14/11 13:40:06 RF Off and Quit...
+06/14/11 13:40:07 End of msc main calibration. Status: 0
+06/14/11 13:40:07 Start of evaluation of main calibration with description empty
+06/14/11 13:40:08 End of evaluation of main calibration
+06/14/11 13:40:08 Start new main calibration measurement...
+06/14/11 13:40:09 Init devices...
+06/14/11 13:40:29 ...done
+06/14/11 13:40:29 Zero devices...
+06/14/11 13:40:29 ...done
+Position E field probes and reference antenna...
+Are you ready to start the measurement?
+
+Start: start measurement.
+Quit: quit measurement.
+06/14/11 13:40:43 Tuner position [0]
+06/14/11 13:40:43 Move tuner(s)...
+06/14/11 13:40:45 ...done
+06/14/11 13:40:45 Frequency 2.375501e+09 Hz
+06/14/11 13:40:47 Eta_Tx for f = 2.375501e+09 Hz is 0.9 +/- 0.2 (V/V)^(2)
+06/14/11 13:40:47 Eta_Rx(0) for f = 2.375501e+09 Hz is 0.9 +/- 0.2 (V/V)^(2)
+06/14/11 13:40:47 Starting noise floor measurement for f = 2.375501e+09 Hz ...
+06/14/11 13:40:47 Got answer from: ['Pm']
+06/14/11 13:40:47 Noise floor measurement done.
+06/14/11 13:40:47 RF On...
+06/14/11 13:40:48 Going to sleep for 1 seconds ...
+06/14/11 13:40:49 ... back.
+06/14/11 13:40:49 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:40:49 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0219090440531 +/- 0.00209074333841 W
+06/14/11 13:40:49 Noise Pm_corrected 'Noise: Pref/c_refant_pmref' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 1.63788558109e-07 +/- 1.10595342165e-08 W
+06/14/11 13:40:49 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 7.52454077585e-07 +/- 2.41299492423e-09 W
+06/14/11 13:40:49 Pm_corrected 'Pref/c_refant_pmref' 1.63788558109e-07 +/- 1.10595342165e-08 W
+06/14/11 13:40:49 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 9.80466616439e-08 +/- 4.84029780435e-09 [NC] W
+06/14/11 13:40:49 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:40:49 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:40:49 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] [ 20.9273948669 +/- 2.09273948669 V*m^(-1) 39.8187904358 +/- 3.98187904358 V*m^(-1) 8.05424594879 +/- 0.805424594879 V*m^(-1) ]
+06/14/11 13:40:49 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:40:49 Noise Pm 'Noise reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 9.80466616439e-08 +/- 4.84029780435e-09 [NC] W
+06/14/11 13:40:49 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:40:49 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.997059240191 +/- 0.106942582308 W
+06/14/11 13:40:49 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 0.000137745271696 +/- 4.41726148267e-07 W
+06/14/11 13:40:49 RF Off...
+06/14/11 13:40:49 autosave ...
+06/14/11 13:40:49 ... done
+06/14/11 13:40:49 Frequency 3.000000e+09 Hz
+06/14/11 13:40:50 Eta_Tx for f = 3.000000e+09 Hz is 0.9 +/- 0.2 (V/V)^(2)
+06/14/11 13:40:50 Eta_Rx(0) for f = 3.000000e+09 Hz is 0.9 +/- 0.2 (V/V)^(2)
+06/14/11 13:40:50 Starting noise floor measurement for f = 3.000000e+09 Hz ...
+06/14/11 13:40:50 Got answer from: ['Pm']
+06/14/11 13:40:50 Noise floor measurement done.
+06/14/11 13:40:50 RF On...
+06/14/11 13:40:50 Going to sleep for 1 seconds ...
+06/14/11 13:40:51 ... back.
+06/14/11 13:40:52 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:40:52 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0509274835629 +/- 0.00461888791365 W
+06/14/11 13:40:52 Noise Pm_corrected 'Noise: Pref/c_refant_pmref' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 1.94036185809e-07 +/- 1.31019520592e-08 W
+06/14/11 13:40:52 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 1.68442236829e-06 +/- 5.40166203627e-09 W
+06/14/11 13:40:52 Pm_corrected 'Pref/c_refant_pmref' 1.94036185809e-07 +/- 1.31019520592e-08 W
+06/14/11 13:40:52 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 1.08628780968e-07 +/- 5.362708339e-09 [NC] W
+06/14/11 13:40:52 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:40:52 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:40:52 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] [ 12.0548686981 +/- 1.20548686981 V*m^(-1) 37.1430206299 +/- 3.71430206299 V*m^(-1) 5.70951557159 +/- 0.570951557159 V*m^(-1) ]
+06/14/11 13:40:52 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:40:52 Noise Pm 'Noise reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 1.08628780968e-07 +/- 5.362708339e-09 [NC] W
+06/14/11 13:40:52 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:40:52 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.995427023899 +/- 0.106552700409 W
+06/14/11 13:40:52 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 0.000159933042809 +/- 5.12878635401e-07 W
+06/14/11 13:40:52 RF Off...
+06/14/11 13:40:52 Tuner position [28]
+06/14/11 13:40:52 Move tuner(s)...
+06/14/11 13:40:56 ...done
+06/14/11 13:40:56 Frequency 2.375501e+09 Hz
+06/14/11 13:40:57 RF On...
+06/14/11 13:40:57 Going to sleep for 1 seconds ...
+06/14/11 13:40:58 ... back.
+06/14/11 13:40:59 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:40:59 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0420857846509 +/- 0.00401617586268 W
+06/14/11 13:40:59 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 0.000138279945595 +/- 4.43440758422e-07 W
+06/14/11 13:40:59 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 1.44541314501e-06 +/- 4.63519925828e-09 W
+06/14/11 13:40:59 Pm_corrected 'Pref/c_refant_pmref' 0.00195712002079 +/- 0.000132151086044 W
+06/14/11 13:40:59 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:40:59 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:40:59 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] [ 37.097743988 +/- 3.7097743988 V*m^(-1) 20.397190094 +/- 2.0397190094 V*m^(-1) 7.64416503906 +/- 0.764416503906 V*m^(-1) ]
+06/14/11 13:40:59 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:40:59 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:40:59 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 1.00092943874 +/- 0.107357692073 W
+06/14/11 13:40:59 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 0.00117156586937 +/- 5.78370299417e-05 [NC] W
+06/14/11 13:40:59 RF Off...
+06/14/11 13:40:59 Frequency 3.000000e+09 Hz
+06/14/11 13:40:59 RF On...
+06/14/11 13:41:00 Going to sleep for 1 seconds ...
+06/14/11 13:41:01 ... back.
+06/14/11 13:41:01 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:41:01 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0393274889113 +/- 0.00356682189062 W
+06/14/11 13:41:01 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 0.000160106402765 +/- 5.1343457191e-07 W
+06/14/11 13:41:01 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 1.30075349058e-06 +/- 4.171299836e-09 W
+06/14/11 13:41:01 Pm_corrected 'Pref/c_refant_pmref' 0.00296289355348 +/- 0.00020006417428 W
+06/14/11 13:41:01 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:41:01 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:41:01 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] [ 20.2020454407 +/- 2.02020454407 V*m^(-1) 33.4389381409 +/- 3.34389381409 V*m^(-1) 34.9489440918 +/- 3.49489440918 V*m^(-1) ]
+06/14/11 13:41:01 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:41:01 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:41:01 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.996506020346 +/- 0.106668198564 W
+06/14/11 13:41:01 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 0.00165873964958 +/- 8.1887478362e-05 [NC] W
+06/14/11 13:41:01 RF Off...
+06/14/11 13:41:01 Tuner position [56]
+06/14/11 13:41:01 Move tuner(s)...
+06/14/11 13:41:06 ...done
+06/14/11 13:41:06 Frequency 2.375501e+09 Hz
+06/14/11 13:41:06 RF On...
+06/14/11 13:41:07 Going to sleep for 1 seconds ...
+06/14/11 13:41:08 ... back.
+06/14/11 13:41:08 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:41:08 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0516761831292 +/- 0.00493137150894 W
+06/14/11 13:41:08 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 0.000138420400029 +/- 4.43891172405e-07 W
+06/14/11 13:41:08 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 1.77479011021e-06 +/- 5.6914563361e-09 W
+06/14/11 13:41:08 Pm_corrected 'Pref/c_refant_pmref' 0.00625579573537 +/- 0.000422411600575 W
+06/14/11 13:41:08 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:41:08 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:41:08 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] [ 39.5504455566 +/- 3.95504455566 V*m^(-1) 30.3929023743 +/- 3.03929023743 V*m^(-1) 26.5720672607 +/- 2.65720672607 V*m^(-1) ]
+06/14/11 13:41:08 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:41:08 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:41:08 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 1.00194610806 +/- 0.107466737994 W
+06/14/11 13:41:08 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 0.00374482744619 +/- 0.000184871975869 [NC] W
+06/14/11 13:41:08 RF Off...
+06/14/11 13:41:08 Frequency 3.000000e+09 Hz
+06/14/11 13:41:09 RF On...
+06/14/11 13:41:10 Going to sleep for 1 seconds ...
+06/14/11 13:41:11 ... back.
+06/14/11 13:41:11 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:41:11 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0600677296267 +/- 0.00544786608257 W
+06/14/11 13:41:11 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 0.000160366222752 +/- 5.14267771343e-07 W
+06/14/11 13:41:11 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 1.98673526192e-06 +/- 6.37112914343e-09 W
+06/14/11 13:41:11 Pm_corrected 'Pref/c_refant_pmref' 0.00460809823818 +/- 0.000311153726038 W
+06/14/11 13:41:11 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:41:11 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:41:11 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] [ 29.157535553 +/- 2.9157535553 V*m^(-1) 28.9267940521 +/- 2.89267940521 V*m^(-1) 11.5105791092 +/- 1.15105791092 V*m^(-1) ]
+06/14/11 13:41:11 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:41:11 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:41:11 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.998123146064 +/- 0.106841299261 W
+06/14/11 13:41:11 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 0.0025797873325 +/- 0.000127357104789 [NC] W
+06/14/11 13:41:11 RF Off...
+Position E field probes and reference antenna...
+Are you ready to start the measurement?
+
+Start: start measurement.
+Quit: quit measurement.
+06/14/11 13:41:25 Tuner position [0]
+06/14/11 13:41:25 Move tuner(s)...
+06/14/11 13:41:30 ...done
+06/14/11 13:41:30 Frequency 2.375501e+09 Hz
+06/14/11 13:41:31 RF On...
+06/14/11 13:41:31 Going to sleep for 1 seconds ...
+06/14/11 13:41:32 ... back.
+06/14/11 13:41:33 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:41:33 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0239542417721 +/- 0.00228591312748 W
+06/14/11 13:41:33 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 0.00013579585067 +/- 4.35474679665e-07 W
+06/14/11 13:41:33 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 8.22695269275e-07 +/- 2.63824672904e-09 W
+06/14/11 13:41:33 Pm_corrected 'Pref/c_refant_pmref' 0.00222577243535 +/- 0.00015029136767 W
+06/14/11 13:41:33 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:41:33 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:41:33 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] [ 20.9602508545 +/- 2.09602508545 V*m^(-1) 34.8830032349 +/- 3.48830032349 V*m^(-1) 10.2500219345 +/- 1.02500219345 V*m^(-1) ]
+06/14/11 13:41:33 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:41:33 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:41:33 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.98294849633 +/- 0.10542909211 W
+06/14/11 13:41:33 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 0 ] 0.00133238584785 +/- 6.57762761707e-05 [NC] W
+06/14/11 13:41:33 RF Off...
+06/14/11 13:41:33 Frequency 3.000000e+09 Hz
+06/14/11 13:41:34 RF On...
+06/14/11 13:41:34 Going to sleep for 1 seconds ...
+06/14/11 13:41:35 ... back.
+06/14/11 13:41:36 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:41:36 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0480569514415 +/- 0.00435854388733 W
+06/14/11 13:41:36 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 0.000160587190458 +/- 5.14976377979e-07 W
+06/14/11 13:41:36 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 1.58947975232e-06 +/- 5.0971968772e-09 W
+06/14/11 13:41:36 Pm_corrected 'Pref/c_refant_pmref' 0.000708460643162 +/- 4.78375584629e-05 W
+06/14/11 13:41:36 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:41:36 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:41:36 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] [ 11.9327535629 +/- 1.19327535629 V*m^(-1) 34.0638656616 +/- 3.40638656616 V*m^(-1) 7.10909986496 +/- 0.710909986496 V*m^(-1) ]
+06/14/11 13:41:36 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:41:36 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:41:36 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.999498454268 +/- 0.10698851528 W
+06/14/11 13:41:36 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 0 ] 0.000396623009827 +/- 1.95802024406e-05 [NC] W
+06/14/11 13:41:36 RF Off...
+06/14/11 13:41:36 Tuner position [28]
+06/14/11 13:41:36 Move tuner(s)...
+06/14/11 13:41:40 ...done
+06/14/11 13:41:40 Frequency 2.375501e+09 Hz
+06/14/11 13:41:41 RF On...
+06/14/11 13:41:41 Going to sleep for 1 seconds ...
+06/14/11 13:41:42 ... back.
+06/14/11 13:41:43 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:41:43 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0404175913545 +/- 0.00385698297352 W
+06/14/11 13:41:43 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 0.000136992061146 +/- 4.3931072746e-07 W
+06/14/11 13:41:43 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 1.38811996302e-06 +/- 4.45146956441e-09 W
+06/14/11 13:41:43 Pm_corrected 'Pref/c_refant_pmref' 0.00174885281204 +/- 0.000118088209199 W
+06/14/11 13:41:43 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:41:43 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:41:43 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] [ 34.7780342102 +/- 3.47780342102 V*m^(-1) 21.0214061737 +/- 2.10214061737 V*m^(-1) 9.04634666443 +/- 0.904634666443 V*m^(-1) ]
+06/14/11 13:41:43 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:41:43 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:41:43 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.991607179805 +/- 0.106357805203 W
+06/14/11 13:41:43 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 28 ] 0.00104689351873 +/- 5.16822940745e-05 [NC] W
+06/14/11 13:41:43 RF Off...
+06/14/11 13:41:43 Frequency 3.000000e+09 Hz
+06/14/11 13:41:43 RF On...
+06/14/11 13:41:44 Going to sleep for 1 seconds ...
+06/14/11 13:41:45 ... back.
+06/14/11 13:41:45 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:41:45 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0393696194856 +/- 0.00357064293943 W
+06/14/11 13:41:45 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 0.0001602961162 +/- 5.14042951305e-07 W
+06/14/11 13:41:45 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 1.30214695589e-06 +/- 4.17576844721e-09 W
+06/14/11 13:41:45 Pm_corrected 'Pref/c_refant_pmref' 0.00299229019194 +/- 0.000202049130571 W
+06/14/11 13:41:45 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:41:45 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:41:45 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] [ 20.6245727539 +/- 2.06245727539 V*m^(-1) 33.1040878296 +/- 3.31040878296 V*m^(-1) 33.8809356689 +/- 3.38809356689 V*m^(-1) ]
+06/14/11 13:41:45 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:41:45 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:41:45 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.997686801235 +/- 0.10679459195 W
+06/14/11 13:41:45 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 28 ] 0.0016751969974 +/- 8.26999329954e-05 [NC] W
+06/14/11 13:41:45 RF Off...
+06/14/11 13:41:45 Tuner position [56]
+06/14/11 13:41:45 Move tuner(s)...
+06/14/11 13:41:50 ...done
+06/14/11 13:41:50 Frequency 2.375501e+09 Hz
+06/14/11 13:41:50 RF On...
+06/14/11 13:41:51 Going to sleep for 1 seconds ...
+06/14/11 13:41:52 ... back.
+06/14/11 13:41:52 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:41:52 Pm2_corrected 'Pbwd/c_ant_pm2' 0.0505349020907 +/- 0.00482246097306 W
+06/14/11 13:41:52 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 0.000135831532317 +/- 4.35589104763e-07 W
+06/14/11 13:41:52 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 1.73559344015e-06 +/- 5.56575914245e-09 W
+06/14/11 13:41:52 Pm_corrected 'Pref/c_refant_pmref' 0.00575878891047 +/- 0.000388852089158 W
+06/14/11 13:41:52 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 2375500541.26 (5.54718843239e-05-3.6325984274e-05j) +/- (4.54581913028e-06-7.2844167811e-07j) (V/V)^(2)
+06/14/11 13:41:52 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 2375500541.26 (0.308625954104+0.367579635264j) +/- (0.0183014217069+0.0346750009073j) (V/V)^(2)
+06/14/11 13:41:52 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] [ 40.5644416809 +/- 4.05644416809 V*m^(-1) 30.064031601 +/- 3.0064031601 V*m^(-1) 26.0331039429 +/- 2.60331039429 V*m^(-1) ]
+06/14/11 13:41:52 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 2375500541.26 0.598617283013 +/- 0.027577089629 (V/V)^(2)
+06/14/11 13:41:52 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 2375500541.26 (-4.88771042356e-06-3.3994875534e-05j) +/- (2.57865369962e-07-3.26541643062e-06j) (V/V)^(2)
+06/14/11 13:41:52 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.98320677536 +/- 0.105456794603 W
+06/14/11 13:41:52 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 2375500541.26 tunerpos 'tuner position' [ 56 ] 0.00344731057103 +/- 0.000170184374543 [NC] W
+06/14/11 13:41:52 RF Off...
+06/14/11 13:41:52 autosave ...
+06/14/11 13:41:52 ... done
+06/14/11 13:41:52 Frequency 3.000000e+09 Hz
+06/14/11 13:41:53 RF On...
+06/14/11 13:41:54 Going to sleep for 1 seconds ...
+06/14/11 13:41:55 ... back.
+06/14/11 13:41:55 Got answer from: ['Fprobe', 'Pm1', 'Pm2', 'Pm']
+06/14/11 13:41:55 Pm2_corrected 'Pbwd/c_ant_pm2' 0.06010646921 +/- 0.00545137958413 W
+06/14/11 13:41:55 Pm1 'Reading of the fwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 0.000160471606349 +/- 5.14605718989e-07 W
+06/14/11 13:41:55 Pm2 'Reading of the bwd power meter' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 1.98801657048e-06 +/- 6.37523808661e-09 W
+06/14/11 13:41:55 Pm_corrected 'Pref/c_refant_pmref' 0.0045677542363 +/- 0.000308429568293 W
+06/14/11 13:41:55 c_a2_pm1 'Correction from amplifier output to fwd power meter' freq 'the frequency [Hz]' 3000000000.0 (-6.90440748429e-05+9.10824621069e-06j) +/- (4.72257681874e-06+1.11260228044e-06j) (V/V)^(2)
+06/14/11 13:41:55 c_a2_ant 'Correction from amplifier output to antenna' freq 'the frequency [Hz]' 3000000000.0 (-0.432049325171-0.034880888714j) +/- (0.0332352341495+0.0115901961869j) (V/V)^(2)
+06/14/11 13:41:55 Fprobe 'Reading of the e-field probe for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] [ 28.0604686737 +/- 2.80604686737 V*m^(-1) 29.9696292877 +/- 2.99696292877 V*m^(-1) 10.8734502792 +/- 1.08734502792 V*m^(-1) ]
+06/14/11 13:41:55 c_refant_pmref0 'Correction from ref antenna feed to ref power meter' freq 'the frequency [Hz]' 3000000000.0 0.559837746323 +/- 0.0257905946689 (V/V)^(2)
+06/14/11 13:41:55 c_ant_pm2 'Correction from antenna feed to bwd power meter' freq 'the frequency [Hz]' 3000000000.0 (3.21567611228e-05+7.73905342512e-06j) +/- (2.7969639533e-06+1.07898020808e-06j) (V/V)^(2)
+06/14/11 13:41:55 Pm1_corrected 'Pfwd*c_a2_ant/c_a2_pm1' 0.998779056053 +/- 0.106911509311 W
+06/14/11 13:41:55 Pm 'Reading of the receive antenna power meter for position 0' freq 'the frequency [Hz]' 3000000000.0 tunerpos 'tuner position' [ 56 ] 0.0025572012374 +/- 0.000126242090523 [NC] W
+06/14/11 13:41:55 RF Off...
+06/14/11 13:41:55 RF Off and Quit...
+06/14/11 13:41:56 End of msc main calibration. Status: 0
+06/14/11 13:41:56 Start of evaluation of main calibration with description loaded
+06/14/11 13:41:57 End of evaluation of main calibration
+06/14/11 13:41:57 pickle results to 'msc-maincal.p' ...
+06/14/11 13:41:57 ...done.

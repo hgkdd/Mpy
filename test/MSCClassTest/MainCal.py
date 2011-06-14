@@ -9,6 +9,7 @@ import pprint
 import pickle
 
 from mpy.env.msc.MSC import MSC
+import mpy.tools.util
 
 
 cdict = {"autosave_filename": 'msc-autosave.p',
@@ -205,7 +206,7 @@ if __name__ == '__main__':
                 descriptions.append( "%s+%s"%(_passedcal,_des) )
         dest_str='_'.join(descriptions)
         pickle.dump(msc, file('AfterEval.p', 'wb') , 2)
-        msc.OutputProcessedData_MainCal()#fname = (cdict["processeddata_output_filename"])%(dest_str) )
+        msc.OutputProcessedData_MainCal( fname = (cdict["processeddata_output_filename"])%(dest_str) )
     else:
         msg="Select description to use.\n"
         but = []
@@ -231,12 +232,12 @@ if __name__ == '__main__':
     else:
         mode = 'wb'
     try:
-        msc.messenger(umdutil.tstamp()+" pickle results to '%s' ..."%(cdict['pickle_output_filename']), [])
+        msc.messenger(mpy.tools.util.tstamp()+" pickle results to '%s' ..."%(cdict['pickle_output_filename']), [])
         pf = myopen(cdict['pickle_output_filename'], mode)
         pickle.dump(msc, pf,2)
-        msc.messenger(umdutil.tstamp()+" ...done.", [])
+        msc.messenger(mpy.tools.util.tstamp()+" ...done.", [])
     except:
-        msc.messenger(umdutil.tstamp()+" failed to pickle to %s"%(cdict['pickle_output_filename']), [])
+        msc.messenger(mpy.tools.util.tstamp()+" failed to pickle to %s"%(cdict['pickle_output_filename']), [])
         raise
     else:
         # remove autosave file after measurement is completed and class instance was pickled

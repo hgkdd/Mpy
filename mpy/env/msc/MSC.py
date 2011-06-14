@@ -196,6 +196,7 @@ class MSC(Measure.Measure):
                 
             # list of frequencies
             freqs = spacing.logspaceTab(FStart,FStop,ftab,nftab,endpoint=True)
+            
             PrbPosCounter ={}
             RefAntPosCounter ={}
             #calculate numbrer of required probe positions for each freq
@@ -504,7 +505,7 @@ class MSC(Measure.Measure):
                                 self.__addLoggerBlock(block, n, 'Reading of the e-field probe for position %d'%i, nbresult[n], {})
                                 self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                                efields = self.__insert_it (efields, (nbresult[n]).eval(), PFwd, PBwd, f, t, p+i-1)
+                                efields = self.__insert_it (efields, [_.eval() for _ in nbresult[n]], PFwd, PBwd, f, t, p+i-1)
                         for log in self.logger:
                             log(block)
 
@@ -2386,7 +2387,7 @@ Quit: quit measurement.
         r=[1,1.313,1.499,1.630,1.732,1.957,2,2.08,2.25,2.3,2.38,2.47,2.54,2.59,2.64,2.76,2.92,3.04,3.2,3.6,3.97]
         return scipy.interpolate.interp1d(t,r)
 
-    def Evaluate_MainCal(self, description="empty", standard=None):
+    def Evaluate_MainCal(self, description="empty", standard=None, freqs=None):
         ctx=Context()
         standard = self.getStandard(standard)
         self.messenger(util.tstamp()+" Start of evaluation of main calibration with description %s"%description, [])
@@ -2394,15 +2395,17 @@ Quit: quit measurement.
             self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
             
-        zeroPR = Quantity(POWERRATIO, 0.0)
-        onePR = Quantity(POWERRATIO, 1.0)
-        zeroVm = Quantity(EFIELD, 0.0)            
-        zeroVmoversqrtW = Quantity(EFIELDPNORM,0.0)            
+        #zeroPR = Quantity(POWERRATIO, 0.0)
+        #onePR = Quantity(POWERRATIO, 1.0)
+        #zeroVm = Quantity(EFIELD, 0.0)            
+        #zeroVmoversqrtW = Quantity(EFIELDPNORM,0.0)            
+
+        if not freqs:
+            freqs = self.rawData_MainCal[description]['efield'].keys()
+        freqs.sort()
 
         efields = self.rawData_MainCal[description]['efield']
         pref = self.rawData_MainCal[description]['pref']
-        freqs = efields.keys()
-        freqs.sort()
 
         self.processedData_MainCal.setdefault(description,{})
         self.processedData_MainCal[description]['Standard_Used']=standard
@@ -2447,8 +2450,8 @@ Quit: quit measurement.
             for p in pees:  # positions in the room, keys for the dicts
                 EMax = []
                 for k in range(3):  # x,y,z
-                    EMax.append(zeroVm)
-                EMaxT=zeroVm
+                    EMax.append(Quantity(EFIELD, 0.0))
+                EMaxT=Quantity(EFIELD, 0.0)
                 PInput = Quantity(WATT, 0.0)
                 PInputMin = Quantity(WATT, 1.0e10)
                 PInputMax = Quantity(WATT, 0.0)
@@ -2461,7 +2464,7 @@ Quit: quit measurement.
                         #print len(ef), ef[0], ef[1], ef[2]
                         for k in range(3): # max for each component
                             EMax[k] = max(EMax[k], ef[k])
-                        et=(sum([e**2 for e in ef], zeroVm**2)).sqrt() # max of rss (E_T)
+                        et=(sum([e**2 for e in ef], Quantity(EFIELD, 0.0)**2)).sqrt() # max of rss (E_T)
                         EMaxT=max(EMaxT, et)
                         
                         pf = efields[f][t][p][i]['pfwd']
@@ -2470,7 +2473,7 @@ Quit: quit measurement.
                         PInput += pf # av 
                         InCounter += 1
                 PInput /= InCounter
-                EMaxL[p]=EMax.eval()  # for each probe pos: Max over tuner positions
+                EMaxL[p]=[_.eval() for _ in EMax]  # for each probe pos: Max over tuner positions
                 EMaxTL[p]=EMaxT.eval()
                 PInputVariation = (PInputMax / PInputMin).eval()
                 PInputEL[p]=PInput.eval()
@@ -2525,20 +2528,18 @@ Quit: quit measurement.
             self.processedData_MainCal[description]['EMaxT'][f]=EMaxTL.copy()
 
             # calc ACF and IL
-            IL = zeroPR
+            IL = Quantity(POWERRATIO, 0.0)
             for pos,Pmax in PMaxRecL.items():            
-                IL = IL + onePR*Pmax/PInputAL[pos]
+                IL = IL + Quantity(POWERRATIO, 1.0)*Pmax/PInputAL[pos]
             IL = (IL / len(PMaxRecL.keys())).eval()
-            ACF = zeroPR
+            ACF = Quantity(POWERRATIO, 0.0)
             for pos,Pav in PAveRecL.items():            
-                ACF = ACF + onePR*Pav/PInputAL[pos]
+                ACF = ACF + Quantity(POWERRATIO, 1.0)*Pav/PInputAL[pos]
             ACF = (ACF / len(PAveRecL.keys())).eval()
             self.processedData_MainCal[description]['ACF'][f] = ACF
             self.processedData_MainCal[description]['IL'][f] = IL
 
-            Avxyz = [] #umddevice.stdVectorUMDMResult()
-            for k in range(3):
-                Avxyz.append(zeroVmoversqrtW)
+            Avxyz = [Quantity(EFIELDPNORM,0.0) for _ in (1,2,3)] #umddevice.stdVectorUMDMResult()
             self.processedData_MainCal[description]['Enorm'][f]={}
             self.processedData_MainCal[description]['EnormT'][f]={}
             for pos,Em in EMaxL.items():
@@ -2548,12 +2549,13 @@ Quit: quit measurement.
                 #u = pin.get_u()
                 #l = pin.get_l()
                 sqrtPInput = v # umddevice.UMDMResult(sqrtv, sqrtv+(u-l)/(4.0*sqrtv), sqrtv-(u-l)/(4.0*sqrtv), umddevice.UMD_sqrtW)
-                en = [] #umddevice.stdVectorUMDMResult()
-                for k in range(len(Em)):
-                    en.append(Em[k]/sqrtPInput)
-                    Avxyz[k] += en[k]
-                self.processedData_MainCal[description]['Enorm'][f][pos]=en.eval()
-            AvT = zeroVmoversqrtW
+                en = [_e_/sqrtPInput for _e_ in Em] #umddevice.stdVectorUMDMResult()
+                for k,_en_ in enumerate(en):
+                    Avxyz[k] += _en_
+                self.processedData_MainCal[description]['Enorm'][f][pos]=[_.eval() for _ in en]
+            Npos=len(EMaxL.keys())
+            Avxyz = [_a_/Npos for _a_ in Avxyz]
+            AvT = Quantity(EFIELDPNORM,0.0)
             for pos,Em in EMaxTL.items():
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos]
                 v = pin.sqrt()
@@ -2565,29 +2567,28 @@ Quit: quit measurement.
                 self.processedData_MainCal[description]['EnormT'][f][pos]=en.eval()
                 AvT+=en
             AvT /= len(EMaxTL)
-            Av24 = zeroVmoversqrtW
-            for k in range(3):
-                Avxyz[k] /= len(EMaxL.keys())
+            Av24 = Quantity(EFIELDPNORM,0.0)
+            for k in (0,1,2):
                 Av24 += Avxyz[k]
             Av24 /= 3.0
-            self.processedData_MainCal[description]['EnormAveXYZ'][f]=Avxyz.eval()
-            self.processedData_MainCal[description]['EnormAve'][f]=Av24.eval()
-            self.processedData_MainCal[description]['EnormTAve'][f]=AvT.eval()
+            Avxyz=self.processedData_MainCal[description]['EnormAveXYZ'][f]=[_.eval() for _ in Avxyz]
+            Av24=self.processedData_MainCal[description]['EnormAve'][f]=Av24.eval()
+            AvT=self.processedData_MainCal[description]['EnormTAve'][f]=AvT.eval()
             enorm = self.processedData_MainCal[description]['Enorm'][f]
             Sxyz = [] # umddevice.stdVectorUMDMResult()
             list24 = []
-            for k in range(3):
+            for k in (0,1,2):
                 lst = [enorm[p][k] for p in enorm.keys()]
                 list24 = list24 + lst
                 S = util.CalcSigma(lst, Avxyz[k])
-                Sxyz.append(S)            
-            S24 = util.CalcSigma(list24, Av24)
+                Sxyz.append(S.eval())            
+            S24 = util.CalcSigma(list24, Av24).eval()
             
-            self.processedData_MainCal[description]['SigmaXYZ'][f]=Sxyz.eval()
+            self.processedData_MainCal[description]['SigmaXYZ'][f]=[_.eval() for _ in Sxyz]
             self.processedData_MainCal[description]['Sigma24'][f]=S24.eval()
             SdBxyz = [20 * ((Sxyz[k]+Avxyz[k])/Avxyz[k] ).log10() for k in (0,1,2)] #umddevice.stdVectorUMDMResult()
             SdB24 =   20 * ( (S24+Av24) / Av24 ).log10()
-            self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = SdBxyz.eval()
+            self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = [_.eval() for _ in SdBxyz]
             self.processedData_MainCal[description]['Sigma24_dB'][f] = SdB24.eval()
 
         self.messenger(util.tstamp()+" End of evaluation of main calibration", [])
@@ -2632,7 +2633,7 @@ Quit: quit measurement.
             self.messenger(util.tstamp()+" EUT cal not found. Description: %s"%EUT_cal, [])
             return -1
 	
-        zeroPR = Quantity (POWERRATIO, 0.0)
+        #zeroPR = Quantity (POWERRATIO, 0.0)
         
         pref = self.rawData_Emission[description]['pref']
         noise= self.rawData_Emission[description]['noise']
@@ -2789,7 +2790,7 @@ Quit: quit measurement.
         if EUT_OK==None:
             EUT_OK = self.std_eut_status_checker
 
-        zeroPR = Quantity (POWERRATIO, 0.0)
+        #zeroPR = Quantity (POWERRATIO, 0.0)
         
         testfield_from_pfwd = TestField(self, maincal=empty_cal, eutcal=EUT_cal)
         
@@ -3140,9 +3141,9 @@ Quit: quit measurement.
             self.messenger(util.tstamp()+" Calibration %s not found."%calibration, [])
             return -1
             
-        zeroPR = Quantity(POWERRATIO, 0.0)
-        zeroVm = Quantity(EFIELD, 0.0)            
-        zeroVmoversqrtW = Quantity (EFIELDPNORM, 0.0)            
+        #zeroPR = Quantity(POWERRATIO, 0.0)
+        #zeroVm = Quantity(EFIELD, 0.0)            
+        #Quantity(EFIELDPNORM,0.0) = Quantity (EFIELDPNORM, 0.0)            
 
         efields = self.rawData_EUTCal[description]['efield']
         pref = self.rawData_EUTCal[description]['pref']
@@ -3186,7 +3187,7 @@ Quit: quit measurement.
             PInputEL = {}
             PInputVariationEL = {}
             for p in pees:
-                EMax = [zeroVm for k in (0,1,2)]
+                EMax = [Quantity(EFIELD, 0.0) for k in (0,1,2)]
                 PInput = Quantity( WATT, 0.0)
                 PInputMin = Quantity( WATT, 1.0e10)
                 PInputMax = Quantity( WATT, 0.0)
@@ -3251,11 +3252,11 @@ Quit: quit measurement.
             self.processedData_EUTCal[description]['EMax'][f]=EMaxL.copy()
 
             # calc CCF and CCF_from_PMaxRec
-            CCF_from_PMaxRec = zeroPR
+            CCF_from_PMaxRec = Quantity(POWERRATIO, 0.0)
             for pos,Pmax in PMaxRecL.items():            
                 CCF_from_PMaxRec += Pmax/PInputAL[pos]
             CCF_from_PMaxRec /= len(PMaxRecL.keys())
-            CCF = zeroPR
+            CCF = Quantity(POWERRATIO, 0.0)
             for pos,Pav in PAveRecL.items():            
                 CCF += Pav/PInputAL[pos]
             CCF /= len(PAveRecL.keys())
@@ -3263,7 +3264,7 @@ Quit: quit measurement.
             self.processedData_EUTCal[description]['CCF'][f] = CCF
 
             if npees > 0:
-                Avxyz = [zeroVmoversqrtW]*3
+                Avxyz = [Quantity(EFIELDPNORM,0.0)]*3
                 self.processedData_EUTCal[description]['Enorm'][f]={}
                 for pos,Em in EMaxL.items():
                     pin = self.processedData_EUTCal[description]['PInputForEField'][f][pos] 
@@ -3277,7 +3278,7 @@ Quit: quit measurement.
                         en.append(em/sqrtPInput)
                         Avxyz[k] += em
                     self.processedData_EUTCal[description]['Enorm'][f][pos]=en
-                Av24 = zeroVmoversqrtW
+                Av24 = Quantity(EFIELDPNORM,0.0)
                 for k in range(3):
                     Avxyz[k] /= len(EMaxL.keys())
                     Av24 += Avxyz[k]
