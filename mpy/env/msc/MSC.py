@@ -399,7 +399,7 @@ class MSC(Measure.Measure):
                                     self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                     self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                     self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                    PRef = ctx.value_of(abs((PRef / c_refant_pmref[i]).reduce_to(WATT)))
+                                    PRef = (abs((PRef / c_refant_pmref[i]).reduce_to(WATT))).eval()
                                     self.__addLoggerBlock(block, nn+'_corrected', 'Noise: Pref/c_refant_pmref', PRef, {})
                                     self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                     self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -452,12 +452,12 @@ class MSC(Measure.Measure):
                             self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                            PFwd = ctx.value_of(abs((PFwd * c_a2_ant).reduce_to(WATT)))
+                            PFwd = (abs((PFwd * c_a2_ant).reduce_to(WATT))).eval()
                             self.__addLoggerBlock(block, 'c_a2_ant', 'Correction from amplifier output to antenna', c_a2_ant, {})
                             self.__addLoggerBlock(block['c_a2_ant']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter', c_a2_pm1, {})
                             self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PFwd = ctx.value_of(abs((PFwd / c_a2_pm1).reduce_to(WATT)))
+                            PFwd = (abs((PFwd / c_a2_pm1).reduce_to(WATT))).eval()
                             self.__addLoggerBlock(block, n+'_corrected', 'Pfwd*c_a2_ant/c_a2_pm1', PFwd, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -470,7 +470,7 @@ class MSC(Measure.Measure):
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             self.__addLoggerBlock(block, 'c_ant_pm2', 'Correction from antenna feed to bwd power meter', c_ant_pm2, {})
                             self.__addLoggerBlock(block['c_ant_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PBwd = ctx.value_of(abs((PBwd / c_ant_pm2).reduce_to(WATT)))
+                            PBwd = (abs((PBwd / c_ant_pm2).reduce_to(WATT))).eval()
                             self.__addLoggerBlock(block, n+'_corrected', 'Pbwd/c_ant_pm2', PBwd, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -488,7 +488,7 @@ class MSC(Measure.Measure):
                                 self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                                 self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                 self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                PRef = ctx.value_of(abs((PRef / c_refant_pmref[i]).reduce_to(WATT)))
+                                PRef = (abs((PRef / c_refant_pmref[i]).reduce_to(WATT))).eval()
                                 prefant = self.__insert_it (prefant, PRef, PFwd, PBwd, f, t, pra+i-1)
                                 self.__addLoggerBlock(block, n+'_corrected', 'Pref/c_refant_pmref', PRef, {})
                                 self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -504,7 +504,7 @@ class MSC(Measure.Measure):
                                 self.__addLoggerBlock(block, n, 'Reading of the e-field probe for position %d'%i, nbresult[n], {})
                                 self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                                efields = self.__insert_it (efields, ctx.value_of(nbresult[n]), PFwd, PBwd, f, t, p+i-1)
+                                efields = self.__insert_it (efields, (nbresult[n]).eval(), PFwd, PBwd, f, t, p+i-1)
                         for log in self.logger:
                             log(block)
 
@@ -2470,10 +2470,10 @@ Quit: quit measurement.
                         PInput += pf # av 
                         InCounter += 1
                 PInput /= InCounter
-                EMaxL[p]=ctx.value_of(EMax)  # for each probe pos: Max over tuner positions
-                EMaxTL[p]=ctx.value_of(EMaxT)
-                PInputVariation = ctx.value_of(PInputMax / PInputMin)
-                PInputEL[p]=ctx.value_of(PInput)
+                EMaxL[p]=EMax.eval()  # for each probe pos: Max over tuner positions
+                EMaxTL[p]=EMaxT.eval()
+                PInputVariation = (PInputMax / PInputMin).eval()
+                PInputEL[p]=PInput.eval()
                 PInputVariationEL[p] = PInputVariation
 
             # receive antenna calibration
@@ -2507,11 +2507,11 @@ Quit: quit measurement.
                         PInput += pf
                         InCounter += 1
                 PAveRec  /= RecCounter
-                PMaxRecL[p]=ctx.value_of(PMaxRec)
-                PAveRecL[p]=ctx.value_of(PAveRec)    # for each receive antenna pos: Max and Av over tuner positions
+                PMaxRecL[p]=PMaxRec.eval()
+                PAveRecL[p]=PAveRec.eval()    # for each receive antenna pos: Max and Av over tuner positions
                 PInput  /=InCounter
-                PInputVariation = ctx.value_of(PInputMax / PInputMin)
-                PInputAL[p]=ctx.value_of(PInput)
+                PInputVariation = (PInputMax / PInputMin).eval()
+                PInputAL[p]=PInput.eval()
                 PInputVariationAL[p] = PInputVariation
                     
                 
@@ -2528,11 +2528,11 @@ Quit: quit measurement.
             IL = zeroPR
             for pos,Pmax in PMaxRecL.items():            
                 IL = IL + onePR*Pmax/PInputAL[pos]
-            IL = ctx.value_of(IL / len(PMaxRecL.keys()))
+            IL = (IL / len(PMaxRecL.keys())).eval()
             ACF = zeroPR
             for pos,Pav in PAveRecL.items():            
                 ACF = ACF + onePR*Pav/PInputAL[pos]
-            ACF = ctx.value_of(ACF / len(PAveRecL.keys()))
+            ACF = (ACF / len(PAveRecL.keys())).eval()
             self.processedData_MainCal[description]['ACF'][f] = ACF
             self.processedData_MainCal[description]['IL'][f] = IL
 
@@ -2552,7 +2552,7 @@ Quit: quit measurement.
                 for k in range(len(Em)):
                     en.append(Em[k]/sqrtPInput)
                     Avxyz[k] += en[k]
-                self.processedData_MainCal[description]['Enorm'][f][pos]=ctx.value_of(en)
+                self.processedData_MainCal[description]['Enorm'][f][pos]=en.eval()
             AvT = zeroVmoversqrtW
             for pos,Em in EMaxTL.items():
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos]
@@ -2562,7 +2562,7 @@ Quit: quit measurement.
                 #l = pin.get_l()
                 sqrtPInput = v # umddevice.UMDMResult(sqrtv, sqrtv+(u-l)/(4.0*sqrtv), sqrtv-(u-l)/(4.0*sqrtv), umddevice.UMD_sqrtW)
                 en=Em/sqrtPInput
-                self.processedData_MainCal[description]['EnormT'][f][pos]=ctx.value_of(en)
+                self.processedData_MainCal[description]['EnormT'][f][pos]=en.eval()
                 AvT+=en
             AvT /= len(EMaxTL)
             Av24 = zeroVmoversqrtW
@@ -2570,9 +2570,9 @@ Quit: quit measurement.
                 Avxyz[k] /= len(EMaxL.keys())
                 Av24 += Avxyz[k]
             Av24 /= 3.0
-            self.processedData_MainCal[description]['EnormAveXYZ'][f]=ctx.value_of(Avxyz)
-            self.processedData_MainCal[description]['EnormAve'][f]=ctx.value_of(Av24)
-            self.processedData_MainCal[description]['EnormTAve'][f]=ctx.value_of(AvT)
+            self.processedData_MainCal[description]['EnormAveXYZ'][f]=Avxyz.eval()
+            self.processedData_MainCal[description]['EnormAve'][f]=Av24.eval()
+            self.processedData_MainCal[description]['EnormTAve'][f]=AvT.eval()
             enorm = self.processedData_MainCal[description]['Enorm'][f]
             Sxyz = [] # umddevice.stdVectorUMDMResult()
             list24 = []
@@ -2583,12 +2583,12 @@ Quit: quit measurement.
                 Sxyz.append(S)            
             S24 = util.CalcSigma(list24, Av24)
             
-            self.processedData_MainCal[description]['SigmaXYZ'][f]=ctx.value_of(Sxyz)
-            self.processedData_MainCal[description]['Sigma24'][f]=ctx.value_of(S24)
+            self.processedData_MainCal[description]['SigmaXYZ'][f]=Sxyz.eval()
+            self.processedData_MainCal[description]['Sigma24'][f]=S24.eval()
             SdBxyz = [20 * ((Sxyz[k]+Avxyz[k])/Avxyz[k] ).log10() for k in (0,1,2)] #umddevice.stdVectorUMDMResult()
             SdB24 =   20 * ( (S24+Av24) / Av24 ).log10()
-            self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = ctx.value_of(SdBxyz)
-            self.processedData_MainCal[description]['Sigma24_dB'][f] = ctx.value_of(SdB24)
+            self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = SdBxyz.eval()
+            self.processedData_MainCal[description]['Sigma24_dB'][f] = SdB24.eval()
 
         self.messenger(util.tstamp()+" End of evaluation of main calibration", [])
         return 0

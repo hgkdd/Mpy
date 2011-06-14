@@ -330,12 +330,12 @@ class MGraph(Graph):
             #print TotalPath
             #for k,v in result.items():
             #    print k,v
-            TotalPath=ctx.value_of(TotalPath)
+            TotalPath=TotalPath.eval()
             TotalPath = TotalPath.reduce_to(unit)
             Total += TotalPath
         #print start, end, Total
         try:
-            result['total'] = ctx.value_of(Total)
+            result['total'] = Total.eval()
         except AttributeError:
             result['total'] = Total
         return result
