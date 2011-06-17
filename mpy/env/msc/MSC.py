@@ -11,6 +11,7 @@ import math
 import sys
 import time
 #import rpy
+import numpy
 import scipy
 import scipy.interpolate
 import scipy.optimize
@@ -203,7 +204,7 @@ class MSC(Measure.Measure):
             positions={}
             hasDupes = []
             for f in freqs:
-                findex = util.getIndex(f, ftab)
+                findex = util.getIndex(f, ftab) - 1 
                 #print f, findex
                 PrbPosCounter[f] = nprbpostab[findex]   # number of positions to measure for this freq
                 RefAntPosCounter[f] = nrefantpostab[findex]   # number of positions (ref ant)
@@ -213,7 +214,9 @@ class MSC(Measure.Measure):
                 for tunerindex in range(ntuner):
                     positions[findex].append( [tunerposindex*tofftab[tunerindex][findex] for tunerposindex in range(ntuntab[tunerindex][findex])])
                 positions[findex] = util.combinations(positions[findex])
+                # collection of all tuner positions
                 hasDupes += positions[findex]
+            # remove duplicate tuner pos entries...
             noDupes = []
             [noDupes.append(_i) for _i in hasDupes if not noDupes.count(_i)]
             alltpos = noDupes   # unique and sorted
@@ -229,24 +232,25 @@ class MSC(Measure.Measure):
             etaTx = {}
             etaRx = {}
             # for autosave: autosave_info
-            as_i={'prbposleft': prbposleft,
-                  'refantposleft': refantposleft,
-                  'LastMeasuredFreq': None,
-                  'LastMeasuredTpos': None}
+            as_i={'prbposleft': prbposleft,  #remaining probe positions
+                  'refantposleft': refantposleft,  # remaining ref ant positions
+                  'LastMeasuredFreq': None,   # last freq measure before auto save
+                  'LastMeasuredTpos': None}  # last tuner position measured before auto save 
             # restore from auto save
-            if self.autosave:
+            if self.autosave:  # self.autosave is set True in Measure.do_autosave, i.e. instance was created from autosave pickle file
+                # copy raw data
                 efields=self.rawData_MainCal[description]['efield'].copy()
                 prefant=self.rawData_MainCal[description]['pref'].copy()
                 noise=self.rawData_MainCal[description]['noise'].copy()
-                
+                # autosave info record
                 as_i=self.autosave_info.copy()
-
+                # number of probe positions and ref ant positions not yet measured
                 prbposleft=as_i['prbposleft']
                 refantposleft=as_i['refantposleft']
-                if 'PrbPosCounter' in as_i:
-                    PrbPosCounter=as_i['PrbPosCounter'].copy()
-                if 'RefAntPosCounter' in as_i:
-                    RefAntPosCounter=as_i['RefAntPosCounter'].copy()
+                #if 'PrbPosCounter' in as_i:
+                PrbPosCounter=as_i['PrbPosCounter'].copy()
+                #if 'RefAntPosCounter' in as_i:
+                RefAntPosCounter=as_i['RefAntPosCounter'].copy()
 
 ##                
 ##                edat = self.rawData_MainCal[description]['efield']
@@ -269,35 +273,42 @@ class MSC(Measure.Measure):
 ##                refantposleft -= len(rpees)
                 
 ##                msg = "List of probe positions from autosave file:\n%s\nList of ref antenna positions from autosave file:\n%s\n"%(str(epees), str(rpees))
-                msg = "List of probe positions from autosave file:\n%s\nList of ref antenna positions from autosave file:\n%s\n"%(str(range(maxnprbpos-max(0,prbposleft))), str(range(maxnrefantpos-max(0,refantposleft))))
+                msg = ("List of probe positions from autosave file:\n"
+                      "%s\n"
+                      "List of ref antenna positions from autosave file:\n"
+                      "%s\n"%( range(1, maxnprbpos   -max(0,prbposleft)   +1), 
+                               range(1, maxnrefantpos-max(0,refantposleft)+1) ) )
                 but = []
                 self.messenger(msg, but)
-            self.autosave=False
+            self.autosave=False  # reset auto save flag
             ##################################################
             # for all probe/refant positions
             ##################################################
-            while prbposleft > 0 or refantposleft > 0:
+            while prbposleft > 0 or refantposleft > 0:   # positions are count down
                 stat = mg.RFOff_Devices()
-                msg = """Position E field probes and reference antenna...\nAre you ready to start the measurement?\n\nStart: start measurement.\nQuit: quit measurement."""
+                p = maxnprbpos - prbposleft + 1 # current probe pos 
+                pra = maxnrefantpos - refantposleft + 1 # current refant pos
+                msg = ("Position E field probes (%d to %d) and reference antenna (%d to %d) ...\n"
+                      "Are you ready to start the measurement?\n\n"
+                      "Start: start measurement.\n"
+                      "Quit: quit measurement."%(p,p+nprb-1,pra,pra+nrefant-1))
                 but = ["Start", "Quit"]
                 answer = self.messenger(msg, but)
                 if answer == but.index('Quit'):
                     self.messenger(util.tstamp()+" measurement terminated by user.", [])
                     raise UserWarning      # to reach finally statement
-                p = maxnprbpos - prbposleft + 1 # current probe pos 
-                pra = maxnrefantpos - refantposleft + 1 # current refant pos
                 ##############################################
                 # loop tuner positions
                 ################################################
                 for t in alltpos:
                     ast=as_i['LastMeasuredTpos']
-                    if ast:
-                        if alltpos[-1]==ast:
-                            pass
-                        elif alltpos.index(t)<=alltpos.index(ast):
-                            continue
-                    as_i['LastMeasuredTpos']=None
-                    self.messenger(util.tstamp()+" Tuner position %s"%(repr(t)), [])
+                    if ast: # True: instance from auto save pickle file
+                        if alltpos[-1]==ast:  # don't remember why this is useful ????? 
+                            pass   # special case for last tuner position ?????
+                        elif alltpos.index(t)<alltpos.index(ast): # tuner pos already measured 
+                            continue   # next t-pos
+                    as_i['LastMeasuredTpos']=None  # reset flag
+                    self.messenger(util.tstamp()+" Tuner position %r"%t, [])
                     # position tuners
                     self.messenger(util.tstamp()+" Move tuner(s)...", [])
                     for i, tname in enumerate(names['tuner']):
@@ -311,16 +322,16 @@ class MSC(Measure.Measure):
                         asf=as_i['LastMeasuredFreq']
                         if asf:
                             if (freqs[-1]==asf) and not (alltpos[-1]==ast):
-                                pass
-                            elif (freqs[-1]==asf) and (alltpos[-1]==ast):
-                                for fr in freqs:
+                                pass  # last freq measured but not for last t-pos
+                            elif (freqs[-1]==asf) and (alltpos[-1]==ast): # last freq for last t-pos measured
+                                for fr in freqs:  # count down Pos Counters
                                     RefAntPosCounter[fr] -= nrefant
                                     PrbPosCounter[fr] -= nprb                    
                             elif freqs.index(f)<=freqs.index(asf):
-                                continue
-                        as_i['LastMeasuredFreq']=None
+                                continue   # f already measured -> next freq
+                        as_i['LastMeasuredFreq']=None  # reset flag
                         self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
-                        findex = util.getIndex(f, ftab)
+                        findex = util.getIndex(f, ftab) - 1 
                         if t not in positions[findex]:   # pos t is not for this freq
                             self.messenger(util.tstamp()+" Skipping tuner position", [])
                             continue
@@ -2457,6 +2468,10 @@ Quit: quit measurement.
                 PInputMax = Quantity(WATT, 0.0)
                 InCounter = 0
                 for t in tees:  # tuner positions-> max values with respect to tuner
+                    try:
+                        efields[f][t][p]
+                    except KeyError:
+                        efields[f][t][p]=efields[f][t][0]   # TO BE REMOVED
                     for i in range(len(efields[f][t][p])): #typically, len=1
                         ef = efields[f][t][p][i]['value'] # x,y,z vector
                         #import pprint
@@ -2464,7 +2479,7 @@ Quit: quit measurement.
                         #print len(ef), ef[0], ef[1], ef[2]
                         for k in range(3): # max for each component
                             EMax[k] = max(EMax[k], ef[k])
-                        et=(sum([e**2 for e in ef], Quantity(EFIELD, 0.0)**2)).sqrt() # max of rss (E_T)
+                        et=numpy.sqrt( sum([e**2 for e in ef], Quantity(EFIELD, 0.0)**2) ) # max of rss (E_T)
                         EMaxT=max(EMaxT, et)
                         
                         pf = efields[f][t][p][i]['pfwd']
@@ -2544,7 +2559,7 @@ Quit: quit measurement.
             self.processedData_MainCal[description]['EnormT'][f]={}
             for pos,Em in EMaxL.items():
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos] 
-                v = pin.sqrt()
+                v = numpy.sqrt(pin)
                 #sqrtv=math.sqrt(v)
                 #u = pin.get_u()
                 #l = pin.get_l()
@@ -2558,7 +2573,7 @@ Quit: quit measurement.
             AvT = Quantity(EFIELDPNORM,0.0)
             for pos,Em in EMaxTL.items():
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos]
-                v = pin.sqrt()
+                v = numpy.sqrt(pin)
                 #sqrtv=math.sqrt(v)
                 #u = pin.get_u()
                 #l = pin.get_l()
@@ -2586,8 +2601,8 @@ Quit: quit measurement.
             
             self.processedData_MainCal[description]['SigmaXYZ'][f]=[_.eval() for _ in Sxyz]
             self.processedData_MainCal[description]['Sigma24'][f]=S24.eval()
-            SdBxyz = [20 * ((Sxyz[k]+Avxyz[k])/Avxyz[k] ).log10() for k in (0,1,2)] #umddevice.stdVectorUMDMResult()
-            SdB24 =   20 * ( (S24+Av24) / Av24 ).log10()
+            SdBxyz = [20 * numpy.log10((Sxyz[k]+Avxyz[k])/Avxyz[k] ) for k in (0,1,2)] #umddevice.stdVectorUMDMResult()
+            SdB24 =   20 * numpy.log10( (S24+Av24) / Av24 )
             self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = [_.eval() for _ in SdBxyz]
             self.processedData_MainCal[description]['Sigma24_dB'][f] = SdB24.eval()
 
@@ -2714,7 +2729,7 @@ Quit: quit measurement.
             gmax_f=gmax(f,s=distance,hg=hg,RH=RH)
             #print gmax_f['h'], gmax_f['v']
             gm=max(gmax_f['h'], gmax_f['v'])
-            neccf_v = (dmax_f*npr*30).sqrt()*gm
+            neccf_v = numpy.sqrt(dmax_f*npr*30)*gm
             #neccf_u = math.sqrt(dmax_f*npr.get_u()*30)*gm
             #print dmax_f*npr.get_l()*30
             #neccf_l = math.sqrt(max(0,dmax_f*npr.get_l()*30))*gm
@@ -2746,11 +2761,11 @@ Quit: quit measurement.
                 PRadCLFL[p]=PMaxRec*etaTx_inter(i)/(clf_inter(i)*il_inter(i))
                 prccf = PRadCCFL[p] # .convert(umddevice.UMD_W)
                 prclf = PRadCLFL[p] # .convert(umddevice.UMD_W)
-                eccf_v = (dmax_f*prccf*30).sqrt()*gm
+                eccf_v = numpy.sqrt(dmax_f*prccf*30)*gm
                 #eccf_u = math.sqrt(dmax_f*prccf.get_u()*30)*gm
                 #eccf_l = math.sqrt(max(0,dmax_f*prccf.get_l()*30))*gm
                 ERadCCFL[p] = eccf_v
-                eclf_v = (dmax_f*prclf*30).sqrt()*gm
+                eclf_v = numpy.sqrt(dmax_f*prclf*30)*gm
                 #eclf_u = math.sqrt(dmax_f*prclf.get_u()*30)*gm
                 #eclf_l = math.sqrt(max(0,dmax_f*prclf.get_l()*30))*gm
                 ERadCLFL[p] = eclf_v
@@ -3269,7 +3284,7 @@ Quit: quit measurement.
                 for pos,Em in EMaxL.items():
                     pin = self.processedData_EUTCal[description]['PInputForEField'][f][pos] 
                     v = pin#.get_v()
-                    sqrtv=v.sqrt()
+                    sqrtv=numpy.sqrt(v)
                     #u = pin.get_u()
                     #l = pin.get_l()
                     sqrtPInput = sqrtv
@@ -3306,11 +3321,11 @@ Quit: quit measurement.
                 SdBxyz = []
                 for k in range(3):
                     try:
-                        SdBxyz.append(20*( (Sxyz[k]+Avxyz[k]) / Avxyz[k] ).log10())
+                        SdBxyz.append( (20*numpy.log10( (Sxyz[k]+Avxyz[k]) / Avxyz[k] )).eval())
                     except:
                         util.LogError (self.messenger)            
                 try:
-                    SdB24 =  20* ( (S24+Av24) / Av24 ).log10()
+                    SdB24 =  (20* ( numpy.log10(S24+Av24) / Av24 )).eval()
                 except:
                     SdB24 = None
                 self.processedData_EUTCal[description]['SigmaXYZ_dB'][f] = SdBxyz
@@ -3476,7 +3491,7 @@ class TestField:
         #print clf
         #print enorm
         etest2 = power * clf * enorm * enorm                    
-        etest_v = etest2.sqrt()
+        etest_v = numpy.sqrt(etest2)
         #dp = 0.5*(power.get_u()-power.get_l())
         #dc = 0.5*(clf.get_u()-clf.get_l())
         #de = 0.5*(enorm.get_u()-enorm.get_l())

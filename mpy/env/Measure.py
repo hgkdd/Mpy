@@ -350,16 +350,17 @@ class Measure(object):
             calling_sequence=[cs for cs in calling_sequence if cs != '<string>']
             #print calling_sequence
             try:
-                self.ascmd=calling_sequence[depth]
+                ascmd=calling_sequence[depth]
             except IndexError:
-                self.ascmd=calling_sequence[-1]
-            if self.ascmd.startswith('exec'):
+                ascmd=calling_sequence[-1]
+            if ascmd.startswith('exec'):
                 # print self.ascmd
-                try:
-                    self.ascmd = str(re.match( r'exec.*\(.*[\'\"](.*)[\'\"].*\)', self.ascmd ).groups()[0]) # extrace arg of exec
-                except AttributeError:
-                    pass
-                    
+                ascmd = ascmd[ascmd.index( '(' )+1: ascmd.rindex(')')].strip() # part between brackets
+                var=util.get_var_from_nearest_outerframe(ascmd)
+                if var:
+                    ascmd=var
+            self.ascmd=ascmd
+            # print "Measure.py; 363:", self.ascmd
             # now, we can serialize 'self'
             pfile=None
             if isinstance(name_or_obj, basestring):   # it's a string (filename)

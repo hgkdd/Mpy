@@ -219,6 +219,7 @@ if __name__ == '__main__':
         except IndexError:
             mp = cdict['measure_parameters'][0]
         mp['description']=cdict['descriptions'][answer]
+        #cmd='msc.Measure_MainCal(**mp)'
         exec(cmd)
         
     if os.path.isfile(cdict['pickle_output_filename']):

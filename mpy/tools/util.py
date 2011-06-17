@@ -260,7 +260,7 @@ def get_var_from_nearest_outerframe(varstr):
                 #print "found key %s in dict with name %s"%(varstr,name)
                 #print "value:", var
                 break
-            except (KeyError,TypeError,AttributeError):
+            except (KeyError,TypeError,AttributeError,IndexError,ValueError):
                 continue
         if var:
             #print "got it!"
@@ -418,7 +418,7 @@ def CalcSigma (lst, av=None):
     
     if av is None:
         av=sum(lst, zero)/float(n)
-    s2=sum([(x-av)**2 for x in lst], zero*zero)/float(n-1)
+    s2=sum([(x-av)*(x-av) for x in lst], zero*zero)/float(n-1)
     try:
         s=s2.sqrt()
     except AttributeError:
