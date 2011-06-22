@@ -2406,15 +2406,11 @@ Quit: quit measurement.
             self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
             
-        #zeroPR = Quantity(POWERRATIO, 0.0)
-        #onePR = Quantity(POWERRATIO, 1.0)
-        #zeroVm = Quantity(EFIELD, 0.0)            
-        #zeroVmoversqrtW = Quantity(EFIELDPNORM,0.0)            
-
         if not freqs:
             freqs = self.rawData_MainCal[description]['efield'].keys()
         freqs.sort()
 
+        # shortcuts to raw data
         efields = self.rawData_MainCal[description]['efield']
         pref = self.rawData_MainCal[description]['pref']
 
@@ -2442,10 +2438,13 @@ Quit: quit measurement.
         self.processedData_MainCal[description]['Sigma24_dB'] = {}
         # the evaluation has to be done for all frequencies
         for f in freqs:
+            self.messenger(util.tstamp()+" Frequency: %.2f ..."%f, [])
+            #print
+            #print f,
             tees = efields[f].keys() #tuner positions
             pees = efields[f][tees[0]].keys() #e-field probe positions
             prees = pref[f][tees[0]].keys() #ref antenna positions
-            tees.sort()
+            #tees.sort()
             pees.sort()
             prees.sort()
             ntees = len(tees)
@@ -2459,34 +2458,41 @@ Quit: quit measurement.
             PInputEL = {} #input for a certain field strength
             PInputVariationEL = {} # max to min ratio
             for p in pees:  # positions in the room, keys for the dicts
+                #print p,
                 EMax = []
-                for k in range(3):  # x,y,z
-                    EMax.append(Quantity(EFIELD, 0.0))
+                for k in (0,1,2):  # x,y,z
+                    EMax.append(Quantity(EFIELD, 0.0))  # for each p init EMax with (0 V/m, 0 V/m, 0 V/m)
                 EMaxT=Quantity(EFIELD, 0.0)
                 PInput = Quantity(WATT, 0.0)
                 PInputMin = Quantity(WATT, 1.0e10)
                 PInputMax = Quantity(WATT, 0.0)
                 InCounter = 0
                 for t in tees:  # tuner positions-> max values with respect to tuner
-                    try:
-                        efields[f][t][p]
-                    except KeyError:
-                        efields[f][t][p]=efields[f][t][0]   # TO BE REMOVED
-                    for i in range(len(efields[f][t][p])): #typically, len=1
-                        ef = efields[f][t][p][i]['value'] # x,y,z vector
+                    #print t,
+                    #try:
+                    #    efields[f][t][p]
+                    #except KeyError:
+                    #    efields[f][t][p]=efields[f][t][0]   # TO BE REMOVED
+                    for efli in efields[f][t][p]: #typically, len=1
+                        ef = efli['value'] # x,y,z vector
                         #import pprint
                         #pprint.pprint(ef)
                         #print len(ef), ef[0], ef[1], ef[2]
-                        for k in range(3): # max for each component
+                        for k in (0,1,2): # max for each component
+                            #print EMax[k], ef[k], '->',
                             EMax[k] = max(EMax[k], ef[k])
-                        et=numpy.sqrt( sum([e**2 for e in ef], Quantity(EFIELD, 0.0)**2) ) # max of rss (E_T)
+                            #print EMax[k]
+                        #print "EMax", EMax
+                        et=numpy.sqrt( sum([e*e for e in ef], Quantity(EFIELD, 0.0)**2) ) # max of rss (E_T)
                         EMaxT=max(EMaxT, et)
                         
-                        pf = efields[f][t][p][i]['pfwd']
+                        pf = efli['pfwd']
                         PInputMin = min(PInputMin, pf) # min  
                         PInputMax = max(PInputMax, pf) # max
                         PInput += pf # av 
                         InCounter += 1
+                #print
+                #print EMax
                 PInput /= InCounter
                 EMaxL[p]=[_.eval() for _ in EMax]  # for each probe pos: Max over tuner positions
                 EMaxTL[p]=EMaxT.eval()
@@ -2569,7 +2575,7 @@ Quit: quit measurement.
                     Avxyz[k] += _en_
                 self.processedData_MainCal[description]['Enorm'][f][pos]=[_.eval() for _ in en]
             Npos=len(EMaxL.keys())
-            Avxyz = [_a_/Npos for _a_ in Avxyz]
+            Avxyz = [_a_/float(Npos) for _a_ in Avxyz]
             AvT = Quantity(EFIELDPNORM,0.0)
             for pos,Em in EMaxTL.items():
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos]
@@ -2581,7 +2587,7 @@ Quit: quit measurement.
                 en=Em/sqrtPInput
                 self.processedData_MainCal[description]['EnormT'][f][pos]=en.eval()
                 AvT+=en
-            AvT /= len(EMaxTL)
+            AvT /= float(len(EMaxTL))
             Av24 = Quantity(EFIELDPNORM,0.0)
             for k in (0,1,2):
                 Av24 += Avxyz[k]
