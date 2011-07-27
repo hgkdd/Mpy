@@ -142,6 +142,7 @@ class FIELDPROBE(FLDPRB):
         return self.error, percent*0.01
     
     def Quit(self):
+        self.dev.close()
         self.error=0
         return self.error
 

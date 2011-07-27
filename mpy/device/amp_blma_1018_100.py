@@ -8,6 +8,7 @@ class AMPLIFIER(AMP):
     conftmpl['init_value']['gpib']=int
     def __init__(self):
         AMP.__init__(self)
+        self.operating=False
         self._cmds={'POn':  [("AMP_OFF", None)],
                     'POff':  [("AMP_OFF", None)],
                     'Operate': [("AMP_ON", None)],
@@ -17,9 +18,9 @@ class AMPLIFIER(AMP):
     def Init(self, ini=None, channel=None):
         self.term_chars=visa.LF
         self.error=AMP.Init(self, ini, channel)
-        self.POn()
-        self.Operate()
-        time.sleep(2)
+        #self.POn()
+        self.Standby()
+        #time.sleep(2)
         return self.error
 
     def _wait(self, state=False):
@@ -31,6 +32,16 @@ class AMPLIFIER(AMP):
             time.sleep(0.1)
         
     def SetFreq(self, freq):
+        self.error=0
+        if (1e9<=freq<=18e9) and (not self.operating):
+            self.Operate()
+            time.sleep(2)
+            self.operating=True
+        elif (not 1e9<=freq<=18e9) and self.operating:
+            self.Standby()
+            self.operating=False
+            return self.error, freq
+
         for _ in range(5):
             try:
                 swstat=self.dev.ask('SW01?')

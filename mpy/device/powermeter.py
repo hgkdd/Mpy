@@ -218,15 +218,17 @@ class POWERMETER(DRIVER):
        
         Parameters:
             
-            - *ch*: an integer specifiing the channel number of multi channel devices.
-             Numbering is starting with 1.
-            - *unit*: an string specifiing the unit for the measured.the table shows the posibilities.            
-            
-                            Unit        SCPI notation
-                            Watt           W
-                            dB             DB
-                            dBm            DBM
-                            dBµV           DBUV
+        - *ch*: an integer specifiing the channel number of multi channel devices. Numbering is starting with 1.
+        - *unit*: an string specifiing the unit for the measured data.
+
+        The table shows the posibilities::
+        
+              Unit        SCPI notation
+              Watt           W
+              dB             DB
+              dBm            DBM
+              dBuV           DBUV
+
         """
         unit=unit 
         channel=ch
@@ -255,7 +257,7 @@ class POWERMETER(DRIVER):
         G2=(vswr2-1.)/(vswr2+1.)
         umax=(1.+G1*G2)**2
         umin=(1.-G1*G2)**2
-        print G1, G2, umax, umin
+        #print G1, G2, umax, umin
         width=umax-umin
         sigma=width/(2.*math.sqrt(2.))
         return sigma

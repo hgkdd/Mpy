@@ -1,0 +1,111 @@
+# Description: empty
+#  mg
+digraph G {
+Sw [ini="sw_rc.ini", condition="f<=18e9"];
+Sg [color=green, ini="sg-rs-smf100a.ini", condition="1e5<=f<=22e9"];
+AmpLF [ini="amp-lf-bonn-blwa.ini", condition="8e7<=f<=1e9"];
+AmpHF [ini="amp-hf-bonn-blma.ini", condition="1e9<f<=18e9"];
+Pm [color=green, ch=1, ini="pm_rxatt.ini", condition="1e7<f<=18e9"];
+Pm1 [color=green, ch=1, ini="pm_rs_nrp_2ch.ini", condition="1e7<f<=18e9"];
+Pm2 [color=green, ch=2, ini="pm_rs_nrp_2ch.ini", condition="1e7<f<=18e9"];
+Path_04_sg_LFamp [ini="04-sg-LFamp.ini", condition="f<=18e9"];
+Path_05_sg_HFamp [ini="05-sg-HFamp.ini", condition="f<=18e9"];
+Path_06_LFamp_LFcoup_LFant [ini="06-LFamp-LFcoup-LFant.ini", condition="8e7<=f<=1e9"];
+Path_08_HFamp_HFant [ini="08-HFamp-HFant.ini", condition="f<=18e9"];
+Path_10_LFamp_LFcoup_PMAfwd [ini="10-LFamp-LFcoup-PMAfwd.ini", condition="8e7<=f<=1e9"];
+Path_13_LFant_LFcoup_PMBrev [ini="13-LFant-LFcoup-PMBrev.ini", condition="8e7<=f<=1e9"];
+Path_14_HFampFwd_PmAFwd [ini="14-HFampfwd-PMAfwd.ini", condition="f<=18e9"];
+Path_15_HFampRev_PmBRev [ini="15-HFamprev-PMBrev.ini", condition="f<=18e9"];
+Path_29_AntCable_TxLF [ini="29-AntCable-TxLF.ini", condition="10e6<f<=18e9"];
+Path_30_AntCable_TxHF [ini="30-AntCable-TxHF.ini", condition="10e6<f<=18e9"];
+Path_31_AntCable_RxLF [ini="31-AntCable-RxLF.ini", condition="10e6<f<=18e9"];
+Path_32_AntCable_RxHF [ini="32-AntCable-RxHF.ini", condition="10e6<f<=18e9"];
+coupler_blma [color=blue, ini="coupler-blma.ini", condition="1e9<f<=18e9"];
+corr_hftx [color=blue, ini="corr_hftx.ini", condition="1e9<f<=18e9"];
+Fprobe [color=green, ini="prb_pmm_ep601.ini"];
+Tuner [color=green, ini="mc_teseq_stirrer.ini"];
+TxAnt_LF [ini="ant-rs-hl223.ini", condition="100e6 <=f<=1e9"];
+TxAnt_HF [ini="ant-rs-hf907.ini", condition="1e9<f<=18e9"];
+RxAnt_LF [ini="ant-rs-hl223.ini", condition="100e6 <=f<=1e9"];
+RxAnt_HF [ini="ant-rs-hf907.ini", condition="1e9<f<=18e9"];
+Amp_Input [color=green];
+Amp_Output [color=green];
+TxAnt [color=green];
+RxAnt [color=green];
+Sg -> Sg_LFamp  [color="red", active=False, condition="f<=1e9"];
+Sg -> Sg_HFamp  [color="blue", active=True, condition="1e9<f<=18e9"];
+Sg_LFamp -> Amp_Input  [active=True, what="S21", dev=Path_04_sg_LFamp, label="04"];
+Sg_HFamp -> Amp_Input  [active=True, what="S21", dev=Path_05_sg_HFamp, label="05"];
+Amp_Input -> Amp_LF  [color="red", active=False, condition="f<=1e9"];
+Amp_Input -> Amp_HF  [color="blue", active=True, condition="1e9<f<=18e9"];
+Amp_LF -> Amp_Output  [active=True, what="S21", dev=AmpLF, label=""];
+Amp_HF -> Amp_Output  [active=True, what="S21", dev=AmpHF, label=""];
+Amp_Output -> AmpOut_LF  [color="red", active=False, condition="f<=1e9"];
+Amp_Output -> AmpOut_HF  [color="blue", active=True, condition="1e9<f<=18e9"];
+AmpOut_HF -> AmpOut_HFout  [what="S21", color="blue", dev=coupler_blma, label="c_S21", active=True, condition="1e9<f<=18e9"];
+AmpOut_LF -> FeedthrTx_LF  [what="S21", color="red", dev=Path_06_LFamp_LFcoup_LFant, label="06", active=False, condition="f<=1e9"];
+AmpOut_HFout -> corrhf  [what="S21", color="blue", dev=corr_hftx, label="corr_hf", active=True, condition="1e9<f<=18e9"];
+corrhf -> FeedthrTx_HF  [what="S21", color="blue", dev=Path_08_HFamp_HFant, label="08", active=True, condition="1e9<f<=18e9"];
+FeedthrTx_LF -> TxAnt_LF  [what="S21", color="red", dev=Path_29_AntCable_TxLF, label="29", active=False, condition="f<=1e9"];
+FeedthrTx_HF -> TxAnt_HF  [what="S21", color="blue", dev=Path_30_AntCable_TxHF, label="30", active=True, condition="1e9<f<=18e9"];
+TxAnt_LF -> TxAnt  [color="red", active=False, condition="f<=1e9"];
+TxAnt_HF -> TxAnt  [color="blue", active=True, condition="1e9<f<=18e9"];
+Amp_Output -> PmFwd_LF  [active=False, condition="8e7<=f<=1e9"];
+Amp_Output -> PmFwd_HF  [color="blue", active=True, condition="1e9<f<=18e9"];
+PmFwd_LF -> Pm1  [what="S21", color="red", dev=Path_10_LFamp_LFcoup_PMAfwd, label="10", active=False, condition="f<=1e9"];
+PmFwd_HF -> PmFwd_HFout  [what="S31", color="blue", dev=coupler_blma, label="c_S31", active=True, condition="1e9<f<=18e9"];
+PmFwd_HFout -> Pm1  [what="S21", color="blue", dev=Path_14_HFampFwd_PmAFwd, label="14", active=True, condition="1e9<f<=18e9"];
+TxAnt -> TxAnt_LFr  [color="red", active=False, dev=TxAnt_LF, condition="f<=1e9", label="TxAnt_LF"];
+TxAnt -> TxAnt_HFr  [color="blue", active=True, dev=TxAnt_HF, condition="1e9<f<=18e9", label="TxAnt_HF"];
+TxAnt_LFr -> FeedthrTx_LFr  [what="S21", color="red", dev=Path_29_AntCable_TxLF, label="29", active=False, condition="f<=1e9"];
+TxAnt_HFr -> FeedthrTx_HFr  [what="S21", color="blue", dev=Path_30_AntCable_TxHF, label="30", active=True, condition="1e9<f<=18e9"];
+FeedthrTx_LFr -> PmRev_LF  [color="red", active=False, condition="f<=1e9"];
+FeedthrTx_HFr -> PmRev_HF  [color="blue", active=True, condition="1e9<f<=18e9"];
+PmRev_LF -> Pm2  [what="S21", color="red", dev=Path_13_LFant_LFcoup_PMBrev, label="13", active=False, condition="f<=1e9"];
+PmRev_HF -> PmRev_HF2  [what="S21", color="blue", dev=Path_08_HFamp_HFant, label="08", active=True, condition="1e9<f<=18e9"];
+PmRev_HF2 -> PmRev_HF3  [what="S42", color="blue", dev=coupler_blma, label="c_S42", active=True, condition="1e9<f<=18e9"];
+PmRev_HF3 -> Pm2  [what="S21", color="blue", dev=Path_15_HFampRev_PmBRev, label="15", active=True, condition="1e9<f<=18e9"];
+RxAnt -> RxAnt_LF  [color="red", active=False, condition="f<=1e9"];
+RxAnt -> RxAnt_HF  [color="blue", active=True, condition="1e9<f<=18e9"];
+RxAnt_LF -> FeedthrRx_LF  [what="S21", color="red", dev=Path_31_AntCable_RxLF, label="31", active=False, condition="f<=1e9"];
+RxAnt_HF -> FeedthrRx_HF  [what="S21", color="blue", dev=Path_32_AntCable_RxHF, label="32", active=True, condition="1e9<f<=18e9"];
+FeedthrRx_LF -> FeedthrRx  [color="red", active=False, condition="f<=1e9"];
+FeedthrRx_HF -> FeedthrRx  [color="blue", active=True, condition="1e9<f<=18e9"];
+FeedthrRx -> Pm  [active=True];
+}
+
+#  noise
+f: 2375500541.26 t: [0] p: 0 [ { pbwd: None value: 1.45062634233e-07 +/- 9.79509915319e-09 W pfwd: None } ]
+f: 3000000000.0 t: [0] p: 0 [ { pbwd: None value: 1.97958306146e-07 +/- 1.33667863344e-08 W pfwd: None } ]
+#  pref
+f: 2375500541.26 t: [0] p: 0 [ { pbwd: 0.0183675160752 +/- 0.00175278126167 W value: 1.45062634233e-07 +/- 9.79509915319e-09 W pfwd: 0.980939815768 +/- 0.105213645046 W } ]
+f: 2375500541.26 t: [0] p: 1 [ { pbwd: 0.0221451399185 +/- 0.00211327357097 W value: 0.00189003549214 +/- 0.000127621321275 W pfwd: 0.984063588378 +/- 0.105548694656 W } ]
+f: 2375500541.26 t: [28] p: 0 [ { pbwd: 0.047231248809 +/- 0.00450719887972 W value: 0.0022770986702 +/- 0.000153757081375 W pfwd: 0.983281940286 +/- 0.105464856643 W } ]
+f: 2375500541.26 t: [28] p: 1 [ { pbwd: 0.0445449451606 +/- 0.00425084942676 W value: 0.00208549503225 +/- 0.00014081938283 W pfwd: 0.995374848535 +/- 0.106761917824 W } ]
+f: 2375500541.26 t: [56] p: 0 [ { pbwd: 0.049916304876 +/- 0.00476342927808 W value: 0.0047248753944 +/- 0.000319038898054 W pfwd: 0.995100541685 +/- 0.106732496219 W } ]
+f: 2375500541.26 t: [56] p: 1 [ { pbwd: 0.0489089600594 +/- 0.00466730005128 W value: 0.0048423330865 +/- 0.000326970022058 W pfwd: 0.981279356737 +/- 0.105250063532 W } ]
+f: 3000000000.0 t: [0] p: 0 [ { pbwd: 0.0538431199567 +/- 0.00488332268949 W value: 1.97958306146e-07 +/- 1.33667863344e-08 W pfwd: 1.00156612367 +/- 0.107209843165 W } ]
+f: 3000000000.0 t: [0] p: 1 [ { pbwd: 0.0506443751614 +/- 0.00459321128715 W value: 0.00092926617459 +/- 6.2747063487e-05 W pfwd: 1.00050837145 +/- 0.107096619039 W } ]
+f: 3000000000.0 t: [28] p: 0 [ { pbwd: 0.037856217423 +/- 0.00343338435121 W value: 0.00277182124442 +/- 0.000187162352783 W pfwd: 1.00076158624 +/- 0.107123723707 W } ]
+f: 3000000000.0 t: [28] p: 1 [ { pbwd: 0.0382824934844 +/- 0.00347204562426 W value: 0.00273359064203 +/- 0.00018458089862 W pfwd: 1.00039572414 +/- 0.107084561023 W } ]
+f: 3000000000.0 t: [56] p: 0 [ { pbwd: 0.0593346270967 +/- 0.0053813770637 W value: 0.00415539419804 +/- 0.000280585682216 W pfwd: 1.00112158868 +/- 0.107162259161 W } ]
+f: 3000000000.0 t: [56] p: 1 [ { pbwd: 0.0587564052131 +/- 0.00532893500526 W value: 0.00417440064694 +/- 0.000281869059238 W pfwd: 0.999599722329 +/- 0.106999355236 W } ]
+#  etaTx
+f: 2375500541.26 t: [0] p: 0 [ { pbwd: None value: 0.9 +/- 0.2 (V/V)^(2) pfwd: None } ]
+f: 3000000000.0 t: [0] p: 0 [ { pbwd: None value: 0.9 +/- 0.2 (V/V)^(2) pfwd: None } ]
+#  etaRx
+f: 2375500541.26 t: [0] p: 0 [ { pbwd: None value: 0.9 +/- 0.2 (V/V)^(2) pfwd: None } ]
+f: 3000000000.0 t: [0] p: 0 [ { pbwd: None value: 0.9 +/- 0.2 (V/V)^(2) pfwd: None } ]
+#  efield
+f: 2375500541.26 t: [0] p: 0 [ { pbwd: 0.0183675160752 +/- 0.00175278126167 W value: [ 20.618724823 +/- 2.0618724823 V*m^(-1) 44.829120636 +/- 4.4829120636 V*m^(-1) 7.84475898743 +/- 0.784475898743 V*m^(-1) ] pfwd: 0.980939815768 +/- 0.105213645046 W } ]
+f: 2375500541.26 t: [0] p: 1 [ { pbwd: 0.0221451399185 +/- 0.00211327357097 W value: [ 20.8686008453 +/- 2.08686008453 V*m^(-1) 39.0910072327 +/- 3.90910072327 V*m^(-1) 8.69160175323 +/- 0.869160175323 V*m^(-1) ] pfwd: 0.984063588378 +/- 0.105548694656 W } ]
+f: 2375500541.26 t: [28] p: 0 [ { pbwd: 0.047231248809 +/- 0.00450719887972 W value: [ 40.879486084 +/- 4.0879486084 V*m^(-1) 17.7791481018 +/- 1.77791481018 V*m^(-1) 2.5143802166 +/- 0.25143802166 V*m^(-1) ] pfwd: 0.983281940286 +/- 0.105464856643 W } ]
+f: 2375500541.26 t: [28] p: 1 [ { pbwd: 0.0445449451606 +/- 0.00425084942676 W value: [ 38.5663909912 +/- 3.85663909912 V*m^(-1) 18.4515781403 +/- 1.84515781403 V*m^(-1) 4.96450662613 +/- 0.496450662613 V*m^(-1) ] pfwd: 0.995374848535 +/- 0.106761917824 W } ]
+f: 2375500541.26 t: [56] p: 0 [ { pbwd: 0.049916304876 +/- 0.00476342927808 W value: [ 43.4921951294 +/- 4.34921951294 V*m^(-1) 31.0072479248 +/- 3.10072479248 V*m^(-1) 25.8585472107 +/- 2.58585472107 V*m^(-1) ] pfwd: 0.995100541685 +/- 0.106732496219 W } ]
+f: 2375500541.26 t: [56] p: 1 [ { pbwd: 0.0489089600594 +/- 0.00466730005128 W value: [ 42.6525382996 +/- 4.26525382996 V*m^(-1) 30.9062671661 +/- 3.09062671661 V*m^(-1) 25.7828197479 +/- 2.57828197479 V*m^(-1) ] pfwd: 0.981279356737 +/- 0.105250063532 W } ]
+f: 3000000000.0 t: [0] p: 0 [ { pbwd: 0.0538431199567 +/- 0.00488332268949 W value: [ 11.7375774384 +/- 1.17375774384 V*m^(-1) 39.1316261292 +/- 3.91316261292 V*m^(-1) 5.7260389328 +/- 0.57260389328 V*m^(-1) ] pfwd: 1.00156612367 +/- 0.107209843165 W } ]
+f: 3000000000.0 t: [0] p: 1 [ { pbwd: 0.0506443751614 +/- 0.00459321128715 W value: [ 12.2573518753 +/- 1.22573518753 V*m^(-1) 37.6085166931 +/- 3.76085166931 V*m^(-1) 6.23965835571 +/- 0.623965835571 V*m^(-1) ] pfwd: 1.00050837145 +/- 0.107096619039 W } ]
+f: 3000000000.0 t: [28] p: 0 [ { pbwd: 0.037856217423 +/- 0.00343338435121 W value: [ 17.9669113159 +/- 1.79669113159 V*m^(-1) 38.3581008911 +/- 3.83581008911 V*m^(-1) 38.3207473755 +/- 3.83207473755 V*m^(-1) ] pfwd: 1.00076158624 +/- 0.107123723707 W } ]
+f: 3000000000.0 t: [28] p: 1 [ { pbwd: 0.0382824934844 +/- 0.00347204562426 W value: [ 19.1117362976 +/- 1.91117362976 V*m^(-1) 35.9088783264 +/- 3.59088783264 V*m^(-1) 38.1348304749 +/- 3.81348304749 V*m^(-1) ] pfwd: 1.00039572414 +/- 0.107084561023 W } ]
+f: 3000000000.0 t: [56] p: 0 [ { pbwd: 0.0593346270967 +/- 0.0053813770637 W value: [ 25.1532688141 +/- 2.51532688141 V*m^(-1) 32.2304878235 +/- 3.22304878235 V*m^(-1) 10.7599649429 +/- 1.07599649429 V*m^(-1) ] pfwd: 1.00112158868 +/- 0.107162259161 W } ]
+f: 3000000000.0 t: [56] p: 1 [ { pbwd: 0.0587564052131 +/- 0.00532893500526 W value: [ 25.3865470886 +/- 2.53865470886 V*m^(-1) 31.8951244354 +/- 3.18951244354 V*m^(-1) 10.6809558868 +/- 1.06809558868 V*m^(-1) ] pfwd: 0.999599722329 +/- 0.106999355236 W } ]

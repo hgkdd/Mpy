@@ -88,23 +88,26 @@ def linspaceN(start,stop,number,endpoint=0,precision=2):
     lst = [round(start+step*i,precision) for i in xrange(number)]
     return lst
 
-def logspaceTab(start, end, ftab=[3,6,10,100,1000], nftab=[20,15,10,20,20], endpoint=True):
+def logspaceTab(start, end, ftab=[1,3,6,10,100,1000], nftab=[20,15,10,20,20], endpoint=True):
     freqs = []
-    s = start
+    s = ftab[0]
     finished = False
-    for i,ft in ftab:
-        e = start*ft
+    for i,ft in enumerate(ftab[1:]):
+        e = ft
         f = logspaceN(s,e,nftab[i],endpoint=False)
         while len(f) and f[-1]>end:  # More points as we need
             f.pop()
             finished = True
-        freqs = freqs + f
+        freqs.extend(f)
         if finished:
             break
         s = e
     if endpoint and end not in freqs:
         freqs.append(end)
-    return freqs
+    for i,f in enumerate(freqs):
+        if f>=start:
+            break
+    return freqs[i:]
 
 
 def frange(limit1, limit2=None, increment=1.):

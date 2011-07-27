@@ -15,7 +15,7 @@ def get_calling_sequence(prefixes=None):
                 candidate=name  # probably, we will not get more information. But we try further...
             else:
                 module=inspect.getmodule(obj) # 'code' from outerframes is only one line. We need more...
-            print type(module)
+            #print type(module)
             try:
                 slines, _ = inspect.getsourcelines(module) # so, get the module
             except IOError:  # can not get the source
