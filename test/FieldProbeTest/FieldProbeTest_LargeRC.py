@@ -17,7 +17,7 @@ def W2dBm (v):
     
 MpyDIRS=['\\MpyConfig\\LargeRC', '.']  # Suchpfad fuer dot, ini, dat
 
-dot='mvk-immunity-pmm.dot' # Messaufbau mit PMM field probe
+dot='mvk-immunity.dot' # Messung mit AR Feldsonde 
     
 names={'sg': 'Sg',
        'amp_in': 'Amp_Input',
@@ -36,13 +36,18 @@ tuner=instrumentation[mg.name.tuner]                            # Tuner
 fp=instrumentation[mg.name.fp]                                  # Feldsonde
 #
 outname="FieldProbeTest.p" 
-freq=[7.9e9]#4e9,8e9]
+freq=[1e9,3e9,8e9]
 stirrer=int(0)     
 E=['Ex','Ey','Ez','Emag']
+#
+Pmin=0.1
 Pmax1=80
 Pmax2=25
 Pmax3=15
-Emax=400
+Pn1=45
+Pn2=25
+Pn3=20
+Emax=600
 #
 try:
     print ' '
@@ -58,40 +63,53 @@ try:
     #
     print ' --> measurement started'
     for f in freq:
-        if (f>=8e7) and (f<=2e9):   
-            power=scipy.logspace(scipy.log10(0.001),scipy.log10(Pmax1),20)
-        elif (f>2e9) and (f<=6e9):
-            power=scipy.logspace(scipy.log10(0.001),scipy.log10(Pmax2),20)
-        elif (f>6e9) and (f<12e9):
-            power=scipy.logspace(scipy.log10(0.001),scipy.log10(Pmax3),20)
-        else:
-            break
-        #
-        DataDct[f]=dict.fromkeys(power,{})
-        for P in power: 
-            DataDct[f][P]=dict.fromkeys(E,None)
+        DataDct[f]={}
         #
         mg.EvaluateConditions()
         (minf, maxf) = mg.SetFreq_Devices(f)
-        mg.RFOn_Devices()
         lev=Leveler(mg, mg.name.sg, mg.name.output, mg.name.output, mg.name.pm_fwd)
-        for P in power: 
-            Ptarget=Quantity(WATT, P) 
+        #
+        if (f>=8e7) and (f<=2e9):   
+            #power=scipy.logspace(scipy.log10(0.001),scipy.log10(Pmax1),20)
+            p=scipy.linspace(scipy.sqrt(Pmin),scipy.sqrt(Pmax1),Pn1)
+            power=p**2
             #
-            #  
-            sglv1, p_val1 = lev.adjust_level(Ptarget)
+        elif (f>2e9) and (f<=6e9):
+            #power=scipy.logspace(scipy.log10(0.001),scipy.log10(Pmax2),20)
+            p=scipy.linspace(scipy.sqrt(Pmin),scipy.sqrt(Pmax2),Pn2)
+            power=p**2
+            #
+        elif (f>6e9) and (f<12e9):
+            #power=scipy.logspace(scipy.log10(0.001),scipy.log10(Pmax3),20)
+            p=scipy.linspace(scipy.sqrt(Pmin),scipy.sqrt(Pmax3),Pn3)
+            power=p**2
+            #
+        else:
+            break
+        #
+        mg.RFOn_Devices()
+        for P in power: 
+            
+            Ptarget=Quantity(WATT, P)  
+            sglv, p_val = lev.adjust_level(Ptarget)
+            Preal=p_val.get_expectation_value_as_float()
+            #
+            if P*0.8 < Preal:
+                DataDct[f][Preal]={}
+            else:
+                break
+            #
+            e_val=[]
             err, e_val = fp.GetData()
             #
-            # print '  freq: ', f, '   P: ', P,'   E: ', e_val
-            #
-            DataDct[f][P]['Ex'] =e_val[0].get_expectation_value_as_float()
-            DataDct[f][P]['Ey'] =e_val[1].get_expectation_value_as_float()
-            DataDct[f][P]['Ez'] =e_val[2].get_expectation_value_as_float()        
-            DataDct[f][P]['Emag']=scipy.sqrt(DataDct[f][P]['Ex']**2+DataDct[f][P]['Ey']**2+DataDct[f][P]['Ez']**2)
+            DataDct[f][Preal]['Ex'] =e_val[0].get_expectation_value_as_float()
+            DataDct[f][Preal]['Ey'] =e_val[1].get_expectation_value_as_float()
+            DataDct[f][Preal]['Ez'] =e_val[2].get_expectation_value_as_float()        
+            DataDct[f][Preal]['Emag']=scipy.sqrt(DataDct[f][Preal]['Ex']**2+DataDct[f][Preal]['Ey']**2+DataDct[f][Preal]['Ez']**2)
             #             
-            print 'freq:  %dMHZ  power:  %.3fW  Ex: %.2f  Ey: %.2f  Ez:  %.2f  Emag: %.2f' %(f/1e6,P,DataDct[f][P]['Ex'],DataDct[f][P]['Ey'],DataDct[f][P]['Ez'],DataDct[f][P]['Emag']) 
+            print 'f:  %dMHZ  P:  %.3fW  Preal: %.3fW Ex: %.2f  Ey: %.2f  Ez:  %.2f  Emag: %.2f' %(f/1e6,P,Preal,DataDct[f][Preal]['Ex'],DataDct[f][Preal]['Ey'],DataDct[f][Preal]['Ez'],DataDct[f][Preal]['Emag']) 
             # 
-            if DataDct[f][P]['Emag']>Emax:
+            if DataDct[f][Preal]['Emag']>Emax:
                 break
         mg.RFOff_Devices()
     #
@@ -116,23 +134,23 @@ pylab.rcParams.update(params)
 #
 pylab.axes([0.125,0.125,0.825,0.825])
 #
-pylab.xlabel('Input power P in dBm')
-pylab.ylabel('Squared field strength ratio E to Emax')
+pylab.xlabel('Square root of input power P in W^(-1/2)')
+pylab.ylabel('Field strength E in V/m')
 #
 for f in freq:
     power       = sorted(DataDct[f].keys())
-    Plot_power  = 10*numpy.log10(numpy.array(power)*1e3)
-    Plot_Emag2  = numpy.zeros((len(Plot_power))) 
+    Plot_P      = numpy.sqrt(numpy.array(power)) 
+    Plot_Emag   = numpy.zeros((len(Plot_P))) 
+    #
     for i in range(len(power)): 
         if DataDct[f][power[i]]['Emag']==None:
-            Plot_Emag2[i]=None
+            Plot_Emag[i]=None
         else:    
-            Plot_Emag2[i]=(DataDct[f][power[i]]['Emag']/Emax)**2
+            Plot_Emag[i]=DataDct[f][power[i]]['Emag']
     #
-    pylab.semilogy(Plot_power, Plot_Emag2,'x--',label='%d MHz'%(f/1e6))
+    pylab.plot(Plot_P, Plot_Emag,'.',label='%.1f GHz'%(f/1e9))
 #
-pylab.ylim(1e-5,1e1)
-pylab.xlim(0,50)
+pylab.ylim(0,Emax)
 pylab.grid(True)
 pylab.legend(loc='upper left')
 pylab.savefig('FieldProbeTest.png',dpi=200)
