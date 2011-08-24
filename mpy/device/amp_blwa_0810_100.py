@@ -26,11 +26,11 @@ class AMPLIFIER(AMP):
     def SetFreq(self, freq):
         self.error=0
 
-        if (80e6<=freq<1e9) and (not self.operating):
+        if (80e6<=freq<=1e9) and (not self.operating):
             self.Operate()
             time.sleep(2)
             self.operating=True
-        elif (not 80e6<=freq<1e9) and self.operating:
+        elif (not 80e6<=freq<=1e9) and self.operating:
             self.Standby()
             self.operating=False
             return self.error, freq
