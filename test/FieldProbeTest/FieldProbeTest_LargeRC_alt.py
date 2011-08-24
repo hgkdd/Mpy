@@ -36,8 +36,8 @@ tuner=instrumentation[mg.name.tuner]                            # Tuner
 fp=instrumentation[mg.name.fp]                                  # Feldsonde
 #
 outname="FieldProbeTest.p" 
-freq=[1e9,3e9,8e9]
-stirrer=int(0)     
+freq=[500e6,1e9,3e9,8e9]
+stirrer=0     
 E=['Ex','Ey','Ez','Emag']
 #
 Pmin=0.1
@@ -63,13 +63,14 @@ try:
     #
     print ' --> measurement started'
     for f in freq:
-        DataDct[f]={}
+        #DataDct[f]={}
         #
         mg.EvaluateConditions()
         (minf, maxf) = mg.SetFreq_Devices(f)
+        mg.RFOn_Devices()
         lev=Leveler(mg, mg.name.sg, mg.name.output, mg.name.output, mg.name.pm_fwd)
         #
-        if (f>=8e7) and (f<=2e9):   
+        if 8e7<=f<=2e9: #(f>=8e7) and (f<=2e9):   
             #power=scipy.logspace(scipy.log10(0.001),scipy.log10(Pmax1),20)
             p=scipy.linspace(scipy.sqrt(Pmin),scipy.sqrt(Pmax1),Pn1)
             power=p**2
@@ -85,11 +86,9 @@ try:
             power=p**2
             #
         else:
-            break
+            continue
         #
-        mg.RFOn_Devices()
         for P in power: 
-            
             Ptarget=Quantity(WATT, P)  
             sglv, p_val = lev.adjust_level(Ptarget)
             Preal=p_val.get_expectation_value_as_float()
@@ -99,7 +98,7 @@ try:
             else:
                 break
             #
-            e_val=[]
+            #e_val=[]
             err, e_val = fp.GetData()
             #
             DataDct[f][Preal]['Ex'] =e_val[0].get_expectation_value_as_float()
@@ -143,10 +142,10 @@ for f in freq:
     Plot_Emag   = numpy.zeros((len(Plot_P))) 
     #
     for i in range(len(power)): 
-        if DataDct[f][power[i]]['Emag']==None:
-            Plot_Emag[i]=None
-        else:    
-            Plot_Emag[i]=DataDct[f][power[i]]['Emag']
+        #if DataDct[f][power[i]]['Emag']==None:
+        #    Plot_Emag[i]=None
+        #else:    
+        Plot_Emag[i]=DataDct[f][power[i]]['Emag']
     #
     pylab.plot(Plot_P, Plot_Emag,'.',label='%.1f GHz'%(f/1e9))
 #
