@@ -51,7 +51,11 @@ class FIELDPROBE(FLDPRB):
         self.error=0
         cmd="D,%d?"%self.channel
         tmpl=r"D,%d,(?P<x>[\d.]{5}),(?P<y>[\d.]{5}),(?P<z>[\d.]{5}),(?P<t>[\d.]{5})"%self.channel
-        ans=self.query(cmd,tmpl)
+        for i in range(5):  # 5 tries
+            ans=self.query(cmd,tmpl)
+            if ans:
+                break
+            time.sleep(0.1)
         #print ans
         if self.freq <= 1e9:
             relerr=0.096  # 0.8 dB
