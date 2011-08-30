@@ -9,6 +9,8 @@ Copyright (c) 2001-2011 All rights reserved
 from __future__ import division
 import math
 import sys
+import os
+import shutil
 import time
 #import rpy
 import numpy
@@ -291,11 +293,28 @@ class MSC(Measure.Measure):
                 msg = ("Position E field probes (%d to %d) and reference antenna (%d to %d) ...\n"
                       "Are you ready to start the measurement?\n\n"
                       "Start: start measurement.\n"
-                      "Quit: quit measurement."%(p,p+nprb-1,pra,pra+nrefant-1))
+                      "Quit: perform autosave and quit measurement."%(p,p+nprb-1,pra,pra+nrefant-1))
                 but = ["Start", "Quit"]
                 answer = self.messenger(msg, but)
                 if answer == but.index('Quit'):
                     self.messenger(util.tstamp()+" measurement terminated by user.", [])
+                    # perform autosave
+                    self.autosave_info={'prbposleft': prbposleft,
+                                            'refantposleft': refantposleft,
+                                            'LastMeasuredFreq': freqs[-1],
+                                            'LastMeasuredTpos': alltpos[-1],
+                                            'PrbPosCounter': PrbPosCounter.copy(),
+                                            'RefAntPosCounter': RefAntPosCounter.copy()}
+                    if self.asname:
+                        self.messenger(util.tstamp()+" autosave ...", [])
+                        basename, extension = os.path.splitext(self.asname)
+                        try:
+                            # save the autosave file
+                            shutil.copyfile(self.asname, "%s-%s.p"%(basename, time.strftime("%Y-%m-%d_%H_%M_%S", time.gmtime())))
+                        except IOError: # no src or dst not writeble (should not happen)
+                            pass # ignore 
+                        self.do_autosave()
+                        self.messenger(util.tstamp()+" ... done", [])
                     raise UserWarning      # to reach finally statement
                 ##############################################
                 # loop tuner positions
