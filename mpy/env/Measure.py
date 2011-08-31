@@ -9,7 +9,7 @@
 import sys
 import os
 import time
-import cPickle
+import cPickle as pickle
 import gzip
 import re
 import tempfile
@@ -23,12 +23,19 @@ except ImportError:
     
 from mpy.device import device
 from mpy.tools import util,calling
-import scuq as uq
+from scuq.quantities import Quantity
+from scuq.si import WATT
 
 try:
     import pyttsx
     _tts=pyttsx.init()
+    _tts.setProperty('volume', 1.0)
+    vs=_tts.getProperty('voices')
+    #for v in vs:
+    #    if v.name == 'Microsoft Mary':
+    #        _tts.setProperty('voice', v.id)
     #_tts.SetVoiceByName('MSMary')
+    raise ImportError
 except ImportError:
     _tts=None
 
@@ -115,7 +122,7 @@ class Measure(object):
                 print str(k)+":",
                 self.out(item[k])
             print "}",
-        elif hasattr(item, 'index'):  # a list like object
+        elif hasattr(item, 'append'):  # a list like object
             print "[",
             for i in item:
                 self.out(i)
@@ -315,7 +322,7 @@ class Measure(object):
         self.asname = name
 
     def do_autosave(self, name_or_obj=None, depth=None, prefixes=None):
-        """Serialize *self* using :mod:`cPickle`.
+        """Serialize *self* using :mod:`pickle`.
 
            Assuming a calling sequence like so::
         
@@ -343,13 +350,17 @@ class Measure(object):
             calling_sequence=[cs for cs in calling_sequence if cs != '<string>']
             #print calling_sequence
             try:
-                self.ascmd=calling_sequence[depth]
+                ascmd=calling_sequence[depth]
             except IndexError:
-                self.ascmd=calling_sequence[-1]
-            if self.ascmd.startswith('exec'):
-                print self.ascmd
-                self.ascmd = str(re.match( r'exec.*\(.*[\'\"](.*)[\'\"].*\)', self.ascmd ).groups()[0]) # extrace arg of exec
-
+                ascmd=calling_sequence[-1]
+            if ascmd.startswith('exec'):
+                # print self.ascmd
+                ascmd = ascmd[ascmd.index( '(' )+1: ascmd.rindex(')')].strip() # part between brackets
+                var=util.get_var_from_nearest_outerframe(ascmd)
+                if var:
+                    ascmd=var
+            self.ascmd=ascmd
+            # print "Measure.py; 363:", self.ascmd
             # now, we can serialize 'self'
             pfile=None
             if isinstance(name_or_obj, basestring):   # it's a string (filename)
@@ -370,7 +381,7 @@ class Measure(object):
                 
             try:
                 try:
-                    cPickle.dump(self, pfile, 2)
+                    pickle.dump(self, pfile, 2)
                     self.lastautosave = time.time()
                 except IOError:
                     util.LogError (self.messenger)
@@ -460,33 +471,30 @@ class Measure(object):
                 # #break  # only first true condition ie evaluated
         # return None
 
-    def set_level(self, mg, names, l):
-        sg = mg.nodes[names['sg']]['inst']
-        # get unit for sg
-        if mg.nodes[names['sg']].has_key('ch'):
-            ch_sec = 'channel_' + str(mg.nodes['sg']['ch'])
-        else:
-            ch_sec = 'channel_1'
-        sg_unit_str = mg.nodes[names['sg']]['inidic'][ch_sec]['unit']
-        sg_unit = mg.UMD_UNITS[sg_unit_str.lower()]
-        try:
-            l = l.convert(sg_unit)
-            l = l.get_v()
+    def set_level(self, mg, l, leveler=None):
+        """
+        """
+
+        sg = mg.instrumentation[mg.name.sg]
+        # l is in dBm -> convert to WATT
+        l=Quantity(WATT, 10**(0.1*l)*0.001)
+        
+        if leveler is None: # try to use instance leveler
             try:
-                l=l.real   # if complex -> ignore imaginary part
+                leveler=self.leveler_inst#(**self.leveler_par)
             except AttributeError:
-                pass  # not a complex
-        except AttributeError:
-            pass   # not an MResult or CMResult
-        is_save, message = mg.AmplifierProtect (names['sg'], names['a2'], l, sg_unit, typ='lasy')
-        if not is_save:
-            raise AmplifierProtectionError, message
-        # set level
-        lv = sg.SetLevel (l)
-        #Create UMDCMResult with this level, unit
-        level = device.UMDCMResult(complex(lv,mg.zero(sg_unit)), sg_unit)
-        self.messenger(util.tstamp()+" Signal Generator set to %s"%(str(level)), [])
-        return level
+                pass  # stay with None
+
+        if leveler: #use MaxSafe
+            l = min(l, leveler.MaxSafe)
+        err, lv = sg.SetLevel (l)
+        
+        #is_save, message = mg.AmplifierProtect (names['sg'], names['a2'], l, sg_unit, typ='lasy')
+        #if not is_save:
+        #    raise AmplifierProtectionError, message
+
+        self.messenger(util.tstamp()+" Signal Generator set to %s"%(lv), [])
+        return lv
 
     # def __test_leveling_condition(self, actual, nominal, c_level):
         # cond = True
@@ -503,7 +511,7 @@ class Measure(object):
 
     def make_deslist(self, thedata, description):
         if description is None:
-            description = []
+            description = thedata.keys()
         if util.issequence(description): # a sequence
             deslist = [des for des in description if des in thedata]
         else:

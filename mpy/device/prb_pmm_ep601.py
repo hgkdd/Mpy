@@ -54,7 +54,7 @@ class FIELDPROBE(FLDPRB):
                                timeout=1,
                                baudrate=9600)
 
-        #self.dev.write('#00e 600') # switch off after 3 hours
+        #self.dev.write('#00e 600*') # switch off after 10 minutes
         ans=self._query('#00e 10800*', 1) # switch off after 3 hours
         if ans != 'e':
             self.error=1
@@ -96,16 +96,17 @@ class FIELDPROBE(FLDPRB):
         else:
             self.error=1
         self.dev.flushInput()
-        return self.error, rfreq*1e6
+        return self.error, rfreq  # rfreq*1e6
     
     def GetData(self):
         self.error=0
         data=None
         for i in range(5):
             ans=self._query('#00?A*',1)
-            #if debug: print ans
+            #print 'Sonde: ',ans
             if ans=='A':
                 data=struct.unpack('<3f', self._read(12))
+                #print data
                 relerr=0.1  # geschaetzt        
                 data=[quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(v, v*relerr)) for v in data]
                 self.error=0
@@ -141,6 +142,7 @@ class FIELDPROBE(FLDPRB):
         return self.error, percent*0.01
     
     def Quit(self):
+        self.dev.close()
         self.error=0
         return self.error
 

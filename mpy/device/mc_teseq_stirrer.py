@@ -12,10 +12,12 @@ class MOTORCONTROLLER(MC):
         pass
 
     def _state(self):
+        time.sleep(0.5)
         ans=self._ask('?') # ask for status
         #print ans
         ans=ans.split(",")
         stopped=(ans[0]=='1')
+        #print ans,' --> ', ans[0], ans[1], ' --> ', stopped
         self.ca=float(ans[1]) # current angle
         self.drive_init_ok=(ans[2]=='0')
         fail=(ans[3]=='1')
@@ -68,12 +70,20 @@ class MOTORCONTROLLER(MC):
         maxspeed=6
         minspeed=0.18
         acc=65
-        self.dev=serial.Serial(port=port, # 2 -> COM3 
-                            baudrate=9600,
-                            bytesize=serial.EIGHTBITS,
-                            parity=serial.PARITY_NONE,
-                            stopbits=serial.STOPBITS_ONE,
-                            timeout=None)
+        for i in range(5):
+            try:
+                self.dev=serial.Serial(port=port, # 2 -> COM3 
+                                baudrate=9600,
+                                bytesize=serial.EIGHTBITS,
+                                parity=serial.PARITY_NONE,
+                                stopbits=serial.STOPBITS_ONE,
+                                timeout=None)
+                break
+            except:
+                time.sleep(0.5)
+        else:
+            raise
+        
         ans=self._ask('INIT')
         self._wait()
         if not self.drive_init_ok:
@@ -182,6 +192,7 @@ class MOTORCONTROLLER(MC):
             # stop first
             self._write('STOP')
             self.ca=self._wait()
+        self.dev.close()
         return self.error
             
 def main():

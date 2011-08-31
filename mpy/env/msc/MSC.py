@@ -4,65 +4,29 @@ MSC: class for MSC measurements
 
 Author: Dr. Hans Georg Krauthaeuser, hgk@ieee.org
 
-Copyright (c) 2001-2005 All rights reserved
-Note: rpy and R are GPLed
-...
-Form the R FAQ:
-2.11 Can I use R for commercial purposes?
-
-R is released under the GNU General Public License (GPL).
-If you have any questions regarding the legality of using R
-in any particular situation you should bring it up with your legal counsel.
-We are in no position to offer legal advice.
-
-It is the opinion of the R Core Team that one can use
-R for commercial purposes (e.g., in business or in consulting).
-The GPL, like all Open Source licenses, permits all and any use of the package.
-It only restricts distribution of R or of other programs containing code from R. This is made clear in clause 6 (“No Discrimination Against Fields of Endeavor”)
-of the Open Source Definition:
-
-    The license must not restrict anyone from making use of the
-    program in a specific field of endeavor. For example, it may not restrict
-    the program from being used in a business, or from being
-    used for genetic research. 
-
-It is also explicitly stated in clause 0 of the GPL, which says in part
-
-    Activities other than copying, distribution and modification are
-    not covered by this License; they are outside its scope. The act
-    of running the Program is not restricted, and the output from the
-    Program is covered only if its contents constitute a work based on
-    the Program. 
-
-Most add-on packages, including all recommended ones, also explicitly
-allow commercial use in this way. A few packages are restricted
-to “non-commercial use”; you should contact the author to clarify whether
-these may be used or seek the advice of your legal counsel.
-
-None of the discussion in this section constitutes legal advice. The R Core Team does not provide legal advice under any circumstances. 
-...
-
-So, my understanding is that I can use it.
+Copyright (c) 2001-2011 All rights reserved
 """
 from __future__ import division
 import math
 import sys
+import os
+import shutil
 import time
-import rpy
+#import rpy
+import numpy
 import scipy
+import scipy.interpolate
+import scipy.optimize
 import pprint
 
-scipy_pkgs=('interpolate','optimize')
-for p in scipy_pkgs:
-    try:
-        getattr(scipy,p)
-    except AttributeError:
-        scipy.pkgload(p)
-
-
 from mpy.device import device
-from mpy.tools import util
+from mpy.tools import util,mgraph,spacing,distributions,correlation
 from mpy.env import Measure
+from mpy.tools.aunits import *
+
+from scuq.quantities import Quantity
+from scuq.ucomponents import Context
+from scuq.si import WATT, VOLT, METER
 
 
 #from win32com.client import Dispatch
@@ -150,16 +114,19 @@ class MSC(Measure.Measure):
                            description="empty",
                            dotfile='msc-calibration.dot',
                            delay=1.0,
+                           LUF=250e6,                           
                            FStart=150e6,
                            FStop=1e9,
-                           SGLevel=-20,
-                           leveling=None,
-                           ftab=[3,6,10,100,1000],
+                           InputLevel=None,
+                           leveler=None,
+                           leveler_par=None,
+                           ftab=[1,3,6,10,100,1000],
                            nftab=[20,15,10,20,20],
                            ntuntab=[[50,18,12,12,12]],
                            tofftab=[[7,14,28,28,28]],
                            nprbpostab=[8,8,8,8,8],
                            nrefantpostab=[8,8,8,8,8],
+                           SearchPaths=None,
                            names={'sg': 'sg',
                                   'a1': 'a1',
                                   'a2': 'a2',
@@ -172,72 +139,86 @@ class MSC(Measure.Measure):
                                   'pmref': ['pmref1']}):
         """Performs a msc main calibration according to IEC 61000-4-21
         """
-        self.pre_user_event()
-
+        ctx=Context()
+        self.PreUserEvent()
+        ftab=LUF*scipy.array(ftab)
+        
         if self.autosave:
-            self.messenger(umdutil.tstamp()+" Resume main calibration measurement from autosave...", [])
+            self.messenger(util.tstamp()+" Resume main calibration measurement from autosave...", [])
         else:
-            self.messenger(umdutil.tstamp()+" Start new main calibration measurement...", [])
+            self.messenger(util.tstamp()+" Start new main calibration measurement...", [])
 
         self.rawData_MainCal.setdefault(description, {})
-
-        if leveling is None:
-            leveling = [{'condition': 'False',
-                         'actor': None,
-                         'actor_min': None,
-                         'actor_max': None,
-                         'watch': None,
-                         'nominal': None,
-                         'reader': None,
-                         'path': None}]
                     
         # number of probes, ref-antenna and tuners
         nprb = len(names['fp'])
         nrefant = min(len(names['refant']),len(names['pmref']))
         ntuner = min(len(ntuntab),len(tofftab),len(names['tuner']))
+        
+        mg=mgraph.MGraph(dotfile, map=names.copy(), SearchPaths=SearchPaths)
 
-        mg=umdutil.UMDMGraph(dotfile)
-        ddict=mg.CreateDevices()
+        if leveler is None:
+            self.leveler=mgraph.Leveler
+        else:
+            self.leveler=leveler
+        if leveler_par is None:
+            self.leveler_par = {'mg': mg, 
+                                'actor': mg.name.sg, 
+                                'output': mg.name.ant, 
+                                'lpoint': mg.name.ant, 
+                                'observer': mg.name.pmfwd, 
+                                'pin': None, 
+                                'datafunc': None, 
+                                'min_actor': None}
+        else:
+            self.leveler_par=leveler_par
+        if InputLevel is None:
+            self.InputLevel=Quantity(WATT, 1e-3)   # 1 mW default
+        else:
+            self.InputLevel=InputLevel
+        
+        leveler_inst=None
+        
+        
+        ddict=mg.CreateDevices()  # ddict -> instrumentation
         #for k,v in ddict.items():
         #    globals()[k] = v
             
-        self.messenger(umdutil.tstamp()+" Init devices...", [])
+        self.messenger(util.tstamp()+" Init devices...", [])
         err = mg.Init_Devices()
         if err: 
-            self.messenger(umdutil.tstamp()+" ...faild with err %d"%(err), [])
+            self.messenger(util.tstamp()+" ...faild with err %d"%(err), [])
             return err
         try:  
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
             stat = mg.RFOff_Devices()
-            self.messenger(umdutil.tstamp()+" Zero devices...", [])
+            self.messenger(util.tstamp()+" Zero devices...", [])
             stat = mg.Zero_Devices()
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
 
-            try:
-                level = self.set_level(mg, names, SGLevel)
-            except AmplifierProtectionError, _e:
-                self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
-                raise  # re raise to reach finaly clause
                 
             # list of frequencies
-            freqs = umdutil.logspaceTab(FStart,FStop,ftab,nftab,endpoint=True)
+            freqs = spacing.logspaceTab(FStart,FStop,ftab,nftab,endpoint=True)
+            
             PrbPosCounter ={}
             RefAntPosCounter ={}
             #calculate numbrer of required probe positions for each freq
             positions={}
             hasDupes = []
             for f in freqs:
-                findex = umdutil.getIndex(f, [_f*FStart for _f in ftab])
+                findex = util.getIndex(f, ftab) - 1 
                 #print f, findex
                 PrbPosCounter[f] = nprbpostab[findex]   # number of positions to measure for this freq
                 RefAntPosCounter[f] = nrefantpostab[findex]   # number of positions (ref ant)
-                if positions.has_key(findex):
+                if findex in positions:
                     continue
                 positions[findex]=[]
                 for tunerindex in range(ntuner):
                     positions[findex].append( [tunerposindex*tofftab[tunerindex][findex] for tunerposindex in range(ntuntab[tunerindex][findex])])
-                positions[findex] = umdutil.combinations(positions[findex])
+                positions[findex] = util.combinations(positions[findex])
+                # collection of all tuner positions
                 hasDupes += positions[findex]
+            # remove duplicate tuner pos entries...
             noDupes = []
             [noDupes.append(_i) for _i in hasDupes if not noDupes.count(_i)]
             alltpos = noDupes   # unique and sorted
@@ -252,26 +233,26 @@ class MSC(Measure.Measure):
             noise={}
             etaTx = {}
             etaRx = {}
-            as_i={'prbposleft': prbposleft,
-                                'refantposleft': refantposleft,
-                                'LastMeasuredFreq': None,
-                                'LastMeasuredTpos': None}
-            if self.autosave:
+            # for autosave: autosave_info
+            as_i={'prbposleft': prbposleft,  #remaining probe positions
+                  'refantposleft': refantposleft,  # remaining ref ant positions
+                  'LastMeasuredFreq': None,   # last freq measure before auto save
+                  'LastMeasuredTpos': None}  # last tuner position measured before auto save 
+            # restore from auto save
+            if self.autosave:  # self.autosave is set True in Measure.do_autosave, i.e. instance was created from autosave pickle file
+                # copy raw data
                 efields=self.rawData_MainCal[description]['efield'].copy()
                 prefant=self.rawData_MainCal[description]['pref'].copy()
                 noise=self.rawData_MainCal[description]['noise'].copy()
-                
+                # autosave info record
                 as_i=self.autosave_info.copy()
-                try:
-                    as_i['LastMeasuredTpos']=as_i['LastMeasuredTPos']  # Greding special (black magic)
-                except KeyError:
-                    pass
+                # number of probe positions and ref ant positions not yet measured
                 prbposleft=as_i['prbposleft']
                 refantposleft=as_i['refantposleft']
-                if 'PrbPosCounter' in as_i:
-                    PrbPosCounter=as_i['PrbPosCounter'].copy()
-                if 'RefAntPosCounter' in as_i:
-                    RefAntPosCounter=as_i['RefAntPosCounter'].copy()
+                #if 'PrbPosCounter' in as_i:
+                PrbPosCounter=as_i['PrbPosCounter'].copy()
+                #if 'RefAntPosCounter' in as_i:
+                RefAntPosCounter=as_i['RefAntPosCounter'].copy()
 
 ##                
 ##                edat = self.rawData_MainCal[description]['efield']
@@ -294,78 +275,110 @@ class MSC(Measure.Measure):
 ##                refantposleft -= len(rpees)
                 
 ##                msg = "List of probe positions from autosave file:\n%s\nList of ref antenna positions from autosave file:\n%s\n"%(str(epees), str(rpees))
-                msg = "List of probe positions from autosave file:\n%s\nList of ref antenna positions from autosave file:\n%s\n"%(str(range(maxnprbpos-max(0,prbposleft))), str(range(maxnrefantpos-max(0,refantposleft))))
+                msg = ("List of probe positions from autosave file:\n"
+                      "%s\n"
+                      "List of ref antenna positions from autosave file:\n"
+                      "%s\n"%( range(1, maxnprbpos   -max(0,prbposleft)   +1), 
+                               range(1, maxnrefantpos-max(0,refantposleft)+1) ) )
                 but = []
                 self.messenger(msg, but)
-            self.autosave=False    
+            self.autosave=False  # reset auto save flag
+            ##################################################
             # for all probe/refant positions
-            while prbposleft > 0 or refantposleft > 0:
+            ##################################################
+            while prbposleft > 0 or refantposleft > 0:   # positions are count down
                 stat = mg.RFOff_Devices()
-                msg = """Position E field probes and reference antenna...\nAre you ready to start the measurement?\n\nStart: start measurement.\nQuit: quit measurement."""
+                p = maxnprbpos - prbposleft + 1 # current probe pos 
+                pra = maxnrefantpos - refantposleft + 1 # current refant pos
+                msg = ("Position E field probes (%d to %d) and reference antenna (%d to %d) ...\n"
+                      "Are you ready to start the measurement?\n\n"
+                      "Start: start measurement.\n"
+                      "Quit: perform autosave and quit measurement."%(p,p+nprb-1,pra,pra+nrefant-1))
                 but = ["Start", "Quit"]
                 answer = self.messenger(msg, but)
                 if answer == but.index('Quit'):
-                    self.messenger(umdutil.tstamp()+" measurement terminated by user.", [])
+                    self.messenger(util.tstamp()+" measurement terminated by user.", [])
+                    # perform autosave
+                    self.autosave_info={'prbposleft': prbposleft,
+                                            'refantposleft': refantposleft,
+                                            'LastMeasuredFreq': freqs[-1],
+                                            'LastMeasuredTpos': alltpos[-1],
+                                            'PrbPosCounter': PrbPosCounter.copy(),
+                                            'RefAntPosCounter': RefAntPosCounter.copy()}
+                    if self.asname:
+                        self.messenger(util.tstamp()+" autosave ...", [])
+                        basename, extension = os.path.splitext(self.asname)
+                        try:
+                            # save the autosave file
+                            shutil.copyfile(self.asname, "%s-%s.p"%(basename, time.strftime("%Y-%m-%d_%H_%M_%S", time.gmtime())))
+                        except IOError: # no src or dst not writeble (should not happen)
+                            pass # ignore 
+                        self.do_autosave()
+                        self.messenger(util.tstamp()+" ... done", [])
                     raise UserWarning      # to reach finally statement
-                p = maxnprbpos - prbposleft + 1 # current probe pos 
-                pra = maxnrefantpos - refantposleft + 1 # current refant pos
+                ##############################################
                 # loop tuner positions
+                ################################################
                 for t in alltpos:
                     ast=as_i['LastMeasuredTpos']
-                    if ast:
-                        if alltpos[-1]==ast:
-                            pass
-                        elif alltpos.index(t)<=alltpos.index(ast):
-                            continue
-                    as_i['LastMeasuredTpos']=None
-                    self.messenger(umdutil.tstamp()+" Tuner position %s"%(repr(t)), [])
+                    if ast: # True: instance from auto save pickle file
+                        if alltpos[-1]==ast:  # don't remember why this is useful ????? 
+                            pass   # special case for last tuner position ?????
+                        elif alltpos.index(t)<alltpos.index(ast): # tuner pos already measured 
+                            continue   # next t-pos
+                    as_i['LastMeasuredTpos']=None  # reset flag
+                    self.messenger(util.tstamp()+" Tuner position %r"%t, [])
                     # position tuners
-                    self.messenger(umdutil.tstamp()+" Move tuner(s)...", [])
-                    for i in range(ntuner):
-                        TPos = umddevice.UMDMResult(t[i], umddevice.UMD_deg)
-                        IsPos = ddict[names['tuner'][i]].Goto (TPos, 0)
-                    self.messenger(umdutil.tstamp()+" ...done", [])
+                    self.messenger(util.tstamp()+" Move tuner(s)...", [])
+                    for i, tname in enumerate(names['tuner']):
+                        TPos = t[i]
+                        IsPos = ddict[tname].Goto (TPos)
+                    self.messenger(util.tstamp()+" ...done", [])
+                    ########################################################
                     # loop freqs
+                    ########################################################
                     for f in freqs:
                         asf=as_i['LastMeasuredFreq']
                         if asf:
                             if (freqs[-1]==asf) and not (alltpos[-1]==ast):
-                                pass
-                            elif (freqs[-1]==asf) and (alltpos[-1]==ast):
-                                for fr in freqs:
+                                pass  # last freq measured but not for last t-pos
+                            elif (freqs[-1]==asf) and (alltpos[-1]==ast): # last freq for last t-pos measured
+                                for fr in freqs:  # count down Pos Counters
                                     RefAntPosCounter[fr] -= nrefant
                                     PrbPosCounter[fr] -= nprb                    
                             elif freqs.index(f)<=freqs.index(asf):
-                                continue
-                        as_i['LastMeasuredFreq']=None
-                        self.messenger(umdutil.tstamp()+" Frequency %e Hz"%(f), [])
-                        findex = umdutil.getIndex(f, [_i*FStart for _i in ftab])
+                                continue   # f already measured -> next freq
+                        as_i['LastMeasuredFreq']=None  # reset flag
+                        self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
+                        findex = util.getIndex(f, ftab) - 1 
                         if t not in positions[findex]:   # pos t is not for this freq
-                            self.messenger(umdutil.tstamp()+" Skipping tuner position", [])
+                            self.messenger(util.tstamp()+" Skipping tuner position", [])
                             continue
                         # switch if necessary
                         #print f
                         mg.EvaluateConditions()
                         # set frequency for all devices
                         (minf, maxf) = mg.SetFreq_Devices (f)
+                                                
+                                            
                         # cable corrections
-                        c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], umddevice.UMD_dB)
-                        c_sg_ant = mg.get_path_correction(names['sg'], names['ant'], umddevice.UMD_dB)
-                        c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], umddevice.UMD_dB)
-                        c_a2_ant = mg.get_path_correction(names['a2'], names['ant'], umddevice.UMD_dB)
-                        c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'], umddevice.UMD_dB)
+                        c_sg_amp = mg.get_path_correction(mg.name.sg, mg.name.a1, POWERRATIO)
+                        c_sg_ant = mg.get_path_correction(mg.name.sg, mg.name.ant, POWERRATIO)
+                        c_a2_pm1 = mg.get_path_correction(mg.name.a2, mg.name.pmfwd, POWERRATIO)
+                        c_a2_ant = mg.get_path_correction(mg.name.a2, mg.name.ant, POWERRATIO)
+                        c_ant_pm2 = mg.get_path_correction(mg.name.ant, mg.name.pmbwd, POWERRATIO)
                         c_refant_pmref = []
                         for i in range(nrefant):
-                            c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i], umddevice.UMD_dB))
+                            c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i], POWERRATIO))
                         c_fp = 1.0
-                        if not etaTx.has_key(f):
-                            eta = mg.GetAntennaEfficiency(names['ant'])
-                            self.messenger(umdutil.tstamp()+" Eta_Tx for f = %e Hz is %s"%(f,str(eta)), [])
+                        if not f in etaTx:
+                            eta = mg.GetAntennaEfficiency(mg.name.ant)
+                            self.messenger(util.tstamp()+" Eta_Tx for f = %e Hz is %s"%(f,str(eta)), [])
                             etaTx = self.__insert_it (etaTx, eta, None, None, f, t, 0)
-                        if not etaRx.has_key(f):
+                        if not f in etaRx:
                             for i in range(nrefant):
                                 eta = mg.GetAntennaEfficiency(names['refant'][i])
-                                self.messenger(umdutil.tstamp()+" Eta_Rx(%d) for f = %e Hz is %s"%(i,f,str(eta)), [])
+                                self.messenger(util.tstamp()+" Eta_Rx(%d) for f = %e Hz is %s"%(i,f,str(eta)), [])
                                 etaRx = self.__insert_it (etaRx, eta, None, None, f, t, i)
 
 
@@ -373,12 +386,12 @@ class MSC(Measure.Measure):
                         block = {}
                         nbresult = {} # dict for NB-Read results
                         pmreflist=[]
-                        nblist = [names['pmfwd'], names['pmbwd']] # list of devices for NB Reading
+                        nblist = [mg.name.pmfwd, mg.name.pmbwd] # list of devices for NB Reading
                         # check for fwd pm
-                        if mg.nodes[names['pmfwd']]['inst']:
+                        if mg.nodes[mg.name.pmfwd]['inst']:
                             NoPmFwd = False  # ok
                         else:  # no fwd pm
-                            msg = umdutil.tstamp()+" WARNING: No fwd power meter. Signal generator output is used instead!"
+                            msg = util.tstamp()+" WARNING: No fwd power meter. Signal generator output is used instead!"
                             answer = self.messenger(msg,[])
                             NoPmFwd = True
 
@@ -394,7 +407,7 @@ class MSC(Measure.Measure):
 
                         # noise floor measurement..
                         if not noise.has_key(f):
-                            self.messenger(umdutil.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
+                            self.messenger(util.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
                             mg.NBTrigger(pmreflist)
                             # serial poll all devices in list
                             olddevs = []
@@ -404,45 +417,53 @@ class MSC(Measure.Measure):
                                 new_devs=[i for i in nbresult.keys() if i not in olddevs]
                                 olddevs = nbresult.keys()[:]
                                 if len(new_devs):
-                                    self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                                    self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                                 if len(nbresult)==len(pmreflist):
                                     break
                             for i in range(nrefant):
                                 n = names['pmref'][i]
-                                if nbresult.has_key(n):
+                                if n in nbresult:
                                     # add path correction here
-                                    PRef = umddevice.UMDCMResult(nbresult[n])
+                                    PRef = nbresult[n]
                                     nn = 'Noise '+n
                                     self.__addLoggerBlock(block, nn, 'Noise reading of the receive antenna power meter for position %d'%i, nbresult[n], {})
                                     self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                     self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                     self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                    PRef /= c_refant_pmref[i]['total']
+                                    PRef = (abs((PRef / c_refant_pmref[i]).reduce_to(WATT))).eval()
                                     self.__addLoggerBlock(block, nn+'_corrected', 'Noise: Pref/c_refant_pmref', PRef, {})
                                     self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                     self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'tunerpos', 'tuner position', t, {}) 
                                     noise = self.__insert_it (noise, PRef, None, None, f, t, i)
-                            self.messenger(umdutil.tstamp()+" Noise floor measurement done.", [])
+                            self.messenger(util.tstamp()+" Noise floor measurement done.", [])
 
 
-                        self.messenger(umdutil.tstamp()+" RF On...", [])
+                        self.messenger(util.tstamp()+" RF On...", [])
                         stat = mg.RFOn_Devices()   # switch on just before measure
+                        if not leveler_inst:
+                            leveler_inst=self.leveler(**self.leveler_par)
 
-                        level2 = self.do_leveling(leveling, mg, names, locals())
-                        if level2:
-                            level=level2
+                        #try:
+                        level = leveler_inst.adjust_level (self.InputLevel)
+                        #except AmplifierProtectionError, _e:
+                        #    self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
+                        #    raise  # re raise to reach finaly clause
+
+                        #level2 = self.do_leveling(leveling, mg, names, locals())
+                        #if level2:
+                        #    level=level2
 
                         # wait delay seconds
-                        self.messenger(umdutil.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
+                        self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
                         self.wait(delay,locals(),self.__HandleUserInterrupt)
-                        self.messenger(umdutil.tstamp()+" ... back.", [])
+                        self.messenger(util.tstamp()+" ... back.", [])
 
                         # Trigger all devices in list
                         mg.NBTrigger(nblist)
                         # serial poll all devices in list
                         if NoPmFwd:
-                            nbresult[names['pmfwd']] = level
-                            nbresult[names['pmbwd']] = umddevice.UMDMResult(mg.zero(level.unit), level.get_unit())
+                            nbresult[mg.name.pmfwd] = level
+                            nbresult[mg.name.pmbwd] = Quantity (WATT, 0.0)
                         olddevs = []
                         while 1:
                             self.__HandleUserInterrupt(locals())    
@@ -450,37 +471,37 @@ class MSC(Measure.Measure):
                             new_devs=[i for i in nbresult.keys() if i not in olddevs]
                             olddevs = nbresult.keys()[:]
                             if len(new_devs):
-                                self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                                self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                             if len(nbresult)==len(nblist):
                                 break
                         # print nbresult
 
                         # pfwd
-                        n = names['pmfwd']
-                        if nbresult.has_key(n):
-                            PFwd = umddevice.UMDCMResult(nbresult[n])
+                        n = mg.name.pmfwd
+                        if n in nbresult:
+                            PFwd = nbresult[n]
                             self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                            PFwd *= c_a2_ant['total']
+                            PFwd = (abs((PFwd * c_a2_ant).reduce_to(WATT))).eval()
                             self.__addLoggerBlock(block, 'c_a2_ant', 'Correction from amplifier output to antenna', c_a2_ant, {})
                             self.__addLoggerBlock(block['c_a2_ant']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter', c_a2_pm1, {})
                             self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PFwd /= c_a2_pm1['total']
+                            PFwd = (abs((PFwd / c_a2_pm1).reduce_to(WATT))).eval()
                             self.__addLoggerBlock(block, n+'_corrected', 'Pfwd*c_a2_ant/c_a2_pm1', PFwd, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                         # pbwd
-                        n = names['pmbwd']
-                        if nbresult.has_key(n):
-                            PBwd = umddevice.UMDCMResult(nbresult[n])
+                        n = mg.name.pmbwd
+                        if n in nbresult:
+                            PBwd = nbresult[n]
                             self.__addLoggerBlock(block, n, 'Reading of the bwd power meter', nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             self.__addLoggerBlock(block, 'c_ant_pm2', 'Correction from antenna feed to bwd power meter', c_ant_pm2, {})
                             self.__addLoggerBlock(block['c_ant_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PBwd /= c_ant_pm2['total']
+                            PBwd = (abs((PBwd / c_ant_pm2).reduce_to(WATT))).eval()
                             self.__addLoggerBlock(block, n+'_corrected', 'Pbwd/c_ant_pm2', PBwd, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -490,15 +511,15 @@ class MSC(Measure.Measure):
                             if RefAntPosCounter[f] < i+1:
                                 break
                             n = names['pmref'][i]
-                            if nbresult.has_key(n):
+                            if n in nbresult:
                                 # add path correction here
-                                PRef = umddevice.UMDCMResult(nbresult[n])
+                                PRef = nbresult[n]
                                 self.__addLoggerBlock(block, n, 'Reading of the receive antenna power meter for position %d'%i, nbresult[n], {})
                                 self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                                 self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                 self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                PRef /= c_refant_pmref[i]['total']
+                                PRef = (abs((PRef / c_refant_pmref[i]).reduce_to(WATT))).eval()
                                 prefant = self.__insert_it (prefant, PRef, PFwd, PBwd, f, t, pra+i-1)
                                 self.__addLoggerBlock(block, n+'_corrected', 'Pref/c_refant_pmref', PRef, {})
                                 self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -510,16 +531,16 @@ class MSC(Measure.Measure):
                             if PrbPosCounter[f] < i+1:
                                 break
                             n = names['fp'][i]
-                            if nbresult.has_key(n):
+                            if n in nbresult:
                                 self.__addLoggerBlock(block, n, 'Reading of the e-field probe for position %d'%i, nbresult[n], {})
                                 self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                                efields = self.__insert_it (efields, nbresult[n], PFwd, PBwd, f, t, p+i-1)
+                                efields = self.__insert_it (efields, [_.eval() for _ in nbresult[n]], PFwd, PBwd, f, t, p+i-1)
                         for log in self.logger:
                             log(block)
 
                         self.__HandleUserInterrupt(locals())    
-                        self.messenger(umdutil.tstamp()+" RF Off...", [])
+                        self.messenger(util.tstamp()+" RF Off...", [])
                         stat = mg.RFOff_Devices() # switch off after measure
 
                         self.rawData_MainCal[description].update({'efield': efields,
@@ -536,22 +557,23 @@ class MSC(Measure.Measure):
                                             'RefAntPosCounter': RefAntPosCounter.copy()}
                         # autosave class instance
                         if self.asname and (time.time()-self.lastautosave > self.autosave_interval):
-                            self.messenger(umdutil.tstamp()+" autosave ...", [])
+                            self.messenger(util.tstamp()+" autosave ...", [])
                             self.do_autosave()
-                            self.messenger(umdutil.tstamp()+" ... done", [])
-
+                            self.messenger(util.tstamp()+" ... done", [])
+                        leveler_inst=None
                         # END OF f LOOP
+                    
                     # test for low battery
                     lowBatList = mg.getBatteryLow_Devices()
                     if len(lowBatList):
-                        self.messenger(umdutil.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
+                        self.messenger(util.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
                 #END OF t LOOP
 ##                self.rawData_MainCal[description].update({'efield': efields, 'pref': prefant, 'noise': noise, 'etaTx': etaTx, 'etaRx': etaRx, 'mg': mg})
 ##                # autosave class instance
 ##                if self.asname and (time.time()-self.lastautosave > self.autosave_interval):
-##                    self.messenger(umdutil.tstamp()+" autosave ...", [])
+##                    self.messenger(util.tstamp()+" autosave ...", [])
 ##                    self.do_autosave()
-##                    self.messenger(umdutil.tstamp()+" ... done", [])
+##                    self.messenger(util.tstamp()+" ... done", [])
 ##
                 # decrease counter
                 for f in freqs:
@@ -564,12 +586,14 @@ class MSC(Measure.Measure):
 
                 
         finally:
+            leveler_inst=None
+
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(umdutil.tstamp()+" RF Off and Quit...", [])
+            self.messenger(util.tstamp()+" RF Off and Quit...", [])
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
-        self.messenger(umdutil.tstamp()+" End of msc main calibration. Status: %d"%stat, [])
-        self.post_user_event()
+        self.messenger(util.tstamp()+" End of msc main calibration. Status: %d"%stat, [])
+        self.PostUserEvent()
         return stat
 
 
@@ -582,6 +606,7 @@ class MSC(Measure.Measure):
                            freqs=None,
                            toffsets=[1],
                            ntunerpos=[360],     
+                          SearchPaths=None,
                            names={'sg': 'sg',
                                   'a1': 'a1',
                                   'a2': 'a2',
@@ -592,11 +617,11 @@ class MSC(Measure.Measure):
                                   'tuner': ['tuner1']}):
         """Performs a msc autocorrelation measurement
         """
-        self.pre_user_event()
+        self.PreUserEvent()
         if self.autosave:
-            self.messenger(umdutil.tstamp()+" Resume autocorrelation measurement from autosave...", [])
+            self.messenger(util.tstamp()+" Resume autocorrelation measurement from autosave...", [])
         else:
-            self.messenger(umdutil.tstamp()+" Start new autocorrelation measurement...", [])
+            self.messenger(util.tstamp()+" Start new autocorrelation measurement...", [])
         self.rawData_AutoCorr.setdefault(description, {})
 
         if leveling is None:
@@ -613,35 +638,35 @@ class MSC(Measure.Measure):
         nprb = len(names['fp'])
         ntuner = min(len(toffsets),len(ntunerpos),len(names['tuner']))
 
-        mg=umdutil.UMDMGraph(dotfile)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
 
-        self.messenger(umdutil.tstamp()+" Init devices...", [])
+        self.messenger(util.tstamp()+" Init devices...", [])
         err = mg.Init_Devices()
         if err: 
-            self.messenger(umdutil.tstamp()+" ...faild with err %d"%(err), [])
+            self.messenger(util.tstamp()+" ...faild with err %d"%(err), [])
             return err
         try:  
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
             stat = mg.RFOff_Devices()
-            self.messenger(umdutil.tstamp()+" Zero devices...", [])
+            self.messenger(util.tstamp()+" Zero devices...", [])
             stat = mg.Zero_Devices()
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
             try:
-                level = self.set_level(mg, names, SGLevel)
+                level = self.set_level(mg,  SGLevel)
             except AmplifierProtectionError, _e:
-                self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
+                self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                 raise  # re raise to reach finaly clause
             if freqs is None:
-                self.messenger(umdutil.tstamp()+" msc autocorrelation measurment terminated. No frequencies given.", [])
+                self.messenger(util.tstamp()+" msc autocorrelation measurment terminated. No frequencies given.", [])
                 raise UserWarning      # to reach finally statement
 
             positions = []
             for tunerindex in range(ntuner):
                 positions.append( [tunerposindex*toffsets[tunerindex] for tunerposindex in range(ntunerpos[tunerindex])])
-            positions = umdutil.combinations(positions)
+            positions = util.combinations(positions)
             alltpos = positions   # unique and sorted
             # set up efields, ...
             efields={}
@@ -661,7 +686,7 @@ class MSC(Measure.Measure):
                     try:
                         alltpos.remove(eval(t))
                     except:
-                        umdutil.LogError (self.messenger)
+                        util.LogError (self.messenger)
                 msg = "List of tuner positions from autosave file:\n%s\n"%(str(tees))
                 but = []
                 self.messenger(msg, but)
@@ -672,30 +697,30 @@ class MSC(Measure.Measure):
             but = ["Start", "Quit"]
             answer = self.messenger(msg, but)
             if answer == but.index('Quit'):
-                self.messenger(umdutil.tstamp()+" measurement terminated by user.", [])
+                self.messenger(util.tstamp()+" measurement terminated by user.", [])
                 raise UserWarning      # to reach finally statement
             # loop tuner positions
             for t in alltpos:
-                self.messenger(umdutil.tstamp()+" Tuner position %s"%(repr(t)), [])
+                self.messenger(util.tstamp()+" Tuner position %s"%(repr(t)), [])
                 # position tuners
-                self.messenger(umdutil.tstamp()+" Move tuner(s)...", [])
+                self.messenger(util.tstamp()+" Move tuner(s)...", [])
                 for i in range(ntuner):
-                    TPos = umddevice.UMDMResult(t[i], umddevice.UMD_deg)
-                    IsPos = ddict[names['tuner'][i]].Goto (TPos, 0)
-                self.messenger(umdutil.tstamp()+" ...done", [])
+                    TPos = t[i]
+                    IsPos = ddict[names['tuner'][i]].Goto (TPos)
+                self.messenger(util.tstamp()+" ...done", [])
                 # loop freqs
                 for f in freqs:
-                    self.messenger(umdutil.tstamp()+" Frequency %e Hz"%(f), [])
+                    self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
                     # switch if necessary
                     mg.EvaluateConditions()
                     # set frequency for all devices
                     (minf, maxf) = mg.SetFreq_Devices (f)
                     # cable corrections
-                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], umddevice.UMD_dB)
-                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'], umddevice.UMD_dB)
-                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], umddevice.UMD_dB)
-                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'], umddevice.UMD_dB)
-                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'], umddevice.UMD_dB)
+                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], POWERRATIO)
+                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'], POWERRATIO)
+                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], POWERRATIO)
+                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'], POWERRATIO)
+                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'], POWERRATIO)
                     c_fp = 1.0
 
 
@@ -707,14 +732,14 @@ class MSC(Measure.Measure):
                     if mg.nodes[names['pmfwd']]['inst']:
                         NoPmFwd = False  # ok
                     else:  # no fwd pm
-                        msg = umdutil.tstamp()+" WARNING: No fwd power meter. Signal generator output is used instead!"
+                        msg = util.tstamp()+" WARNING: No fwd power meter. Signal generator output is used instead!"
                         answer = self.messenger(msg,[])
                         NoPmFwd = True
 
                     for i in range(nprb):
                         nblist.append(names['fp'][i])
 
-                    self.messenger(umdutil.tstamp()+" RF On...", [])
+                    self.messenger(util.tstamp()+" RF On...", [])
                     stat = mg.RFOn_Devices()   # switch on just before measure
 
                     level2 = self.do_leveling(leveling, mg, names, locals())
@@ -722,16 +747,16 @@ class MSC(Measure.Measure):
                         level=level2
 
                     # wait delay seconds
-                    self.messenger(umdutil.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
+                    self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
                     self.wait(delay,locals(),self.__HandleUserInterrupt)
-                    self.messenger(umdutil.tstamp()+" ... back.", [])
+                    self.messenger(util.tstamp()+" ... back.", [])
  
                     # Trigger all devices in list
                     mg.NBTrigger(nblist)
                     # serial poll all devices in list
                     if NoPmFwd:
                         nbresult[names['pmfwd']] = level
-                        nbresult[names['pmbwd']] = umddevice.UMDMResult(mg.zero(level.unit), level.get_unit())
+                        nbresult[names['pmbwd']] = Quantity (WATT, 0.0)
                     olddevs = []
                     while 1:
                         self.__HandleUserInterrupt(locals())    
@@ -739,7 +764,7 @@ class MSC(Measure.Measure):
                         new_devs=[i for i in nbresult.keys() if i not in olddevs]
                         olddevs = nbresult.keys()[:]
                         if len(new_devs):
-                            self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                            self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(nblist):
                             break
                     # print nbresult
@@ -747,29 +772,29 @@ class MSC(Measure.Measure):
                     # pfwd
                     n = names['pmfwd']
                     if nbresult.has_key(n):
-                        PFwd = umddevice.UMDCMResult(nbresult[n])
+                        PFwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                        PFwd *= c_a2_ant['total']
+                        PFwd = PFwd * c_a2_ant
                         self.__addLoggerBlock(block, 'c_a2_ant', 'Correction from amplifier output to antenna', c_a2_ant, {})
                         self.__addLoggerBlock(block['c_a2_ant']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter', c_a2_pm1, {})
                         self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PFwd /= c_a2_pm1['total']
+                        PFwd = PFwd / c_a2_pm1
                         self.__addLoggerBlock(block, n+'_corrected', 'Pfwd*c_a2_ant/c_a2_pm1', PFwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                     # pbwd
                     n = names['pmbwd']
                     if nbresult.has_key(n):
-                        PBwd = umddevice.UMDCMResult(nbresult[n])
+                        PBwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the bwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                         self.__addLoggerBlock(block, 'c_ant_pm2', 'Correction from antenna feed to bwd power meter', c_ant_pm2, {})
                         self.__addLoggerBlock(block['c_ant_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PBwd /= c_ant_pm2['total']
+                        PBwd = PBwd / c_ant_pm2
                         self.__addLoggerBlock(block, n+'_corrected', 'Pbwd/c_ant_pm2', PBwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -788,28 +813,28 @@ class MSC(Measure.Measure):
                         log(block)
 
                     self.__HandleUserInterrupt(locals())    
-                    self.messenger(umdutil.tstamp()+" RF Off...", [])
+                    self.messenger(util.tstamp()+" RF Off...", [])
                     stat = mg.RFOff_Devices() # switch off after measure
                     # END OF f LOOP
                 lowBatList = mg.getBatteryLow_Devices()
                 if len(lowBatList):
-                    self.messenger(umdutil.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
+                    self.messenger(util.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
                 self.rawData_AutoCorr[description].update({'efield': efields, 'tpos': alltpos, 'mg': mg})
                 # autosave class instance
                 if self.asname and (time.time()-self.lastautosave > self.autosave_interval):
-                    self.messenger(umdutil.tstamp()+" autosave ...", [])
+                    self.messenger(util.tstamp()+" autosave ...", [])
                     self.do_autosave()
-                    self.messenger(umdutil.tstamp()+" ... done", [])
+                    self.messenger(util.tstamp()+" ... done", [])
 
             #END OF t LOOP
                 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(umdutil.tstamp()+" RF Off and Quit...", [])
+            self.messenger(util.tstamp()+" RF Off and Quit...", [])
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
-        self.messenger(umdutil.tstamp()+" End of msc autocorelation measurement. Status: %d"%stat, [])
-        self.post_user_event()
+        self.messenger(util.tstamp()+" End of msc autocorelation measurement. Status: %d"%stat, [])
+        self.PostUserEvent()
         return stat
 
     def __HandleUserInterrupt(self, dct, ignorelist='', handler=None):
@@ -819,12 +844,12 @@ class MSC(Measure.Measure):
             return self.stdUserInterruptHandler(dct,ignorelist=ignorelist)
     
     def stdUserInterruptHandler(self, dct, ignorelist=''):
-        key = self.user_interrupt_tester() 
+        key = self.UserInterruptTester() 
         if key and not chr(key) in ignorelist:
             # empty key buffer
-            _k = self.user_interrupt_tester()
+            _k = self.UserInterruptTester()
             while not _k is None:
-                _k = self.user_interrupt_tester()
+                _k = self.UserInterruptTester()
 
             mg = dct['mg']
             names = dct['names']
@@ -847,51 +872,51 @@ class MSC(Measure.Measure):
             except KeyError:
                 nblist=[]
             
-            self.messenger(umdutil.tstamp()+" RF Off...", [])
+            self.messenger(util.tstamp()+" RF Off...", [])
             stat = mg.RFOff_Devices() # switch off after measure
             msg1 = """The measurement has been interrupted by the user.\nHow do you want to proceed?\n\nContinue: go ahead...\nSuspend: Quit devices, go ahead later after reinit...\nInteractive: Go to interactive mode...\nQuit: Quit measurement..."""
             but1 = ['Continue','Suspend','Interactive','Quit']
             answer = self.messenger(msg1, but1)
             #print answer
             if answer == but1.index('Quit'):
-                self.messenger(umdutil.tstamp()+" measurment terminated by user.", [])
+                self.messenger(util.tstamp()+" measurment terminated by user.", [])
                 raise UserWarning      # to reach finally statement
             elif answer == but1.index('Interactive'):
-                umdutil.interactive("Press CTRL-Z plus Return to exit")
+                util.interactive("Press CTRL-Z plus Return to exit")
             elif answer == but1.index('Suspend'):
-                self.messenger(umdutil.tstamp()+" measurment suspended by user.", [])
+                self.messenger(util.tstamp()+" measurment suspended by user.", [])
                 stat = mg.Quit_Devices()                                
                 msg2 = """Measurement is suspended.\n\nResume: Reinit and continue\nQuit: Quit measurement..."""
                 but2 = ['Resume','Quit']
                 answer = self.messenger(msg2, but2)
                 if answer == but2.index('Resume'):
                     # TODO: check if init was successful
-                    self.messenger(umdutil.tstamp()+" Init devices...", [])
+                    self.messenger(util.tstamp()+" Init devices...", [])
                     stat = mg.Init_Devices()
-                    self.messenger(umdutil.tstamp()+" ... Init returned with stat = %d"%stat, [])        
+                    self.messenger(util.tstamp()+" ... Init returned with stat = %d"%stat, [])        
                     stat = mg.RFOff_Devices() # switch off
-                    self.messenger(umdutil.tstamp()+" Zero devices...", [])
+                    self.messenger(util.tstamp()+" Zero devices...", [])
                     stat = mg.Zero_Devices()
                     if hassg:
                         try:
-                            level = self.set_level(mg, names, SGLevel)
+                            level = self.set_level(mg, SGLevel)
                         except AmplifierProtectionError, _e:
-                            self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
+                            self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
 
                     # set frequency for all devices
                     (minf, maxf) = mg.SetFreq_Devices (f)
                     mg.EvaluateConditions()
                     # position tuners
                     if not t is None:
-                        self.messenger(umdutil.tstamp()+" Move tuner(s)...", [])
+                        self.messenger(util.tstamp()+" Move tuner(s)...", [])
                         for i in range(len(names['tuner'])):
-                            TPos = umddevice.UMDMResult(t[i], umddevice.UMD_deg)
-                            IsPos = ddict[names['tuner'][i]].Goto (TPos, 0)
-                        self.messenger(umdutil.tstamp()+" ...done", [])
+                            TPos = t[i]
+                            IsPos = ddict[names['tuner'][i]].Goto (TPos)
+                        self.messenger(util.tstamp()+" ...done", [])
                 elif answer == but2.index('Quit'):
-                    self.messenger(umdutil.tstamp()+" measurment terminated by user.", [])
+                    self.messenger(util.tstamp()+" measurment terminated by user.", [])
                     raise UserWarning      # to reach finally statement
-            self.messenger(umdutil.tstamp()+" RF On...", [])
+            self.messenger(util.tstamp()+" RF On...", [])
             stat = mg.RFOn_Devices()   # switch on just before measure
             if hassg:
                 level2 = self.do_leveling(leveling, mg, names, locals())
@@ -899,9 +924,9 @@ class MSC(Measure.Measure):
                     level=level2
             try:
                 # wait delay seconds
-                self.messenger(umdutil.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
+                self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
                 self.wait(delay, dct,self.__HandleUserInterrupt)
-                self.messenger(umdutil.tstamp()+" ... back.", [])
+                self.messenger(util.tstamp()+" ... back.", [])
             except:
                 pass
             mg.NBTrigger(nblist)
@@ -914,6 +939,7 @@ class MSC(Measure.Measure):
                            SGLevel=-20,
                             leveling=None,
                            calibration = 'empty',
+                          SearchPaths=None,
                            names={'sg': 'sg',
                                   'a1': 'a1',
                                   'a2': 'a2',
@@ -926,11 +952,11 @@ class MSC(Measure.Measure):
         """Performs a msc EUT calibration according to IEC 61000-4-21
         """
 
-        self.pre_user_event()
+        self.PreUserEvent()
         if self.autosave:
-            self.messenger(umdutil.tstamp()+" Resume EUT calibration measurement from autosave...", [])
+            self.messenger(util.tstamp()+" Resume EUT calibration measurement from autosave...", [])
         else:
-            self.messenger(umdutil.tstamp()+" Start new EUT calibration measurement...", [])
+            self.messenger(util.tstamp()+" Start new EUT calibration measurement...", [])
 
         self.rawData_EUTCal.setdefault(description, {})
 
@@ -951,27 +977,27 @@ class MSC(Measure.Measure):
         nrefant = min(len(names['refant']),len(names['pmref']))
         ntuner = len(names['tuner'])
 
-        mg=umdutil.UMDMGraph(dotfile)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
 
-        self.messenger(umdutil.tstamp()+" Init devices...", [])
+        self.messenger(util.tstamp()+" Init devices...", [])
         err = mg.Init_Devices()
         if err: 
-            self.messenger(umdutil.tstamp()+" ...faild with err %d"%(err), [])
+            self.messenger(util.tstamp()+" ...faild with err %d"%(err), [])
             return err
         try:  
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
             stat = mg.RFOff_Devices()
-            self.messenger(umdutil.tstamp()+" Zero devices...", [])
+            self.messenger(util.tstamp()+" Zero devices...", [])
             stat = mg.Zero_Devices()
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
             # set level
             try:
-                level = self.set_level(mg, names, SGLevel)
+                level = self.set_level(mg, SGLevel)
             except AmplifierProtectionError, _e:
-                self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
+                self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                 raise  # re raise to reach finaly clause
             # list of frequencies
             if freqs is None:
@@ -980,7 +1006,7 @@ class MSC(Measure.Measure):
             if self.rawData_MainCal.has_key(calibration):
                 alltpos = self.GetAllTPos (calibration)            
             else:
-                self.messenger(umdutil.tstamp()+" Error: Calibration '%s' not found."%calibration, [])
+                self.messenger(util.tstamp()+" Error: Calibration '%s' not found."%calibration, [])
                 return -1
             # set up efields, ...
             efields={}
@@ -1015,7 +1041,7 @@ class MSC(Measure.Measure):
                     try:
                         alltpos.remove(tt)
                     except:
-                        umdutil.LogError (self.messenger)            
+                        util.LogError (self.messenger)            
                 msg = "List of tuner positions from autosave file:\n%s\nRemaining tuner positions:\n%s\n"%(str(tees),str(alltpos))
                 but = []
                 self.messenger(msg, but)
@@ -1026,46 +1052,46 @@ class MSC(Measure.Measure):
             but = ["Start", "Quit"]
             answer = self.messenger(msg, but)
             if answer == but.index('Quit'):
-                self.messenger(umdutil.tstamp()+" measurement terminated by user.", [])
+                self.messenger(util.tstamp()+" measurement terminated by user.", [])
                 raise UserWarning      # to reach finally statement
             
             # loop tuner positions
             for t in alltpos:
-                self.messenger(umdutil.tstamp()+" Tuner position %s"%(repr(t)), [])
+                self.messenger(util.tstamp()+" Tuner position %s"%(repr(t)), [])
                 # position tuners
-                self.messenger(umdutil.tstamp()+" Move tuner(s)...", [])
+                self.messenger(util.tstamp()+" Move tuner(s)...", [])
                 for i in range(ntuner):
-                    TPos = umddevice.UMDMResult(t[i], umddevice.UMD_deg)
-                    IsPos = ddict[names['tuner'][i]].Goto (TPos, 0)
-                self.messenger(umdutil.tstamp()+" ...done", [])
+                    TPos = t[i]
+                    IsPos = ddict[names['tuner'][i]].Goto (TPos)
+                self.messenger(util.tstamp()+" ...done", [])
                 # loop freqs
                 for f in freqs:
-                    self.messenger(umdutil.tstamp()+" Frequency %e Hz"%(f), [])
+                    self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
                     if not self.UseTunerPos (calibration, f, t):
-                        self.messenger(umdutil.tstamp()+" Skipping tuner position", [])
+                        self.messenger(util.tstamp()+" Skipping tuner position", [])
                         continue
                     # switch if necessary
                     mg.EvaluateConditions()
                     # set frequency for all devices
                     (minf, maxf) = mg.SetFreq_Devices (f)
                     # cable corrections
-                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], umddevice.UMD_dB)
-                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'], umddevice.UMD_dB)
-                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], umddevice.UMD_dB)
-                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'], umddevice.UMD_dB)
-                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'], umddevice.UMD_dB)
+                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], POWERRATIO)
+                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'], POWERRATIO)
+                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], POWERRATIO)
+                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'], POWERRATIO)
+                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'], POWERRATIO)
                     c_refant_pmref = []
                     for i in range(nrefant):
-                        c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i], umddevice.UMD_dB))
+                        c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i], POWERRATIO))
                     c_fp = 1.0
                     if not etaTx.has_key(f):
                         eta = mg.GetAntennaEfficiency(names['ant'])
-                        self.messenger(umdutil.tstamp()+" Eta_Tx for f = %e Hz is %s"%(f,str(eta)), [])
+                        self.messenger(util.tstamp()+" Eta_Tx for f = %e Hz is %s"%(f,str(eta)), [])
                         etaTx = self.__insert_it (etaTx, eta, None, None, f, t, 0)
                     if not etaRx.has_key(f):
                         for i in range(nrefant):
                             eta = mg.GetAntennaEfficiency(names['refant'][i])
-                            self.messenger(umdutil.tstamp()+" Eta_Rx(%d) for f = %e Hz is %s"%(i,f,str(eta)), [])
+                            self.messenger(util.tstamp()+" Eta_Rx(%d) for f = %e Hz is %s"%(i,f,str(eta)), [])
                             etaRx = self.__insert_it (etaRx, eta, None, None, f, t, i)
                         
 
@@ -1078,7 +1104,7 @@ class MSC(Measure.Measure):
                     if mg.nodes[names['pmfwd']]['inst']:
                         NoPmFwd = False  # ok
                     else:  # no fwd pm
-                        msg = umdutil.tstamp()+" WARNING: No fwd power meter. Signal generator output is used instead!"
+                        msg = util.tstamp()+" WARNING: No fwd power meter. Signal generator output is used instead!"
                         answer = self.messenger(msg,[])
                         NoPmFwd = True
                         
@@ -1090,7 +1116,7 @@ class MSC(Measure.Measure):
 
                     # noise floor measurement..
                     if not noise.has_key(f):
-                        self.messenger(umdutil.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
+                        self.messenger(util.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
                         mg.NBTrigger(pmreflist)
                         # serial poll all devices in list
                         olddevs = []
@@ -1100,27 +1126,27 @@ class MSC(Measure.Measure):
                             new_devs=[i for i in nbresult.keys() if i not in olddevs]
                             olddevs = nbresult.keys()[:]
                             if len(new_devs):
-                                self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                                self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                             if len(nbresult)==len(pmreflist):
                                 break
                         for i in range(nrefant):
                             n = names['pmref'][i]
                             if nbresult.has_key(n):
                                 # add path correction here
-                                PRef = umddevice.UMDCMResult(nbresult[n])
+                                PRef = nbresult[n]
                                 nn = 'Noise '+n
                                 self.__addLoggerBlock(block, nn, 'Noise reading of the receive antenna power meter for position %d'%i, nbresult[n], {})
                                 self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                 self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                PRef /= c_refant_pmref[i]['total']
+                                PRef = PRef / c_refant_pmref[i]
                                 self.__addLoggerBlock(block, nn+'_corrected', 'Noise: Pref/c_refant_pmref', PRef, {})
                                 self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'tunerpos', 'tuner position', t, {}) 
                                 noise = self.__insert_it (noise, PRef, None, None, f, t, i)
-                        self.messenger(umdutil.tstamp()+" Noise floor measurement done.", [])
+                        self.messenger(util.tstamp()+" Noise floor measurement done.", [])
 
-                    self.messenger(umdutil.tstamp()+" RF On...", [])
+                    self.messenger(util.tstamp()+" RF On...", [])
                     stat = mg.RFOn_Devices()   # switch on just before measure
 
                     level2 = self.do_leveling(leveling, mg, names, locals())
@@ -1128,19 +1154,19 @@ class MSC(Measure.Measure):
                         level=level2
 
                     # wait delay seconds
-                    self.messenger(umdutil.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
+                    self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
                     self.wait(delay,locals(),self.__HandleUserInterrupt)
-                    self.messenger(umdutil.tstamp()+" ... back.", [])
+                    self.messenger(util.tstamp()+" ... back.", [])
 
                         
                     # Trigger all devices in list
-                    self.messenger(umdutil.tstamp()+" Send trigger to %s ..."%(str(nblist)), [])
+                    self.messenger(util.tstamp()+" Send trigger to %s ..."%(str(nblist)), [])
                     mg.NBTrigger(nblist)
-                    self.messenger(umdutil.tstamp()+" ... back.", [])
+                    self.messenger(util.tstamp()+" ... back.", [])
                     # serial poll all devices in list
                     if NoPmFwd:
                         nbresult[names['pmfwd']] = level
-                        nbresult[names['pmbwd']] = umddevice.UMDMResult(mg.zero(level.unit), level.get_unit())
+                        nbresult[names['pmbwd']] = Quantity(WATT, 0.0)
                     olddevs = []
                     while 1:
                         self.__HandleUserInterrupt(locals())    
@@ -1148,7 +1174,7 @@ class MSC(Measure.Measure):
                         new_devs=[i for i in nbresult.keys() if i not in olddevs]
                         olddevs = nbresult.keys()[:]
                         if len(new_devs):
-                            self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                            self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(nblist):
                             break
                     # print nbresult
@@ -1156,29 +1182,29 @@ class MSC(Measure.Measure):
                     # pfwd
                     n = names['pmfwd']
                     if nbresult.has_key(n):
-                        PFwd = umddevice.UMDCMResult(nbresult[n])
+                        PFwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                        PFwd *= c_a2_ant['total']
+                        PFwd = PFwd * c_a2_ant
                         self.__addLoggerBlock(block, 'c_a2_ant', 'Correction from amplifier output to antenna', c_a2_ant, {})
                         self.__addLoggerBlock(block['c_a2_ant']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter', c_a2_pm1, {})
                         self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PFwd /= c_a2_pm1['total']
+                        PFwd = PFwd / c_a2_pm1
                         self.__addLoggerBlock(block, n+'_corrected', 'Pfwd*c_a2_ant/c_a2_pm1', PFwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                     # pbwd
                     n = names['pmbwd']
                     if nbresult.has_key(n):
-                        PBwd = umddevice.UMDCMResult(nbresult[n])
+                        PBwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the bwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                         self.__addLoggerBlock(block, 'c_ant_pm2', 'Correction from antenna feed to bwd power meter', c_ant_pm2, {})
                         self.__addLoggerBlock(block['c_ant_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PBwd /= c_ant_pm2['total']
+                        PBwd = PBwd / c_ant_pm2
                         self.__addLoggerBlock(block, n+'_corrected', 'Pbwd/c_ant_pm2', PBwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1188,13 +1214,13 @@ class MSC(Measure.Measure):
                         n = names['pmref'][i]
                         if nbresult.has_key(n):
                             # add path correction here
-                            PRef = umddevice.UMDCMResult(nbresult[n])
+                            PRef = nbresult[n]
                             self.__addLoggerBlock(block, n, 'Reading of the receive antenna power meter for position %d'%i, nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                             self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PRef /= c_refant_pmref[i]['total']
+                            PRef = PRef / c_refant_pmref[i]
                             prefant = self.__insert_it (prefant, PRef, PFwd, PBwd, f, t, i)
                             self.__addLoggerBlock(block, n+'_corrected', 'Pref/c_refant_pmref', PRef, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -1213,27 +1239,27 @@ class MSC(Measure.Measure):
                         log(block)
 
                     self.__HandleUserInterrupt(locals())    
-                    self.messenger(umdutil.tstamp()+" RF Off...", [])
+                    self.messenger(util.tstamp()+" RF Off...", [])
                     stat = mg.RFOff_Devices() # switch off after measure
                     # END OF f LOOP
                 lowBatList = mg.getBatteryLow_Devices()
                 if len(lowBatList):
-                    self.messenger(umdutil.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
+                    self.messenger(util.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
                 self.rawData_EUTCal[description].update({'efield': efields, 'pref': prefant, 'noise': noise, 'etaTx': etaTx, 'etaRx': etaRx, 'mg': mg})
                 # autosave class instance
                 if self.asname and (time.time()-self.lastautosave > self.autosave_interval):
-                    self.messenger(umdutil.tstamp()+" autosave ...", [])
+                    self.messenger(util.tstamp()+" autosave ...", [])
                     self.do_autosave()
-                    self.messenger(umdutil.tstamp()+" ... done", [])
+                    self.messenger(util.tstamp()+" ... done", [])
             #END OF t LOOP
                 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(umdutil.tstamp()+" RF Off and Quit...", [])
+            self.messenger(util.tstamp()+" RF Off and Quit...", [])
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
-        self.messenger(umdutil.tstamp()+" End of EUT main calibration. Status: %d"%stat, [])
-        self.post_user_event()
+        self.messenger(util.tstamp()+" End of EUT main calibration. Status: %d"%stat, [])
+        self.PostUserEvent()
         return stat
 
     def Measure_Immunity (self,
@@ -1243,6 +1269,7 @@ class MSC(Measure.Measure):
                           kernel=(None,None),
                           leveling=None,
                           freqs=None,
+                          SearchPaths=None,
                           names={'sg': 'sg',
                                   'a1': 'a1',
                                   'a2': 'a2',
@@ -1256,10 +1283,10 @@ class MSC(Measure.Measure):
         """Performs a msc immunity measurement according to IEC 61000-4-21
         """
 
-        self.pre_user_event()
+        self.PreUserEvent()
         if kernel[0] is None:
             if kernel[1] is None:
-                kernel=(stdImmunityKernel,{'field': umddevice.UMDMResult(10, umddevice.UMD_Voverm),
+                kernel=(stdImmunityKernel,{'field': Quantity(EFIELD, 10),
                                             'dwell': 1,
                                             'keylist': 'sS'})
             else:
@@ -1278,9 +1305,9 @@ class MSC(Measure.Measure):
                          'path': None}]
      
         if self.autosave:
-            self.messenger(umdutil.tstamp()+" Resume MSC immunity measurement from autosave...", [])
+            self.messenger(util.tstamp()+" Resume MSC immunity measurement from autosave...", [])
         else:
-            self.messenger(umdutil.tstamp()+" Start new MSC immunity measurement...", [])
+            self.messenger(util.tstamp()+" Start new MSC immunity measurement...", [])
 
         self.rawData_Immunity.setdefault(description, {})
 
@@ -1289,26 +1316,26 @@ class MSC(Measure.Measure):
         ntuner = len(names['tuner'])
         nprb = len(names['fp'])
 
-        mg=umdutil.UMDMGraph(dotfile)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
 
-        self.messenger(umdutil.tstamp()+" Init devices...", [])
+        self.messenger(util.tstamp()+" Init devices...", [])
         err = mg.Init_Devices()
         if err: 
-            self.messenger(umdutil.tstamp()+" ...faild with err %d"%(err), [])
+            self.messenger(util.tstamp()+" ...faild with err %d"%(err), [])
             return err
         try:  
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
 
             if self.rawData_MainCal.has_key(calibration):
                 alltpos = self.GetAllTPos (calibration)            
             else:
-                self.messenger(umdutil.tstamp()+" Error: Calibration '%s' not found."%calibration, [])
+                self.messenger(util.tstamp()+" Error: Calibration '%s' not found."%calibration, [])
                 return -1
             if not self.processedData_EUTCal.has_key(description):
-                self.messenger(umdutil.tstamp()+" Warning: EUT-Calibration '%s' not found. CLF = 1 will be used."%calibration, [])
+                self.messenger(util.tstamp()+" Warning: EUT-Calibration '%s' not found. CLF = 1 will be used."%calibration, [])
             # set up prefant ...
             prefant={}
             efields = {}
@@ -1343,7 +1370,7 @@ class MSC(Measure.Measure):
             but = ["Start", "Quit"]
             answer = self.messenger(msg, but)
             if answer == but.index('Quit'):
-                self.messenger(umdutil.tstamp()+" measurement terminated by user.", [])
+                self.messenger(util.tstamp()+" measurement terminated by user.", [])
                 raise UserWarning      # to reach finally statement
             
             tposdict={}
@@ -1396,35 +1423,35 @@ class MSC(Measure.Measure):
                     stat=0
                     continue
                 cmd=cmd.lower()
-                self.messenger(umdutil.tstamp()+' Got cmd: %s, msg: %s, dct: %s'%(cmd, msg, pprint.pformat(dct)), [])
+                self.messenger(util.tstamp()+' Got cmd: %s, msg: %s, dct: %s'%(cmd, msg, pprint.pformat(dct)), [])
                 if len(msg):
-                    self.messenger(umdutil.tstamp()+" %s"%(msg), [])
+                    self.messenger(util.tstamp()+" %s"%(msg), [])
                 if cmd in ['finished']:
                     finished=True
                     stat = 0
                 elif cmd in ['autosave']:
                     # autosave class instance
                     if self.asname and (time.time()-self.lastautosave > self.autosave_interval):
-                        self.messenger(umdutil.tstamp()+" autosave ...", [])
+                        self.messenger(util.tstamp()+" autosave ...", [])
                         self.do_autosave()
-                        self.messenger(umdutil.tstamp()+" ... done", [])
+                        self.messenger(util.tstamp()+" ... done", [])
                     stat=0
                 elif cmd in ['freq']:
                     f = dct['freq']
-                    self.messenger(umdutil.tstamp()+" Frequency %e Hz"%(f), [])
+                    self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
                     # switch if necessary
                     mg.EvaluateConditions()
                     # set frequency for all devices
                     (minf, maxf) = mg.SetFreq_Devices (f)
                     # cable corrections
-                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], umddevice.UMD_dB)
-                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'], umddevice.UMD_dB)
-                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], umddevice.UMD_dB)
-                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'], umddevice.UMD_dB)
-                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'], umddevice.UMD_dB)
+                    c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], POWERRATIO)
+                    c_sg_ant = mg.get_path_correction(names['sg'], names['ant'], POWERRATIO)
+                    c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], POWERRATIO)
+                    c_a2_ant = mg.get_path_correction(names['a2'], names['ant'], POWERRATIO)
+                    c_ant_pm2 = mg.get_path_correction(names['ant'], names['pmbwd'], POWERRATIO)
                     c_refant_pmref = []
                     for i in range(nrefant):
-                        c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i], umddevice.UMD_dB))
+                        c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i], POWERRATIO))
                     c_fp = 1.0
                     #print "Got all Cable corrections"
                     #for i in range(nrefant):
@@ -1436,7 +1463,7 @@ class MSC(Measure.Measure):
                     if mg.nodes[names['pmfwd']]['inst']:
                         NoPmFwd = False  # ok
                     else:  # no fwd pm
-                        msg = umdutil.tstamp()+" WARNING: No fwd power meter. Signal generator output is used instead!"
+                        msg = util.tstamp()+" WARNING: No fwd power meter. Signal generator output is used instead!"
                         answer = self.messenger(msg,[])
                         NoPmFwd = True
 
@@ -1452,7 +1479,7 @@ class MSC(Measure.Measure):
                     #print "NBList: ", nblist
                     # noise floor measurement..
                     if not noise.has_key(f):
-                        self.messenger(umdutil.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
+                        self.messenger(util.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
                         if RFon:
                             mg.RFOff_Devices()
                         # ALL measurement start here
@@ -1467,20 +1494,20 @@ class MSC(Measure.Measure):
                             new_devs=[i for i in nbresult.keys() if i not in olddevs]
                             olddevs = nbresult.keys()[:]
                             if len(new_devs):
-                                self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                                self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                             if len(nbresult)==len(pmreflist):
                                 break
                         for i in range(nrefant):
                             n = names['pmref'][i]
                             if nbresult.has_key(n):
                                 # add path correction here
-                                PRef = umddevice.UMDCMResult(nbresult[n])
+                                PRef = nbresult[n]
                                 nn = 'Noise '+n
                                 self.__addLoggerBlock(block, nn, 'Noise reading of the receive antenna power meter for position %d'%i, nbresult[n], {})
                                 self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                                 self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                                PRef /= c_refant_pmref[i]['total']
+                                PRef = PRef / c_refant_pmref[i]
                                 self.__addLoggerBlock(block, nn+'_corrected', 'Noise: Pref/c_refant_pmref', PRef, {})
                                 self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                                 self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1489,29 +1516,29 @@ class MSC(Measure.Measure):
                             log(block)
                         if RFon:
                             mg.RFOn_Devices()
-                        self.messenger(umdutil.tstamp()+" Noise floor measurement done.", [])
+                        self.messenger(util.tstamp()+" Noise floor measurement done.", [])
                         stat = 0
                 elif cmd in ['tuner']:
                     t = dct['tunerpos']
                     if type(t) != type([]):
                         t = [t]
-                    self.messenger(umdutil.tstamp()+" Tuner position %s"%(repr(t)), [])
+                    self.messenger(util.tstamp()+" Tuner position %s"%(repr(t)), [])
                     # position tuners
-                    self.messenger(umdutil.tstamp()+" Move tuner(s)...", [])
+                    self.messenger(util.tstamp()+" Move tuner(s)...", [])
                     for i,ti in enumerate(t):
-                        TPos = umddevice.UMDMResult(ti, umddevice.UMD_deg)
-                        IsPos = ddict[names['tuner'][i]].Goto(TPos, 0)
-                    self.messenger(umdutil.tstamp()+" ...done", [])
+                        TPos = ti
+                        IsPos = ddict[names['tuner'][i]].Goto(TPos)
+                    self.messenger(util.tstamp()+" ...done", [])
                     stat = 0
                 elif cmd in ['rf']:
                     rfon = dct['rfon']
                     if rfon == 1:
-                        self.messenger(umdutil.tstamp()+' Switching RF On.', [])
+                        self.messenger(util.tstamp()+' Switching RF On.', [])
                         mg.RFOn_Devices()
                         time.sleep(1)
                         RFon=True
                     else:
-                        self.messenger(umdutil.tstamp()+' Switching RF Off.', [])
+                        self.messenger(util.tstamp()+' Switching RF Off.', [])
                         mg.RFOff_Devices()
                         RFon=False
                     stat = 0
@@ -1521,14 +1548,14 @@ class MSC(Measure.Measure):
                         efield = self.getMaxE(mg,names,f,etest)
                         self.messenger("DEBUG: MaxEField: %s"%str(efield), [])
                     testfield=efield
-                    power = umddevice.UMDCMResult(ptest(f, efield))
-                    sgpower = power / c_sg_ant['total']
-                    self.messenger("DEBUG: power: %s, c_sg_ant: %s, sgpower: %s"%(str(power), str(c_sg_ant['total']), str(sgpower)),[])
+                    power = ptest(f, efield)
+                    sgpower = power / c_sg_ant
+                    self.messenger("DEBUG: power: %s, c_sg_ant: %s, sgpower: %s"%(str(power), str(c_sg_ant), str(sgpower)),[])
                     olevel=level
                     try:
-                        level = self.set_level(mg,names,sgpower)
+                        level = self.set_level(mg, sgpower)
                     except AmplifierProtectionError, _e:
-                        self.messenger(umdutil.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
+                        self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                         level=olevel
                         stat = 'AmplifierProtectionError'
                     else:
@@ -1542,7 +1569,7 @@ class MSC(Measure.Measure):
                     # serial poll all devices in list
                     if NoPmFwd:
                         nbresult[names['pmfwd']] = level
-                        nbresult[names['pmbwd']] = umddevice.UMDMResult(mg.zero(level.unit), level.get_unit())
+                        nbresult[names['pmbwd']] = Quantity(WATT, 0.0)
                     olddevs = []
                     nbresult={}
                     while 1:
@@ -1551,7 +1578,7 @@ class MSC(Measure.Measure):
                         new_devs=[i for i in nbresult.keys() if i not in olddevs]
                         olddevs = nbresult.keys()[:]
                         if len(new_devs):
-                            self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                            self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(nblist):
                             break
                     # print nbresult
@@ -1559,29 +1586,29 @@ class MSC(Measure.Measure):
                     # pfwd
                     n = names['pmfwd']
                     if nbresult.has_key(n):
-                        PFwd = umddevice.UMDCMResult(nbresult[n])
+                        PFwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
-                        PFwd *= c_a2_ant['total']
+                        PFwd = PFwd * c_a2_ant
                         self.__addLoggerBlock(block, 'c_a2_ant', 'Correction from amplifier output to antenna', c_a2_ant, {})
                         self.__addLoggerBlock(block['c_a2_ant']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter', c_a2_pm1, {})
                         self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PFwd /= c_a2_pm1['total']
+                        PFwd = PFwd / c_a2_pm1
                         self.__addLoggerBlock(block, n+'_corrected', 'Pfwd*c_a2_ant/c_a2_pm1', PFwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                     # pbwd
                     n = names['pmbwd']
                     if nbresult.has_key(n):
-                        PBwd = umddevice.UMDCMResult(nbresult[n])
+                        PBwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the bwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                         self.__addLoggerBlock(block, 'c_ant_pm2', 'Correction from antenna feed to bwd power meter', c_ant_pm2, {})
                         self.__addLoggerBlock(block['c_ant_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                        PBwd /= c_ant_pm2['total']
+                        PBwd = PBwd / c_ant_pm2
                         self.__addLoggerBlock(block, n+'_corrected', 'Pbwd/c_ant_pm2', PBwd, {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1591,13 +1618,13 @@ class MSC(Measure.Measure):
                         n = names['pmref'][i]
                         if nbresult.has_key(n):
                             # add path correction here
-                            PRef = umddevice.UMDCMResult(nbresult[n])
+                            PRef = nbresult[n]
                             self.__addLoggerBlock(block, n, 'Reading of the receive antenna power meter for position %d'%i, nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             self.__addLoggerBlock(block, 'c_refant_pmref'+str(i), 'Correction from ref antenna feed to ref power meter', c_refant_pmref[i], {})
                             self.__addLoggerBlock(block['c_refant_pmref'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PRef /= c_refant_pmref[i]['total']
+                            PRef = PRef / c_refant_pmref[i]
                             prefant = self.__insert_it (prefant, PRef, PFwd, PBwd, f, t, i)
                             self.__addLoggerBlock(block, n+'_corrected', 'Pref/c_refant_pmref', PRef, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -1620,7 +1647,7 @@ class MSC(Measure.Measure):
                     lowBatList = mg.getBatteryLow_Devices()
                     #print "hinter 'getBatteryLow'"
                     if len(lowBatList):
-                        self.messenger(umdutil.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
+                        self.messenger(util.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
                     #print "vor update"
                     self.rawData_Immunity[description].update({'efield': efields, 'pref': prefant, 'noise': noise, 'mg': mg})                
                     #print "hinter update"
@@ -1635,77 +1662,79 @@ class MSC(Measure.Measure):
                     stat = 0
                 else:
                     stat=-1
-                    self.messenger(umdutil.tstamp()+" WARNING: Got unknown command '%s'. Command must be one of %s"%(cmd,str(dispatchtable)), [])
+                    self.messenger(util.tstamp()+" WARNING: Got unknown command '%s'. Command must be one of %s"%(cmd,str(dispatchtable)), [])
                 
                 self.__HandleUserInterrupt(locals(),ignorelist=ignorekeys, handler=UIHandler)
             #end of while loop
                 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(umdutil.tstamp()+" RF Off and Quit...", [])
+            self.messenger(util.tstamp()+" RF Off and Quit...", [])
             stat = mg.RFOff_Devices()
             stat = mg.Quit_Devices()
-        self.messenger(umdutil.tstamp()+" End of Immunity mesurement. Status: %d"%stat, [])
-        self.post_user_event()
+        self.messenger(util.tstamp()+" End of Immunity mesurement. Status: %d"%stat, [])
+        self.PostUserEvent()
         return stat
                           
 
-    def getMaxE(self, mg, names, f, etest):
-        start=names['sg']
-        ends=[names['ant'],names['pmfwd'],names['pmbwd']]
-        maxstart=None
-        allpaths=[]
-        for end in ends:
-            allpaths.extend(mg.find_all_paths(start, end))
-        for path in allpaths:
-            edges = []
-            for i in range(len(path)-1):
-                left  = path[i]
-                right = path[i+1]
-                edges.append((left,right,mg.graph[left][right]))
-            for left,right,edge in edges:
-                try:
-                    attribs = mg.nodes[edge['dev']]
-                except KeyError:
-                    continue
-                if attribs['inst'] is None:
-                    continue
-                err = 0
-                if (attribs.has_key('isActive') and attribs['isActive']):
-                    dev=attribs['inst']
-                    cmds = ['getData', 'GetData']
-                    stat = -1
-                    for cmd in cmds:
-                        #print hasattr(dev, cmd)
-                        if hasattr(dev, cmd):
-                            # at the moment, we only check for MAXIN
-                            what = ['MAXIN'] #['MAXIN', 'MAXFWD', 'MAXBWD']
-                            for w in what:
-                                result = umddevice.UMDCMResult()
-                                stat = 0
-                                try:
-                                    stat = getattr(dev, cmd)(result, w)
-                                except AttributeError:
-                                    # function not callable
-                                    #print "attrErr"
-                                    continue 
-                                if stat != 0:
-                                    #print stat
-                                    continue
-                                # ok we have a value that can be checked
-                                corr = mg.get_path_correction(start, left, umddevice.UMD_dB)
-                                sglevel = result / corr['total']
-                                sglevel = sglevel.mag()
-                                #print "DEBUG: Node %s limits sglevel to %s"%(left,str(sglevel)) 
-                                if maxstart:
-                                    maxstart=min(maxstart,sglevel)
-                                else:
-                                    maxstart=umddevice.UMDMResult(sglevel)
-            
-        pathcorr=mg.get_path_correction(start, names['ant'], umddevice.UMD_dB)
-        pfwd=maxstart*pathcorr['total'].mag()
+    def getMaxE(self, mg, names, f, etest, rfac=None):
+#        start=names['sg']
+#        ends=[names['ant'],names['pmfwd'],names['pmbwd']]
+#        maxstart=None
+#        allpaths=[]
+#        for end in ends:
+#            allpaths.extend(mg.find_all_paths(start, end))
+#        for path in allpaths:
+#            edges = []
+#            for i in range(len(path)-1):
+#                left  = path[i]
+#                right = path[i+1]
+#                edges.append((left,right,mg.graph[left][right]))
+#            for left,right,edge in edges:
+#                try:
+#                    attribs = mg.nodes[edge['dev']]
+#                except KeyError:
+#                    continue
+#                if attribs['inst'] is None:
+#                    continue
+#                err = 0
+#                if (attribs.has_key('isActive') and attribs['isActive']):
+#                    dev=attribs['inst']
+#                    cmds = ['getData', 'GetData']
+#                    stat = -1
+#                    for cmd in cmds:
+#                        #print hasattr(dev, cmd)
+#                        if hasattr(dev, cmd):
+#                            # at the moment, we only check for MAXIN
+#                            what = ['MAXIN'] #['MAXIN', 'MAXFWD', 'MAXBWD']
+#                            for w in what:
+#                                stat = 0
+#                                try:
+#                                    stat, result = getattr(dev, cmd)(w)
+#                                except AttributeError:
+#                                    # function not callable
+#                                    #print "attrErr"
+#                                    continue 
+#                                if stat != 0:
+#                                    #print stat
+#                                    continue
+#                                # ok we have a value that can be checked
+#                                corr = mg.get_path_correction(start, left)
+#                                sglevel = result / corr
+#                                sglevel = sglevel.mag()
+#                                #print "DEBUG: Node %s limits sglevel to %s"%(left,str(sglevel)) 
+#                                if maxstart:
+#                                    maxstart=min(maxstart,sglevel)
+#                                else:
+#                                    maxstart=umddevice.UMDMResult(sglevel)
+#            
+        sglv=mg.MaxSafe
+        pathcorr=mg.get_path_correction(mg.name.start, mg.name.ant, POWERRATIO)
+        pfwd=sglv*pathcorr
         Emax = etest(f,pfwd)
-        return Emax
+        if rfac is None: # assume 1dB compression -> rfac=0.891  (1/ 10**(1/20))
+            rfac=0.891
+        return rfac*Emax
         
 ##        
 ##        for n,attribs in mg.nodes.items():
@@ -1744,7 +1773,7 @@ class MSC(Measure.Measure):
 ##                        corr = mg.get_path_correction(start, n, umddevice.UMD_dB)
 ##                        print "DEBUG: node %s is limiting, corr = "%n, corr
 ##
-##                        sglevel = result / corr['total']
+##                        sglevel = result / corr
 ##                        sglevel = sglevel.mag()
 ##                        print "DEBUG: Node %s limits sglevel to %s"%(n,str(sglevel)) 
 ##                        if maxstart:
@@ -1753,7 +1782,7 @@ class MSC(Measure.Measure):
 ##                            maxstart=umddevice.UMDMResult(sglevel,sglevel.unit)
 ##            
 ##            pathcorr=mg.get_path_correction(start, end, umddevice.UMD_dB)
-##            pfwd=maxstart*pathcorr['total'].mag()
+##            pfwd=maxstart*pathcorr.mag()
 ##            Emax = etest(f,pfwd)
 ##        return Emax
 
@@ -1764,17 +1793,18 @@ class MSC(Measure.Measure):
                            delay=1.0,
                            freqs=None,
                           receiverconf = None,
+                          SearchPaths=None,
                            names={'tuner': ['tuner1'],
                                    'refant': ['refant1'],
                                   'receiver': ['saref1']}):
         """Performs a msc emission measurement according to IEC 61000-4-21
         """
 
-        self.pre_user_event()
+        self.PreUserEvent()
         if self.autosave:
-            self.messenger(umdutil.tstamp()+" Resume MSC emission measurement from autosave...", [])
+            self.messenger(util.tstamp()+" Resume MSC emission measurement from autosave...", [])
         else:
-            self.messenger(umdutil.tstamp()+" Start new MSC emission measurement...", [])
+            self.messenger(util.tstamp()+" Start new MSC emission measurement...", [])
 
         self.rawData_Emission.setdefault(description, {})
 
@@ -1782,18 +1812,18 @@ class MSC(Measure.Measure):
         nrefant = min(len(names['refant']),len(names['receiver']))
         ntuner = len(names['tuner'])
 
-        mg=umdutil.UMDMGraph(dotfile)
+        mg=mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
         ddict=mg.CreateDevices()
         #for k,v in ddict.items():
         #    globals()[k] = v
 
-        self.messenger(umdutil.tstamp()+" Init devices...", [])
+        self.messenger(util.tstamp()+" Init devices...", [])
         err = mg.Init_Devices()
         if err: 
-            self.messenger(umdutil.tstamp()+" ...faild with err %d"%(err), [])
+            self.messenger(util.tstamp()+" ...faild with err %d"%(err), [])
             return err
         try:  
-            self.messenger(umdutil.tstamp()+" ...done", [])
+            self.messenger(util.tstamp()+" ...done", [])
             if freqs is None:
                 freqs = []
 
@@ -1806,7 +1836,7 @@ class MSC(Measure.Measure):
             if self.rawData_MainCal.has_key(calibration):
                 alltpos = self.GetAllTPos (calibration)            
             else:
-                self.messenger(umdutil.tstamp()+" Error: Calibration '%s' not found."%calibration, [])
+                self.messenger(util.tstamp()+" Error: Calibration '%s' not found."%calibration, [])
                 return -1
             # set up prefant, noise, ...
             prefant={}
@@ -1840,7 +1870,7 @@ class MSC(Measure.Measure):
                     try:
                         alltpos.remove(t)
                     except:
-                        umdutil.LogError (self.messenger)            
+                        util.LogError (self.messenger)            
                 msg = "List of tuner positions from autosave file:\n%s\nRemaining tuner positions:\n%s\n"%(str(tees),str(alltpos))
                 but = []
                 self.messenger(msg, but)
@@ -1879,7 +1909,7 @@ Quit: quit measurement.
                 but = ["Start", "Quit"]
                 answer = self.messenger(msg, but)
                 if answer == but.index('Quit'):
-                    self.messenger(umdutil.tstamp()+" measurement terminated by user.", [])
+                    self.messenger(util.tstamp()+" measurement terminated by user.", [])
                     raise UserWarning      # to reach finally statement
                 # loop freqs
                 try:
@@ -1889,7 +1919,7 @@ Quit: quit measurement.
                 for f in freqs:
                     if f in noise.keys():
                         continue
-                    self.messenger(umdutil.tstamp()+" Frequency %e Hz"%(f), [])
+                    self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
                     mg.EvaluateConditions()
                     # set frequency for all devices
                     (minf, maxf) = mg.SetFreq_Devices (f)
@@ -1902,12 +1932,12 @@ Quit: quit measurement.
                     except:
                         conf = {}
                     rconf = mg.ConfReceivers(conf)
-                    self.messenger(umdutil.tstamp()+" Receiver configuration: %s"%str(rconf), [])
+                    self.messenger(util.tstamp()+" Receiver configuration: %s"%str(rconf), [])
                         
                     # cable corrections
                     c_refant_receiver = []
                     for i in range(nrefant):
-                        c_refant_receiver.append(mg.get_path_correction(names['refant'][i], names['receiver'][i], umddevice.UMD_dB))
+                        c_refant_receiver.append(mg.get_path_correction(names['refant'][i], names['receiver'][i], POWERRATIO))
 
                     # ALL measurement start here
                     block = {}
@@ -1918,7 +1948,7 @@ Quit: quit measurement.
                         receiverlist.append(names['receiver'][i])
 
                     # noise floor measurement..
-                    self.messenger(umdutil.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
+                    self.messenger(util.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
                     mg.NBTrigger(receiverlist)
                     # serial poll all devices in list
                     olddevs = []
@@ -1928,25 +1958,25 @@ Quit: quit measurement.
                         new_devs=[i for i in nbresult.keys() if i not in olddevs]
                         olddevs = nbresult.keys()[:]
                         if len(new_devs):
-                            self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                            self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(receiverlist):
                             break
                     for i in range(nrefant):
                         n = names['receiver'][i]
                         if nbresult.has_key(n):
                             # add path correction here
-                            PRef = umddevice.UMDCMResult(nbresult[n])
+                            PRef = nbresult[n]
                             nn = 'Noise '+n
                             self.__addLoggerBlock(block, nn, 'Noise reading of the receive antenna receiver for position %d'%i, nbresult[n], {})
                             self.__addLoggerBlock(block[nn]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block, 'c_refant_receiver'+str(i), 'Correction from ref antenna feed to ref receiver', c_refant_receiver[i], {})
                             self.__addLoggerBlock(block['c_refant_receiver'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PRef /= c_refant_receiver[i]['total']
+                            PRef = abs((PRef / c_refant_receiver[i]).reduce_to(WATT))
                             self.__addLoggerBlock(block, nn+'_corrected', 'Noise: Pref/c_refant_receiver', PRef, {})
                             self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[nn+'_corrected']['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             noise = self.__insert_it (noise, PRef, None, None, f, t, i)
-                    self.messenger(umdutil.tstamp()+" Noise floor measurement done.", [])
+                    self.messenger(util.tstamp()+" Noise floor measurement done.", [])
 
                     for log in self.logger:
                         log(block)
@@ -1955,13 +1985,13 @@ Quit: quit measurement.
                     # END OF f LOOP
                 lowBatList = mg.getBatteryLow_Devices()
                 if len(lowBatList):
-                    self.messenger(umdutil.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
+                    self.messenger(util.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
                 self.rawData_Emission[description].update({'noise': noise})
                 # autosave class instance
                 if self.asname and (time.time()-self.lastautosave > self.autosave_interval):
-                    self.messenger(umdutil.tstamp()+" autosave ...", [])
+                    self.messenger(util.tstamp()+" autosave ...", [])
                     self.do_autosave()
-                    self.messenger(umdutil.tstamp()+" ... done", [])
+                    self.messenger(util.tstamp()+" ... done", [])
 
                 # NOISE MEASUREMENT finished
             self.autosave=False    
@@ -1980,23 +2010,23 @@ Quit: quit measurement.
             but = ["Start", "Quit"]
             answer = self.messenger(msg, but)
             if answer == but.index('Quit'):
-                self.messenger(umdutil.tstamp()+" measurement terminated by user.", [])
+                self.messenger(util.tstamp()+" measurement terminated by user.", [])
                 raise UserWarning      # to reach finally statement
             
             # loop tuner positions
             for t in alltpos:
-                self.messenger(umdutil.tstamp()+" Tuner position %s"%(repr(t)), [])
+                self.messenger(util.tstamp()+" Tuner position %s"%(repr(t)), [])
                 # position tuners
-                self.messenger(umdutil.tstamp()+" Move tuner(s)...", [])
+                self.messenger(util.tstamp()+" Move tuner(s)...", [])
                 for i in range(ntuner):
-                    TPos = umddevice.UMDMResult(t[i], umddevice.UMD_deg)
-                    IsPos = ddict[names['tuner'][i]].Goto (TPos, 0)
-                self.messenger(umdutil.tstamp()+" ...done", [])
+                    TPos = t[i]
+                    IsPos = ddict[names['tuner'][i]].Goto (TPos)
+                self.messenger(util.tstamp()+" ...done", [])
                 # loop freqs
                 for f in freqs:
-                    self.messenger(umdutil.tstamp()+" Frequency %e Hz"%(f), [])
+                    self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
                     if not self.UseTunerPos (calibration, f, t):
-                        self.messenger(umdutil.tstamp()+" Skipping tuner position", [])
+                        self.messenger(util.tstamp()+" Skipping tuner position", [])
                         continue
                     # switch if necessary
                     mg.EvaluateConditions()
@@ -2011,12 +2041,12 @@ Quit: quit measurement.
                     except:
                         conf = {}
                     rconf = mg.ConfReceivers(conf)
-                    self.messenger(umdutil.tstamp()+" Receiver configuration: %s"%str(rconf), [])
+                    self.messenger(util.tstamp()+" Receiver configuration: %s"%str(rconf), [])
                         
                     # cable corrections
                     c_refant_receiver = []
                     for i in range(nrefant):
-                        c_refant_receiver.append(mg.get_path_correction(names['refant'][i], names['receiver'][i], umddevice.UMD_dB))
+                        c_refant_receiver.append(mg.get_path_correction(names['refant'][i], names['receiver'][i], POWERRATIO))
 
                     # ALL measurement start here
                     block = {}
@@ -2028,9 +2058,9 @@ Quit: quit measurement.
 
                     # wait delay seconds
                     time.sleep(0.5)   # minimum delay according -4-21
-                    self.messenger(umdutil.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
+                    self.messenger(util.tstamp()+" Going to sleep for %d seconds ..."%(delay), [])
                     self.wait(delay,locals(),self.__HandleUserInterrupt)
-                    self.messenger(umdutil.tstamp()+" ... back.", [])
+                    self.messenger(util.tstamp()+" ... back.", [])
 
                         
                     # Trigger all devices in list
@@ -2043,7 +2073,7 @@ Quit: quit measurement.
                         new_devs=[i for i in nbresult.keys() if i not in olddevs]
                         olddevs = nbresult.keys()[:]
                         if len(new_devs):
-                            self.messenger(umdutil.tstamp()+" Got answer from: "+str(new_devs), [])                            
+                            self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(nblist):
                             break
                     # print nbresult
@@ -2053,13 +2083,13 @@ Quit: quit measurement.
                         n = names['receiver'][i]
                         if nbresult.has_key(n):
                             # add path correction here
-                            PRef = umddevice.UMDCMResult(nbresult[n])
+                            PRef = nbresult[n]
                             self.__addLoggerBlock(block, n, 'Reading of the receive antenna receiver for position %d'%i, nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                             self.__addLoggerBlock(block, 'c_refant_receiver'+str(i), 'Correction from ref antenna feed to ref receiver', c_refant_receiver[i], {})
                             self.__addLoggerBlock(block['c_refant_receiver'+str(i)]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
-                            PRef /= c_refant_receiver[i]['total']
+                            PRef = PRef / c_refant_receiver[i]
                             prefant = self.__insert_it (prefant, PRef, None, None, f, t, i)
                             self.__addLoggerBlock(block, n+'_corrected', 'Pref/c_refant_receiver', PRef, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -2072,21 +2102,21 @@ Quit: quit measurement.
                     # END OF f LOOP
                 lowBatList = mg.getBatteryLow_Devices()
                 if len(lowBatList):
-                    self.messenger(umdutil.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
+                    self.messenger(util.tstamp()+" WARNING: Low battery status detected for: %s"%(str(lowBatList)), [])
                 self.rawData_Emission[description].update({'pref': prefant, 'mg': mg})
                 # autosave class instance
                 if self.asname and (time.time()-self.lastautosave > self.autosave_interval):
-                    self.messenger(umdutil.tstamp()+" autosave ...", [])
+                    self.messenger(util.tstamp()+" autosave ...", [])
                     self.do_autosave()
-                    self.messenger(umdutil.tstamp()+" ... done", [])
+                    self.messenger(util.tstamp()+" ... done", [])
             #END OF t LOOP
                 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(umdutil.tstamp()+" Quit...", [])
+            self.messenger(util.tstamp()+" Quit...", [])
             stat = mg.Quit_Devices()
-        self.messenger(umdutil.tstamp()+" End of Emission mesurement. Status: %d"%stat, [])
-        self.post_user_event()
+        self.messenger(util.tstamp()+" End of Emission mesurement. Status: %d"%stat, [])
+        self.PostUserEvent()
         return stat
 
     def GetAllTPos (self, description):
@@ -2108,7 +2138,7 @@ Quit: quit measurement.
                         pos[n].append(l)
         for p in pos:
             p.sort()
-        alltpos = umdutil.combinations (pos)
+        alltpos = util.combinations (pos)
         return alltpos
 
     def UseTunerPos (self, description, f, t):
@@ -2131,6 +2161,7 @@ Quit: quit measurement.
     def OutputRawData_MainCal (self, description=None, what=None, fname=None):
         thedata = self.rawData_MainCal
         stdout = sys.stdout
+        fp=None
         if fname:
             fp = file(fname,"w")
             sys.stdout = fp
@@ -2138,14 +2169,16 @@ Quit: quit measurement.
             self.__OutputRawData(thedata, description, what)
         finally:
             try:
-                fp.close()
+                if fp:
+                    fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
     def OutputRawData_Emission (self, description=None, what=None, fname=None):
         thedata = self.rawData_Emission
         stdout = sys.stdout
+        fp=None
         if fname:
             fp = file(fname,"w")
             sys.stdout = fp
@@ -2153,14 +2186,16 @@ Quit: quit measurement.
             self.__OutputRawData(thedata, description, what)
         finally:
             try:
-                fp.close()
+                if fp:
+                    fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
     def OutputRawData_AutoCorr (self, description=None, what=None, fname=None):
         thedata = self.rawData_AutoCorr
         stdout = sys.stdout
+        fp=None
         if fname:
             fp = file(fname,"w")
             sys.stdout = fp
@@ -2168,9 +2203,10 @@ Quit: quit measurement.
             self.__OutputRawData(thedata, description, what)
         finally:
             try:
-                fp.close()
+                if fp:
+                    fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 ##        # fuers praktikum
 ##        deslist = self.__MakeDeslist(thedata, description)
@@ -2195,6 +2231,7 @@ Quit: quit measurement.
     def OutputRawData_EUTCal (self, description=None, what=None, fname=None):
         thedata = self.rawData_EUTCal
         stdout = sys.stdout
+        fp=None
         if fname:
             fp = file(fname,"w")
             sys.stdout = fp
@@ -2202,14 +2239,16 @@ Quit: quit measurement.
             self.__OutputRawData(thedata, description, what)
         finally:
             try:
-                fp.close()
+                if fp:
+                    fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
     def OutputRawData_Immunity (self, description=None, what=None, fname=None):
         thedata = self.rawData_Immunity
         stdout = sys.stdout
+        fp=None
         if fname:
             fp = file(fname,"w")
             sys.stdout = fp
@@ -2217,9 +2256,10 @@ Quit: quit measurement.
             self.__OutputRawData(thedata, description, what)
         finally:
             try:
-                fp.close()
+                if fp:
+                    fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
 
@@ -2262,7 +2302,7 @@ Quit: quit measurement.
             try:
                 fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
     def OutputProcessedData_Emission (self, description=None, what=None, fname=None):
@@ -2277,7 +2317,7 @@ Quit: quit measurement.
             try:
                 fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
     def OutputProcessedData_EUTCal (self, description=None, what=None, fname=None):
@@ -2292,7 +2332,7 @@ Quit: quit measurement.
             try:
                 fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
     def OutputProcessedData_AutoCorr (self, description=None, what=None, fname=None):
@@ -2307,7 +2347,7 @@ Quit: quit measurement.
             try:
                 fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
     def OutputProcessedData_Immunity (self, description=None, what=None, fname=None):
@@ -2322,7 +2362,7 @@ Quit: quit measurement.
             try:
                 fp.close()
             except:
-                umdutil.LogError (self.messenger)            
+                util.LogError (self.messenger)            
             sys.stdout=stdout
 
     def __OutputProcessedData(self, thedata, description, what):
@@ -2377,21 +2417,21 @@ Quit: quit measurement.
         r=[1,1.313,1.499,1.630,1.732,1.957,2,2.08,2.25,2.3,2.38,2.47,2.54,2.59,2.64,2.76,2.92,3.04,3.2,3.6,3.97]
         return scipy.interpolate.interp1d(t,r)
 
-    def Evaluate_MainCal(self, description="empty", standard=None):
+    def Evaluate_MainCal(self, description="empty", standard=None, freqs=None):
+        ctx=Context()
         standard = self.getStandard(standard)
-        self.messenger(umdutil.tstamp()+" Start of evaluation of main calibration with description %s"%description, [])
+        self.messenger(util.tstamp()+" Start of evaluation of main calibration with description %s"%description, [])
         if not self.rawData_MainCal.has_key(description):
-            self.messenger(umdutil.tstamp()+" Description %s not found."%description, [])
+            self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
             
-        zeroPR = umddevice.UMDMResult(0.0,umddevice.UMD_powerratio)
-        zeroVm = umddevice.UMDMResult(0.0,umddevice.UMD_Voverm)            
-        zeroVmoversqrtW = umddevice.UMDMResult(0.0,umddevice.UMD_VovermoversqrtW)            
+        if not freqs:
+            freqs = self.rawData_MainCal[description]['efield'].keys()
+        freqs.sort()
 
+        # shortcuts to raw data
         efields = self.rawData_MainCal[description]['efield']
         pref = self.rawData_MainCal[description]['pref']
-        freqs = efields.keys()
-        freqs.sort()
 
         self.processedData_MainCal.setdefault(description,{})
         self.processedData_MainCal[description]['Standard_Used']=standard
@@ -2417,10 +2457,13 @@ Quit: quit measurement.
         self.processedData_MainCal[description]['Sigma24_dB'] = {}
         # the evaluation has to be done for all frequencies
         for f in freqs:
+            self.messenger(util.tstamp()+" Frequency: %.2f ..."%f, [])
+            #print
+            #print f,
             tees = efields[f].keys() #tuner positions
             pees = efields[f][tees[0]].keys() #e-field probe positions
             prees = pref[f][tees[0]].keys() #ref antenna positions
-            tees.sort()
+            #tees.sort()
             pees.sort()
             prees.sort()
             ntees = len(tees)
@@ -2434,36 +2477,46 @@ Quit: quit measurement.
             PInputEL = {} #input for a certain field strength
             PInputVariationEL = {} # max to min ratio
             for p in pees:  # positions in the room, keys for the dicts
-                EMax = umddevice.stdVectorUMDMResult()
-                for k in range(3):  # x,y,z
-                    EMax.append(zeroVm)
-                EMaxT=zeroVm
-                PInput = umddevice.UMDMResult(0.0, umddevice.UMD_W)
-                PInputMin = umddevice.UMDMResult(1.0e10, umddevice.UMD_W)
-                PInputMax = umddevice.UMDMResult(0.0, umddevice.UMD_W)
+                #print p,
+                EMax = []
+                for k in (0,1,2):  # x,y,z
+                    EMax.append(Quantity(EFIELD, 0.0))  # for each p init EMax with (0 V/m, 0 V/m, 0 V/m)
+                EMaxT=Quantity(EFIELD, 0.0)
+                PInput = Quantity(WATT, 0.0)
+                PInputMin = Quantity(WATT, 1.0e10)
+                PInputMax = Quantity(WATT, 0.0)
                 InCounter = 0
                 for t in tees:  # tuner positions-> max values with respect to tuner
-                    for i in range(len(efields[f][t][p])): #typically, len=1
-                        ef = efields[f][t][p][i]['value'] # x,y,z vector
+                    #print t,
+                    #try:
+                    #    efields[f][t][p]
+                    #except KeyError:
+                    #    efields[f][t][p]=efields[f][t][0]   # TO BE REMOVED
+                    for efli in efields[f][t][p]: #typically, len=1
+                        ef = efli['value'] # x,y,z vector
                         #import pprint
                         #pprint.pprint(ef)
                         #print len(ef), ef[0], ef[1], ef[2]
-                        for k in range(3): # max for each component
-                            EMax[k] = umdutil.MRmax(EMax[k], ef[k].convert(umddevice.UMD_Voverm))
-                        et=umdutil.MR_RSS(ef) # max of rss (E_T)
-                        EMaxT=umdutil.MRmax(EMaxT, et.convert(umddevice.UMD_Voverm))
+                        for k in (0,1,2): # max for each component
+                            #print EMax[k], ef[k], '->',
+                            EMax[k] = max(EMax[k], ef[k])
+                            #print EMax[k]
+                        #print "EMax", EMax
+                        et=numpy.sqrt( sum([e*e for e in ef], Quantity(EFIELD, 0.0)**2) ) # max of rss (E_T)
+                        EMaxT=max(EMaxT, et)
                         
-                        pf = efields[f][t][p][i]['pfwd'].convert(umddevice.UMD_W)
-                        pf = pf.mag()
-                        PInputMin = umdutil.MRmin(PInputMin, pf) # min  
-                        PInputMax = umdutil.MRmax(PInputMax, pf) # max
+                        pf = efli['pfwd']
+                        PInputMin = min(PInputMin, pf) # min  
+                        PInputMax = max(PInputMax, pf) # max
                         PInput += pf # av 
                         InCounter += 1
+                #print
+                #print EMax
                 PInput /= InCounter
-                EMaxL[p]=EMax  # for each probe pos: Max over tuner positions
-                EMaxTL[p]=EMaxT
-                PInputVariation = PInputMax / PInputMin
-                PInputEL[p]=PInput
+                EMaxL[p]=[_.eval() for _ in EMax]  # for each probe pos: Max over tuner positions
+                EMaxTL[p]=EMaxT.eval()
+                PInputVariation = (PInputMax / PInputMin).eval()
+                PInputEL[p]=PInput.eval()
                 PInputVariationEL[p] = PInputVariation
 
             # receive antenna calibration
@@ -2472,12 +2525,12 @@ Quit: quit measurement.
             PInputAL = {}
             PInputVariationAL = {}
             for p in prees:   # ref antenna positions -> keys
-                PMaxRec = umddevice.UMDMResult(0.0, umddevice.UMD_W)
-                PAveRec = umddevice.UMDMResult(0.0, umddevice.UMD_W)
+                PMaxRec = Quantity (WATT, 0.0)
+                PAveRec = Quantity (WATT, 0.0)
                 RecCounter = 0
-                PInput = umddevice.UMDMResult(0.0, umddevice.UMD_W)
-                PInputMin = umddevice.UMDMResult(1.0e10, umddevice.UMD_W)
-                PInputMax = umddevice.UMDMResult(0.0, umddevice.UMD_W)
+                PInput = Quantity (WATT, 0.0)
+                PInputMin = Quantity (WATT, 1.0e10)
+                PInputMax = Quantity (WATT, 0.0)
                 InCounter = 0
                 for t in tees:
                     try:
@@ -2485,23 +2538,23 @@ Quit: quit measurement.
                     except KeyError:
                         pref[f][t][p]=pref[f][t][0][:]
                     for i in range(len(pref[f][t][p])):
-                        pr = pref[f][t][p][i]['value'].convert(umddevice.UMD_W)
-                        pr = pr.mag()
-                        PMaxRec = umdutil.MRmax(PMaxRec, pr) 
+                        pr = pref[f][t][p][i]['value']
+                        #pr = pr.mag()
+                        PMaxRec = max(PMaxRec, pr) 
                         PAveRec += pr
                         RecCounter += 1
-                        pf = pref[f][t][p][i]['pfwd'].convert(umddevice.UMD_W)
-                        pf = pf.mag()
-                        PInputMin = umdutil.MRmin(PInputMin, pf) 
-                        PInputMax = umdutil.MRmax(PInputMax, pf) 
+                        pf = pref[f][t][p][i]['pfwd']
+                        #pf = pf.mag()
+                        PInputMin = min(PInputMin, pf) 
+                        PInputMax = max(PInputMax, pf) 
                         PInput += pf
                         InCounter += 1
                 PAveRec  /= RecCounter
-                PMaxRecL[p]=PMaxRec
-                PAveRecL[p]=PAveRec    # for each receive antenna pos: Max and Av over tuner positions
+                PMaxRecL[p]=PMaxRec.eval()
+                PAveRecL[p]=PAveRec.eval()    # for each receive antenna pos: Max and Av over tuner positions
                 PInput  /=InCounter
-                PInputVariation = PInputMax / PInputMin
-                PInputAL[p]=PInput
+                PInputVariation = (PInputMax / PInputMin).eval()
+                PInputAL[p]=PInput.eval()
                 PInputVariationAL[p] = PInputVariation
                     
                 
@@ -2515,74 +2568,70 @@ Quit: quit measurement.
             self.processedData_MainCal[description]['EMaxT'][f]=EMaxTL.copy()
 
             # calc ACF and IL
-            IL = zeroPR
+            IL = Quantity(POWERRATIO, 0.0)
             for pos,Pmax in PMaxRecL.items():            
-                IL += Pmax/PInputAL[pos]
-            IL /= len(PMaxRecL.keys())
-            ACF = zeroPR
+                IL = IL + Quantity(POWERRATIO, 1.0)*Pmax/PInputAL[pos]
+            IL = (IL / len(PMaxRecL.keys())).eval()
+            ACF = Quantity(POWERRATIO, 0.0)
             for pos,Pav in PAveRecL.items():            
-                ACF += Pav/PInputAL[pos]
-            ACF /= len(PAveRecL.keys())
+                ACF = ACF + Quantity(POWERRATIO, 1.0)*Pav/PInputAL[pos]
+            ACF = (ACF / len(PAveRecL.keys())).eval()
             self.processedData_MainCal[description]['ACF'][f] = ACF
             self.processedData_MainCal[description]['IL'][f] = IL
 
-            Avxyz = umddevice.stdVectorUMDMResult()
-            for k in range(3):
-                Avxyz.append(zeroVmoversqrtW)
+            Avxyz = [Quantity(EFIELDPNORM,0.0) for _ in (1,2,3)] #umddevice.stdVectorUMDMResult()
             self.processedData_MainCal[description]['Enorm'][f]={}
             self.processedData_MainCal[description]['EnormT'][f]={}
             for pos,Em in EMaxL.items():
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos] 
-                v = pin.get_v()
-                sqrtv=math.sqrt(v)
-                u = pin.get_u()
-                l = pin.get_l()
-                sqrtPInput = umddevice.UMDMResult(sqrtv, sqrtv+(u-l)/(4.0*sqrtv), sqrtv-(u-l)/(4.0*sqrtv), umddevice.UMD_sqrtW)
-                en = umddevice.stdVectorUMDMResult()
-                for k in range(len(Em)):
-                    en.append(Em[k]/sqrtPInput)
-                    Avxyz[k] += en[k]
-                self.processedData_MainCal[description]['Enorm'][f][pos]=en
-            AvT = zeroVmoversqrtW
+                v = numpy.sqrt(pin)
+                #sqrtv=math.sqrt(v)
+                #u = pin.get_u()
+                #l = pin.get_l()
+                sqrtPInput = v # umddevice.UMDMResult(sqrtv, sqrtv+(u-l)/(4.0*sqrtv), sqrtv-(u-l)/(4.0*sqrtv), umddevice.UMD_sqrtW)
+                en = [_e_/sqrtPInput for _e_ in Em] #umddevice.stdVectorUMDMResult()
+                for k,_en_ in enumerate(en):
+                    Avxyz[k] += _en_
+                self.processedData_MainCal[description]['Enorm'][f][pos]=[_.eval() for _ in en]
+            Npos=len(EMaxL.keys())
+            Avxyz = [_a_/float(Npos) for _a_ in Avxyz]
+            AvT = Quantity(EFIELDPNORM,0.0)
             for pos,Em in EMaxTL.items():
-                pin = self.processedData_MainCal[description]['PInputForEField'][f][pos] 
-                v = pin.get_v()
-                sqrtv=math.sqrt(v)
-                u = pin.get_u()
-                l = pin.get_l()
-                sqrtPInput = umddevice.UMDMResult(sqrtv, sqrtv+(u-l)/(4.0*sqrtv), sqrtv-(u-l)/(4.0*sqrtv), umddevice.UMD_sqrtW)
+                pin = self.processedData_MainCal[description]['PInputForEField'][f][pos]
+                v = numpy.sqrt(pin)
+                #sqrtv=math.sqrt(v)
+                #u = pin.get_u()
+                #l = pin.get_l()
+                sqrtPInput = v # umddevice.UMDMResult(sqrtv, sqrtv+(u-l)/(4.0*sqrtv), sqrtv-(u-l)/(4.0*sqrtv), umddevice.UMD_sqrtW)
                 en=Em/sqrtPInput
-                self.processedData_MainCal[description]['EnormT'][f][pos]=en
+                self.processedData_MainCal[description]['EnormT'][f][pos]=en.eval()
                 AvT+=en
-            AvT /= len(EMaxTL)
-            Av24 = zeroVmoversqrtW
-            for k in range(3):
-                Avxyz[k] /= len(EMaxL.keys())
+            AvT /= float(len(EMaxTL))
+            Av24 = Quantity(EFIELDPNORM,0.0)
+            for k in (0,1,2):
                 Av24 += Avxyz[k]
             Av24 /= 3.0
-            self.processedData_MainCal[description]['EnormAveXYZ'][f]=Avxyz
-            self.processedData_MainCal[description]['EnormAve'][f]=Av24
-            self.processedData_MainCal[description]['EnormTAve'][f]=AvT
+            Avxyz=self.processedData_MainCal[description]['EnormAveXYZ'][f]=[_.eval() for _ in Avxyz]
+            Av24=self.processedData_MainCal[description]['EnormAve'][f]=Av24.eval()
+            AvT=self.processedData_MainCal[description]['EnormTAve'][f]=AvT.eval()
             enorm = self.processedData_MainCal[description]['Enorm'][f]
-            Sxyz = umddevice.stdVectorUMDMResult()
+            Sxyz = [] # umddevice.stdVectorUMDMResult()
             list24 = []
-            for k in range(3):
+            for k in (0,1,2):
                 lst = [enorm[p][k] for p in enorm.keys()]
-                list24+=lst
-                S = umdutil.CalcSigma(lst, Avxyz[k])
-                Sxyz.append(S)            
-            S24 = umdutil.CalcSigma(list24, Av24)
+                list24 = list24 + lst
+                S = util.CalcSigma(lst, Avxyz[k])
+                Sxyz.append(S.eval())            
+            S24 = util.CalcSigma(list24, Av24).eval()
             
-            self.processedData_MainCal[description]['SigmaXYZ'][f]=Sxyz
-            self.processedData_MainCal[description]['Sigma24'][f]=S24
-            SdBxyz = umddevice.stdVectorUMDMResult()
-            for k in range(3):
-                SdBxyz.append(((Sxyz[k]+Avxyz[k])/Avxyz[k]).convert(umddevice.UMD_dB))
-            SdB24 = ((S24+Av24)/Av24).convert(umddevice.UMD_dB)
-            self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = SdBxyz
-            self.processedData_MainCal[description]['Sigma24_dB'][f] = SdB24
+            self.processedData_MainCal[description]['SigmaXYZ'][f]=[_.eval() for _ in Sxyz]
+            self.processedData_MainCal[description]['Sigma24'][f]=S24.eval()
+            SdBxyz = [20 * numpy.log10((Sxyz[k]+Avxyz[k])/Avxyz[k] ) for k in (0,1,2)] #umddevice.stdVectorUMDMResult()
+            SdB24 =   20 * numpy.log10( (S24+Av24) / Av24 )
+            self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = [_.eval() for _ in SdBxyz]
+            self.processedData_MainCal[description]['Sigma24_dB'][f] = SdB24.eval()
 
-        self.messenger(umdutil.tstamp()+" End of evaluation of main calibration", [])
+        self.messenger(util.tstamp()+" End of evaluation of main calibration", [])
         return 0
 
     def Evaluate_Emission(self, 
@@ -2599,10 +2648,10 @@ Quit: quit measurement.
         if isoats==None:
             isoats=False
         if isoats:
-            gmax=umdutil.gmax_oats
+            gmax=util.gmax_oats
             gmax_model="OATS"
         else:
-            gmax=umdutil.gmax_fs
+            gmax=util.gmax_fs
             gmax_model="FAR"
         dmax_f=directivity
 
@@ -2610,21 +2659,21 @@ Quit: quit measurement.
         EUTprocData=self.processedData_EUTCal
             
 
-        self.messenger(umdutil.tstamp()+" Start of evaluation of emission measurement with description %s"%description, [])
+        self.messenger(util.tstamp()+" Start of evaluation of emission measurement with description %s"%description, [])
         if not self.rawData_Emission.has_key(description):
-            self.messenger(umdutil.tstamp()+" Description %s not found."%description, [])
+            self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
         if not self.rawData_MainCal.has_key(empty_cal):
-            self.messenger(umdutil.tstamp()+" Empty chamber cal not found. Description: %s"%empty_cal, [])
+            self.messenger(util.tstamp()+" Empty chamber cal not found. Description: %s"%empty_cal, [])
             return -1
         if not self.rawData_MainCal.has_key(loaded_cal):
-            self.messenger(umdutil.tstamp()+" Loaded chamber cal not found. Description: %s"%loaded_cal, [])
+            self.messenger(util.tstamp()+" Loaded chamber cal not found. Description: %s"%loaded_cal, [])
             return -1
         if not EUTrawData.has_key(EUT_cal):
-            self.messenger(umdutil.tstamp()+" EUT cal not found. Description: %s"%EUT_cal, [])
+            self.messenger(util.tstamp()+" EUT cal not found. Description: %s"%EUT_cal, [])
             return -1
 	
-        zeroPR = umddevice.UMDMResult(0.0,umddevice.UMD_powerratio)
+        #zeroPR = Quantity (POWERRATIO, 0.0)
         
         pref = self.rawData_Emission[description]['pref']
         noise= self.rawData_Emission[description]['noise']
@@ -2644,7 +2693,7 @@ Quit: quit measurement.
         
         #cal_freqs = self.rawData_MainCal[empty_cal]['efield'].keys().sort()
         #maxload_org = maxload.values()
-        maxload_inter = umdutil.InterpolateMResults(maxload, freqs, interpolation)
+        maxload_inter = util.InterpolateMResults(maxload, freqs, interpolation)
 
         etaTx_org = {}
         etaTx = self.rawData_MainCal[empty_cal]['etaTx']
@@ -2655,20 +2704,20 @@ Quit: quit measurement.
                 if not ei['value'] is None:
                     break
             etaTx_org[f]=ei['value']
-        etaTx_inter = umdutil.InterpolateMResults(etaTx_org, freqs, interpolation)
+        etaTx_inter = util.InterpolateMResults(etaTx_org, freqs, interpolation)
 
         il_org = self.processedData_MainCal[empty_cal]['IL']
-        il_inter = umdutil.InterpolateMResults(il_org, freqs, interpolation)
+        il_inter = util.InterpolateMResults(il_org, freqs, interpolation)
 
         #eutcal_freqs = self.processedData_EUTCal[EUT_cal]['CCF'].keys()
         ccf = EUTprocData[EUT_cal]['CCF']
         clf = EUTprocData[EUT_cal]['CLF']
-        ccf_inter = umdutil.InterpolateMResults(ccf, freqs, interpolation)
-        clf_inter = umdutil.InterpolateMResults(clf, freqs, interpolation)
+        ccf_inter = util.InterpolateMResults(ccf, freqs, interpolation)
+        clf_inter = util.InterpolateMResults(clf, freqs, interpolation)
 
         relload={}
         for i,f in enumerate(freqs):
-            relload[f]=eutload[f]/maxload_inter[i]
+            relload[f]=eutload[f]/maxload_inter(i)
 
         self.processedData_Emission.setdefault(description,{})        
         self.processedData_Emission[description]['PMaxRec']={}
@@ -2683,13 +2732,13 @@ Quit: quit measurement.
         self.processedData_Emission[description]['Gmax_Model']=gmax_model
         self.processedData_Emission[description]['Assumed_hg']=hg
         self.processedData_Emission[description]['Assumed_RH']=RH
-        self.processedData_Emission[description]['Asumed_Distance']=umddevice.UMDMResult(distance,umddevice.UMD_m)
+        self.processedData_Emission[description]['Asumed_Distance']=Quantity(METER, distance)
         self.processedData_Emission[description]['RelLoading']=relload.copy()
         
         for i,f in enumerate(freqs):
             if callable(directivity):
                 dmax_f=directivity(f)
-            self.processedData_Emission[description]['Asumed_Directivity'][f]=umddevice.UMDMResult(dmax_f,umddevice.UMD_powerratio)
+            self.processedData_Emission[description]['Asumed_Directivity'][f]=Quantity(POWERRATIO, dmax_f)
             i = freqs.index(f)
             tees = pref[f].keys()
             prees = pref[f][tees[0]].keys()
@@ -2698,18 +2747,18 @@ Quit: quit measurement.
             ntees = len(tees)
             nprees = len(prees)
 
-            npr = noise[f][tees[0]][prees[0]][0]['value'].convert(umddevice.UMD_W)
-            npr = npr.mag()
-            npr *= etaTx_inter[i]/ccf_inter[i]
-            npr = npr.convert(umddevice.UMD_W)
+            npr = noise[f][tees[0]][prees[0]][0]  # ['value'].convert(umddevice.UMD_W)
+            #npr = npr.mag()
+            npr = npr *   etaTx_inter(i)/ccf_inter(i)
+            #npr = npr.convert(umddevice.UMD_W)
             gmax_f=gmax(f,s=distance,hg=hg,RH=RH)
             #print gmax_f['h'], gmax_f['v']
             gm=max(gmax_f['h'], gmax_f['v'])
-            neccf_v = math.sqrt(dmax_f*npr.get_v()*30)*gm
-            neccf_u = math.sqrt(dmax_f*npr.get_u()*30)*gm
+            neccf_v = numpy.sqrt(dmax_f*npr*30)*gm
+            #neccf_u = math.sqrt(dmax_f*npr.get_u()*30)*gm
             #print dmax_f*npr.get_l()*30
-            neccf_l = math.sqrt(max(0,dmax_f*npr.get_l()*30))*gm
-            nERad = umddevice.UMDMResult(neccf_v, neccf_u, neccf_l, umddevice.UMD_Voverm)
+            #neccf_l = math.sqrt(max(0,dmax_f*npr.get_l()*30))*gm
+            nERad = neccf_v
             self.processedData_Emission[description]['PRad_noise'][f]=npr
             self.processedData_Emission[description]['ERad_noise'][f]=nERad
 
@@ -2720,31 +2769,31 @@ Quit: quit measurement.
             ERadCCFL={}
             ERadCLFL={}
             for p in prees:
-                PMaxRec = umddevice.UMDMResult(0.0, umddevice.UMD_W)
-                PAveRec = umddevice.UMDMResult(0.0, umddevice.UMD_W)
+                PMaxRec = Quantity( WATT, 0.0)
+                PAveRec = Quantity( WATT, 0.0)
                 RecCounter = 0
                 for t in tees:
                     for k in range(len(pref[f][t][p])):
-                        pr = pref[f][t][p][k]['value'].convert(umddevice.UMD_W)
-                        pr = pr.mag()
-                        PMaxRec = umdutil.MRmax(PMaxRec, pr)        
+                        pr = pref[f][t][p][k] #['value'].convert(umddevice.UMD_W)
+                        #pr = pr.mag()
+                        PMaxRec = max(PMaxRec, pr)        
                         PAveRec += pr
                         RecCounter += 1
                 PAveRec /= RecCounter
                 PMaxRecL[p]=PMaxRec
                 PAveRecL[p]=PAveRec    # for each receive antenna pos: Max and Av over tuner positions
-                PRadCCFL[p]=PAveRec*etaTx_inter[i]/ccf_inter[i]
-                PRadCLFL[p]=PMaxRec*etaTx_inter[i]/(clf_inter[i]*il_inter[i])
-                prccf = PRadCCFL[p].convert(umddevice.UMD_W)
-                prclf = PRadCLFL[p].convert(umddevice.UMD_W)
-                eccf_v = math.sqrt(dmax_f*prccf.get_v()*30)*gm
-                eccf_u = math.sqrt(dmax_f*prccf.get_u()*30)*gm
-                eccf_l = math.sqrt(max(0,dmax_f*prccf.get_l()*30))*gm
-                ERadCCFL[p] = umddevice.UMDMResult(eccf_v, eccf_u, eccf_l, umddevice.UMD_Voverm)
-                eclf_v = math.sqrt(dmax_f*prclf.get_v()*30)*gm
-                eclf_u = math.sqrt(dmax_f*prclf.get_u()*30)*gm
-                eclf_l = math.sqrt(max(0,dmax_f*prclf.get_l()*30))*gm
-                ERadCLFL[p] = umddevice.UMDMResult(eclf_v, eclf_u, eclf_l, umddevice.UMD_Voverm)
+                PRadCCFL[p]=PAveRec*etaTx_inter(i)/ccf_inter(i)
+                PRadCLFL[p]=PMaxRec*etaTx_inter(i)/(clf_inter(i)*il_inter(i))
+                prccf = PRadCCFL[p] # .convert(umddevice.UMD_W)
+                prclf = PRadCLFL[p] # .convert(umddevice.UMD_W)
+                eccf_v = numpy.sqrt(dmax_f*prccf*30)*gm
+                #eccf_u = math.sqrt(dmax_f*prccf.get_u()*30)*gm
+                #eccf_l = math.sqrt(max(0,dmax_f*prccf.get_l()*30))*gm
+                ERadCCFL[p] = eccf_v
+                eclf_v = numpy.sqrt(dmax_f*prclf*30)*gm
+                #eclf_u = math.sqrt(dmax_f*prclf.get_u()*30)*gm
+                #eclf_l = math.sqrt(max(0,dmax_f*prclf.get_l()*30))*gm
+                ERadCLFL[p] = eclf_v
                 
             self.processedData_Emission[description]['PMaxRec'][f]=PMaxRecL.copy()
             self.processedData_Emission[description]['PAveRec'][f]=PAveRecL.copy()
@@ -2754,7 +2803,7 @@ Quit: quit measurement.
             self.processedData_Emission[description]['ERad_from_CLF'][f]=ERadCLFL.copy()
             
 
-        self.messenger(umdutil.tstamp()+" End of evaluation of emission measurement", [])
+        self.messenger(util.tstamp()+" End of evaluation of emission measurement", [])
         return 0
 
     def Evaluate_Immunity(self,
@@ -2764,24 +2813,24 @@ Quit: quit measurement.
                           EUT_cal="EUT",
                           EUT_OK=None,
                           interpolation = 'linxliny'):
-        self.messenger(umdutil.tstamp()+" Start of evaluation of immunity measurement with description %s"%description, [])
+        self.messenger(util.tstamp()+" Start of evaluation of immunity measurement with description %s"%description, [])
         if not self.rawData_Immunity.has_key(description):
-            self.messenger(umdutil.tstamp()+" Description %s not found."%description, [])
+            self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
         if not self.rawData_MainCal.has_key(empty_cal):
-            self.messenger(umdutil.tstamp()+" Empty chamber cal not found. Description: %s"%empty_cal, [])
+            self.messenger(util.tstamp()+" Empty chamber cal not found. Description: %s"%empty_cal, [])
             return -1
         if not self.rawData_MainCal.has_key(loaded_cal):
-            self.messenger(umdutil.tstamp()+" Loaded chamber cal not found. Description: %s"%loaded_cal, [])
+            self.messenger(util.tstamp()+" Loaded chamber cal not found. Description: %s"%loaded_cal, [])
             return -1
         if not self.rawData_EUTCal.has_key(EUT_cal):
-            self.messenger(umdutil.tstamp()+" WARNING: EUT cal not found. Description: %s"%EUT_cal, [])
+            self.messenger(util.tstamp()+" WARNING: EUT cal not found. Description: %s"%EUT_cal, [])
             EUT_cal=None
 
         if EUT_OK==None:
             EUT_OK = self.std_eut_status_checker
 
-        zeroPR = umddevice.UMDMResult(0.0,umddevice.UMD_powerratio)
+        #zeroPR = Quantity (POWERRATIO, 0.0)
         
         testfield_from_pfwd = TestField(self, maincal=empty_cal, eutcal=EUT_cal)
         
@@ -2795,7 +2844,7 @@ Quit: quit measurement.
         if not self.processedData_MainCal.has_key(empty_loaded):
             self.CalculateLoading_MainCal(empty_cal=empty_cal, loaded_cal=loaded_cal)
         maxload = self.processedData_MainCal[empty_loaded]['Loading']
-        maxload_inter = umdutil.MResult_Interpol(maxload, interpolation)
+        maxload_inter = util.InterpolateMResults([maxload[_f] for _f in freqs], freqs, interpolation)
 
         relload={}
         if EUT_cal:
@@ -2803,11 +2852,11 @@ Quit: quit measurement.
             if not self.processedData_EUTCal.has_key(empty_eut):
                 self.CalculateLoading_EUTCal(empty_cal=empty_cal, eut_cal=EUT_cal, freqs=freqs)
             eutload = self.processedData_EUTCal[empty_eut]['Loading']
-            eutload_inter = umdutil.MResult_Interpol(eutload, interpolation)
+            eutload_inter = util.InterpolateMResults([eutload[_f] for _f in freqs], freqs, interpolation)
             #clf = self.processedData_EUTCal[EUT_cal]['CLF']
             #clf_inter = umdutil.InterpolateMResults(clf, freqs, interpolation)
             for f in freqs:
-                relload[f]=eutload_inter[f]/maxload_inter[f]
+                relload[f]=eutload_inter(f)/maxload_inter(f)
 
         self.processedData_Immunity.setdefault(description,{})        
         self.processedData_Immunity[description]['PMaxRec']={}
@@ -2827,14 +2876,14 @@ Quit: quit measurement.
             PMaxRecL = {}
             PAveRecL = {}
             for p in prees:
-                PMaxRec = umddevice.UMDMResult(0.0, umddevice.UMD_W)
-                PAveRec = umddevice.UMDMResult(0.0, umddevice.UMD_W)
+                PMaxRec = Quantity(WATT,0.0)
+                PAveRec = Quantity(WATT,0.0)
                 RecCounter = 0
                 for t in tees:
                     for val in pref[f][t][p]:
-                        pr = val['value'].convert(umddevice.UMD_W)
-                        pr = pr.mag()
-                        PMaxRec = umdutil.MRmax(PMaxRec, pr)        
+                        pr = val['value']#.convert(umddevice.UMD_W)
+                        #pr = pr.mag()
+                        PMaxRec = max(PMaxRec, pr)        
                         PAveRec += pr
                         RecCounter += 1
                 PAveRec /= RecCounter
@@ -2870,7 +2919,7 @@ Quit: quit measurement.
                         
             self.processedData_Immunity[description]['EUTImmunityThreshold'][f]=thres[:]
 
-        self.messenger(umdutil.tstamp()+" End of evaluation of Immunity measurement", [])
+        self.messenger(util.tstamp()+" End of evaluation of Immunity measurement", [])
         return 0
 
 
@@ -2901,9 +2950,9 @@ Quit: quit measurement.
                           offset=0):            
         if skip is None:
             skip = []
-        self.messenger(umdutil.tstamp()+" Start of evaluation of autocorrelation measurement with description %s"%description, [])
+        self.messenger(util.tstamp()+" Start of evaluation of autocorrelation measurement with description %s"%description, [])
         if not self.rawData_AutoCorr.has_key(description):
-            self.messenger(umdutil.tstamp()+" Description %s not found."%description, [])
+            self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
         self.processedData_AutoCorr.setdefault(description,{})        
             
@@ -2914,20 +2963,20 @@ Quit: quit measurement.
         freqs.sort()
 
         if not 'DistributuionOfr'in skip:
-            self.messenger(umdutil.tstamp()+" Calculating pdf and cdf of the autocorrelation coefficient ...", [])
-            r, psi ,cpsi = umdutil.CalcPsi(len(tpos),rho)
-            self.messenger(umdutil.tstamp()+" ... done.", [])
+            self.messenger(util.tstamp()+" Calculating pdf and cdf of the autocorrelation coefficient ...", [])
+            r, psi ,cpsi = util.CalcPsi(len(tpos),rho)
+            self.messenger(util.tstamp()+" ... done.", [])
             self.processedData_AutoCorr[description]['DistributuionOfr']={}
             self.processedData_AutoCorr[description]['DistributuionOfr']['n']=len(tpos)
             self.processedData_AutoCorr[description]['DistributuionOfr']['r']=r[:]
             self.processedData_AutoCorr[description]['DistributuionOfr']['pdf']=psi[:]
             self.processedData_AutoCorr[description]['DistributuionOfr']['cdf']=cpsi[:]
             self.processedData_AutoCorr[description]['DistributuionOfr']['rho']=rho
-            self.messenger(umdutil.tstamp()+" Calculating critical limit of the autocorelation coeficient rho0 ...", [])
-            rho0 = umdutil.CalcRho0(r, cpsi, alpha)
+            self.messenger(util.tstamp()+" Calculating critical limit of the autocorelation coeficient rho0 ...", [])
+            rho0 = util.CalcRho0(r, cpsi, alpha)
             self.processedData_AutoCorr[description]['DistributuionOfr']['rho0']=rho0[alpha]
-            self.messenger(umdutil.tstamp()+" ...done.", [])
-            self.messenger(umdutil.tstamp()+" N=%d, alpha=%f, rho0=%f"%(len(tpos),alpha,rho0[alpha]), [])
+            self.messenger(util.tstamp()+" ...done.", [])
+            self.messenger(util.tstamp()+" N=%d, alpha=%f, rho0=%f"%(len(tpos),alpha,rho0[alpha]), [])
         
 
         self.processedData_AutoCorr[description]['TunerPositions']=tpos[:]            
@@ -2936,8 +2985,8 @@ Quit: quit measurement.
         if not 'NIndependentBoundaries' in skip:
             self.processedData_AutoCorr[description]['NIndependentBoundaries']={}
         if not 'Statistic' in skip:
-            rpy.r.library('ctest')
-            ray=umdutil.RayleighDist()
+            #rpy.r.library('ctest')
+            ray=distributions.RayleighDist()
             self.processedData_AutoCorr[description]['Statistic']={}
         for _i,f in filter(lambda (_i,_f): not (_i+offset)%every, enumerate(freqs)):
             try:
@@ -2945,43 +2994,40 @@ Quit: quit measurement.
             except:
                 lagf=lag
             if not 'AutoCorrelation' in skip:
-                self.messenger(umdutil.tstamp()+" Calculating autocorrelation f = %e"%f, [])
+                self.messenger(util.tstamp()+" Calculating autocorrelation f = %e"%f, [])
                 self.processedData_AutoCorr[description]['AutoCorrelation'][f]={}
                 ac_f = self.processedData_AutoCorr[description]['AutoCorrelation'][f]
                 pees = efields[f][str(tpos[0])].keys()
                 for p in pees:
-                    self.messenger(umdutil.tstamp()+" p = %d"%p, [])
+                    self.messenger(util.tstamp()+" p = %d"%p, [])
                     ac_f[p]={}
                     for k in range(len(efields[f][str(tpos[0])][p][0]['value'])):
-                        self.messenger(umdutil.tstamp()+" k = %d"%k, [])
+                        self.messenger(util.tstamp()+" k = %d"%k, [])
                         ees = []
                         for t in tpos:
                             ees.append(efields[f][str(t)][p][0]['value'][k])
-                        self.messenger(umdutil.tstamp()+" Calculating autocorrelation ...", [])
-                        r=umdutil.autocorr(ees,lagf,cyclic=True)
-                        self.messenger(umdutil.tstamp()+" ...done", [])
+                        self.messenger(util.tstamp()+" Calculating autocorrelation ...", [])
+                        r=correlation.autocorr(ees,lagf,cyclic=True)
+                        self.messenger(util.tstamp()+" ...done", [])
                         ac_f[p][k]=r[:]
-                self.messenger(umdutil.tstamp()+" ...done", [])
+                self.messenger(util.tstamp()+" ...done", [])
             if not 'NIndependentBoundaries' in skip:
-                self.messenger(umdutil.tstamp()+" Calculating Number of Independent Boundaries f = %e"%f, [])
+                self.messenger(util.tstamp()+" Calculating Number of Independent Boundaries f = %e"%f, [])
                 self.processedData_AutoCorr[description]['NIndependentBoundaries'][f]={}
                 ac_f = self.processedData_AutoCorr[description]['AutoCorrelation'][f]
                 nib_f = self.processedData_AutoCorr[description]['NIndependentBoundaries'][f]
                 pees = efields[f][str(tpos[0])].keys()
                 for p in pees:
-                    self.messenger(umdutil.tstamp()+" p = %d"%p, [])
+                    self.messenger(util.tstamp()+" p = %d"%p, [])
                     nib_f[p]={}
                     for k in range(len(efields[f][str(tpos[0])][p][0]['value'])):
-                        self.messenger(umdutil.tstamp()+" k = %d"%k, [])
+                        self.messenger(util.tstamp()+" k = %d"%k, [])
                         nib_f[p][k]=None
                         for i,_v in enumerate(ac_f[p][k]):
-                            try:
-                                ri=_v.get_v()
-                            except:
-                                ri=_v
+                            ri=_v
                             if ri < rho0[alpha]:
                                 # interpolation
-                                m=ri-ac_f[p][k][i-1].get_v()  # i=0 can not happen
+                                m=ri-ac_f[p][k][i-1] #.get_v()  # i=0 can not happen
                                 b=ri-m*i
                                 try:
                                     iinter=(rho0[alpha]-b)/m
@@ -2989,32 +3035,32 @@ Quit: quit measurement.
                                     iinter = 1.0*i
                                 nib_f[p][k] = len(tpos)/iinter   # division by zero can not happen because r[i] = 1 and rho0<=1
                                 #print f*1.0,p,k,r[i]*1.0,i,nib_f[p][k]
-                                self.messenger(umdutil.tstamp()+" f=%e, p=%d, k=%d, r=%s, lag=%f, Nindependent=%f"%(f*1.0,p,k,str(_v),iinter,nib_f[p][k]), [])
+                                self.messenger(util.tstamp()+" f=%e, p=%d, k=%d, r=%s, lag=%f, Nindependent=%f"%(f*1.0,p,k,str(_v),iinter,nib_f[p][k]), [])
                                 break
-                self.messenger(umdutil.tstamp()+" ...done", [])
+                self.messenger(util.tstamp()+" ...done", [])
             if not 'Statistic' in skip:
-                self.messenger(umdutil.tstamp()+" Calculating statistic f = %e"%f, [])
+                self.messenger(util.tstamp()+" Calculating statistic f = %e"%f, [])
                 self.processedData_AutoCorr[description]['Statistic'][f]={}
                 s_f = self.processedData_AutoCorr[description]['Statistic'][f]
                 ees24={}
                 pees = efields[f][str(tpos[0])].keys()
                 for p in pees:
-                    self.messenger(umdutil.tstamp()+" p = %d"%p, [])
+                    self.messenger(util.tstamp()+" p = %d"%p, [])
                     s_f[p]={}
                     for k in range(len(efields[f][str(tpos[0])][p][0]['value'])):
-                        self.messenger(umdutil.tstamp()+" k = %d"%k, [])
+                        self.messenger(util.tstamp()+" k = %d"%k, [])
                         # now, we have to redure the data set accoreding the result of the autocorr evaluation
                         ntotal = len(tpos)
                         try:
                             n_ind = self.processedData_AutoCorr[description]['NIndependentBoundaries'][f][p][k]
                         except:
-                            self.messenger(umdutil.tstamp()+" WARNING: No of independent boundaries not found. Using all boundaries.",[])
+                            self.messenger(util.tstamp()+" WARNING: No of independent boundaries not found. Using all boundaries.",[])
                             n_ind = ntotal   # fall back
                         # use autocor information
-                        posidx = umdutil.idxset(int(n_ind), len(tpos))
+                        posidx = spacing.idxset(int(n_ind), len(tpos))
                         ees = []
                         for i,t in enumerate(tpos):
-                            evalue=efields[f][str(t)][p][0]['value'][k].convert(umddevice.UMD_Voverm).get_v()
+                            evalue=efields[f][str(t)][p][0]['value'][k]# .convert(umddevice.UMD_Voverm).get_v()
                             ees24.setdefault(str(t),[]).append(evalue)
                             if i in posidx:
                                 ees.append(evalue)
@@ -3022,109 +3068,122 @@ Quit: quit measurement.
                         s_f[p][k]={}
                         ss=s_f[p][k]
                         ss['n']=n_ind
-                        hist=rpy.r.hist(ees,plot=False) # dict with keys: density, equidist, breaks, intensities, counts, xname, mids
-                        ss['hist']=hist.copy()
-                        e_cdf = rpy.r.ecdf(ees)
+                        
+                        
+                        
+                        hist=(histogram,low_range,binsize,extrapoits)=scipy.stats.histogram(ees) #tuple: histogram, low_range, binsize, extrapoints
+                        ss['hist']=hist
+                        e_cdf = distributions.ECDF(ees)
                         ss['samples']=ees[:]
                         ss['ecdf']=e_cdf(ees)[:]
                         # cost function for the fit
-                        cost=umdutil.Chi2Cost(ees,ss['ecdf'],ray.cdf)
+                        cost=distributions.Chi2Cost(ees,ss['ecdf'],ray.cdf)
                         s_fit=abs(scipy.optimize.brent(cost,brack=(ees[0],ees[-1])))
                         ss['fitted_shape']=s_fit
                         ss['cdf-fit']=[ray.cdf(e,s_fit) for e in ees]
                         # calc estimates for cho2-test
                         estimates=[]
-                        for i in range(len(hist['counts'])):
-                            estimates.append(ray.cdf(hist['breaks'][i+1],s_fit)-ray.cdf(hist['breaks'][i],s_fit))
-                        result_chi2 = rpy.r.chisq_test(hist['counts'],p=estimates)
-                        ss['p-chisquare']=result_chi2['p.value']
-                        result_ks = rpy.r.ks_test(ss['ecdf'], ss['cdf-fit'], exact=1)
-                        ss['p-KS']=result_ks['p.value']
+                        low=low_break
+                        for i,counts in enumerate(histogram):
+                            high=low+binsize
+                            estimates.append(ray.cdf(high,s_fit)-ray.cdf(low,s_fit))
+                            low=high
+                        cs, p_cs = scipy.stats.chisquare(histogram,f_exp=estimates)
+                        ss['p-chisquare']=p_cs
+                        ks, p_ks = scipy.stats.ks_2samp(ss['ecdf'], ss['cdf-fit'])
+                        ss['p-KS']=p_ks
+
                         #
                         # try different                        
                         #
                         ss['p-values_disttest']={}
                         for n_ind in range(len(tpos),2,-1):
-                            posidx = umdutil.idxset(n_ind, len(tpos))
+                            posidx = spacing.idxset(n_ind, len(tpos))
                             ees = []
                             for i,t in enumerate(tpos):
                                 if i in posidx:
-                                    ees.append(efields[f][str(t)][p][0]['value'][k].convert(umddevice.UMD_Voverm).get_v())
+                                    ees.append(efields[f][str(t)][p][0]['value'][k])
                             ees.sort()      # values only, no ebars, unit is V/m
-                            hist=rpy.r.hist(ees,plot=False) # dict with keys: density, equidist, breaks, intensities, counts, xname, mids
-                            e_cdf = rpy.r.ecdf(ees)
+                            hist=(histogram,low_range,binsize,extrapoits)=scipy.stats.histogram(ees) 
+                            e_cdf = distributions.ECDF(ees)
                             # cost function for the fit
-                            cost=umdutil.Chi2Cost(ees,e_cdf(ees),ray.cdf)
+                            cost=distributions.Chi2Cost(ees,e_cdf(ees),ray.cdf)
                             s_fit=abs(scipy.optimize.brent(cost,brack=(ees[0],ees[-1])))
                             estimates=[]
-                            for i in range(len(hist['counts'])):
-                                estimates.append(ray.cdf(hist['breaks'][i+1],s_fit)-ray.cdf(hist['breaks'][i],s_fit))
-                            result_chi2 = rpy.r.chisq_test(hist['counts'],p=estimates)
+                            low=low_break
+                            for i,counts in enumerate(histogram):
+                                high=low+binsize
+                                estimates.append(ray.cdf(high,s_fit)-ray.cdf(low,s_fit))
+                                low=high
+                            cs, p_cs = scipy.stats.chisquare(histogram,f_exp=estimates)
                             cdffit=[ray.cdf(e,s_fit) for e in ees]
-                            result_ks = rpy.r.ks_test(e_cdf(ees), cdffit, exact=1)
-                            ss['p-values_disttest'][n_ind]={'chisq': result_chi2['p.value'], 'KS': result_ks['p.value']}
+                            ks, p_ks = scipy.stats.ks_2samp(e_cdf(ees), cdffit)
+                            ss['p-values_disttest'][n_ind]={'chisq': p_cs, 'KS': p_ks}
 #                            print n_ind, result_chi2['p.value'], result_ks['p.value']
 #                            if result_chi2['p.value'] > 0.05 and result_ks['p.value'] > 0.05:
-#                                self.messenger(umdutil.tstamp()+" "%(n_ind+1, result_ks['p.value'], result_chi2['p.value']))
+#                                self.messenger(util.tstamp()+" "%(n_ind+1, result_ks['p.value'], result_chi2['p.value']))
 #                                break
-                            
                         ss['hist_disttest']=hist.copy()
                         ss['samples_disttest']=ees[:]
                         ss['ecdf_disttest']=e_cdf(ees)[:]
                         ss['fitted_shape_disttest']=s_fit
                         ss['cdf-fit_disttest']=cdffit
-                        ss['p-chisquare_disttest']=result_chi2['p.value']
-                        ss['p-KS_disttest']=result_ks['p.value']
-                        self.messenger(umdutil.tstamp()+" f=%e, p=%d, k=%d, p_ks_disttest=%e, p_chi2-disttest=%e"%(f*1.0,p,k,ss['p-KS_disttest'],ss['p-chisquare_disttest']), [])                     
+                        ss['p-chisquare_disttest']=p_cs
+                        ss['p-KS_disttest']=p_ks
+                            
+                        self.messenger(util.tstamp()+" f=%e, p=%d, k=%d, p_ks_disttest=%e, p_chi2-disttest=%e"%(f*1.0,p,k,ss['p-KS_disttest'],ss['p-chisquare_disttest']), [])                     
                 # now we try with all 24 e-field vals for one freq
                 ss=s_f[0][0]
                 ss['p-values_disttest24']={}
                 for n_ind in range(len(tpos),2,-1):
-                    posidx = umdutil.idxset(n_ind, len(tpos))
+                    posidx = spacing.idxset(n_ind, len(tpos))
                     ees = []
                     for i,t in enumerate(tpos):
                         if i in posidx:
                             ees.extend(ees24[str(t)])
                     ees.sort()      # values only, no ebars, unit is V/m
-                    hist=rpy.r.hist(ees,plot=False) # dict with keys: density, equidist, breaks, intensities, counts, xname, mids
-                    e_cdf = rpy.r.ecdf(ees)
+                    hist=(histogram,low_range,binsize,extrapoits)=scipy.stats.histogram(ees)
+                    e_cdf = distributions.ECDF(ees)
                     # cost function for the fit
-                    cost=umdutil.Chi2Cost(ees,e_cdf(ees),ray.cdf)
+                    cost=distributions.Chi2Cost(ees,e_cdf(ees),ray.cdf)
                     s_fit=abs(scipy.optimize.brent(cost,brack=(ees[0],ees[-1])))
                     estimates=[]
-                    for i in range(len(hist['counts'])):
-                        estimates.append(ray.cdf(hist['breaks'][i+1],s_fit)-ray.cdf(hist['breaks'][i],s_fit))
-                    result_chi2 = rpy.r.chisq_test(hist['counts'],p=estimates)
+                    low=low_break
+                    for i,counts in enumerate(histogram):
+                        high=low+binsize
+                        estimates.append(ray.cdf(high,s_fit)-ray.cdf(low,s_fit))
+                        low=high
+                    cs, p_cs = scipy.stats.chisquare(histogram,f_exp=estimates)
                     cdffit=[ray.cdf(e,s_fit) for e in ees]
-                    result_ks = rpy.r.ks_test(e_cdf(ees), cdffit, exact=1)
-                    ss['p-values_disttest24'][n_ind]={'chisq': result_chi2['p.value'], 'KS': result_ks['p.value']}
+                    ks, p_ks = scipy.stats.ks_2samp(e_cdf(ees), cdffit)
+                    ss['p-values_disttest24'][n_ind]={'chisq': p_cs, 'KS': p_ks}
                     
                 ss['hist_disttest24']=hist.copy()
                 ss['samples_disttest24']=ees[:]
                 ss['ecdf_disttest24']=e_cdf(ees)[:]
                 ss['fitted_shape_disttest24']=s_fit
                 ss['cdf-fit_disttest24']=cdffit
-                ss['p-chisquare_disttest24']=result_chi2['p.value']
-                ss['p-KS_disttest24']=result_ks['p.value']
-                self.messenger(umdutil.tstamp()+" f=%e, p_ks_disttest24=%e, p_chi2-disttest24=%e"%(f*1.0,ss['p-KS_disttest24'],ss['p-chisquare_disttest24']), [])
+                ss['p-chisquare_disttest24']=p_cs
+                ss['p-KS_disttest24']=p_ks
+                self.messenger(util.tstamp()+" f=%e, p_ks_disttest24=%e, p_chi2-disttest24=%e"%(f*1.0,ss['p-KS_disttest24'],ss['p-chisquare_disttest24']), [])
        
-                self.messenger(umdutil.tstamp()+" ...done", [])
+                self.messenger(util.tstamp()+" ...done", [])
 
-        self.messenger(umdutil.tstamp()+" End of evaluation of autocorrelation measurement", [])
+        self.messenger(util.tstamp()+" End of evaluation of autocorrelation measurement", [])
         return 0        
 
     def Evaluate_EUTCal(self, description="EUT", calibration="empty"):
-        self.messenger(umdutil.tstamp()+" Start of evaluation of EUT calibration with description %s"%description, [])
+        self.messenger(util.tstamp()+" Start of evaluation of EUT calibration with description %s"%description, [])
         if not self.rawData_EUTCal.has_key(description):
-            self.messenger(umdutil.tstamp()+" Description %s not found."%description, [])
+            self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
         if not self.rawData_MainCal.has_key(calibration):
-            self.messenger(umdutil.tstamp()+" Calibration %s not found."%calibration, [])
+            self.messenger(util.tstamp()+" Calibration %s not found."%calibration, [])
             return -1
             
-        zeroPR = umddevice.UMDMResult(0.0,umddevice.UMD_powerratio)
-        zeroVm = umddevice.UMDMResult(0.0,umddevice.UMD_Voverm)            
-        zeroVmoversqrtW = umddevice.UMDMResult(0.0,umddevice.UMD_VovermoversqrtW)            
+        #zeroPR = Quantity(POWERRATIO, 0.0)
+        #zeroVm = Quantity(EFIELD, 0.0)            
+        #Quantity(EFIELDPNORM,0.0) = Quantity (EFIELDPNORM, 0.0)            
 
         efields = self.rawData_EUTCal[description]['efield']
         pref = self.rawData_EUTCal[description]['pref']
@@ -3168,22 +3227,20 @@ Quit: quit measurement.
             PInputEL = {}
             PInputVariationEL = {}
             for p in pees:
-                EMax = umddevice.stdVectorUMDMResult()
-                for k in range(3):
-                    EMax.append(zeroVm)
-                PInput = umddevice.UMDMResult(0.0, umddevice.UMD_W)
-                PInputMin = umddevice.UMDMResult(1.0e10, umddevice.UMD_W)
-                PInputMax = umddevice.UMDMResult(0.0, umddevice.UMD_W)
+                EMax = [Quantity(EFIELD, 0.0) for k in (0,1,2)]
+                PInput = Quantity( WATT, 0.0)
+                PInputMin = Quantity( WATT, 1.0e10)
+                PInputMax = Quantity( WATT, 0.0)
                 InCounter = 0
                 for t in tees:
                     for i in range(len(efields[f][t][p])):
                         ef = efields[f][t][p][i]['value']
                         for k in range(3):
-                            EMax[k] = umdutil.MRmax(EMax[k], ef[k].convert(umddevice.UMD_Voverm))
-                        pf = efields[f][t][p][i]['pfwd'].convert(umddevice.UMD_W)
-                        pf = pf.mag()
-                        PInputMin = umdutil.MRmin(PInputMin, pf) 
-                        PInputMax = umdutil.MRmax(PInputMax, pf) 
+                            EMax[k] = max(EMax[k], ef[k])
+                        pf = efields[f][t][p][i]['pfwd']
+                        #pf = pf.mag()
+                        PInputMin = min(PInputMin, pf) 
+                        PInputMax = max(PInputMax, pf) 
                         PInput += pf
                         InCounter += 1
                 EMaxL[p]=EMax  # for each probe pos: Max over tuner positions
@@ -3197,24 +3254,24 @@ Quit: quit measurement.
             PInputAL = {}
             PInputVariationAL = {}
             for p in prees:
-                PMaxRec = umddevice.UMDMResult(0.0, umddevice.UMD_W)
-                PAveRec = umddevice.UMDMResult(0.0, umddevice.UMD_W)
+                PMaxRec = Quantity( WATT, 0.0)
+                PAveRec = Quantity( WATT, 0.0)
                 RecCounter = 0
-                PInput = umddevice.UMDMResult(0.0, umddevice.UMD_W)
-                PInputMin = umddevice.UMDMResult(1.0e10, umddevice.UMD_W)
-                PInputMax = umddevice.UMDMResult(0.0, umddevice.UMD_W)
+                PInput = Quantity( WATT, 0.0)
+                PInputMin = Quantity( WATT, 1.0e10)
+                PInputMax = Quantity( WATT, 0.0)
                 InCounter = 0
                 for t in tees:
                     for i in range(len(pref[f][t][p])):
-                        pr = pref[f][t][p][i]['value'].convert(umddevice.UMD_W)
-                        pr = pr.mag()
-                        PMaxRec = umdutil.MRmax(PMaxRec, pr)        
+                        pr = pref[f][t][p][i]['value']
+                        #pr = pr.mag()
+                        PMaxRec = max(PMaxRec, pr)        
                         PAveRec += pr
                         RecCounter += 1
-                        pf = pref[f][t][p][i]['pfwd'].convert(umddevice.UMD_W)
-                        pf = pf.mag()
-                        PInputMin = umdutil.MRmin(PInputMin, pf) 
-                        PInputMax = umdutil.MRmax(PInputMax, pf) 
+                        pf = pref[f][t][p][i]['pfwd']
+                        #pf = pf.mag()
+                        PInputMin = min(PInputMin, pf) 
+                        PInputMax = max(PInputMax, pf) 
                         PInput += pf
                         InCounter += 1
                 PAveRec /= RecCounter
@@ -3235,11 +3292,11 @@ Quit: quit measurement.
             self.processedData_EUTCal[description]['EMax'][f]=EMaxL.copy()
 
             # calc CCF and CCF_from_PMaxRec
-            CCF_from_PMaxRec = zeroPR
+            CCF_from_PMaxRec = Quantity(POWERRATIO, 0.0)
             for pos,Pmax in PMaxRecL.items():            
                 CCF_from_PMaxRec += Pmax/PInputAL[pos]
             CCF_from_PMaxRec /= len(PMaxRecL.keys())
-            CCF = zeroPR
+            CCF = Quantity(POWERRATIO, 0.0)
             for pos,Pav in PAveRecL.items():            
                 CCF += Pav/PInputAL[pos]
             CCF /= len(PAveRecL.keys())
@@ -3247,23 +3304,21 @@ Quit: quit measurement.
             self.processedData_EUTCal[description]['CCF'][f] = CCF
 
             if npees > 0:
-                Avxyz = umddevice.stdVectorUMDMResult()
-                for k in range(3):
-                    Avxyz.append(zeroVmoversqrtW)
+                Avxyz = [Quantity(EFIELDPNORM,0.0)]*3
                 self.processedData_EUTCal[description]['Enorm'][f]={}
                 for pos,Em in EMaxL.items():
                     pin = self.processedData_EUTCal[description]['PInputForEField'][f][pos] 
-                    v = pin.get_v()
-                    sqrtv=math.sqrt(v)
-                    u = pin.get_u()
-                    l = pin.get_l()
-                    sqrtPInput = umddevice.UMDMResult(sqrtv, sqrtv+(u-l)/(4.0*sqrtv), sqrtv-(u-l)/(4.0*sqrtv), umddevice.UMD_sqrtW)
-                    en = umddevice.stdVectorUMDMResult()
-                    for k in range(len(Em)):
-                        en.append(Em[k]/sqrtPInput)
-                        Avxyz[k] += en[k]
+                    v = pin#.get_v()
+                    sqrtv=numpy.sqrt(v)
+                    #u = pin.get_u()
+                    #l = pin.get_l()
+                    sqrtPInput = sqrtv
+                    en = []
+                    for k,em in enumerate(Em):
+                        en.append(em/sqrtPInput)
+                        Avxyz[k] += em
                     self.processedData_EUTCal[description]['Enorm'][f][pos]=en
-                Av24 = zeroVmoversqrtW
+                Av24 = Quantity(EFIELDPNORM,0.0)
                 for k in range(3):
                     Avxyz[k] /= len(EMaxL.keys())
                     Av24 += Avxyz[k]
@@ -3271,31 +3326,31 @@ Quit: quit measurement.
                 self.processedData_EUTCal[description]['EnormAveXYZ'][f]=Avxyz
                 self.processedData_EUTCal[description]['EnormAve'][f]=Av24
                 enorm = self.processedData_EUTCal[description]['Enorm'][f]
-                Sxyz = umddevice.stdVectorUMDMResult()
+                Sxyz = [] 
                 list24 = []
                 for k in range(3):
                     lst = [enorm[p][k] for p in enorm.keys()]
                     list24+=lst
-                    S = umdutil.CalcSigma(lst, Avxyz[k])
+                    S = util.CalcSigma(lst, Avxyz[k])
                     try:
                         Sxyz.append(S)
                     except:
-                        umdutil.LogError (self.messenger)            
+                        util.LogError (self.messenger)            
                 try:
-                    S24 = umdutil.CalcSigma(list24, Av24)
+                    S24 = util.CalcSigma(list24, Av24)
                 except:
                     S24 = None
                 
                 self.processedData_EUTCal[description]['SigmaXYZ'][f]=Sxyz
                 self.processedData_EUTCal[description]['Sigma24'][f]=S24
-                SdBxyz = umddevice.stdVectorUMDMResult()
+                SdBxyz = []
                 for k in range(3):
                     try:
-                        SdBxyz.append(((Sxyz[k]+Avxyz[k])/Avxyz[k]).convert(umddevice.UMD_dB))
+                        SdBxyz.append( (20*numpy.log10( (Sxyz[k]+Avxyz[k]) / Avxyz[k] )).eval())
                     except:
-                        umdutil.LogError (self.messenger)            
+                        util.LogError (self.messenger)            
                 try:
-                    SdB24 = ((S24+Av24)/Av24).convert(umddevice.UMD_dB)
+                    SdB24 =  (20* ( numpy.log10(S24+Av24) / Av24 )).eval()
                 except:
                     SdB24 = None
                 self.processedData_EUTCal[description]['SigmaXYZ_dB'][f] = SdBxyz
@@ -3316,7 +3371,7 @@ Quit: quit measurement.
         ccfPMax = self.processedData_EUTCal[description]['CCF_from_PMaxRec']
         self.processedData_EUTCal[description]['CLF'] = self.__CalcLoading(ccf, acf, freqs,'linxliny')             
         self.processedData_EUTCal[description]['CLF_from_PMaxRec'] = self.__CalcLoading(ccfPMax, il, freqs,'linxliny')             
-        self.messenger(umdutil.tstamp()+" End of evaluation of EUT calibration", [])
+        self.messenger(util.tstamp()+" End of evaluation of EUT calibration", [])
         return 0
 
     def CalculateLoading_MainCal (self, empty_cal='empty', loaded_cal='loaded', freqs=None, interpolation='linxliny'):
@@ -3359,8 +3414,8 @@ Quit: quit measurement.
         if freqs is None:
             freqs = acf1.keys()
         ldict={}
-        cf1 = umdutil.MResult_Interpol(acf1,interpolation)
-        cf2 = umdutil.MResult_Interpol(acf2,interpolation)
+        cf1 = util.MResult_Interpol(acf1,interpolation)
+        cf2 = util.MResult_Interpol(acf2,interpolation)
         for f in freqs:
             loading = cf1(f)/cf2(f)            
             ldict[f]=loading
@@ -3421,7 +3476,7 @@ class stdImmunityKernel:
             start = time.time()
             intervall = 0.01
             while (time.time()-start < self.dwell):
-                key = umdutil.anykeyevent()
+                key = util.anykeyevent()
                 if (0<=key<=255) and chr(key) in self.keylist:
                     cmd=('eut', 'User event.', {'eutstatus': 'Marked by user'})
                     break
@@ -3437,44 +3492,44 @@ class TestField:
             self.fail=True
         if eutcal and not instance.rawData_EUTCal.has_key(eutcal):
             self.fail=True
-        self.Enorm=umdutil.MResult_Interpol(instance.processedData_MainCal[maincal]['EnormAve'].copy())
+        self.Enorm=util.MResult_Interpol(instance.processedData_MainCal[maincal]['EnormAve'].copy())
         try:
-            self.clf=umdutil.MResult_Interpol(instance.processedData_EUTCal[eutcal]['CLF'].copy())
+            self.clf=util.MResult_Interpol(instance.processedData_EUTCal[eutcal]['CLF'].copy())
         except:
-            self.clf=(lambda _f: umddevice.UMDMResult(1,umddevice.UMD_powerratio))
+            self.clf=(lambda _f: Quantity (POWERRATIO, 1.0))
         
     def __call__(self, f=None, power=None):
         if f is None:
             return None
         if power is None:
             return None
-        try:
-            power = power.convert(umddevice.UMD_W)
-        except:
-            power = umddevice.UMDMResult(power,umddevice.UMD_W)
-        power = power.mag()
-        power.unit=umddevice.UMD_dimensionless   # sqrt(W) is not implemented yet
-        enorm = self.Enorm(f).convert(umddevice.UMD_VovermoversqrtW)
-        enorm.unit=umddevice.UMD_dimensionless
-        clf=self.clf(f).convert(umddevice.UMD_powerratio)
+        #try:
+        #    power = power.convert(umddevice.UMD_W)
+        #except:
+        #    power = umddevice.UMDMResult(power,umddevice.UMD_W)
+        #power = power.mag()
+        #power.unit=umddevice.UMD_dimensionless   # sqrt(W) is not implemented yet
+        enorm = self.Enorm(f)# .convert(umddevice.UMD_VovermoversqrtW)
+        #enorm.unit=umddevice.UMD_dimensionless
+        clf=self.clf(f)#.convert(umddevice.UMD_powerratio)
         #print power
         #print clf
         #print enorm
         etest2 = power * clf * enorm * enorm                    
-        etest_v = math.sqrt(etest2.get_v())
-        dp = 0.5*(power.get_u()-power.get_l())
-        dc = 0.5*(clf.get_u()-clf.get_l())
-        de = 0.5*(enorm.get_u()-enorm.get_l())
+        etest_v = numpy.sqrt(etest2)
+        #dp = 0.5*(power.get_u()-power.get_l())
+        #dc = 0.5*(clf.get_u()-clf.get_l())
+        #de = 0.5*(enorm.get_u()-enorm.get_l())
         # TODO: Check for ZeroDivision Error
-        try:
-            det = math.sqrt((0.5*math.sqrt(clf.get_v()/power.get_v())*enorm.get_v()*dp)**2
-                        +(0.5*math.sqrt(power.get_v()/clf.get_v())*enorm.get_v()*dc)**2
-                        +(math.sqrt(power.get_v()*clf.get_v()*de))**2)
-        except ZeroDivisionError:
-            det = 0.0
-        etest_u=etest_v+det
-        etest_l=etest_v-det
-        return umddevice.UMDMResult(etest_v,etest_u,etest_l,umddevice.UMD_Voverm)
+        #try:
+        #    det = math.sqrt((0.5*math.sqrt(clf.get_v()/power.get_v())*enorm.get_v()*dp)**2
+        #                +(0.5*math.sqrt(power.get_v()/clf.get_v())*enorm.get_v()*dc)**2
+        #                +(math.sqrt(power.get_v()*clf.get_v()*de))**2)
+        #except ZeroDivisionError:
+        #    det = 0.0
+        #etest_u=etest_v+det
+        #etest_l=etest_v-det
+        return etest_v
 
 class TestPower:
     def __init__(self, instance, maincal='empty', eutcal=None):
@@ -3484,11 +3539,11 @@ class TestPower:
             self.fail=True
         if eutcal and not instance.rawData_EUTCal.has_key(eutcal):
             self.fail=True
-        self.Enorm=umdutil.MResult_Interpol(instance.processedData_MainCal[maincal]['EnormAve'].copy())
+        self.Enorm=util.MResult_Interpol(instance.processedData_MainCal[maincal]['EnormAve'].copy())
         try:
-            self.clf=umdutil.MResult_Interpol(instance.processedData_EUTCal[eutcal]['CLF'].copy())
+            self.clf=util.MResult_Interpol(instance.processedData_EUTCal[eutcal]['CLF'].copy())
         except:
-            self.clf=(lambda _f: umddevice.UMDMResult(1,umddevice.UMD_powerratio)) 
+            self.clf=(lambda _f: Quantity(POWERRATIO, 1.0)) 
         
     def __call__(self, f=None, etest=None):
         if f is None:
@@ -3499,27 +3554,27 @@ class TestPower:
             etest = etest()
         except TypeError:
             pass
-        try:
-            etest = etest.convert(umddevice.UMD_Voverm)
-        except AttributeError:
-            etest = umddevice.UMDMResult(etest,umddevice.UMD_Voverm)
+        #try:
+        #    etest = etest.convert(umddevice.UMD_Voverm)
+        #except AttributeError:
+        #    etest = umddevice.UMDMResult(etest,umddevice.UMD_Voverm)
         #etest.unit=umddevice.UMD_dimensionless   # (V/m)**2 is not implemented yet
-        enorm = self.Enorm(f).convert(umddevice.UMD_VovermoversqrtW)
-        clf=self.clf(f).convert(umddevice.UMD_powerratio)
+        enorm = self.Enorm(f)#.convert(umddevice.UMD_VovermoversqrtW)
+        clf=self.clf(f)#.convert(umddevice.UMD_powerratio)
         #self.instance.messenger("DEBUG TestPower: f: %e, etest: %r, enorm: %r, clf: %r"%(f,etest,enorm,clf), [])
-        enorm.unit=umddevice.UMD_dimensionless
-        E = etest.get_v()
-        e = enorm.get_v()
-        c = clf.get_v()
+        #enorm.unit=umddevice.UMD_dimensionless
+        E = etest#.get_v()
+        e = enorm#.get_v()
+        c = clf#.get_v()
         power_v = (E/e)**2 / c
 
-        dE = 0.5*(etest.get_u()-etest.get_l())
-        dc = 0.5*(clf.get_u()-clf.get_l())
-        de = 0.5*(enorm.get_u()-enorm.get_l())
+        #dE = 0.5*(etest.get_u()-etest.get_l())
+        #dc = 0.5*(clf.get_u()-clf.get_l())
+        #de = 0.5*(enorm.get_u()-enorm.get_l())
         
-        dp = E/(e*c) * math.sqrt((2*dE/e)**2
-                               + (2*E*de/(e*e))**2
-                               + (E*dc/(e*math.sqrt(c)))**2)            
-        power = umddevice.UMDMResult(power_v,power_v+dp,power_v-dp,umddevice.UMD_W)
+        #dp = E/(e*c) * math.sqrt((2*dE/e)**2
+        #                       + (2*E*de/(e*e))**2
+        #                       + (E*dc/(e*math.sqrt(c)))**2)            
+        power = power_v
         #self.instance.messenger("DEBUG TestPower: f: %e, power: %r"%(f,power), [])
         return power
