@@ -25,10 +25,10 @@ class Meta_Driver(type):
     """ Meta-Klasse für Driver.
         
         In der Beschreibung wird von Driver-Klassen und Super-Klassen gesprochen.
-        Mit Dirver-Klasse ist eine konkrete Implemntiereung eines Drivers gemeint, wie z.B. die Klasse nw_rs_zlv.py.
-        Mit Super-Klasse ist somit die dazugehörende Super-Kasse bezeichnet, im falle des nw_rs_zlv.py wäre das die Klasse networkanalyzer.py. 
+        Mit Dirver-Klasse ist eine konkrete Implemntiereung eines Drivers gemeint, wie z.B. die Klasse :mod:`mpy.device.nw_rs_zlv`.
+        Mit Super-Klasse ist somit die dazugehörende Super-Kasse bezeichnet, im falle des :mod:`mpy.device.nw_rs_zlv` wäre das die Klasse networkanalyzer.py. 
     
-        Die Meta-Klasse hat mehrere Aufgaben:
+        .. rubric:: Die Meta-Klasse hat mehrere Aufgaben:
 
         Sie baut anhand des _cmds dict der Driver Klasse Methoden für diese Klasse. 
 
@@ -46,15 +46,12 @@ class Meta_Driver(type):
         wird eine Methode gebaut die eine NotImplementedError Exception wirft.
 
 
-
-
-
         Durch die Meta-Klasse ist es auch möglich, globale return_maps für commands und globale 
         possibilities_maps für Parameter zu definieren. 
         Für eine genaure Beschreibung zu return_maps, siehe Command().
         Für eine genaure Beschreibung zu possibilities, siehe Parameter()
 
-        * possibilities:
+        .. rubric:: possibilities:
         
         Possibilities sind mögliche Werte für einen Parameter. Werden andere Werte übergeben, wird mit Hilfe eines
         Fuzzy-string-compares, der übergebene Wert auf einen den in der Posssibilites-Liste vorhandenen zurückgeführt. 
@@ -62,33 +59,36 @@ class Meta_Driver(type):
         Possibilities dürfen sowohl in der Super-Klasse des Driver als auch in der Driver-Klasse selbst definiert werden.
         Wird in beiden Klassen eine Possibilities-Liste  erzeugt, welche den gleichen Parameter anspricht, wird die 
         diejenige der Superklasse verwendet.
-        Beispiel:
+        Beispiel::
+        
             _cmds= CommandsStorage( NETWORKAN,
-                            Command('SetSparameter',"VISA Command String",(
-                                        ...
-                                        Parameter('measParam',ptype=str) 
-                                         )   ),
+                                    Command('SetSparameter',"VISA Command String",(
+                                            ...
+                                            Parameter('measParam',ptype=str) 
+                                             )   ),
 
         Will man für den Parameter 'measParam' eine Possibilites-Liste erzeugen, dann muss diese folgenden Namen 
         besitzen: Name-des-Parameters_possib (unabhängig davon ob die Liste in der Super-Klasse oder in der Driver-Klasse 
         selbst definiert wurde):
-        Beispiel:
+        Beispiel::
+        
             measParam_possib=('S11', 'S12', 'S21', 'S22')
 
         Diese Liste gilt für alle Parameter mit dem Namen 'measParam', egal in welchem Command oder Function.
 
 
-        *possibilities_maps:
+        .. rubric:: possibilities_maps:
 
         possibilities_maps können nur in der Driver-Klasse selbst, nicht in der Superklasse definiert werden.
-        Beispiel:
-                Command('SetSweepType','VISA Command String'),
+        Beispiel::
+        
+            Command('SetSweepType','VISA Command String'),
                             Parameter('sweepType',ptype=str)
                             )),
 
         Will man für den Parameter 'sweepType' eine Possibilites_Map erzeugen, dann muss diese folgenden Namen 
         besitzen: Name-des-Parameters_possib_map
-        Beispiel:
+        Beispiel::
     
             sweepType_possib_map={'LOGARITHMIC'  :   'LOGARITHMIC_map',
                                   'LINEAR'  :   'LINEAR_map',
@@ -97,10 +97,10 @@ class Meta_Driver(type):
         Diese Map gilt für alle Parameter mit dem Namen 'sweepType', egal in welchem Command oder Function.
 
 
-        * return_maps
+        .. rubric:: return_maps
 
         return_maps können nur in der Klasse selbst, nicht in der Super-Klasse, definiert werden.
-        Beispiel:
+        Beispiel::
 
             Command('SetSweepType','VISA Command String'),
                             Parameter('sweepType',ptype=str)
@@ -108,7 +108,7 @@ class Meta_Driver(type):
 
         Will man für dieses Command eine return_maps erzeugen, dann muss diese folgenden Namen besitzen: 
         Name_des_Command_rmap
-        Beispiel:
+        Beispiel::
 
             GetSweepType_rmap={'LOG'  :   'LOGARITHMIC',
                                'LIN'  :   'LINEAR',
@@ -253,11 +253,13 @@ class CommandsStorage(dict):
         CommandStorage fügt jedes Argument, mit dessen Namen als key, sich selbst hinzu. 
         Weiterhin wird für jedes Argument ein Attribut mit dessen Namen angelegt.
 
-        Das ermöglicht einen Zugriff auf zwei Arten:
-        CommandS['key']
-        CommandS.key 
+        Das ermöglicht einen Zugriff auf zwei Arten::
         
-        Verwendung:
+            CommandS['key']
+            CommandS.key 
+        
+        Verwendung::
+        
             c=CommandsStorage(item1,item2,.....)
     """
     
@@ -280,23 +282,23 @@ class CommandsStorage(dict):
 class Function(dict):
     """ Function ist eine Sammelklasse für Commands.
 
-        **Verwendung:
+        .. rubric:: Verwendung:
         
         Die Commands werden der Function beim initialisieren des Function-Objekts
         übergeben. Will man mehr als ein Command angeben, muss man eine List/Tuple von Commands übergeben. 
-        Das erste Argument von Funktion muss immer der name der Function sein:
+        Das erste Argument von Funktion muss immer der name der Function sein::
  
-           f=Function(name_der_Function,(
-              Command('command_1','command_str',(Parameter_1),rtype=float)
-              Command('command_2','command_str',(Parameter_1,Parameter_2),rtype=str)
-              ) )
+            f=Function(name_der_Function,(
+                      Command('command_1','command_str',(Parameter_1),rtype=float)
+                      Command('command_2','command_str',(Parameter_1,Parameter_2),rtype=str)
+                      ) )
 
-        f ist ein Aufrufbares Objekt (callable object), das heißt es kann wie ein Methode/Funktion verwenden:
+        f ist ein Aufrufbares Objekt (callable object), das heißt es kann wie ein Methode/Funktion verwenden::
     
             print f(self,Argumente)
 
         Die Parameter die Function besitzt, richten sich nach den Parametern der Commands. 
-        Bei dem oben aufgeführten Beispiel hätte das Function Objekt zwei Parameter, in folgender Reihenfolge: 
+        Bei dem oben aufgeführten Beispiel hätte das Function Objekt zwei Parameter, in folgender Reihenfolge:: 
     
             f(self,Parameter_1,Parameter_2)
 
@@ -304,68 +306,76 @@ class Function(dict):
         und zwar an der Stelle wo er zuerst auftritt. 
 
 
-        WICHITG: Das erste Argument beim Aufruf einer Function muss immer die aktuelle Dirver Instanz sein! 
+        **WICHITG:** Das erste Argument beim Aufruf einer Function muss immer die aktuelle Dirver Instanz sein! 
 
-        HINWEIS:   Es ist nicht empfohlen die  Function Objekt direkt zu verwenden, man sollte immer über die
-                   durch die Meta-Klasse erzeugten Methoden gehen. Dort wird die Driver Instanz dann automatisch 
-                   übergeben.
+        **HINWEIS:**   Es ist nicht empfohlen die  Function Objekt direkt zu verwenden, man sollte immer über die
+                       durch die Meta-Klasse erzeugten Methoden gehen. Dort wird die Driver Instanz dann automatisch 
+                       übergeben.
 
 
-        **Rückgabe:
+        .. rubric:: Rückgabe:
 
         Als Standard gibt Function ein Dict zurück. Als key wird der Name des Command verwendet, 
         als Wert der Rückgabewert der Commands. 
  
         zum Beispiel:
  
-        Eine Function Objekt hat zwei Commandos:
- 
-         f=Function('bsp',(
-                Command('command_1','command_str',(Parameter),rtype=float)
-                Command('command_2','command_str',(Parameter),rtype=str)
-                ))
- 
- 
-          Dieses Function Objekt würde beispielsweiße folgendes dict zurück geben:
-            print f(self,Argumente)
-              ->  {'command_1': 888,
-                   'command_2': irgendwas_str}
+        Eine Function Objekt hat zwei Commandos::
+            
+            f=Function('bsp',(
+                Command('command_1','command_str',(Parameter),rtype=float)
+                Command('command_2','command_str',(Parameter),rtype=str)
+                ))
  
  
-        * Um die Rückgabe besser kontrollieren zu können ist es möglich ein Template anzugeben:
+        Dieses Function Objekt würde beispielsweiße folgendes dict zurück geben::
+            
+            print f(self,Argumente)
+                ->  {'command_1': 888,
+                    'command_2': irgendwas_str}
+ 
+ 
+        **Um die Rückgabe besser kontrollieren zu können ist es möglich ein Template anzugeben**
+        Beispiel::
          
-         f=Function('bsp',(
-                Command('command_1','command_str',(Parameter),rtype=float)
-                Command('command_2','command_str',(Parameter),rtype=str)
-                ),rtmpl='%(command_1)d')
+            f=Function('bsp',(
+                Command('command_1','command_str',(Parameter),rtype=float)
+                Command('command_2','command_str',(Parameter),rtype=str)
+                    ),rtmpl='%(command_1)d')
  
-          Diese Function Objekt würde folgendes zurück geben:
-            print f(self,Argument)
-              ->  888
-          Der Type der Rückgabe würde aber immer noch ein str sein:    
-            print type(f(self,Argument))
-              ->  <type 'str'>
+        Diese Function Objekt würde folgendes zurück geben::
+            
+            print f(self,Argument)
+                ->  888
+                
+        Der Type der Rückgabe würde aber immer noch ein str sein::  
+            
+            print type(f(self,Argument))
+                ->  <type 'str'>
  
  
-        * Will man nun aber ein float als Rückgabe haben, muss man zusätzlich rtype angeben:
-         f=Function('bsp',(
-                Command('command_1','command_str',(Parameter),rtype=float)
-                Command('command_2','command_str',(Parameter),rtype=str)
-                ),rtmpl='%(command_1)d',rtype=float)
+        Will man nun aber ein float als Rückgabe haben, muss man zusätzlich rtype angeben::
+            
+            f=Function('bsp',(
+                Command('command_1','command_str',(Parameter),rtype=float)
+                Command('command_2','command_str',(Parameter),rtype=str)
+                    ),rtmpl='%(command_1)d',rtype=float)
     
-             print f(self,Argument)
-              ->  888
+            print f(self,Argument)
+                ->  888
  
-            print type(f(self,Argument))
-              ->  <type 'float'>
+            print type(f(self,Argument))
+                ->  <type 'float'>
 
         Es kann entweder ein Python Standard Typ angehen werden, oder ein Objekt welches von R_TYPES() 
-        abgeleitet wurde. Was für R_TYPES() Objekte existieren, siehe dazu r_types.py. Die Klassen dieses Moduls 
+        abgeleitet wurde. Was für R_TYPES() Objekte existieren, siehe dazu :mod:`mpy.device.r_types`. Die Klassen dieses Moduls 
         müssen natürlich auch importiert sein.
         Es kann auch der Platzhalter '<default>' verwendet werden. Dann wird in dem _commands dict 
         der Super Klasse des Driver nach dem returntype, unter dem Namen der Function, gesucht und dieser Verwendet. 
 
-        WICHTIG: rtype wird nur beachtet, wenn auch rtmpl definiert wurde.
+        **WICHTIG:** rtype wird nur beachtet, wenn auch rtmpl definiert wurde.
+
+        .. rubric:: Methods
     """
  
     
@@ -518,21 +528,23 @@ class Command(object):
         Für nähere Beschreibung der Parameter siehe auch __init__() Funktion.
 
 
-        **Verwendung:
-
+        .. rubric:: Verwendung
+        
+        Beispiel::
+        
             c = Command('nane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
-                         Parameter('channel',class_attr='internChannel'),
-                         Parameter('cfreq')  
-                         ) )
+                        Parameter('channel',class_attr='internChannel'),
+                        Parameter('cfreq')  
+                        ) )
                          
         Der VISA-Befehls String ist ein Formatting String. In einen Platzhalter %(name)s wird der 
         aktuelle Werte des Parameters mit gleichen Name eingefügt und so der String vervollständigt. 
         Für jeden Platzhalter im String muss es einen passenden Parameter geben. 
 
-        Instanzen von Command sind aufrufbare Objekte (callable Objekts):
+        Instanzen von Command sind aufrufbare Objekte (callable Objekts)::
 
             print c(self,888)
-               -> Rückgabe_des_VISA_Befehls z.B 777
+                -> Rückgabe_des_VISA_Befehls z.B 777
 
         Das erste Argument für ein Command muss immer die aktuelle Driver Instanz sein, 
         alle weiteren Argumente sind für die Parameter. Die Reihenfolge der Parameter entspricht 
@@ -542,19 +554,21 @@ class Command(object):
         888 ist also der Wert für cfreq (im obigen Beispiel).
 
 
-        **Rückgabe:
+        .. rubric:: Rückgabe:
 
         Standardmäßig gibt ein Command unverändert das zurück was es vom Gerät über VISA erhält. 
         Das ist entweder nichts, oder ein String. Die Rückgabe kann aber auch angepasst werden, 
         dazu dienen die Keyword-Argumente: rfunction, rtype, return_map:
 
-        * Bei rfunction kann der Name einer Methode der Klasse angegeben werden. 
-        (Da alle Commands bzw. Functions in _cmds auch zu Methoden werden, können auch diese Verwendet werden):
+        *Bei rfunction kann der Name einer Methode der Klasse angegeben werden.*
+        
+        (Da alle Commands bzw. Functions in _cmds auch zu Methoden werden, können auch diese Verwendet werden)::
 
             c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
-                         Parameter('channel',class_attr='internChannel'),
-                         Parameter('cfreq')  
-                         ),rfunction='Getname')
+                        Parameter('channel',class_attr='internChannel'),
+                        Parameter('cfreq')  
+                        ),rfunction='Getname')
+                        
             print self.Getname()
                 -> return_of_Getname
 
@@ -563,14 +577,15 @@ class Command(object):
 
         Wird rfunction definiert, haben rtype und return_map keine Bedeutung mehr. 
          
-
-        * Mit rtype kann der Rückgabe-Type bestimmt werden:
+        *Mit rtype kann der Rückgabe-Type bestimmt werden*::
 
             c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
                          Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
                          ),rtype=float)
+            
             oder gleichbedeutend:
+            
             c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
                          Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
@@ -582,7 +597,7 @@ class Command(object):
             print type(c(self,888))
                 -> <type 'float'>
 
-        Es kann entweder ein Python Standard Typ angehen werden, oder ein Objekt welches von R_TYPES() 
+        Es kann entweder ein Python Standard Typ angehen werden, oder ein Objekt welches von R_TYPES() (:mod:`mpy.device.r_types`)
         abgeleitet wurde. Was für R_TYPES() Objekte existieren, siehe r_types.py. Die Klassen dieses Moduls 
         müssen natürlich auch importiert sein. Intern wird float auf R_FLOAT() gemappt.
         Es kann auch der Platzhalter '<default>' verwendet werden. Dann wird in dem _commands dict 
@@ -590,7 +605,7 @@ class Command(object):
         '<default>' darf nicht verwendet werden, wenn Command in einer Function definiert wurde.
 
 
-        * Mit return_map können Werte, die das Geräte zurückgibt, auf gewünschte Werte gemappt werden:
+        *Mit return_map können Werte, die das Geräte zurückgibt, auf gewünschte Werte gemappt werden*::
 
             c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
                          Parameter('channel',class_attr='internChannel'),
@@ -604,6 +619,9 @@ class Command(object):
                 -> <type 'str'>
 
         Ohne return_map würde c 777 vom Type Float zurückgeben (siehe Bsp bei rtype)
+        
+        
+        .. rubric:: Methods:
     """
     
     
@@ -835,17 +853,17 @@ class Command(object):
 class Parameter(object):
     """ Parameter verwaltet und speichert die Argumente für die VISA Kommandos. 
 
-        HINWEIS! Es ist nie nötig den Parametern direkt Werte zu übergeben, das wird 
-                 immer durch ein Function bzw. Command Objekt erledigt! 
+        **HINWEIS!** Es ist nie nötig den Parametern direkt Werte zu übergeben, das wird 
+                        immer durch ein Function bzw. Command Objekt erledigt! 
 
-        **Verwendung:
+        .. rubric:: Verwendung:
 
-        * Dem einfachsten Parameter Objekt muss nur ein Name über geben werden:
+        *Dem einfachsten Parameter Objekt muss nur ein Name über geben werden*::
 
             p=Parameter('name')
 
 
-        * Es ist möglich einen Type für diesen Parameter zu definieren:
+        *Es ist möglich einen Type für diesen Parameter zu definieren*::
 
             p=Parameter('name', ptype=float)
 
@@ -854,7 +872,7 @@ class Parameter(object):
         Alle Python Standard Typen sind erlaubt.
 
 
-        * Weiterhin ist es möglich sogenannte Possibilities anzugeben:
+        *Weiterhin ist es möglich sogenannte Possibilities anzugeben*::
 
             p=Parameter('name', possibilities=('LINEAR','LOGARITHMIC'))
 
@@ -865,11 +883,11 @@ class Parameter(object):
         (siehe weiter unten).
 
 
-        * Mit Possibilities_Map ist es möglich, übergebene Werte, auf einen für den VISA Befehl 
-          brauchbaren Werte, zu mappen:
-
+        *Mit Possibilities_Map ist es möglich, übergebene Werte, auf einen für den VISA Befehl* 
+        *brauchbaren Werte, zu mappen*::
+          
             p=Parameter('name', possibilities_map={'LOGARITHMIC'  :   'LOGARITHMIC_map',
-                                                   'LINEAR'  :   'LINEAR_map'})
+                                                    'LINEAR'  :   'LINEAR_map'})
                             
         In diesem Beispiel wird dem Parameter z.B. LOGARITHMIC übergeben, dieser würde 
         LOGARITHMIC_map daraus machen.
@@ -879,7 +897,7 @@ class Parameter(object):
         verlangen, somit muss gemappt werden.  
 
 
-        * Das requires Keyword Argument:
+        *Das requires Keyword Argument*::
 
             p=Parameter('name', requires=IS_IN_SET(('a','b')) ) 
 
@@ -892,15 +910,18 @@ class Parameter(object):
         Was für Validatoren exitieren, siehe validators.py
 
 
-        * Validatoren haben die höchste Priorität, erst danach werden possibilities und danach possibilities_map verarbeitet.  
+        *Validatoren haben die höchste Priorität, erst danach werden possibilities und danach possibilities_map verarbeitet*.  
 
         
-        * Man kann ein Parameter aber auch an ein Attribut der Driver Instanz binden: 
+        *Man kann ein Parameter aber auch an ein Attribut der Driver Instanz binden*:: 
     
             p=Parameter('name', class_attr='Attribut der Instanz')
 
         Der Werte für den Parameter wird dann immer aus diesem Attribut genommen.
         Wird class_attr definiert, haben  ptype, possibilities und possibilities_map keine Wirkung.
+        
+        
+        .. rubric:: Methods:
     """
     
     

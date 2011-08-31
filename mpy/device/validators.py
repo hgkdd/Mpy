@@ -16,15 +16,17 @@ import re
 class IN_RANGE(object):
     """ Dieser Validator prüft, ob eine Zahl in einem bestimmten Intervall liegt.
     
-    * Verwendung:
+    .. rubric:: Verwendung:
     
-    v = IN_RANGE(1,100)
-    
-    print v(2)
-        -> (2,None)
+    Beispiel::
         
-    print v(102)
-        -> (102,Error Message)
+        v = IN_RANGE(1,100)
+        
+        print v(2)
+            -> (2,None)
+            
+        print v(102)
+            -> (102,Error Message)
         
     Liegt die Zahl im Intervall, wird ein Tupel mit der Zahl und None zurückgegeben;
     Liegt die Zahl außerhalb, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
@@ -62,15 +64,17 @@ class IN_RANGE(object):
 class IS_LOWER_THAN(object):
     """ Dieser Validator prüft, ob eine Zahl kleiner als ein bestimmter Wert ist.
     
-    * Verwendung:
+    .. rubric:: Verwendung:
     
-    v = IN_RANGE(100)
-    
-    print v(2)
-        -> (2,None)
+    Beispiel::
         
-    print v(102)
-        -> (102,Error Message)
+        v = IN_RANGE(100)
+        
+        print v(2)
+            -> (2,None)
+        
+        print v(102)
+            -> (102,Error Message)
         
     Ist die Zahl kleiner als der vorgegebende Wert, wird ein Tupel mit der Zahl und None zurückgegeben;
     Ist die Zahl größer oder gleich, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
@@ -105,15 +109,17 @@ class IS_LOWER_THAN(object):
 class IS_GREATER_THAN(object):
     """ Dieser Validator prüft, ob eine Zahl größer als ein bestimmter Wert ist.
     
-    * Verwendung:
+    .. rubric:: Verwendung:
     
-    v = IN_RANGE(100)
-    
-    print v(2)
-        -> (2,Error Message)
+    Beispiel::
         
-    print v(102)
-        -> (102,None)
+        v = IN_RANGE(100)
+        
+        print v(2)
+            -> (2,Error Message)
+        
+        print v(102)
+            -> (102,None)
         
     Ist die Zahl größer als der vorgegebende Wert, wird ein Tupel mit der Zahl und None zurückgegeben;
     Ist die Zahl kleiner oder gleich, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
@@ -148,15 +154,17 @@ class IS_GREATER_THAN(object):
 class IS_LOWER_EQUAL_THAN(object):
     """ Dieser Validator prüft, ob eine Zahl kleiner oder gleich als ein bestimmter Wert ist.
     
-    * Verwendung:
+    .. rubric:: Verwendung:
     
-    v = IN_RANGE(100)
-    
-    print v(2)
-        -> (2,None)
+    Beispiel::
         
-    print v(102)
-        -> (102,Error Message)
+        v = IN_RANGE(100)
+        
+        print v(2)
+            -> (2,None)
+        
+        print v(102)
+            -> (102,Error Message)
         
     Ist die Zahl kleiner oder gleich als der vorgegebende Wert, wird ein Tupel mit der Zahl und None zurückgegeben;
     Ist die Zahl größer, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
@@ -185,15 +193,17 @@ class IS_LOWER_EQUAL_THAN(object):
 class IS_GREATER_EQUAL_THAN(object):
     """ Dieser Validator prüft, ob eine Zahl größer oder gleich als ein bestimmter Wert ist.
     
-    * Verwendung:
+    .. rubric:: Verwendung:
     
-    v = IN_RANGE(100)
-    
-    print v(2)
-        -> (2,Error Message)
+    Beispiel::
         
-    print v(102)
-        -> (102,None)
+        v = IN_RANGE(100)
+        
+        print v(2)
+            -> (2,Error Message)
+        
+        print v(102)
+            -> (102,None)
         
     Ist die Zahl größer oder gleich als der vorgegebende Wert, wird ein Tupel mit der Zahl und None zurückgegeben;
     Ist die Zahl kleiner, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
@@ -228,15 +238,17 @@ class IS_GREATER_EQUAL_THAN(object):
 class  IS_IN_SET(object):
     """ Dieser Validator prüft, ob ein Argument (z.B. ein String) in einer Menge vorhanden ist.
     
-    * Verwendung:
+    .. rubric:: Verwendung:
     
-    v = IN_RANGE(('aaa','bbb','ccc'))
-    
-    print v('ddd')
-        -> (2,Error Message)
+    Beispiel::
         
-    print v('aaa')
-        -> (102,None)
+        v = IN_RANGE(('aaa','bbb','ccc'))
+        
+        print v('ddd')
+           -> (2,Error Message)
+        
+        print v('aaa')
+           -> (102,None)
         
     Ist der Wert in der Menge vorhanden, wird ein Tupel mit der Zahl und None zurückgegeben;
     Ist der Wert nicht in der Menge vorhanden, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.

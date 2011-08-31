@@ -24,7 +24,7 @@ class DRIVER(object):
     
           :param cmd: the command
           :type cmd: string
-          :rtype: status code of the native write operation
+          :return: status code of the native write operation
     
        .. method:: read(tmpl)
     
@@ -32,9 +32,9 @@ class DRIVER(object):
     
           :param tmpl: a template string
           :type tmpl: valid regular expression string
-          :rtype: the groupdict of the match
+          :return: the groupdict of the match
           
-          Example: 
+          Example::
           
              If a device (signal generator in this case) returns
              ``:MODULATION:AM:INTERNAL 80 PCT`` to indicate a AM modulation depth 
@@ -49,7 +49,7 @@ class DRIVER(object):
           :type cmd: string
           :param tmpl: a template string
           :type tmpl: valid regular expression string
-          :rtype: the groupdict of the match
+          :return: the groupdict of the match
     
     For other low level operation you may use the device stored in ``self.dev`` directly.
     """
@@ -95,16 +95,13 @@ class DRIVER(object):
         """
         Init the instrument.
         
-        Parameters:
-            
-           - *ininame*: filename or file-like object with the initialization
-             parameters for the device. This parameter is handled by 
-             :meth:`mpy.tools.Configuration.Configuration` which takes also 
-             a configuration template stored in ``self.conftmpl``.
-           - *channel*: an integer specifiing the channel number of multi channel devices.
-             Numbering is starting with 1.
-             
-        Return: 0 if sucessful. 
+        :param ininame: filename or file-like object with the initialization parameters for the device. 
+                        This parameter is handled by 
+                        :meth:`mpy.tools.Configuration.Configuration` which takes also 
+                        a configuration template stored in ``self.conftmpl``.
+        :param channel: an integer specifiing the channel number of multi channel devices.
+                         Numbering is starting with 1.
+        :return: 0 if sucessful. 
         """
         
         error=0
@@ -151,7 +148,9 @@ class DRIVER(object):
 
     def SetVirtual(self, virtual):
         """
-        Sets ``self.conf['init_value']['virtual']`` to ``virtual``.
+        Sets::
+        
+            ``self.conf['init_value']['virtual']`` to ``virtual``.
         """
         error=0
         self.conf['init_value']['virtual']=virtual
@@ -159,16 +158,20 @@ class DRIVER(object):
 
     def GetVirtual(self):
         """
-        Returns ``(0, self.conf['init_value']['virtual'])``
+        Returns::
+        
+            ``(0, self.conf['init_value']['virtual'])``
         """
         return 0,self.conf['init_value']['virtual']
 
 
     def GetDescription(self):
         """
-        Returns ``(0, desc)`` with ``desc`` is the concatination of ``self.conf['description']``
-        and ``self.IDN``. The former comes from the ini file, the latter may be set by the driver during
-        initialization.
+        Returns::
+        
+             ``(0, desc)`` with ``desc`` is the concatination of ``self.conf['description']``
+            and ``self.IDN``. The former comes from the ini file, the latter may be set by the driver during
+            initialization.
         """
         try:
             error,re=self.__GetDescription()

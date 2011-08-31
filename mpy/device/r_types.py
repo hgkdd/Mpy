@@ -26,11 +26,18 @@ class R_TYPES(object):
 
 
 class R_DEFAULT(R_TYPES):
-    """Diese Klasse 
-    
+    """Diese Klasse ist ein mapper damit auch Python standard type (wie z.B. int) als
+    rtype angegeben werden können. Dazu initialisiert sie ein, zu dem standard type passendes,
+    objekt aus dem R-Types pool und ruft diese zur Umwandlung auf.
     """
     
     def __init__(self,type,command=None):
+        """
+        :param type: Python standard type (wie z.B. int).  
+        :param command: Command in dem der R_Type verwendet wird (Optimal). Wird das Command angegeben, so wird der Name des 
+                        Commands in der Execption Nachricht aufgeführt, welche geworfen wird falls ein String nicht 
+                        umgewandelt werden kann. 
+        """
         self.type = type
         self.command=command
         if type == float:
@@ -50,6 +57,12 @@ class R_DEFAULT(R_TYPES):
             raise Return_TypesError('Return Type %s not defined in R_DEFAULT \n    %s'%(self.type,mess))
     
     def __call__(self,value):
+        """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
+           Der Validator kann somit genauso wie eine Funktion verwendet werden.
+           Nähre Infos zur Verwendung, siehe Klassen Beschreibung
+           
+           :param value: Wert der umgewandelt werden soll.
+        """
         return self.validator(value)
     
 

@@ -24,28 +24,106 @@ from r_types import *
 from validators import *
 from mpy_exceptions import *
 
-#
-#
-# Für den Spectrumanalyzer R&S ZVL wird die Klasse 'zlv-6' definiert.
-# Diese greift auf die Unterklasse SPECTRUMANALYZER (spectrumanalyzer.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
-#
+
 class NETWORKANALYZER(NETWORKAN):
     
     """
+    This Driver use the new dirver framework!
+    
+    Dieser Driver ist für einen R&S ZVL Vector Network Analyzer geschrieben.
+    
+    Für jede Instanz dieser Klasse wird auf dem Gerät ein neuer Channel erstellt.
+    
+    Jedem Channel können mehrere Traces zugeordnet werden. Auf dem Gerät muss, für alle
+    Channels, jeder Trace einen eindeutigen Namen besitzen, die Driver Klasse ist so konzipiert,
+    dass diese Vorgabe aufjedenfall eingehalten wird. Deshalb entsprechen die Trace-Namen, auf dem
+    Gerät, nicht denen welche der Funktion CreateTrace(tracename, sparam) übergeben wurden. So könnte
+    beispielsweise in zwei Instanzen dieser Klasse der Name "Trc1" verwendet werden, auf dem Gerät würden
+    z.B. die Namen "Trc1_Ch1WIN1TR1" und "Trc1_Ch2WIN1TR1" verwendet werden.
+    
+    Für eine nähere Beschreibung der Channels und Traces schauen Sie bitte ins Handbuch des Gerätes.
+    
+    .. rubric:: Das _cmds-Dict:
+    
+    In der Variable _cmds wird eine Instanz der Klasse CommandsStorage gespeichert, welche sich wie ein Dict verhält.
+    In dem Dict CommandsStorage werden Command oder Function Objekte abgelegt. Jedes dieser Objekte entspricht einem 
+    VISA-Komamndo. Für eine nähere Beschreibung der Command Klasse siehe: tools.Command und tools.Function.
+        
+    Das _cmds-Dict ist die zentrale Sammelstelle für alle VISA-Kommandos, aus diesem Dict erstellt die Driver Metaklasse
+    Funktionen für die Klasse, die nach dem dem erstellen eines Objetes sofort wie normale Methoden verwendet werden
+    können.
+    
+    .. rubric:: Possibilities_maps:
+    
+    Nicht immer entsprechen die von den VISA-Befehlen gewordenten Werte den allgemein bekannten Bezeichnungen oder
+    eine Firma bezeichnet eine bestimmt Funktionalität anders als allgemein üblich. Um solche Probleme leicht zu 
+    löschen gibt es die Possibilities_maps. Mit ihnen können VISA-bezifische Werte auf allgemein gültige gemapt und 
+    zurück gemappt werden.
+        
+    Possibilities_maps können nur in einer konkreten Implementierung eines Driver verwendet werden, nicht in einer 
+    Driver-Superklasse. 
+        
+    Für eine nähre Beschreibung der Verwendung, siehe: tools.Meta_Driver
+    
+    
+    
+    .. rubric:: Possibility-Listen:
+    
+    Possibilities sind mögliche Werte für einen Parameter. Bei bestimmen Parameter können immer nur bestimmte
+    Werte übergeben werden, so sind beispielsweise bei sparam (S-Paramter) außschließlich ('S11', 'S12', 'S21', 'S22')
+    möglich. Damit nicht jeder kleine Schreibfehelr sofort zum Abbruch des Programm führt und damit sichergestellt ist
+    das immer ein richtier Wert übergeben wird, wird mit Hilfe eines Fuzzy-string-compares der übergebene Wert auf einen 
+    in der Posssibilites-Liste vorhandenen zurückgeführt.
+        
+    Possibility-Listen können sowol in einer konkreten Implementierung einer Driver-Klasse als auch in einer Driver-
+    Superklasse definiert werden. Es wird geraten die Definition immer in der Super-Klasse vorzunehmen, damit die 
+    Possibilities für alle Driver gleich sind.
+        
+    Für eine genau beschreibung siehe: tools.Meta_Driver
+        
+    
     .. rubric:: Methods:
     
-    .. method:: SetTrace(tracename,measParam,winNumber):
+    siehe auch :class:`mpy.device.networkanalyzer.NETWORKANALYZER`
     
-          Creat an new Trace.
+    .. method:: CreateWindow(windowName):
     
-          :param tracename: Name of the Trace. This Name is only to work with this class, the real name which will be used on the Device ist created by the class.
-          :type tracename: str
-          :param measParam: S parameter für the Trace 'S11' | 'S22' | 'S12' | 'S21'
-          :type measParam: str
-          :param winNumber: Number of the Window in which the Trace should be created. The Window must be created bevor with SetWindow(winNumber) 
-          :type winNumber: int
-          :rtype: (error Code,0)
+          Create an new plot window.
     
+          :param windowName: Name for the new window
+          :type windowName: String
+          :return: Name of the new Window
+          :rtype: String
+          
+          
+    .. method:: DelWindow():
+        Delete the currently active window.
+        
+        :return: Name of the deleted window
+        :rtype: String
+                         
+        
+    .. method:: SetWindow(windowName):
+        Selects an existing window as the active trace.
+        
+        :param windowName: Name of the window which should be selected.
+        :type windowName: String
+        :return: Name of the currently active window. 
+        :rtype: String
+
+    
+    .. method:: GetWindow():
+        Get the name of the currently active window.
+    
+        :return: Name of the currently active window.
+        :rtype: String
+    
+    
+    ..method:: GetSpectrum():
+        Get the spectrum of the currently active trace.
+        
+        :return: retrun a tuple of (x-Values, y-Values)
+        :rtype: float 
     """
     
     __metaclass__=Meta_Driver
@@ -56,9 +134,6 @@ class NETWORKANALYZER(NETWORKAN):
     #Map: {Allgemein gültige Bezeichnung : Bezeichnung Gerät} 
 
     #Back Map: {RückgabeWert von Gerät : Allgemein gültige Bezeichnung} 
-    
-    
-    
     GetSweepType_rmap={'LOG'  :   'LOGARITHMIC',
                        'LIN'  :   'LINEAR',
                         }
@@ -70,6 +145,8 @@ class NETWORKANALYZER(NETWORKAN):
     GetSweepMode_rmap={'1':'CONTINUOUS',
                        '0':'SINGEL'
                           }
+
+
 
     _cmds= CommandsStorage( NETWORKAN,
                     #Manual S. 499       
@@ -156,20 +233,23 @@ class NETWORKANALYZER(NETWORKAN):
                                               Parameter('windTraceNumber', class_attr='activeTrace_WinNum')                                          
                                               ), rtype="<default>"),                                                   
 
- 
                      ###Trace Mode nur Max hold
-                     #CALCulate<Chn>:PHOLd MAX | OFF                #Manual S. 386
-                     ###Dafür bei Sweep average!!!!!! 
-                     #[SENSe<Ch>:]AVERage[:STATe] <Boolean>           #Manual S. 473
-                     #[SENSe<Ch>:]AVERage:CLEar                       #Manual S. 472 
+                     #Manual S. 386
+                     #CALCulate<Chn>:PHOLd MAX | OFF
+                     
+                     ###Dafür bei Sweep average!!!!!
+                     #Manual S. 473
+                     #[SENSe<Ch>:]AVERage[:STATe] <Boolean>
+                     #Manual S. 472            
+                     #[SENSe<Ch>:]AVERage:CLEar
                     
                                               
                     Function('CreateTrace',(
                                    #Manual S. 384         
-                                   Command('CreateTrace',"CALCulate%(channel)d:PARameter:SDEFine \'%(tracename)s\', \'%(measParam)s\'", (
+                                   Command('CreateTrace',"CALCulate%(channel)d:PARameter:SDEFine \'%(tracename)s\', \'%(sparam)s\'", (
                                               Parameter('channel',class_attr='internChannel'),
                                               Parameter('tracename',ptype=str),
-                                              Parameter('measParam',ptype=str)
+                                              Parameter('sparam',ptype=str)
                                               ), ),
                                    #Manual S. 426
                                    Command('ActivedTrace', "DISPlay:WINDow%(windowName)d:TRACe%(windTraceNumber)d:FEED \'%(tracename)s\'",(
@@ -178,28 +258,30 @@ class NETWORKANALYZER(NETWORKAN):
                                               Parameter('tracename',ptype=str)
                                               )  ),
                                   ) ),
-                     
+                    
+                    #Manual S. 382
                     Command('DelTrace', "CALCulate%(channel)d:PARameter:DELete \'%(traceName)s\'",(
                                               Parameter('channel',class_attr='internChannel'),
                                               Parameter('traceName', ptype=str)
-                                              )      ) ,                                                     
-                                                                                                                        
+                                              ) ),                                                     
+                    
+                    #Manual S. 381                                                                                      
                     Command('GetTrace','CALCulate%(channel)d:PARameter:CATalog?',
                                               Parameter('channel',class_attr='internChannel'), 
                                               rtype="<default>"
                                               ),                            
                     
-                    #
+                    #Manual S. 385
                     Command('SetTrace',"CALCulate%(channel)d:PARameter:SELect \'%(traceName)s\'",(
                                               Parameter('channel',class_attr='internChannel'),
                                               Parameter('traceName',ptype=str)
                                               )     ),
                     
                     #Manual S. 383
-                    Command('SetSparameter',"CALCulate%(channel)d:PARameter:MEASure \'%(traceName)s\' \'%(measParam)s\'",(
+                    Command('SetSparameter',"CALCulate%(channel)d:PARameter:MEASure \'%(traceName)s\' \'%(sparam)s\'",(
                                               Parameter('channel',class_attr='internChannel'),
                                               Parameter('traceName',class_attr='activeTrace_Name'),
-                                              Parameter('measParam',ptype=str) 
+                                              Parameter('sparam',ptype=str) 
                                               ),rfunction='GetSparameter'  ),
                     
                     #Manual S. 523                          
@@ -207,7 +289,8 @@ class NETWORKANALYZER(NETWORKAN):
                                               Parameter('channel',class_attr='internChannel'),
                                               Parameter('sweepType',ptype=str)
                                               ), rfunction='GetSweepType'),
-                               
+                    
+                    #Manual      
                     Command('GetSweepType','SENSe%(channel)d:SWEep:TYPE?',
                                               Parameter('channel',class_attr='internChannel'),
                                               rtype='<default>'),
@@ -302,9 +385,11 @@ class NETWORKANALYZER(NETWORKAN):
                     
                     #Später:
                     #'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],   
-                                    
+                    
+                    #Manual        
                     Command('SetNWAMode',"INSTrument:SELect NWA",()),
                     
+                    #Manual
                     Command('GetDescription','*IDN?',(),
                                             rtype=str)  
                     
@@ -316,7 +401,7 @@ class NETWORKANALYZER(NETWORKAN):
 
     #*************************************************************************
     #
-    #                    Init
+    #        Init
     #*************************************************************************
     def __init__(self): 
         NETWORKAN.__init__(self)
@@ -331,16 +416,27 @@ class NETWORKANALYZER(NETWORKAN):
         
         self.activeTrace=None
         self.activeWindow=None
-        
+
+    #Diese Funktion wird aufgerufen wenn eine Instanz einer Klasse gelöscht wird.
     def __del__(self):
         try:
             del NETWORKANALYZER.NETWORKANALYZERS[NETWORKANALYZER.NETWORKANALYZERS.index(self)]
         except ValueError:
             pass
     
-    #Erstellt ein neues Festern, dazu muss die Fensternumer übergeben werden.
-    #Die hier übergebenen Nummer ist nur in der aktuellen Instanz güllig.
-    #Die eigentliche auf dem Gerät verwendet Nummer wird von der Klasse selbständig ermittelt,
+    #******************************************************************************
+    #
+    #     Überlagerte Funktionen
+    #
+    # Diese Funktionen überlagern Funktionen aus dem _cmds-Dict.
+    # Dies ist nötig wenn vor dem eigentlichen Aufruf der _cmds Funktion
+    # noch andere Aufgaben abgearbeitet werden müssen, oder wenn der Rückgabewert 
+    # nicht direkt verwendet werden können. 
+    #*******************************************************************************
+    
+    #Erstellt ein neues Festern, dazu muss der Fenstername übergeben werden.
+    #Der hier übergebenen Name ist nur in der aktuellen Instanz güllig.
+    #Der eigentliche auf dem Gerät verwendet Name wird von der Klasse selbständig ermittelt,
     #und ist über alle Instancen hinweg eindeutig.
     def CreateWindow(self,windowName):
         win=WINDOW(windowName)
@@ -353,26 +449,31 @@ class NETWORKANALYZER(NETWORKAN):
         self.activeWindow.__del__()
         del self.windows[self.activeWindow.getName()]
         return self._DelWindow(self.activeWindow_Name)
-        
 
-    #Diese Funktion legt einen neuen Trace auf dem Gerät an
-    # *tracename: Name des Traces, dieser ist nur für die aktuelle Instance gültig. Auf dem Gerät
-    #        wird ein Name von der Klasse erstellt, der über alle Instancen hinweg eindeutig ist.
-    # *measParam: Als String muss übergeben werde, was gemessen werden soll. z.B. "S11"
-    # *winNumber: Hier muss die Nummer des Fensters angegeben werden, in dem der Trace dargestellt werden soll.
-    #             Das Fenster muss vorher mit SetWindow(self, winNumber) angelegt werden.
+    def SetWindow(self,windowName):
+        self.activeWindow=self.windows[windowName]
+        self.activeWindow_Name=self.activeWindow.getInternName()
+        return self.GetWindow()
+    
+    def GetWindow(self):
+        return 0,self.activeWindow.getName()
+    
 
-    def CreateTrace(self,tracename,measParam):
+    #Erstellt einen neuen Trace, dazu muss der Name für den neuen Trace übergeben werden.
+    #Die hier übergebene Name ist nur in der aktuellen Instanz güllig.
+    #Der eigentliche auf dem Gerät verwendet Name wird von der Klasse selbständig ermittelt,
+    #und ist über alle Instancen hinweg eindeutig.
+    def CreateTrace(self,tracename,sparam):
         
         existing_traces = re.split(r",",self._GetTrace()[1][1:-1])
         
-        tra = TRACE(self,tracename,self.activeWindow,measParam)
+        tra = TRACE(self,tracename,self.activeWindow,sparam)
         
         if tra.getInternName() in existing_traces:
             raise GeneralDriverError("Trace \'%s\' already exist"%tracename)
         
         self.traces.update({tracename: tra})
-        self._CreateTrace(tra.getInternName(),measParam,tra.getTraceWindowNumber())
+        self._CreateTrace(tra.getInternName(),sparam,tra.getTraceWindowNumber())
         
         return 0,tracename
     
@@ -382,14 +483,6 @@ class NETWORKANALYZER(NETWORKAN):
         del self.traces[self.activeTrace.getName()]
         return self._DelTrace(self.activeTrace_Name)
     
-    #something sie die SParameter als String z.B. 'S11'
-    def SetSparameter(self,sparam):
-        return self._SetSparameter(sparam)
-    
-    
-    def GetSparameter(self):
-        return 0,self.GetTrace()[1][1]
-
     
     def SetTrace(self,traceName):
         self.activeTrace=self.traces.get(traceName)
@@ -398,14 +491,17 @@ class NETWORKANALYZER(NETWORKAN):
         self._SetTrace(self.activeTrace_Name)
         return self.GetTrace()
     
+    #Infos über einen gestimten Trace abrufen
+    def GetTrace(self):        
+        trace = re.split(r",",self._GetTrace()[1][1:-1])
+        trace_index= trace.index(self.activeTrace.getInternName())
+        #print trace_index
+        #print trace
+        return 0,(trace[trace_index],trace[trace_index+1])
+
     
-    def SetWindow(self,windowName):
-        self.activeWindow=self.windows[windowName]
-        self.activeWindow_Name=self.activeWindow.getInternName()
-        return self.GetWindow()
-    
-    def GetWindow(self):
-        return 0,self.activeWindow.getName()
+    def GetSparameter(self):
+        return 0,self.GetTrace()[1][1]
 
 
     def SetSweepCount(self,sweepCount):
@@ -422,15 +518,6 @@ class NETWORKANALYZER(NETWORKAN):
             
         return self._SetSweepCount(sweepCount)
 
-
-
-    #Infos über einen gestimten Trace abrufen
-    def GetTrace(self):        
-        trace = re.split(r",",self._GetTrace()[1][1:-1])
-        trace_index= trace.index(self.activeTrace.getInternName())
-        #print trace_index
-        #print trace
-        return 0,(trace[trace_index],trace[trace_index+1])
    
 
     def GetChannel(self):
@@ -462,7 +549,7 @@ class NETWORKANALYZER(NETWORKAN):
 
     #******************************************************************************
     #
-    #             Verwaltungs Funktionen
+    #     Verwaltungs Funktionen
     #*******************************************************************************
 
     def getChannelNumber(self):
@@ -487,8 +574,25 @@ class NETWORKANALYZER(NETWORKAN):
     #***************************************************************************
     def Init(self, ini=None, channel=None):
         """
-        Init Funktion
-        """                
+        Die Init Funktion initalisiert das Gerät, sie muss vor allen andren 
+        Funktionen aufgerufen werden.
+        
+        Für das Initalisieren werden alle Parameter aus der ini-Datei aufgerufen
+        und dem Gerät übergeben.
+        """
+        
+        #Die Inhalte der ini-Datei sind in der Variable self.conf gespeichert.
+        #Diese Variable ist ein Dict und somit entspricht die Reihenfolge der
+        #Parameter nicht der in der ini-Datei.
+        #Generell lässt sich das self.conf-Dicht über eine for-Schleife abarbeiten
+        #(siehe ende dieser Funktion) das Problem dabei ist, dass alle Parameter in
+        #einer wilkürlichen Reihenfolge auftauchen. Ist es notwendig, dass bestimmt
+        #Parameter vor andren aufgerufen werden, so muss dies außerhalb der 
+        #For-Schleife geschehen. Diese Vorgehen wurde, in dieser konkreten Ini-Funktion,
+        #bei den Parameter CreateWindow und CreatTrace angewandt.
+        
+        #Die keys im self.conf-Dict entprechen den Methoden-Namen dieser Klasse. 
+        
         if channel is None:
             channel=1
         error=NETWORKAN.Init(self,ini, channel)
@@ -506,7 +610,8 @@ class NETWORKANALYZER(NETWORKAN):
         self.CreateChannel()
         
         
-        
+        #Diese beiden eval Funktionen erstellen ein neues Window.
+        #Die dafür nötigen Paramter werden aus dem self.conf-Dict geholt.
         eval("self.%s(%s)"%('CreateWindow',self.conf[sec]['CreateWindow']))
         eval("self.%s(%s)"%('SetWindow',self.conf[sec]['CreateWindow']))
         
@@ -519,10 +624,16 @@ class NETWORKANALYZER(NETWORKAN):
                 self._DelTrace(trace[i])
                 i=i+2
         
+        #Diese beiden eval Funktionen erstellen einen neuen Trace.
+        #Die dafür nötigen Paramter werden aus dem self.conf-Dict geholt.
         eval("self.%s(%s)"%('CreateTrace',self.conf[sec]['CreateTrace']))
         eval("self.%s(%s)"%('SetTrace',self.conf[sec]['CreateTrace'].split(',')[0]))
 
+        
+        #Die restlichen Prameter aus dem self.conf-Dict abarbeiten.
         for func,args in self.conf[sec].items():
+            #CreateTrace und CreatWindow wurden schon etwas weiter oben
+            #aufgetrufen, weshalb sie hier übersprungen werden.
             if (func == 'CreateTrace') or (func == 'CreateWindow') :
                 continue
             #print func,args
@@ -532,21 +643,45 @@ class NETWORKANALYZER(NETWORKAN):
                 #print e
                 pass
         
-        print "\nINIT ENDE   ",self,"\n\n"
+        #print "\nINIT ENDE   ",self,"\n\n"
         
         return error
         
+        
+        
+        
+        
+        
+        
+        
+        
+        
     
 class TRACE(object):
+    """
+    Klasse zum verwalten der Traces auf dem Gerät. 
+    
+    Für jeden Trace wird eine neue Instanz dieser Klasse erstellt. Die Klasse 
+    ermittelt einen eindeuten Namen für den Neuen Trace, für diese 
+    Aufgabe besitzt sie eine Klassen-Variable in der alle Traces gespeichert sind 
+    (unabhängig von der  konkrten Instanz). Weiterhin speichert diese Klasse alle 
+    weiteren relevanten Informationen von eine Trace.
+    
+    Der Name, welcher beim erstellen des Traces der Driver-Instanz übergeben wurde, 
+    wird in der Variable self.name gespeichert
+    
+    Der Name, welcher auf dem Gerät verwendet wird und über alle Instanzen eindeutig
+    ist, wird in der Variable self.internName gespeichert.
+    """
     
     TRACES=[]
     
-    def __init__(self,nw,name,win,measParam):
+    def __init__(self,nw,name,win,sparam):
         TRACE.TRACES.append(self)
         self.networkanalyzer=nw
         self.name=name
         self.window=win
-        self.measParameter = measParam
+        self.sparameter = sparam
         self.traceWindowNumber=-1
         self.traceWindowNumber=self.__gethighestTraceWindowNumber()
         self.internName='%s_Ch%dWIN%sTR%d'%(name,self.networkanalyzer.getChannelNumber(),self.window.getInternName(),self.traceWindowNumber)
@@ -574,14 +709,28 @@ class TRACE(object):
     def getInternName(self):
         return self.internName
     
-    def getMeasParameter(self):
-        return self.measParameter
+    def getsparameter(self):
+        return self.sparameter
     
     def getWindow(self):
         return self.window
     
     
 class WINDOW(object):
+    """
+    Klasse zum verwalten der Windows auf dem Gerät. 
+    
+    Für jedes Window wird eine neue Instanz dieser Klasse erstellt. Die Klasse 
+    ermittelt einen eindeutige Nummer für das neue Window, für diese 
+    Aufgabe besitzt sie eine Klassen-Variable in der alle Widows gespeichert werden 
+    (unabhängig von der  konkrten Instanz). 
+    
+    Der Name, welcher beim erstellen des Windows der Driver-Instanz übergeben wurde, 
+    wird in der Variable self.name gespeichert
+    
+    Die Nummer, welche auf dem Gerät verwendet wird und über alle Instanzen eindeutig
+    ist, wird in der Variable self.internNumbe gespeichert.
+    """
     
     WINDOWS=[]
     
@@ -617,9 +766,6 @@ class WINDOW(object):
 
 
 
-
-
-
 from networkanalyzer_ui import UI as super_ui
 from Meta_ui import Metaui
 import enthought.traits.api as tapi
@@ -628,24 +774,48 @@ import enthought.traits.ui.menu as tuim
 
 class UI(super_ui):
     
+    """
+    Klasse für die grafische Oberfläche zum Testen des Gerätes.
+    
+    Mit Hilfer der Metaklasse Metaui wird ein großteil aller Buttons und Felder
+    automatisch anhand anhand des _commands-Dict und _cmds-Dict der Driver-Klasse bzw. 
+    -Superklasse erstellt.
+    
+    
+    In dieser Klasse können weitere tuiapi.Group erstellt werden, welche nicht schon
+    durch die Super-Klasse oder Metaklasse erstellt wurden. 
+    
+    Diese Klasse muss von der UI-Superklasse des Drivers abgeleitet sein.
+    """
+    
+    #Meta Klasse
     __metaclass__ = Metaui
+    
+    #Driver Klasse
     __driverclass__=NETWORKANALYZER
+    
+    #Super Klasse des Drivers
     __super_driverclass__=NETWORKAN
     
+    
+    #Comands aus dem _cmds-Dict welche ignoriert werden sollen. 
     _ignore=('SetChannel','CreateChannel','GetSpectrum')
     
+    #__init__ Funktion
     def __init__(self,instance, ini=None):
         super_ui.__init__(self,instance,ini)
-   
    
    
    
     SetWindow=tapi.Button("SetWindow")
     SETWINDOW=tapi.Str()
     newSETWINDOW=tapi.Str()
+    
     def _SetWindow_fired(self):
         err,value=self.dv.SetWindow(self.newSETWINDOW)
         self.SETWINDOW=value
+    
+    
     Main_S=tuiapi.Group(tuiapi.Group(tuiapi.Item('SetWindow',show_label=False,width=100),
                                      tuiapi.Item('SETWINDOW',label='Wert',style='readonly',width=70),
                                      tuiapi.Item('newSETWINDOW',label='traceName',width=60),
@@ -664,7 +834,7 @@ class UI(super_ui):
 def main():
     from mpy.tools.util import format_block
     #
-    # Wird f￼r den Test des Treibers keine ini-Datei ￼ber die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
+    # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
     # 'StringIO' in eine virtuelle Datei umgewandelt.
     #
@@ -704,34 +874,34 @@ def main():
         ini=StringIO.StringIO(ini)
         
         
-        ini2=format_block("""
-                        [DESCRIPTION]
-                        description: 'ZLV-K1'
-                        type:        'NETWORKANALYZER'
-                        vendor:      'Rohde&Schwarz'
-                        serialnr:
-                        deviceid:
-                        driver:
+#        ini2=format_block("""
+#                        [DESCRIPTION]
+#                        description: 'ZLV-K1'
+#                        type:        'NETWORKANALYZER'
+#                        vendor:      'Rohde&Schwarz'
+#                        serialnr:
+#                        deviceid:
+#                        driver:
 
-                        [Init_Value]
-                        fstart: 100e6
-                        fstop: 6e9
-                        fstep: 1
-                        gpib: 18
-                        virtual: 0
+#                        [Init_Value]
+#                        fstart: 100e6
+#                        fstop: 6e9
+#                        fstep: 1
+#                        gpib: 18
+#                        virtual: 0
 
-                        [channel_1]
-                        unit: 'dBm'
-                        SetRefLevel: 0
-                        SetRBW: 10e3
-                        SetSpan: 5999991000
-                        CreateWindow: 'default'
-                        CreateTrace: 'default','S11'
-                        SetSweepCount: 1
-                        SetSweepPoints: 50
-                        SetSweepType: 'LINEAR'
-                        """)
-        ini2=StringIO.StringIO(ini2)
+#                        [channel_1]
+#                        unit: 'dBm'
+#                        SetRefLevel: 0
+#                        SetRBW: 10e3
+#                        SetSpan: 5999991000
+#                        CreateWindow: 'default'
+#                        CreateTrace: 'default','S11'
+#                        SetSweepCount: 1
+#                        SetSweepPoints: 50
+#                        SetSweepType: 'LINEAR'
+#                        """)
+#        ini2=StringIO.StringIO(ini2)
         
     # #
     # # Zum Test des Treibers werden sogenannte Konsistenzabfragen ('assert' Bedingungen) verwendet, welche einen 'AssertationError' liefern,
@@ -740,7 +910,7 @@ def main():
     # #
     #from mpy.device.networkanalyzer_ui import UI as UI
     nw=NETWORKANALYZER()
-    nw2=NETWORKANALYZER()
+#    nw2=NETWORKANALYZER()
     
     try:
         UI(nw)
@@ -757,53 +927,42 @@ def main():
     err=nw.Init(ini)
     assert err==0, 'Init() fails with error %d'%(err)
     
-    err=nw2.Init(ini2)
-    assert err==0, 'Init() fails with error %d'%(err)
+#    err=nw2.Init(ini2)
+#    assert err==0, 'Init() fails with error %d'%(err)
     
      
     
-    #_assertlist=[
-    #             ("SetCenterFreq", 3e9,"assert"),                     #Default:3e9
-    #              ('SetSpan',5999991000,"print"),                     #Default:6e9
-    #              ('SetStartFreq',9e3,"assert"),                      #Default:9e3
-    #              ('SetStopFreq',6e9,"assert"),                       #Default:6e9
-    #              ('SetRBW',10e3,"assert"),                           #Default:10e3
-    #              ('SetSweepType',"LOGARITHMIC","print"),             #LINear | LOGARITHMIC | SEGMent   
-    #              ('SetSweepPoints',50,"assert"),                     #Default: 201  
-                  #('SetSweepCount',1,"print"),                       #Default: 1
-    #             ]
+    _assertlist=[
+                 ("SetCenterFreq", (3e9),"assert"),                     #Default:3e9
+                  ('SetSpan',(5999991000),"print"),                     #Default:6e9
+                  ('SetStartFreq',(9e3),"assert"),                      #Default:9e3
+                  ('SetStopFreq',(6e9),"assert"),                       #Default:6e9
+                  ('SetRBW',(10e3),"assert"),                           #Default:10e3
+                  ('SetSweepType',("LOGARITHMIC"),"print"),             #LINear | LOGARITHMIC | SEGMent   
+                  ('SetSweepPoints',(50),"assert"),                     #Default: 201  
+                 #('SetSweepCount',(1),"print"),                       #Default: 1
+                 ]
  
-    #for funk,value,test in _assertlist:
-    #    err,ret = getattr(nw,funk)(value)
-    #    assert err==0,  '%s() fails with error %d'%(funk,err)
-    #    if value != None:
-    #        if test == "assert":
-    #            assert ret==value, '%s() returns freq=%s instead of %s'%(funk,ret,value)
-    #        else:
-    #            print '%s(): Rückgabewert: %s   Sollwert: %s'%(funk,ret,value)
-    #    else:
-    #        print '%s(): Rückgabewert: %s'%(funk,ret)
+    for funk,value,test in _assertlist:
+        err,ret = eval("nw.%s(%s)"%(funk,", ".join(value)))
+        assert err==0,  '%s() fails with error %d'%(funk,err)
+        if value != None:
+            if test == "assert":
+                assert ret==value, '%s() returns freq=%s instead of %s'%(funk,ret,value)
+            else:
+                print '%s(): Rückgabewert: %s   Sollwert: %s'%(funk,ret,value)
+        else:
+            print '%s(): Rückgabewert: %s'%(funk,ret)
 
 
-    nw.SetSweepCount(1)
-    nw.NewSweepCount()
-    time.sleep(1)
     err,spec=nw.GetSpectrum()
     assert err==0, 'GetSpectrum() fails with error %d'%(err)
-    print spec[0]
-    print spec[1]
+    print spec
     
-    
-    nw2.SetSweepCount(1)
-    nw2.NewSweepCount()
-    time.sleep(1)
-    err,spec=nw2.GetSpectrum()
-    assert err==0, 'GetSpectrum() fails with error %d'%(err)
-    print spec[0][25]
-    print spec[1][25]
+#    err,spec=nw2.GetSpectrum()
+#    assert err==0, 'GetSpectrum() fails with error %d'%(err)
+#    print spec
 
-    
-    
     #err=nw.Quit()
     #assert err==0, 'Quit() fails with error %d'%(err)
 #

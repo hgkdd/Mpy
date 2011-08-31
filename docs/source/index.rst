@@ -16,6 +16,7 @@ Contents:
    intro-install-de
    intro-structure-de
    intro-driver-de
+   intro-driver-framework-de
    dat-file-grammar
    FAQ-de
    messanleitung

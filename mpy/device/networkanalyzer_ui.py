@@ -48,6 +48,29 @@ std_ini=StringIO.StringIO(std_ini)
 
 
 class UI(tapi.HasTraits):
+    """
+    Diese Klasse ist die Super Klasse für alle grafischen Test-Oberflächen für 
+    Networkanalyer.
+    
+    In dieser Klasse werden Buttons und Felder definiert die 
+    bei allen Networkanalyer identisch sind, wie z.B. das Plot Fenster.
+    
+    In den konkreten Implementierungen der Driver muss von dieser Klasse eine
+    weitere UI-Klasse abgeleitet werden um die restlichen Buttons und Felder zu
+    erstellen. Den Hauptteil der Arbeit übernimmt dabei die Metaklasse "Meta_ui"
+    die Buttons und Felder anhand des _commands-Dict und _cmds-Dict der Driver-Klasse bzw.
+    -Superklasse erstellt.
+    
+    Diese Metaklasse erstellt auch das eigentliche Fenster mit Taps in dem alle Buttons usw. 
+    angeordnet werden. 
+    
+    Damit die Metaklasse einwandfrei arbeiten kann, dürfen in dieser Klasse nur 
+    sogenannte tuiapi.Group (das sind Taps) erstellt werden. Diese müssen wiederrum in einem Dict
+    mit dem Namen "GROUPS" gespeichert werden. Wobei folgende Konvention einzuhalten ist:
+    
+    GROUPS={'Name des Taps' : tuiapi.Group(...)}
+    
+    """
     
     Init=tapi.Button()
     INI=tapi.Str()    

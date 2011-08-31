@@ -8,6 +8,7 @@
 
 """
 
+###Refers to the currently active Trace. See also SetTrace()
 
 
 import re
@@ -73,221 +74,311 @@ class NETWORKANALYZER(DRIVER):
         - *gpib*: GPIB address of the device
         - *virtual*: 0, false or 1, true. Virtual device are usefull for testing and debugging.
     - Section *channel_%d*
-        - *unit*:
-        - *SetRefLevel*:
-        - *SetRBW*:
-        - *SetSpan*:
-        - *CreateWindow*:
-        - *CreateTrace*:
-        - *SetSweepCount*:
-        - *SetSweepPoints*:
-        - *SetSweepType*:
+        - *unit*: 
+        - *SetRefLevel*: Reference Level (for further information see function description)
+        - *SetRBW*: Resolution Bandwidth (for further information see function description)
+        - *SetSpan*: Span of Device (for further information see function description)
+        - *CreateWindow*: Name of the first Window (for further information see function description)
+        - *CreateTrace*: Name of the first Trace (for further information see function description)
+        - *SetSweepCount*: Sets the number of sweeps to be measured in single sweep mode. (for further information see function description)
+        - *SetSweepPoints*: Sweep Points (for further information see function description)
+        - *SetSweepType*: Sweep Type (for further information see function description)
         
+    .. rubric:: Das _commands-Dict:
         
-        
-    .. rubric:: Methods:
+    Im _commands-Dict werden alle Funktionen Definiert welche möglichst in allen Driver Klassen
+    Implementiert werden sollten. Durch _commands kann so sichergestellt werden, dass alle Driver die von
+    dieser Klasse abgeleitet werden eine Reihe standard Funktionen haben, die in allen Implementierungen
+    gleich sind.
     
+    Beim Schreiben des Dicti ist folgende Konvention einzuhalten::
+        
+        _commands={"Name_der_Funktion": {'parameter': String-Tupel_von_Strings-None,
+                                     'returntype': Standard_Pthon-Typ oder r_type},
+                    ......
+                   
+    Für r_type siehe auch: :mod:`mpy.device.r_types`
+    
+    Siehe auch :class:`mpy.device.tools.Meta_Driver`
+    
+    Die Driver Metaklasse prüft anhand von _commands ob Funktionen, deren Name im Dict vorhanden ist, die gleich 
+    Parameter-Liste besitzen, das heißt: gleiche Anzahl und gleiche Reihenfolge der Parameter. Fehlt in einer 
+    konkreten Implementierung eines Drivers ein in _commands defniniert Funktion, so baut die Metaklasse ein 
+    Funktion welche einen NotImplementedError wirft.
+
+    
+       
+    .. rubric:: Possibiltie-Listen:
+    Possibilities sind mögliche Werte für einen Parameter. Bei bestimmen Parameter können immer nur bestimmte
+    Werte übergeben werden, so sind beispielsweise bei sparam (S-Paramter) außschließlich ('S11', 'S12', 'S21', 'S22')
+    möglich. Damit nicht jeder kleine Schreibfehelr sofort zum Abbruch des Programm führt und damit sichergestellt ist
+    das immer ein richtier Wert übergeben wird, wird mit Hilfe eines Fuzzy-string-compares der übergebene Wert auf einen 
+    in der Posssibilites-Liste vorhandenen zurückgeführt.
+        
+    Possibility-Listen können sowol in einer konkreten Implementierung einer Driver-Klasse als auch in einer Driver-
+    Superklasse definiert werden. Es wird geraten die Definition immer in der Super-Klasse vorzunehmen, damit die 
+    Possibilities für alle Driver gleich sind.
+        
+    Für eine genau beschreibung siehe: :class:`mpy.device.tools.Meta_Driver`
+
+    .. rubric:: Methods:
     .. method:: SetCenterFreq(cfreq):
     
           Set the CenterFreq of the Device.
     
           :param cfreq: CenterFreq for the device
           :type cfreq: float
-          :rtype: CenterFreq which is set on the Device after the set command; Type float
+          :return: CenterFreq which is set on the Device after the set command 
+          :rtype: float
     
     .. method:: GetCenterFreq():
             Get the CenterFreq of the Device
             
-            :rtype: CenterFreq which is set on the Device; Type float
+            :return: CenterFreq which is set on the Device
+            :rtype: float
     
     .. method:: SetSpan(span):
-            Set the Span of the Device
+            Set the Span of the Device.
+            Defines the width of the measurement and display range for a frequency sweep.
                 
             :param span: Span in Hz
             :type span: float
-            :rtype: Span which is set on the Device after the set command; Type float
+            :return: Span which is set on the Device after the set command
+            :rtype: float
             
     .. method:: GetSpan():
             Get the Span of the Device
             
-            :rtype: Span which is set on the Device; Type float
+            :return: Span which is set on the Device 
+            :rtype: float
     
     .. method:: SetStartFreq(stfreq):
             Set the Start Frequency of the Device
             
             :param stfreq: Start Frequency of the Device
             :type stfreq: float
-            :rtype: Start Frequency which is set on the Device; Type float
+            :return: Start Frequency which is set on the Device after the set command 
+            :rtype: float
             
     .. method:: GetStartFreq():
             Get the Start Frequency of the Device
             
-            :rtpye: Start Frequency which is set on the Device; Type float
+            :return: Start Frequency which is set on the Device after the set command  
+            :rtype: float
             
     .. method:: SetStopFreq(spfreq):
             Set the Stop Frequency of the Device
             
             :param spfreq: Stop Frequency of the Device
             :type spfreq: float
-            :rtype: Stop Frequency which is set on the Device; Type float
+            :return: Stop Frequency which is set on the Device after the set command
+            :rtype: float
             
     .. method:: GetStopFreq():
             Get the Stop Frequency of the Device
             
-            :rtpye: Stop Frequency which is set on the Device; Type float
+            :return: Stop Frequency which is set on the Device
+            :rtype: float
 
     .. method:: SetRBW(rbw):
             Set the Resolution Bandwidth of the Device
             
             :param rbw: Resolution Bandwidth of the Device
             :type rbw: float
-            :rtype: Resolution Bandwidth which is set on the Device; Type float
+            :return: Resolution Bandwidth which is set on the Device after the set command 
+            :rtype: float
             
     .. method:: GetRBW():
             Get the Resolution Bandwidth of the Device
             
-            :rtpye: Resolution Bandwidth which is set on the Device; Type float
+            :return: Resolution Bandwidth which is set on the Device 
+            :rtype: float
 
     .. method:: SetRefLevel(reflevel):
-            Set the Reference Level of the Device
+            Set the Reference Level of the currently active Trace.
             
             :param reflevel: Reference Level of the Device
             :type reflevel: float
-            :rtype: Reference Level which is set on the Device; Type float
+            :return: Reference Level which is set on the Device after the set command 
+            :rtype: float
     
     .. method:: GetRefLevel():
-            Get the Reference Level of the Device
+            Get the Reference Level of the currently active Trace.
             
-            :rtpye: Reference Level which is set on the Device; Type float
+            :return: Reference Level which is set on the Device 
+            :rtype: float
 
     .. method:: SetDivisionValue(divivalue):
             Sets the value between two grid graticules (value per division) for the diagram area.
             
             :param divivalue: Division Value of the Device
             :type divivalue: float
-            :rtype: Division Value which is set on the Device; Type float
+            :return: Division Value which is set on the Device after the set command 
+            :rtype: float
 
     .. method:: GetDivisionValue():
             Gets the value between two grid graticules (value per division) for the diagram area.
             
-            :rtpye: Division Value which is set on the Device; Type float
-            
+            :return: Division Value which is set on the Device 
+            :rtype: float
+    
+    
+    .. method:: CreateTrace(tracename, sparam):
+             Creates a Trace and assigns the given name to it.
+             
+             :param tracename: Name of the new Trace
+             :type tracename: String
+             :param sparam: S-parameter as String; ('S11', 'S12', 'S21', 'S22')
+             :type sparam: String
+             :return: Name of the new Trace 
+             :rtype: String
+    
+    .. method:: DelTrace(traceName):
+              Deletes a trace with a specified trace name.
+              
+              :param traceName: Name of the Trace which should deleted
+              :type traceName: String
+              :rtype: None
+    
     .. method:: SetTrace(traceName):
-            Creates a Trace and assigns the given name to it.
+             Selects an existing trace as the active trace.
             
-            :param traceName: Name of the new Trace
-            :type traceName: String
-            :rtype: Name of the currently active Trace; Type String
+             :param traceName: Name of the trace which should be selected.
+             :type traceName: String
+             :return: Name of the currently active Trace after the set command 
+             :rtype: String
             
     .. method:: GetTrace():
             Gets the Name of the currently active Trace
             
-            :rtpye: Name of the currently active Trace; Type String
+            :return: Name of the currently active Trace 
+            :rtype: String
             
     .. method:: SetSparameter(sparam):
-            Assigns the s-parameter to the currently active Trace
+            Assigns the s-parameter to the currently active Trace.
+            See also SetTrace()
             
             :param sparam: S-parameter as String; ('S11', 'S12', 'S21', 'S22')
             :type sparam: String
-            :rtype: S-parameter of the currently active Trace which is set on the Device; Type String
+            :return: S-parameter of the currently active Trace which is set on the Device after the set command 
+            :rtype: String
             
     .. method:: GetTrace():
-            Gets s-parameter of the currently active Trace
+            Gets s-parameter of the currently active Trace.
+            See also SetTrace()
             
-            :rtpye: S-parameter of the currently active Trace which is set on the Device; Type String
+            :return: S-parameter of the currently active Trace which is set on the Device 
+            :rtype: String
 
     .. method:: SetChannel(chan):
             Sets the Channel Number of the Device
             
             :param chan: Number of the Channel
             :type chan: Integer
-            :rtype: Channel Number of the Device ; Type Integer
+            :return: Channel Number of the Device after the set command 
+            :rtype: Integer
             
     .. method:: GetChannel():
             Gets the Channel Number of the Device
             
-            :rtpye: Channel Number of the Device; Type Integer
+            :return: Channel Number of the Device 
+            :rtype: Integer
 
     .. method:: SetSweepType(sweepType):
             Selects the sweep type and the position of the sweep points across the sweep range.
             
             :param sweepType: sweep type as String ('LINEAR','LOGARITHMIC')
             :type sweepType: String
-            :rtype: sweep type of the current channel which is set on the Device; Type String
+            :return: sweep type which is set on the device after the set command 
+            :rtype: String
             
     .. method:: GetSweepType():
             Selects the sweep type and the position of the sweep points across the sweep range.
             
-            :rtpye: sweep type of the current channel which is set on the Device; Type String
+            :return: sweep type which is set on the Device 
+            :rtype: String
 
     .. method:: SetSweepCount(sweepCount):
-            Sets the number of sweeps to be measured in single sweep mode
+            Sets the number of sweeps to be measured in single sweep mode.
             
             :param sweepCount: Reference Level of the Device
             :type sweepCount: Integer
-            :rtype: Sweep Count which is set on the Device; Type Integer
+            :return: Sweep Count which is set on the Device after the set command 
+            :rtype: Integer
     
-    .. method:: GetSweepCount():
+    .. :method:: GetSweepCount():
             Gets the number of sweeps to be measured in single sweep mode
             
-            :rtpye: Sweep Count which is set on the Device; Type Integer
+            :return: Sweep Count which is set on the Device 
+            :rtype: Integer
             
-    .. method:: SetSweepPoints(spoints):
+    .. :method:: NewSweepCount():
+            Starts a new single sweep sequence.
+            
+            
+    .. :method:: SetSweepPoints(spoints):
             Sets the total number of measurement points per sweep
             
             :param spoints: Sweep Points of the Device
             :type spoints: Integer
-            :rtype: Sweep Point which is set on the Device; Type Integer
+            :return: Sweep Point which is set on the Device after the set command 
+            :rtype: Integer
     
-    .. method:: GetSweepPoints():
+    .. :method:: GetSweepPoints():
             Gets the total number of measurement points per sweep
             
-            :rtpye: Sweep Point which is set on the Device; Type Integer
+            :return: Sweep Point which is set on the Device 
+            :rtype: Integer
     
-    .. method:: SetTriggerMode(triggerMode):
-            xxxx
+    .. :method:: SetSweepMode(sweepMode):
+            Set the sweep mode to in single sweep or in continuous sweep
+            
+            :param sweepMode: Sweep mode which should set. ('CONTINUOUS','SINGEL')
+            :type sweepMode: String
+            :return: Sweep Mode which is set on the Device after the set command 
+            :rtype: String
+    
+    .. :method:: GetSweepMode():
+            Get the sweep mode of the device.
+            
+            :return: Sweep Mode which is set on the Device 
+            :rtype: String
+            
+    
+    .. :method:: SetTriggerMode(triggerMode):
+            Selects the source for the events that the analyzer uses to start a sweep.
             
             :param spoints: Trigger Mode of the Device ('IMMEDIATE', 'EXTERNAL')
             :type spoints: String
-            :rtype: Trigger Mode which is set on the Device; Type String
+            :return: Trigger Mode which is set on the Device 
+            :rtype: String
     
-    .. method:: GetTriggerMode():
-            xxxx
+    .. :method:: GetTriggerMode():
+            Gets the source for the events that the analyzer uses to start a sweep.
             
-            :rtpye: Trigger Mode which is set on the Device; Type String
+            :return: Trigger Mode which is set on the Device 
+            :rtype: String
 
-    .. method:: SetTriggerDelay(tdelay):
-            xxxx
+    .. :method:: SetTriggerDelay(tdelay):
+            Sets a delay time between the trigger event and the start of the measurement.
             
             :param tdelay: Trigger Delay of the Device
             :type tdelay: Float
-            :rtype: Trigger Delay which is set on the Device; Type Float
+            :return: Trigger Delay which is set on the Device 
+            :rtype: Float
     
-    .. method:: GetTriggerMode():
-            xxxx
+    .. :method:: GetTriggerMode():
+            Sets a delay time between the trigger event and the start of the measurement.
             
-            :rtpye: Trigger Delay which is set on the Device; Type Float
-            
+            :return: Trigger Delay which is set on the Device 
+            :rtype: Float
     """
     
     
-    # Diese Listen enthalten mögliche Bezeichnungen "possibilities" für Tracemodes usw.
-    # Verwendet ein Gerät andere Bezeichnungen für die Modes, dann muss ein maping von den allgemein
-    # gültigen Bezeichnungen hin zu den Bezeichnungen des Geräts stattfinden. 
-    # Die Maps müssen die Namen MapListenname für das hin mapen bzw. MapListenname_Back für das
-    # zurück mapen erhalten, z.B. MapTRACEMODES,MapTRACEMODES_Back
-    # Der Aufbau der Listen ist:
-    # hin Map: {Allgemein gültiger Bezeichnung : Bezeichnung Gerät}
-    # Back Map: {RückgabeWert von Gerät : Allgemein gültige Bezeichnung}
-    # Wird in _setgetlist eine possibilities Liste angegeben, dann werden Maps mit den oben beschriebenen
-    # Namen automatisch ausgewertet.
-    # Beispiel siehe: sp_rs_zlv-6.py
-    
-    
-    #???
-    #TRACEMODES=('WRITE','VIEW','AVERAGE', 'BLANK', 'MAXHOLD', 'MINHOLD')
 
-    #???
+    
+    
+
     conftmpl={'description': 
                  {'description': str,
                   'type': str,
@@ -314,13 +405,18 @@ class NETWORKANALYZER(DRIVER):
                      }}
 
 
+
+    # Die "possibilities" Listen:
     sweepType_possib=('LINEAR','LOGARITHMIC')
     
     triggerMode_possib=('IMMEDIATE', 'EXTERNAL')
 
     sweepMode_possib=('CONTINUOUS','SINGEL')
     
-    measParam_possib=('S11', 'S12', 'S21', 'S22')
+    sparam_possib=('S11', 'S12', 'S21', 'S22')
+ 
+ 
+ 
  
     _commands={"SetCenterFreq" :   {'parameter': ('cfreq'),
                                      'returntype': float},
@@ -362,6 +458,12 @@ class NETWORKANALYZER(DRIVER):
     
                "GetDivisionValue":  {'parameter': None,
                                      'returntype': float},
+                                     
+               "CreateTrace":       {'parameter': ('tracename','sparam'),
+                                     'returntype': str},
+                                     
+               "DelTrace":          {'parameter': None,
+                                     'returntype': str}, 
                
                "SetTrace":          {'parameter': "traceName",
                                      'returntype': str},
@@ -392,6 +494,9 @@ class NETWORKANALYZER(DRIVER):
                
                "GetSweepCount":     {'parameter': None,
                                      'returntype': int},
+            
+               "NewSweepCount":     {'parameter': None,
+                                     'returntype': None},
 
                "SetSweepPoints":    {'parameter': "spoints",
                                      'returntype': int},
@@ -399,6 +504,12 @@ class NETWORKANALYZER(DRIVER):
                "GetSweepPoints":    {'parameter': None,
                                       'returntype': int},
 
+               "SetSweepMode":      {'parameter': "sweepMode",
+                                     'returntype': str}, 
+               
+               "GetSweepMode":      {'parameter': None,
+                                     'returntype': str}, 
+            
                "SetTriggerMode":    {'parameter': "triggerMode",
                                      'returntype': str},
                

@@ -5,6 +5,14 @@ API Documentation
 
 This is the documentation of the API.
 
+:mod:`mpy.device.driver_framework`
+----------------------------------
+
+.. toctree::
+	:maxdepth: 2
+	
+	mpy/driver_framework.rst
+
 
 :mod:`mpy.device.driver`
 ------------------------
@@ -13,6 +21,15 @@ This is the documentation of the API.
    :members:
    :undoc-members:
    :inherited-members:
+
+
+:mod:`mpy.device.driver_new`
+-----------------------------
+.. automodule:: mpy.device.driver_new
+   :members:
+   :undoc-members:
+   :inherited-members:
+
 
 :mod:`mpy.device.device`
 ------------------------

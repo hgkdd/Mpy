@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This is :mod:`mpy.device.Metaui`: Metaclass to Build a standard GUI from the
-    _setgetlist.
+"""This is :mod:`mpy.device.Metaui`: Metaclass to Build a standard GUI from the _setgetlist.
 
    :author: Christian Albrecht (main author)
    :copyright: All rights reserved
@@ -24,6 +23,7 @@ import inspect
 
 def erzeugeFired_Methode_mit_Rfunction(command,rfunction,param_list):
     """
+    Functionfactory zum erzeugen von Traits-fired Funktionen.
     """
     def Methode_fired(self):
         setattr(self,rfunction.upper(),str(eval('self.dv.%s(%s)'%(command,", ".join(param_list)))[1]))
@@ -36,6 +36,7 @@ def erzeugeFired_Methode_mit_Rfunction(command,rfunction,param_list):
 
 def erzeugeFired_Methode(name,param_list):
     """
+    Functionfactory zum erzeugen von Traits-fired Funktionen.
     """
     def Methode_fired(self):
         setattr(self,name.upper(),str(eval('self.dv.%s(%s)'%(name,", ".join(param_list)))[1]))
@@ -45,6 +46,9 @@ def erzeugeFired_Methode(name,param_list):
 
 
 def _Init_fired(self):
+    """
+    Standard init_fired Funktion.
+    """
     ini=StringIO.StringIO(self.INI)
     self.dv.Init(ini)
         
@@ -57,17 +61,63 @@ def _Init_fired(self):
 
 
 def Erzeuge_TapiVar(typ):
-            if typ == float:
-                return tapi.Float()
-
-            elif typ == int:
-                return tapi.Int()
-            else:
-                return tapi.Str()
+    """
+    Hilfsfunktion zum erstellen von Traits-Variablen.
+    """
+    if typ == float:
+        return tapi.Float()
+    elif typ == int:
+        return tapi.Int()
+    else:
+        return tapi.Str()
                 
 
     
 class Metaui(MetaHasTraits):
+    """
+    Diese Metaklasse ermöglicht das einfache Erstellen von Guis für das Testen eines Drivers.
+    
+    Sie baut für alle im _commands- und _cmds-Dict vorhanden Commands und Functions passende Buttons und
+    Eingabefelder und nimmt so einem viel Schreibarbeit ab.
+    
+    Es werden für alles in _commands und _cmds definiert Kommandos Buttons und Felder erstellt. Sind in dem cmds-Dict mehr
+    Kommandos definiert als in _commands, so werden auch für diese Buttons gebaut. Der Grund für dieses Vorgehen liegt in der
+    Tatsache, dass diese GUI zum testen der Klasse gedacht ist und somit alle definierten Kommandso abgebildet werden sollen.
+    Sind in _commands Kommandos aufgeführt die nicht in der konkreten Dirver-Klasse vorhanden sind, so wird eine Methode
+    erstellt welche einen NotImplementedError wirft.
+    
+    
+    
+    Zu jeder Driver-Superklasse sollte ein UI-Superklasse existieren in der zusätzliche Taps definiert werden
+    die für alle von ihr abgeleiteten Driverklassen gleich sein sollen.
+    Damit die Metaklasse einwandfrei arbeiten kann, dürfen in der Superklasse nur 
+    sogenannte tuiapi.Group (das sind Taps) erstellt werden. Diese müssen wiederrum in einem Dict
+    mit dem Namen "GROUPS" gespeichert werden. Wobei folgende Konvention einzuhalten ist::
+    
+        GROUPS={'Name des Taps' : tuiapi.Group(...)}
+    
+    Als Beispiele siehe: :mod:`mpy.device.networkanalyer_ui`
+    
+    
+    
+    Weiterhin muss eine UI-Klasse für jede konkrete Driver-Implementierung erstellt werden, diese muss von
+    der UI-Superklasse abgeleitet sein. In dieser muss die Meta_ui als Metaklasse angegeben werden, weiterhin 
+    sind folgende speziall Variablen nötig:
+    
+    **__driverclass__= :** Verweis auf eine konkrete Klasse einer Driver-Implementierung. ACHTUNG!! nur ein Verweis auf die Klasse, 
+                        keine Instanz der Klasse. 
+    
+    **__super_driverclass__=**: Verweis auf die Superklasse eines Driver. ACHTUNG!! nur ein Verweis auf die Klasse, 
+                            keine Instanz der Klasse.
+                            
+    Aus diesen Varialben holt sich die Metaklase das _commands-Dict und _cmds-Dict.
+    
+    Als Beispiel siehe: :class:`mpy.device.nw_rs_zlv.UI`
+    
+    .. rubric:: Methods:
+    """
+    
+    
     
     #def __init__(cls, eins, zwei, drei):
     #    print "init %s \n\n   %s  \n\n %s"%(eins,zwei,drei)
@@ -135,7 +185,7 @@ class Metaui(MetaHasTraits):
             param_list=[]
             for param_name in command.getParameterTuple():
                 param=command.getParameter()[param_name]
-                if param.isGlobal():
+                if param.isClass_attr():
                     continue
             
                 if hasattr(driverclass,command_name):
