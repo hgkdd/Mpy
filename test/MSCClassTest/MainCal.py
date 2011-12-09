@@ -2,11 +2,11 @@ import os
 import sys
 import gzip
 import pprint
-#try:
-#    import cPickle as pickle
-#except ImportError:
-#    import pickle
-import pickle
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+#import pickle
 
 from mpy.env.msc.MSC import MSC
 import mpy.tools.util
