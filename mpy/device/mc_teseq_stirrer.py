@@ -37,7 +37,7 @@ class MOTORCONTROLLER(MC):
         return n-1
     
     def _read(self):
-        ans=self.dev.readline(eol='\r')
+        ans=self.dev.readline()#eol='\r')
         return ans
         
     def _ask(self, cmd):
