@@ -37,7 +37,7 @@ class MOTORCONTROLLER(MC):
         return n-1
     
     def _read(self):
-        ans=self.dev.readline()#eol='\r')
+        ans=self.dev.read()
         return ans
         
     def _ask(self, cmd):
@@ -46,7 +46,7 @@ class MOTORCONTROLLER(MC):
             time.sleep(0.1)
         ans=[]
         while self.dev.inWaiting() > 0: # read until there's no more to read
-            time.sleep(0.1)
+            time.sleep(0.01)
             d=self._read()
             #print d
             ans.append(d)
@@ -77,7 +77,9 @@ class MOTORCONTROLLER(MC):
                                 bytesize=serial.EIGHTBITS,
                                 parity=serial.PARITY_NONE,
                                 stopbits=serial.STOPBITS_ONE,
-                                timeout=None)
+                                timeout=1)
+                #self.dev=io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser),
+                #                            newline='\r')
                 break
             except:
                 time.sleep(0.5)

@@ -149,7 +149,7 @@ class DatFile(Parser):
         return t
 
     def t_ID(self, t):
-        r'[a-zA-Z][a-zA-Z0-9]*'
+        r'[a-zA-Z][a-zA-Z0-9/]*'
         if t.value in self.reserved:
             t.type = t.value
         return t

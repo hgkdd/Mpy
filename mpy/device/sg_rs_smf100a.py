@@ -57,7 +57,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         #
     def ConfAM(self, source, freq, depth, waveform, LFOut):
         source=fstrcmp(source, self.AM_sources, n=1,cutoff=0,ignorecase=True)[0]
-        waveform=fstrcmp(source, self.AM_waveforms, n=1,cutoff=0,ignorecase=True)[0]
+        waveform=fstrcmp(waveform, self.AM_waveforms, n=1,cutoff=0,ignorecase=True)[0]
         lfo=1
         if source == 'INT2':
             lfo=2
