@@ -12,16 +12,24 @@ class MOTORCONTROLLER(MC):
         pass
 
     def _state(self):
-        time.sleep(0.5)
-        ans=self._ask('?') # ask for status
-        #print ans
-        ans=ans.split(",")
-        stopped=(ans[0]=='1')
-        #print ans,' --> ', ans[0], ans[1], ' --> ', stopped
-        self.ca=float(ans[1]) # current angle
-        self.drive_init_ok=(ans[2]=='0')
-        fail=(ans[3]=='1')
-        #print self._ask('INFO')
+        #time.sleep(0.5)
+        for _ in range(10):
+            try:
+                ans=self._ask('?') # ask for status
+                #print ans
+                ans=ans.split(",")
+                stopped=(ans[0]=='1')
+                #print ans,' --> ', ans[0], ans[1], ' --> ', stopped
+                self.ca=float(ans[1]) # current angle
+                self.drive_init_ok=(ans[2]=='0')
+                fail=(ans[3]=='1')
+                #print self._ask('INFO')
+                break # exit for loop
+            except IndexError: # structure of ans not as expected
+                time.sleep(0.1)
+                continue
+        else: #no correct answer after 10 tries
+            raise # re-raise the last expection
         return stopped, self.ca, self.drive_init_ok, fail 
     
     def _wait(self):
