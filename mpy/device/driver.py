@@ -108,7 +108,7 @@ class DRIVER(object):
     def _gpib_write(self, cmd):
         #print "In write", cmd
         stat=0
-        if self.dev and isinstance(cmd, basestring):
+        if self.dev and isinstance(cmd, str):
             stat=self.dev.write(cmd)
         return stat
     
@@ -125,7 +125,7 @@ class DRIVER(object):
     def _gpib_query(self, cmd, tmpl):
         #print "In query", cmd, tmpl
         dct=None
-        if self.dev and isinstance(cmd, basestring):
+        if self.dev and isinstance(cmd, str):
             ans=self.dev.ask(cmd)
             #print "ans=",ans
             m=re.match(tmpl, ans)
@@ -135,20 +135,20 @@ class DRIVER(object):
         return dct
 
     def _debug_write(self, cmd):
-        print "%s out:"%self.IDN, cmd
+        print("%s out:"%self.IDN, cmd)
         return 0
     
     def _debug_read(self, tmpl):
-        print "In read", tmpl 
+        print("In read", tmpl) 
         dct=None
-        ans=raw_input('%s in: %s -> '%(self.IDN, tmpl))
+        ans=input('%s in: %s -> '%(self.IDN, tmpl))
         m=re.match(tmpl, ans)
         if m:
             dct=m.groupdict()
         return dct
 
     def _debug_query(self, cmd, tmpl):
-        print "In query", cmd, tmpl 
+        print("In query", cmd, tmpl) 
         self.write(cmd)
         return self.read(tmpl)
 
@@ -229,7 +229,7 @@ class DRIVER(object):
                 if not tmpl:                              # no mask, no read
                                                         # expr may be a function call. Let's try..
                     try:
-                        exec expr in callerdict
+                        exec(expr, callerdict)
                     except (SyntaxError, NameError, TypeError):
                         self.write(expr)                
                 elif not cmd:                           #only data read    no cmd, no write

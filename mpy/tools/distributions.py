@@ -41,7 +41,7 @@ class Chi2Cost:
     def __init__ (self, x, y, f):
         self.x = x[:]
         self.y = y[:]
-        self.xy= zip(self.x, self.y)
+        self.xy= list(zip(self.x, self.y))
         self.f=f
     def __call__(self, par):
         _sum=sum([(y - self.f(x,par))**2 for x,y in self.xy])

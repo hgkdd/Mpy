@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #Es wird benötigt enthought.chaco und enthought.enable
 
-import StringIO
+import io
 import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
 import enthought.traits.ui.menu as tuim
@@ -44,7 +44,7 @@ std_ini=format_block("""
                 SetSweepPoints: 50
                 SetSweepType: 'LINEAR'
                 """)
-std_ini=StringIO.StringIO(std_ini)
+std_ini=io.StringIO(std_ini)
 
 
 class UI(tapi.HasTraits):

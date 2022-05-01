@@ -63,11 +63,11 @@ if __name__ == '__main__':
     #print "Description: %s"%des
 
     for pos in [100]:
-        print "Set pos to %e"%pos
+        print("Set pos to %e"%pos)
         err, rpos = dev.SetPos(pos)
         if err == 0:
-            print "Pos set to %e"%rpos
+            print("Pos set to %e"%rpos)
         else:
-            print "Error setting pos"
+            print("Error setting pos")
 
     dev.Quit()

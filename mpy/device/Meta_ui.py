@@ -13,7 +13,7 @@ import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
 import enthought.traits.ui.menu as tuim
 
-import StringIO
+import io
 import re
 import inspect
 
@@ -49,7 +49,7 @@ def _Init_fired(self):
     """
     Standard init_fired Funktion.
     """
-    ini=StringIO.StringIO(self.INI)
+    ini=io.StringIO(self.INI)
     self.dv.Init(ini)
         
     #Alle Get Funktionen einmal aufrufen und so die Anzeige mit aktuellen Werten belegen.
@@ -147,7 +147,7 @@ class Metaui(MetaHasTraits):
         mainEntries=[]
         items_Map={} 
         
-        for command_name,command in _cmds.items():
+        for command_name,command in list(_cmds.items()):
             items=""
             if command_name in class_dict['_ignore']:
                 continue
@@ -172,7 +172,7 @@ class Metaui(MetaHasTraits):
                 if command.Rfunction() not in mainEntries:
                     mainEntries.append(command.Rfunction())
                 
-                if command.Rfunction() in items_Map.keys():
+                if command.Rfunction() in list(items_Map.keys()):
                     del items_Map[command.Rfunction()]
                 
                 
@@ -214,7 +214,7 @@ class Metaui(MetaHasTraits):
         class_dict.update({'mainEntries': mainEntries})
         
         
-        item_List=items_Map.values()
+        item_List=list(items_Map.values())
         item_List=[item_List[i:i+16] for i in range(0, len(item_List), 16)]
         
         tabs_list_index=0
@@ -234,7 +234,7 @@ class Metaui(MetaHasTraits):
         notIEntries=[]
         items_Map={} 
         
-        for command_name,item in super_driverclass._commands.items():
+        for command_name,item in list(super_driverclass._commands.items()):
             items=""
             if (command_name in mainEntries) or (command_name in notIEntries):
                 continue
@@ -243,7 +243,7 @@ class Metaui(MetaHasTraits):
             
             if item['parameter']:
                 para_command=item['parameter']
-                if isinstance(para_command, basestring):
+                if isinstance(para_command, str):
                     para_command=(para_command,)
             
             #Testen ob die Methode direkt, also nicht über _cmds, implementiert wurde:
@@ -288,7 +288,7 @@ class Metaui(MetaHasTraits):
             items="%s orientation='horizontal')"%(items)
             items_Map[command_name]=items
         
-        item_List=items_Map.values()
+        item_List=list(items_Map.values())
         item_List=[item_List[i:i+16] for i in range(0, len(item_List), 16)]
         
         
@@ -309,7 +309,7 @@ class Metaui(MetaHasTraits):
         
         i=0
         for b in bases:
-           for n,v in b.GROUPS.items():
+           for n,v in list(b.GROUPS.items()):
                if type(v) == tuiapi.Group:
                    tabs ='%s,bases[%d].GROUPS["%s"]'%(tabs,i,n)     
            i=i+1

@@ -9,7 +9,7 @@
 import sys
 import os
 import time
-import cPickle as pickle
+import pickle as pickle
 import gzip
 import re
 import tempfile
@@ -117,23 +117,23 @@ class Measure(object):
            The return value is `None`.
         """
         if hasattr(item, 'keys'):  # a dict like object
-            print "{",
-            for k in item.keys():
-                print str(k)+":",
+            print("{", end=' ')
+            for k in list(item.keys()):
+                print(str(k)+":", end=' ')
                 self.out(item[k])
-            print "}",
+            print("}", end=' ')
         elif hasattr(item, 'append'):  # a list like object
-            print "[",
+            print("[", end=' ')
             for i in item:
                 self.out(i)
-            print "]",
+            print("]", end=' ')
         elif util.issequence(item):  # other sequence 
-            print "(",
+            print("(", end=' ')
             for i in item:
                 self.out(i)
-            print ")",
+            print(")", end=' ')
         else:
-            print item,
+            print(item, end=' ')
             
     def set_autosave_interval (self, interval):
         """Set the intervall between auto save.
@@ -161,13 +161,13 @@ class Measure(object):
             """
             assert hasattr(b, 'keys'), "Argument b has to be a dict."
             try:
-                print repr(b['comment']),
+                print(repr(b['comment']), end=' ')
             except KeyError:
                 pass
             try:
                 par = b['parameter']
-                for des,p in par.iteritems():
-                    print des,
+                for des,p in par.items():
+                    print(des, end=' ')
                     out_block(p)
                 try:
                     item = b['value']
@@ -183,12 +183,12 @@ class Measure(object):
             sys.stdout = self.logfile
         try:
             try:
-                for des,bd in block.iteritems():
-                    print util.tstamp(), des,
+                for des,bd in block.items():
+                    print(util.tstamp(), des, end=' ')
                     out_block(bd)
-                    print # New Line
+                    print() # New Line
             except AttributeError:
-                print block
+                print(block)
         finally:
             sys.stdout=stdout #restore stdout
 
@@ -211,7 +211,7 @@ class Measure(object):
         
            Return value: the index of the selected button (starting from `0`), or `-1` if `len(but)` is `False`.
         """
-        print msg
+        print(msg)
         for l in self.logger:
             l(msg,but,level,dct)                
         if level in ('email',):
@@ -259,7 +259,7 @@ class Measure(object):
             try:
                 cleanedFilename = unicodedata.normalize('NFKD', filename).encode('ASCII', 'ignore')
             except TypeError:
-                cleanedFilename = unicodedata.normalize('NFKD', unicode(filename)).encode('ASCII', 'ignore')
+                cleanedFilename = unicodedata.normalize('NFKD', str(filename)).encode('ASCII', 'ignore')
             return ''.join(c for c in cleanedFilename if c in validFilenameChars)
                 
         log = None
@@ -363,7 +363,7 @@ class Measure(object):
             # print "Measure.py; 363:", self.ascmd
             # now, we can serialize 'self'
             pfile=None
-            if isinstance(name_or_obj, basestring):   # it's a string (filename)
+            if isinstance(name_or_obj, str):   # it's a string (filename)
                 try:
                     if name_or_obj.endswith(('.gz','.zip')):  # gzip
                         pfile = gzip.open(self.asname,"wb")
@@ -511,7 +511,7 @@ class Measure(object):
 
     def make_deslist(self, thedata, description):
         if description is None:
-            description = thedata.keys()
+            description = list(thedata.keys())
         if util.issequence(description): # a sequence
             deslist = [des for des in description if des in thedata]
         else:
@@ -522,7 +522,7 @@ class Measure(object):
         return deslist
 
     def make_whatlist (self, thedata, what):
-        allwhat_withdupes = util.flatten([v.keys() for v in thedata.itervalues()])
+        allwhat_withdupes = util.flatten([list(v.keys()) for v in thedata.values()])
         allwhat=list(set(allwhat_withdupes))
 
         if what is None:

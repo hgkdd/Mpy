@@ -6,7 +6,7 @@
    :license: no licence yet
 """
 
-from __future__ import division
+
 import math, re, inspect
 import types
 import time
@@ -110,16 +110,16 @@ def combinations(L):
     if N == 0:
         return []
     elif N == 1:
-        return [ L[0][i:i+1] for i in xrange(0,len(L[0]))]
+        return [ L[0][i:i+1] for i in range(0,len(L[0]))]
     else:
-        return [ L[0][i:i+1] + subcomb for i in xrange(0, len(L[0])) for subcomb in combinations( L[1:] )]
+        return [ L[0][i:i+1] + subcomb for i in range(0, len(L[0])) for subcomb in combinations( L[1:] )]
 
 def LookForUserInterrupt():
     # look for user interupt
     if anykeyevent():
-        print "Execution interrupted by user."
-        print "Press any key when ready to measure or 'q' to quit."
-        if keypress() in map(ord, 'qQ'):
+        print("Execution interrupted by user.")
+        print("Press any key when ready to measure or 'q' to quit.")
+        if keypress() in list(map(ord, 'qQ')):
             return True
     return None
 
@@ -205,12 +205,12 @@ def removefrom (obj, pat):
         del obj
         return
 
-    if type(obj) in types.StringTypes:
+    if type(obj) in (str,):
         return
 
     # a dict?
     try:
-        for k,v in obj.items():
+        for k,v in list(obj.items()):
             if re.search(pat, str(type(v))) is not None:
                 del obj[k]
             else:
@@ -228,7 +228,7 @@ def removefrom (obj, pat):
     return
 
 def issequence(a):
-    return hasattr(a, '__iter__') and not isinstance(a, basestring) 
+    return hasattr(a, '__iter__') and not isinstance(a, str) 
 
 def flatten(a):
     if not issequence(a): 
@@ -247,7 +247,7 @@ def get_var_from_nearest_outerframe(varstr):
     for of in __outerframes:
         #print "outerframe is:"
         #print of
-        for name,value in of[0].f_locals.items()+of[0].f_globals.items():
+        for name,value in list(of[0].f_locals.items())+list(of[0].f_globals.items()):
             # look for the name
             if name == varstr:
                 #print "found name %s"%varstr
@@ -298,7 +298,7 @@ def format_block(block,nlspaces=0):
     # look at first line to see how much indentation to trim
     ws = re.match(r'\s*',lines[0]).group(0)
     if ws:
-        lines = map( lambda x: x.replace(ws,'',1), lines )
+        lines = [x.replace(ws,'',1) for x in lines]
 
     # remove leading/trailing blank lines (after leading ws removal)
     # we do this again in case there were pure-whitespace lines
@@ -392,7 +392,7 @@ def extrap1d(interpolator):
     def ufunclike(xs):
         if not hasattr(xs, '__iter__'):
             xs=[xs]
-        return np.array(map(pointwise, np.array(xs)))
+        return np.array(list(map(pointwise, np.array(xs))))
 
     return ufunclike
     

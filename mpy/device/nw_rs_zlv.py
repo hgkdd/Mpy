@@ -11,21 +11,21 @@
 import functools
 import re,time
 import sys
-import StringIO
+import io
 from scuq import *
 #from mpy.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
-from networkanalyzer import NETWORKANALYZER as NETWORKAN
+from .networkanalyzer import NETWORKANALYZER as NETWORKAN
 from mpy.tools.Configuration import fstrcmp
 from mpy.tools.spacing import logspaceN,linspaceN
 import numpy
 
-from tools import *
-from r_types import *
-from validators import *
-from mpy_exceptions import *
+from .tools import *
+from .r_types import *
+from .validators import *
+from .mpy_exceptions import *
 
 
-class NETWORKANALYZER(NETWORKAN):
+class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
     
     """
     This Driver use the new dirver framework!
@@ -125,8 +125,6 @@ class NETWORKANALYZER(NETWORKAN):
         :return: retrun a tuple of (x-Values, y-Values)
         :rtype: float 
     """
-    
-    __metaclass__=Meta_Driver
     
     NETWORKANALYZERS=[]
 
@@ -617,7 +615,7 @@ class NETWORKANALYZER(NETWORKAN):
         
         #Existierende Traces im Window löschen:
         trace = re.split(r",",self._GetTrace()[1][1:-1])
-        print self._GetTrace()
+        print(self._GetTrace())
         if trace[0] != '':
             i=0
             while i<len(trace):
@@ -631,7 +629,7 @@ class NETWORKANALYZER(NETWORKAN):
 
         
         #Die restlichen Prameter aus dem self.conf-Dict abarbeiten.
-        for func,args in self.conf[sec].items():
+        for func,args in list(self.conf[sec].items()):
             #CreateTrace und CreatWindow wurden schon etwas weiter oben
             #aufgetrufen, weshalb sie hier übersprungen werden.
             if (func == 'CreateTrace') or (func == 'CreateWindow') :
@@ -639,7 +637,7 @@ class NETWORKANALYZER(NETWORKAN):
             #print func,args
             try:
                 eval("self.%s(%s)"%(func,args))
-            except (AttributeError,NotImplementedError),e :
+            except (AttributeError,NotImplementedError) as e :
                 #print e
                 pass
         
@@ -766,13 +764,13 @@ class WINDOW(object):
 
 
 
-from networkanalyzer_ui import UI as super_ui
-from Meta_ui import Metaui
+from .networkanalyzer_ui import UI as super_ui
+from .Meta_ui import Metaui
 import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
 import enthought.traits.ui.menu as tuim
 
-class UI(super_ui):
+class UI(super_ui, metaclass=Metaui):
     
     """
     Klasse für die grafische Oberfläche zum Testen des Gerätes.
@@ -787,9 +785,6 @@ class UI(super_ui):
     
     Diese Klasse muss von der UI-Superklasse des Drivers abgeleitet sein.
     """
-    
-    #Meta Klasse
-    __metaclass__ = Metaui
     
     #Driver Klasse
     __driverclass__=NETWORKANALYZER
@@ -871,7 +866,7 @@ def main():
                         SetSweepType: 'Log'
                         """)
                         # rbw: 3e6
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
         
         
 #        ini2=format_block("""
@@ -950,14 +945,14 @@ def main():
             if test == "assert":
                 assert ret==value, '%s() returns freq=%s instead of %s'%(funk,ret,value)
             else:
-                print '%s(): Rückgabewert: %s   Sollwert: %s'%(funk,ret,value)
+                print('%s(): Rückgabewert: %s   Sollwert: %s'%(funk,ret,value))
         else:
-            print '%s(): Rückgabewert: %s'%(funk,ret)
+            print('%s(): Rückgabewert: %s'%(funk,ret))
 
 
     err,spec=nw.GetSpectrum()
     assert err==0, 'GetSpectrum() fails with error %d'%(err)
-    print spec
+    print(spec)
     
 #    err,spec=nw2.GetSpectrum()
 #    assert err==0, 'GetSpectrum() fails with error %d'%(err)

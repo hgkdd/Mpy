@@ -3,7 +3,7 @@ import os
 import imp
 import inspect
 import pydot
-import ConfigParser
+import configparser
 from numpy import bool_, sqrt
 from scipy.interpolate import interp1d
 
@@ -68,7 +68,7 @@ class Graph(object):
                     # print self.SearchPaths, fname_or_data
                     try:
                         #print "Hey", self.instance_from_pickle
-                        fname_or_data = locate(fname_or_data, paths=self.SearchPaths).next()  # first hit
+                        fname_or_data = next(locate(fname_or_data, paths=self.SearchPaths))  # first hit
                         """
                         if file was found update dotcontets from this file.
                         if not we maybe come from a pickle file and haven't found the graph
@@ -186,15 +186,15 @@ class MGraph(Graph):
         self.gedges=self.graph.get_edges()
         self.nodes=dict([[n.get_name(),{}] for n in self.gnodes])
         nametonode=dict([[n.get_name(),n] for n in self.gnodes])
-        for n,dct in self.nodes.items():
+        for n,dct in list(self.nodes.items()):
             dct['gnode']=nametonode[n]
-        self.activenodes=self.nodes.keys()
+        self.activenodes=list(self.nodes.keys())
         if map is None:
             map={}
         self.map=map
         # make map bijective
         self.bimap=self.map
-        for k,v in map.items():
+        for k,v in list(map.items()):
             try:
                 self.bimap[v]=k
             except TypeError:  # this happens if v is a list
@@ -305,11 +305,11 @@ class MGraph(Graph):
                                 #print "Nach getattr", stat
                                 break
                         if stat < 0:
-                            raise UserWarning, 'Failed to getData: %s, %s'%(dev, what)  
+                            raise UserWarning('Failed to getData: %s, %s'%(dev, what))  
                     except AttributeError:
                         # function not callable
                         # 
-                        raise UserWarning, 'Failed to getData %s, %s'%(dev, what) 
+                        raise UserWarning('Failed to getData %s, %s'%(dev, what)) 
                     # store the values unconverted
                     #print dev, result[dev]
                     r=result[dev]  #.get_value(unit)
@@ -353,7 +353,7 @@ class MGraph(Graph):
         __outerframes = inspect.getouterframes(__frame)
         __caller = __outerframes[1][0]
         # loop all nodes
-        for name,act_dct in self.nodes.items():
+        for name,act_dct in list(self.nodes.items()):
             node=act_dct['gnode']
             cond_dct=node.get_attributes() # dict with node or edge atributs
             if 'condition' in cond_dct:
@@ -368,12 +368,12 @@ class MGraph(Graph):
                         #print str(act)
                         #print self.CallerLocals['f']
                         #print act
-                        exec str(act) # in self.CallerGlobals, self.CallerLocals
+                        exec(str(act)) # in self.CallerGlobals, self.CallerLocals
                 else:
                     act_dct['active']=False
             else:
                 act_dct['active']=True
-        self.activenodes=[name for name,dct in self.nodes.items() if dct['active']]
+        self.activenodes=[name for name,dct in list(self.nodes.items()) if dct['active']]
         # loop all edges
         for edge in self.edges:
             act_dct=cond_dct=edge.get_attributes()
@@ -389,7 +389,7 @@ class MGraph(Graph):
                         #print str(act)
                         #print self.CallerLocals['f']
                         #print act
-                        exec str(act) # in self.CallerGlobals, self.CallerLocals
+                        exec(str(act)) # in self.CallerGlobals, self.CallerLocals
                 else:
                     act_dct['active']=False
             else:
@@ -429,17 +429,17 @@ class MGraph(Graph):
                  'spectrumanalyzer': 'Spectrumanalyzer',
                  'vectornetworkanalyser': 'NetworkAnalyser',
                  'custom': 'Custom'}
-        devs=dev_map.keys()
+        devs=list(dev_map.keys())
         ddict=DictObj()
-        for name,dct in self.nodes.items():
+        for name,dct in list(self.nodes.items()):
             obj=dct['gnode']
             attribs=obj.get_attributes()
-            for n,v in attribs.items():
+            for n,v in list(attribs.items()):
                 attribs[n]=_stripstr(v)   # strip ' and "
                 
             dct['active']=True
             try:
-                ini=dct['ini']=locate(attribs['ini'], paths=self.SearchPaths).next()   # the ini file name
+                ini=dct['ini']=next(locate(attribs['ini'], paths=self.SearchPaths))   # the ini file name
                 #print ini
             except KeyError:    
                 ini=dct['ini']=dct['inst']=None # no ini file, no device
@@ -449,7 +449,7 @@ class MGraph(Graph):
             try:
                 typetxt = dct['inidic']['description']['type']
             except:
-                raise UserWarning, "No type found for node '%s'."%obj.get_name()
+                raise UserWarning("No type found for node '%s'."%obj.get_name())
             
             # create device instances    
             d = None
@@ -457,12 +457,12 @@ class MGraph(Graph):
                 # fuzzy type matching...
                 best_type_guess=fstrcmp(typetxt, devs, n=1, cutoff=0, ignorecase=True)[0]
             except IndexError:
-                raise IndexError, 'Instrument type %s from file %s not in list of valid instrument types: %r'%(typetxt,ini,devs)
+                raise IndexError('Instrument type %s from file %s not in list of valid instrument types: %r'%(typetxt,ini,devs))
             dtype=dev_map[best_type_guess]
             if dtype == 'Custom':
                 driver = dct['inidic']['description']['driver']
                 cls = dct['inidic']['description']['class']
-                drvfile=locate(driver, self.SearchPaths).next()
+                drvfile=next(locate(driver, self.SearchPaths))
                 m = imp.load_source('m', drvfile)
                 d = getattr(m, cls)()
             else:    
@@ -472,7 +472,7 @@ class MGraph(Graph):
             #exec str(key)+'=d' in self.CallerGlobals # valiable in caller context
             #exec 'self.'+str(key)+'=d'   # as member variable
             self.__dict__.update(ddict)
-            for k,v in ddict.items():
+            for k,v in list(ddict.items()):
                 if k in self.bimap:
                     try:
                         ddict[self.bimap[k]]=v
@@ -566,7 +566,7 @@ class MGraph(Graph):
 
         Return error codes for all devices are stored in `self.nodes[str(n)]['ret']` and `self.nodes[str(n)]['err']`. 
         """
-        devices=[name for name in self.nodes.keys() if IgnoreInactive or name in self.activenodes]  # intersept of list and activenodes
+        devices=[name for name in list(self.nodes.keys()) if IgnoreInactive or name in self.activenodes]  # intersept of list and activenodes
         cmd = str(cmd)
         serr=0
         for n in devices:
@@ -627,7 +627,7 @@ class MGraph(Graph):
             attribs['ret'] = stat
             attribs['err'] = err
             if stat < 0:
-                raise UserWarning, 'Error while init of %s, err: %s'%(str(n), err)
+                raise UserWarning('Error while init of %s, err: %s'%(str(n), err))
             serr += stat
         return serr
 
@@ -724,7 +724,7 @@ class MGraph(Graph):
             # ok, a spec analyzer
             rdict[str(n)]={}
             for index,par in enumerate(parlist):
-                if conf.has_key(par):
+                if par in conf:
                     val = conf[par]
                 else:
                     val = None
@@ -950,11 +950,11 @@ class MGraph(Graph):
 
     def CalcLevelFrom (self, sg, limiter, what):
         if sg not in self.nodes:
-            raise UserWarning, 'Node not in nodes: %s' %sg
+            raise UserWarning('Node not in nodes: %s' %sg)
         if limiter not in self.nodes:
-            raise UserWarning, 'Node not in nodes: %s' %limiter
+            raise UserWarning('Node not in nodes: %s' %limiter)
         if not len(self.find_all_paths (sg, limiter)):
-            raise UserWarning, 'Nodes not connected'
+            raise UserWarning('Nodes not connected')
         il = self.get_path_correction (sg, limiter, POWERRATIO)
         return 0
 
@@ -966,7 +966,7 @@ class MGraph(Graph):
             
             Return configVals
             """
-            configVals = ConfigParser.SafeConfigParser()
+            configVals = configparser.SafeConfigParser()
             if hasattr(filename, 'readline'):  # file like object
                 configVals.readfp(filename)
             else:

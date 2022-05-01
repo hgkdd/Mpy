@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import StringIO
+import io
 #from mpy.device.signalgenerator import SIGNALGENERATOR
 import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
@@ -34,7 +34,7 @@ std_ini=format_block("""
                 unit: 'dBm'
                 outpoutstate: 0
                 """)
-std_ini=StringIO.StringIO(std_ini)
+std_ini=io.StringIO(std_ini)
 
 
 
@@ -71,7 +71,7 @@ class UI(tapi.HasTraits):
         self.INI=ini.read()
     
     def _Init_fired(self):
-        ini=StringIO.StringIO(self.INI)
+        ini=io.StringIO(self.INI)
         self.sg.Init(ini)
         self.RF_is_on=(self.sg.conf['channel_1']['outputstate'] in ('1','on'))
         self.AM_is_on=False

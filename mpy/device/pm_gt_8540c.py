@@ -3,7 +3,7 @@
 import sys
 import time
 import numpy as np
-import StringIO
+import io
 import visa
 import pyvisa.vpp43 as vpp43
 from scuq import *
@@ -185,7 +185,7 @@ class POWERMETER(PWRMTR):
         return self.error
 
 def test_init(ch):
-    import StringIO
+    import io
     from mpy.tools.util import format_block
     inst=POWERMETER()
     ini=format_block("""
@@ -222,12 +222,12 @@ def test_init(ch):
                     swr1: 1.1
                     swr2: 1.1
                     """)
-    ini=StringIO.StringIO(ini)
+    ini=io.StringIO(ini)
     inst.Init(ini,ch)
     return inst
             
 def main():
-    import StringIO
+    import io
     from mpy.tools.util import format_block
     from mpy.device.powermeter_ui import UI as UI
 
@@ -266,7 +266,7 @@ def main():
                         unit: 'W'
                         trg_threshold: 0.5
                         """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
 
     pm=POWERMETER()	
     ui=UI(pm,ini=ini)
@@ -287,7 +287,7 @@ if __name__ == '__main__':
         while True:
             pm1.Trigger()
             #pm2.Trigger()
-            print i, "PM%d"%ch, pm1.GetData()
+            print(i, "PM%d"%ch, pm1.GetData())
             i+=1
             #print "PM2", pm2.GetData()
     finally:

@@ -277,15 +277,15 @@ if __name__ == '__main__':
         d.SetVirtual(False)
 
     err, des=d.GetDescription()
-    print "Description: %s"%des
+    print("Description: %s"%des)
 
     for freq in [100]:
-        print "Set freq to %e Hz"%freq
+        print("Set freq to %e Hz"%freq)
         err, rfreq = d.SetFreq(freq)
         if err == 0:
-            print "Freq set to %e Hz"%rfreq
+            print("Freq set to %e Hz"%rfreq)
         else:
-            print "Error setting freq"
+            print("Error setting freq")
 
 
     d.Quit()

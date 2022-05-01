@@ -54,7 +54,7 @@ class IN_RANGE(object):
            
            :param value: Wert der geprüft werden soll.
         """
-        if not isinstance(value, (int, float,long)):
+        if not isinstance(value, (int, float)):
             return (value,'The Validator IN_RANGE can only used for int, long or float')
         if value > self.max or value < self.min:
             return (value,self.message)
@@ -99,7 +99,7 @@ class IS_LOWER_THAN(object):
            
            :param value: Wert der geprüft werden soll.
         """
-        if not isinstance(value, (int, float,long)):
+        if not isinstance(value, (int, float)):
             return (value,'The Validator IS_LOWER_THAN can only used for int, long or float')
         if value >= self.max:
             return (value,self.message)
@@ -144,7 +144,7 @@ class IS_GREATER_THAN(object):
            
            :param value: Wert der geprüft werden soll.
         """
-        if not isinstance(value, (int, float,long)):
+        if not isinstance(value, (int, float)):
             return (value,'The Validator IS_GREATER_THAN can only used for int, long or float')
         if value <= self.min:
             return (value,self.message)
@@ -183,7 +183,7 @@ class IS_LOWER_EQUAL_THAN(object):
             self.message=message
     
     def __call__(self,value):
-        if not isinstance(value, (int, float,long)):
+        if not isinstance(value, (int, float)):
             return (value,'The Validator IS_LOWER_THAN can only used for int, long or float')
         if value > self.max:
             return (value,self.message)
@@ -228,7 +228,7 @@ class IS_GREATER_EQUAL_THAN(object):
            
            :param value: Wert der geprüft werden soll.
         """
-        if not isinstance(value, (int, float,long)):
+        if not isinstance(value, (int, float)):
             return (value,'The Validator IS_GREATER_THAN can only used for int, long or float')
         if value < self.min:
             return (value,self.message)

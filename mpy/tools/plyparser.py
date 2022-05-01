@@ -3,7 +3,7 @@
 import ply.lex as lex
 import ply.yacc as yacc
 import os
-import StringIO # for evaluation of a string containing a file like object
+import io # for evaluation of a string containing a file like object
 from mpy.tools.util import format_block, get_var_from_nearest_outerframe, locate
 
 class Parser(object):
@@ -43,14 +43,14 @@ class Parser(object):
                 try:
                     #paths=get_var_from_nearest_outerframe('SearchPaths')
                     #print self.SearchPaths, self.filename, locate(self.filename, paths=self.SearchPaths).next()
-                    data=file(locate(self.filename, paths=self.SearchPaths).next()).read() # name of an existing file
+                    data=file(next(locate(self.filename, paths=self.SearchPaths))).read() # name of an existing file
                 except (IOError, StopIteration):
                     data=eval(self.filename).read() # eval to a file like object
             self.parseresult=yacc.parse(data)
         else:
             while 1:
                 try:
-                    s = raw_input('input > ')
+                    s = input('input > ')
                 except EOFError:
                     break
                 if not s:

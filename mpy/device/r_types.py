@@ -13,7 +13,7 @@
 """
 import re
 
-from mpy_exceptions import *
+from .mpy_exceptions import *
 
 class R_TYPES(object):
     """Basis Klasse für alle r_types.

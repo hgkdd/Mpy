@@ -11,13 +11,13 @@
 import re
 
 from types import FunctionType
-from r_types import *
-from validators import *
+from .r_types import *
+from .validators import *
 
 from mpy.tools.Configuration import fstrcmp
 
-from driver_new import DRIVER
-from mpy_exceptions import *
+from .driver_new import DRIVER
+from .mpy_exceptions import *
 import inspect
 import copy
 
@@ -125,9 +125,9 @@ class Meta_Driver(type):
         #*********************
         #Erstellen und Kompilieren der Methoden
         #*********************
-        for cmd_func_name,cmd_func in dict['_cmds'].items():
+        for cmd_func_name,cmd_func in list(dict['_cmds'].items()):
             #Prüfen ob Methode schon existiert, wenn ja, dann private Methode erzeugen.       
-            if dict.has_key(cmd_func_name):
+            if cmd_func_name in dict:
                 cmd_func_name = "_"+cmd_func_name
             func_str={}
             func_str['name']=cmd_func_name
@@ -144,7 +144,7 @@ class Meta_Driver(type):
                         
             code = compile(M_code, '<string>', 'single')
             evaldict={}
-            exec code in evaldict
+            exec(code, evaldict)
             
             if isinstance(cmd_func, Function):
                 dict[cmd_func_name]=evaldict["create_Methode"](cmd_func,function=cmd_func)
@@ -158,7 +158,7 @@ class Meta_Driver(type):
             #********************
             
             if isinstance(cmd_func, Function):
-                for command_name,command in cmd_func.items():
+                for command_name,command in list(cmd_func.items()):
                     try:
                         return_map=dict['%s_rmap'%command_name]
                         command.setReturn_map(return_map)
@@ -173,7 +173,7 @@ class Meta_Driver(type):
                 except KeyError:
                     pass
             
-            for para_name,para in cmd_func.getParameter().items():
+            for para_name,para in list(cmd_func.getParameter().items()):
                 
                 try:
                     possib=dict['%s_possib'%para_name]
@@ -203,9 +203,9 @@ class Meta_Driver(type):
         #Syntaxcheck heißt: Es wird geprüft, ob die Parameter der implementierte Methoden mit den 
         #Angaben des _commands dict übereinstimmen (Name, Reihenfolge).
         #***********************    
-        for commands_name,commad_map in bases[0]._commands.items():
+        for commands_name,commad_map in list(bases[0]._commands.items()):
             para_command=commad_map['parameter']
-            if isinstance(para_command, basestring):
+            if isinstance(para_command, str):
                 para_command=(para_command,)
         
             try:
@@ -231,7 +231,7 @@ class Meta_Driver(type):
                         
                 code = compile(M_code, '<string>', 'single')
                 evaldict={}
-                exec code in evaldict
+                exec(code, evaldict)
                 dict[commands_name]=evaldict["%(name)s"%func_str]
 
         return type.__new__(cls,cls_name,bases,dict)
@@ -444,7 +444,7 @@ class Function(dict):
         if rtype:
             if isinstance(rtype, R_TYPES):
                 self.return_class = rtype
-            elif isinstance(rtype, basestring): 
+            elif isinstance(rtype, str): 
                 self.return_class = R_REGEX(rtype)
             else:
                 self.return_class = R_DEFAULT(rtype,command=self)
@@ -470,7 +470,7 @@ class Function(dict):
         #Eine Kopie der Parameter für jeder Driver Instanz anlegen und die Parameter Initialisieren
         if driver not in self.intance_param:
             p = copy.deepcopy(self.parameter)
-            for v in p.values():
+            for v in list(p.values()):
                 v.init(self,driver)
             self.intance_param[driver]=p
             
@@ -644,7 +644,7 @@ class Command(object):
         self.intance_param ={}
         
         
-        if isinstance(command, basestring):
+        if isinstance(command, str):
             self.command=command
         else:
             pass
@@ -653,7 +653,7 @@ class Command(object):
         self.rfunction=rfunction
         
         
-        if self.rfunction and  not isinstance(self.rfunction, basestring):
+        if self.rfunction and  not isinstance(self.rfunction, str):
             raise TypeError('Value for rfunction must be type of String. Command: %s'%self.name)
             
         
@@ -706,7 +706,7 @@ class Command(object):
         if rtype:
             if isinstance(rtype, R_TYPES):
                 self.tmpl = rtype
-            elif isinstance(rtype, basestring): 
+            elif isinstance(rtype, str): 
                 self.tmpl = R_REGEX(rtype)
             else:
                 self.tmpl = R_DEFAULT(rtype,command=self)
@@ -736,7 +736,7 @@ class Command(object):
         #Eine Kopie der Parameter für jeder Driver Instanz anlegen und die Parameter Initialisieren
         if driver not in self.intance_param:
             p = copy.deepcopy(self.parameter)
-            for v in p.values():
+            for v in list(p.values()):
                 v.init(self,driver)
             self.intance_param[driver]=p
    
@@ -784,7 +784,7 @@ class Command(object):
             else:
                 ans = communication_obj.write(self.command%parameters)
         
-        except (TypeError,ValueError),e:
+        except (TypeError,ValueError) as e:
                 if isinstance(e,TypeError):
                     if 'number' in str(e):
                         raise TypeError("Value of one Parameter of the Command %s can not convert into int."%self.name) 
@@ -803,7 +803,7 @@ class Command(object):
         if self.rfunction:
             try:
                 return getattr(driver,self.rfunction)()
-            except AttributeError,e:
+            except AttributeError as e:
                 raise AttributeError("%s\n           Failure at Command: %s  Parameter: rfunction"%(e,self.name))
         
         #Wenn ein return_map definiert wurdeh, mappen:
@@ -985,7 +985,7 @@ class Parameter(object):
         
         self._validate(value)
         
-        if self.possib and isinstance(value,basestring):
+        if self.possib and isinstance(value,str):
             value =fstrcmp(value, self.possib, n=1,cutoff=0,ignorecase=True)[0]
             #print 'value after fsrtrcmp ',value
         
@@ -1009,7 +1009,7 @@ class Parameter(object):
         #print 'str'
         try:     
             return str(self.getValue())
-        except ValueError,e:
+        except ValueError as e:
             raise ValueError ("""Can not convert the value " %s " from the Parameter %s of the Command %s into str
                   %s"""%(self.getValue(),self.name,self.command.getName(),e))
     
@@ -1019,7 +1019,7 @@ class Parameter(object):
         #print 'to init',self.getValue()
         try:
             return int(self.getValue())
-        except ValueError,e:
+        except ValueError as e:
             raise ValueError ("""Can not convert the value " %s " from the Parameter %s of the Command %s into int
                   %s"""%(self.getValue(),self.name,self.command.getName(),e))
     
@@ -1029,7 +1029,7 @@ class Parameter(object):
         #print 'float'
         try:
             return float(self.getValue())
-        except ValueError,e:
+        except ValueError as e:
             raise ValueError ("""Can not convert the value " %s " from the Parameter %s of the Command %s into float
                   %s"""%(self.getValue(),self.name,self.command.getName(),e))
             

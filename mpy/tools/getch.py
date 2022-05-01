@@ -70,8 +70,8 @@ getch = _Getch()
 if __name__ == '__main__': # a little test
     import sys
     while True:
-       print 'Press a key'
+       print('Press a key')
        k=getch()
-       print k
+       print(k)
        if k=='q':
            break

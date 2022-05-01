@@ -6,7 +6,7 @@ Author: Dr. Hans Georg Krauthaeuser, hgk@ieee.org
 
 Copyright (c) 2001-2011 All rights reserved
 """
-from __future__ import division
+
 import math
 import sys
 import os
@@ -278,8 +278,8 @@ class MSC(Measure.Measure):
                 msg = ("List of probe positions from autosave file:\n"
                       "%s\n"
                       "List of ref antenna positions from autosave file:\n"
-                      "%s\n"%( range(1, maxnprbpos   -max(0,prbposleft)   +1), 
-                               range(1, maxnrefantpos-max(0,refantposleft)+1) ) )
+                      "%s\n"%( list(range(1, maxnprbpos   -max(0,prbposleft)   +1)), 
+                               list(range(1, maxnrefantpos-max(0,refantposleft)+1)) ) )
                 but = []
                 self.messenger(msg, but)
             self.autosave=False  # reset auto save flag
@@ -406,7 +406,7 @@ class MSC(Measure.Measure):
                             nblist.append(names['fp'][i])
 
                         # noise floor measurement..
-                        if not noise.has_key(f):
+                        if f not in noise:
                             self.messenger(util.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
                             mg.NBTrigger(pmreflist)
                             # serial poll all devices in list
@@ -414,8 +414,8 @@ class MSC(Measure.Measure):
                             while 1:
                                 self.__HandleUserInterrupt(locals())    
                                 nbresult = mg.NBRead(pmreflist, nbresult)
-                                new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                                olddevs = nbresult.keys()[:]
+                                new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                                olddevs = list(nbresult.keys())[:]
                                 if len(new_devs):
                                     self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                                 if len(nbresult)==len(pmreflist):
@@ -468,8 +468,8 @@ class MSC(Measure.Measure):
                         while 1:
                             self.__HandleUserInterrupt(locals())    
                             nbresult = mg.NBRead(nblist, nbresult)
-                            new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                            olddevs = nbresult.keys()[:]
+                            new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                            olddevs = list(nbresult.keys())[:]
                             if len(new_devs):
                                 self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                             if len(nbresult)==len(nblist):
@@ -656,7 +656,7 @@ class MSC(Measure.Measure):
             self.messenger(util.tstamp()+" ...done", [])
             try:
                 level = self.set_level(mg,  SGLevel)
-            except AmplifierProtectionError, _e:
+            except AmplifierProtectionError as _e:
                 self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                 raise  # re raise to reach finaly clause
             if freqs is None:
@@ -673,13 +673,13 @@ class MSC(Measure.Measure):
             if self.autosave:
                 efields=self.rawData_AutoCorr[description]['efield'].copy()
                 tlen = 1e300
-                for f in efields.keys():
-                    tees = efields[f].keys()
+                for f in list(efields.keys()):
+                    tees = list(efields[f].keys())
                     if len(tees)<tlen:
                         tlen=len(tees)
                         tf = f
                 try:
-                    tees = efields[tf].keys()
+                    tees = list(efields[tf].keys())
                 except:
                     tees=[]
                 for t in tees:
@@ -761,8 +761,8 @@ class MSC(Measure.Measure):
                     while 1:
                         self.__HandleUserInterrupt(locals())    
                         nbresult = mg.NBRead(nblist, nbresult)
-                        new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                        olddevs = nbresult.keys()[:]
+                        new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                        olddevs = list(nbresult.keys())[:]
                         if len(new_devs):
                             self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(nblist):
@@ -771,7 +771,7 @@ class MSC(Measure.Measure):
 
                     # pfwd
                     n = names['pmfwd']
-                    if nbresult.has_key(n):
+                    if n in nbresult:
                         PFwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -787,7 +787,7 @@ class MSC(Measure.Measure):
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                     # pbwd
                     n = names['pmbwd']
-                    if nbresult.has_key(n):
+                    if n in nbresult:
                         PBwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the bwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -804,7 +804,7 @@ class MSC(Measure.Measure):
                     # read field probes
                     for i in range(nprb):
                         n = names['fp'][i]
-                        if nbresult.has_key(n):
+                        if n in nbresult:
                             self.__addLoggerBlock(block, n, 'Reading of the e-field probe for position %d'%i, nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -900,7 +900,7 @@ class MSC(Measure.Measure):
                     if hassg:
                         try:
                             level = self.set_level(mg, SGLevel)
-                        except AmplifierProtectionError, _e:
+                        except AmplifierProtectionError as _e:
                             self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
 
                     # set frequency for all devices
@@ -972,7 +972,7 @@ class MSC(Measure.Measure):
                             
         # number of probes, ref-antenna and tuners
         nprb = 0
-        if names.has_key('fp'):   # default is no fieldprobes
+        if 'fp' in names:   # default is no fieldprobes
             nprb = len(names['fp'])
         nrefant = min(len(names['refant']),len(names['pmref']))
         ntuner = len(names['tuner'])
@@ -996,14 +996,14 @@ class MSC(Measure.Measure):
             # set level
             try:
                 level = self.set_level(mg, SGLevel)
-            except AmplifierProtectionError, _e:
+            except AmplifierProtectionError as _e:
                 self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                 raise  # re raise to reach finaly clause
             # list of frequencies
             if freqs is None:
                 freqs = []
 
-            if self.rawData_MainCal.has_key(calibration):
+            if calibration in self.rawData_MainCal:
                 alltpos = self.GetAllTPos (calibration)            
             else:
                 self.messenger(util.tstamp()+" Error: Calibration '%s' not found."%calibration, [])
@@ -1027,7 +1027,7 @@ class MSC(Measure.Measure):
                 # if complete -> remove from alltpos and add to tees 
                 tees=[]
                 for f in freqs:
-                    measured_tpos = prefant[f].keys()
+                    measured_tpos = list(prefant[f].keys())
                     for t in alltpos:
                         if not self.UseTunerPos (calibration, f, t):
                             continue
@@ -1084,11 +1084,11 @@ class MSC(Measure.Measure):
                     for i in range(nrefant):
                         c_refant_pmref.append(mg.get_path_correction(names['refant'][i], names['pmref'][i], POWERRATIO))
                     c_fp = 1.0
-                    if not etaTx.has_key(f):
+                    if f not in etaTx:
                         eta = mg.GetAntennaEfficiency(names['ant'])
                         self.messenger(util.tstamp()+" Eta_Tx for f = %e Hz is %s"%(f,str(eta)), [])
                         etaTx = self.__insert_it (etaTx, eta, None, None, f, t, 0)
-                    if not etaRx.has_key(f):
+                    if f not in etaRx:
                         for i in range(nrefant):
                             eta = mg.GetAntennaEfficiency(names['refant'][i])
                             self.messenger(util.tstamp()+" Eta_Rx(%d) for f = %e Hz is %s"%(i,f,str(eta)), [])
@@ -1115,7 +1115,7 @@ class MSC(Measure.Measure):
                         nblist.append(names['fp'][i])
 
                     # noise floor measurement..
-                    if not noise.has_key(f):
+                    if f not in noise:
                         self.messenger(util.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
                         mg.NBTrigger(pmreflist)
                         # serial poll all devices in list
@@ -1123,15 +1123,15 @@ class MSC(Measure.Measure):
                         while 1:
                             self.__HandleUserInterrupt(locals())    
                             nbresult = mg.NBRead(pmreflist, nbresult)
-                            new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                            olddevs = nbresult.keys()[:]
+                            new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                            olddevs = list(nbresult.keys())[:]
                             if len(new_devs):
                                 self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                             if len(nbresult)==len(pmreflist):
                                 break
                         for i in range(nrefant):
                             n = names['pmref'][i]
-                            if nbresult.has_key(n):
+                            if n in nbresult:
                                 # add path correction here
                                 PRef = nbresult[n]
                                 nn = 'Noise '+n
@@ -1171,8 +1171,8 @@ class MSC(Measure.Measure):
                     while 1:
                         self.__HandleUserInterrupt(locals())    
                         nbresult = mg.NBRead(nblist, nbresult)
-                        new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                        olddevs = nbresult.keys()[:]
+                        new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                        olddevs = list(nbresult.keys())[:]
                         if len(new_devs):
                             self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(nblist):
@@ -1181,7 +1181,7 @@ class MSC(Measure.Measure):
 
                     # pfwd
                     n = names['pmfwd']
-                    if nbresult.has_key(n):
+                    if n in nbresult:
                         PFwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -1197,7 +1197,7 @@ class MSC(Measure.Measure):
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                     # pbwd
                     n = names['pmbwd']
-                    if nbresult.has_key(n):
+                    if n in nbresult:
                         PBwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the bwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -1212,7 +1212,7 @@ class MSC(Measure.Measure):
                     # ref-ant                
                     for i in range(nrefant):
                         n = names['pmref'][i]
-                        if nbresult.has_key(n):
+                        if n in nbresult:
                             # add path correction here
                             PRef = nbresult[n]
                             self.__addLoggerBlock(block, n, 'Reading of the receive antenna power meter for position %d'%i, nbresult[n], {})
@@ -1230,7 +1230,7 @@ class MSC(Measure.Measure):
                     # read field probes
                     for i in range(nprb):
                         n = names['fp'][i]
-                        if nbresult.has_key(n):
+                        if n in nbresult:
                             self.__addLoggerBlock(block, n, 'Reading of the e-field probe for position %d'%i, nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1329,12 +1329,12 @@ class MSC(Measure.Measure):
         try:  
             self.messenger(util.tstamp()+" ...done", [])
 
-            if self.rawData_MainCal.has_key(calibration):
+            if calibration in self.rawData_MainCal:
                 alltpos = self.GetAllTPos (calibration)            
             else:
                 self.messenger(util.tstamp()+" Error: Calibration '%s' not found."%calibration, [])
                 return -1
-            if not self.processedData_EUTCal.has_key(description):
+            if description not in self.processedData_EUTCal:
                 self.messenger(util.tstamp()+" Warning: EUT-Calibration '%s' not found. CLF = 1 will be used."%calibration, [])
             # set up prefant ...
             prefant={}
@@ -1348,12 +1348,12 @@ class MSC(Measure.Measure):
                 efields=self.rawData_Immunity[description]['efield'].copy()
                 noise=self.rawData_Immunity[description]['noise'].copy()
                 eutstat=self.rawData_Immunity[description]['eutstatus'].copy()
-                eutfreqs=eutstat.keys()
+                eutfreqs=list(eutstat.keys())
                 nfreqs=len(eutfreqs)
                 min_tpos=1e300
                 max_tpos=-1
                 for f in eutfreqs:
-                    tpos=eutstat[f].keys()
+                    tpos=list(eutstat[f].keys())
                     in_as[f]={}
                     for t in tpos:
                         testfieldlist = [item['testfield'] for item in eutstat[f][t][0]]
@@ -1478,7 +1478,7 @@ class MSC(Measure.Measure):
 
                     #print "NBList: ", nblist
                     # noise floor measurement..
-                    if not noise.has_key(f):
+                    if f not in noise:
                         self.messenger(util.tstamp()+" Starting noise floor measurement for f = %e Hz ..."%(f), [])
                         if RFon:
                             mg.RFOff_Devices()
@@ -1491,15 +1491,15 @@ class MSC(Measure.Measure):
                         while 1:
                             self.__HandleUserInterrupt(locals(), handler=UIHandler)    
                             nbresult = mg.NBRead(pmreflist, nbresult)
-                            new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                            olddevs = nbresult.keys()[:]
+                            new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                            olddevs = list(nbresult.keys())[:]
                             if len(new_devs):
                                 self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                             if len(nbresult)==len(pmreflist):
                                 break
                         for i in range(nrefant):
                             n = names['pmref'][i]
-                            if nbresult.has_key(n):
+                            if n in nbresult:
                                 # add path correction here
                                 PRef = nbresult[n]
                                 nn = 'Noise '+n
@@ -1554,7 +1554,7 @@ class MSC(Measure.Measure):
                     olevel=level
                     try:
                         level = self.set_level(mg, sgpower)
-                    except AmplifierProtectionError, _e:
+                    except AmplifierProtectionError as _e:
                         self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                         level=olevel
                         stat = 'AmplifierProtectionError'
@@ -1575,8 +1575,8 @@ class MSC(Measure.Measure):
                     while 1:
                         self.__HandleUserInterrupt(locals(), handler=UIHandler)    
                         nbresult = mg.NBRead(nblist, nbresult)
-                        new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                        olddevs = nbresult.keys()[:]
+                        new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                        olddevs = list(nbresult.keys())[:]
                         if len(new_devs):
                             self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(nblist):
@@ -1585,7 +1585,7 @@ class MSC(Measure.Measure):
 
                     # pfwd
                     n = names['pmfwd']
-                    if nbresult.has_key(n):
+                    if n in nbresult:
                         PFwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -1601,7 +1601,7 @@ class MSC(Measure.Measure):
                         self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
                     # pbwd
                     n = names['pmbwd']
-                    if nbresult.has_key(n):
+                    if n in nbresult:
                         PBwd = nbresult[n]
                         self.__addLoggerBlock(block, n, 'Reading of the bwd power meter', nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -1616,7 +1616,7 @@ class MSC(Measure.Measure):
                     # ref-ant                
                     for i in range(nrefant):
                         n = names['pmref'][i]
-                        if nbresult.has_key(n):
+                        if n in nbresult:
                             # add path correction here
                             PRef = nbresult[n]
                             self.__addLoggerBlock(block, n, 'Reading of the receive antenna power meter for position %d'%i, nbresult[n], {})
@@ -1634,7 +1634,7 @@ class MSC(Measure.Measure):
                     # read field probes
                     for i in range(nprb):
                         n = names['fp'][i]
-                        if nbresult.has_key(n):
+                        if n in nbresult:
                             self.__addLoggerBlock(block, n, 'Reading of the e-field probe for position %d'%i, nbresult[n], {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                             self.__addLoggerBlock(block[n]['parameter'], 'tunerpos', 'tuner position', t, {}) 
@@ -1829,11 +1829,11 @@ class MSC(Measure.Measure):
 
             if receiverconf is None:
                 receiverconf = {}
-            rcfreqs = receiverconf.keys()
+            rcfreqs = list(receiverconf.keys())
             rcfreqs.sort()
             rcfreqs.reverse()
 
-            if self.rawData_MainCal.has_key(calibration):
+            if calibration in self.rawData_MainCal:
                 alltpos = self.GetAllTPos (calibration)            
             else:
                 self.messenger(util.tstamp()+" Error: Calibration '%s' not found."%calibration, [])
@@ -1854,7 +1854,7 @@ class MSC(Measure.Measure):
                 tees=[]
                 for f in freqs:
                     try:
-                        measured_tpos = prefant[f].keys()
+                        measured_tpos = list(prefant[f].keys())
                     except KeyError:
                         measured_tpos = []
                     for t in alltpos:
@@ -1917,7 +1917,7 @@ Quit: quit measurement.
                 except IndexError:
                     t = [0]
                 for f in freqs:
-                    if f in noise.keys():
+                    if f in list(noise.keys()):
                         continue
                     self.messenger(util.tstamp()+" Frequency %e Hz"%(f), [])
                     mg.EvaluateConditions()
@@ -1955,15 +1955,15 @@ Quit: quit measurement.
                     while 1:
                         self.__HandleUserInterrupt(locals())    
                         nbresult = mg.NBRead(receiverlist, nbresult)
-                        new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                        olddevs = nbresult.keys()[:]
+                        new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                        olddevs = list(nbresult.keys())[:]
                         if len(new_devs):
                             self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(receiverlist):
                             break
                     for i in range(nrefant):
                         n = names['receiver'][i]
-                        if nbresult.has_key(n):
+                        if n in nbresult:
                             # add path correction here
                             PRef = nbresult[n]
                             nn = 'Noise '+n
@@ -2070,8 +2070,8 @@ Quit: quit measurement.
                     while 1:
                         self.__HandleUserInterrupt(locals())    
                         nbresult = mg.NBRead(nblist, nbresult)
-                        new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                        olddevs = nbresult.keys()[:]
+                        new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                        olddevs = list(nbresult.keys())[:]
                         if len(new_devs):
                             self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(nblist):
@@ -2081,7 +2081,7 @@ Quit: quit measurement.
                     # ref-ant                
                     for i in range(nrefant):
                         n = names['receiver'][i]
-                        if nbresult.has_key(n):
+                        if n in nbresult:
                             # add path correction here
                             PRef = nbresult[n]
                             self.__addLoggerBlock(block, n, 'Reading of the receive antenna receiver for position %d'%i, nbresult[n], {})
@@ -2124,15 +2124,15 @@ Quit: quit measurement.
             data = self.rawData_MainCal[description]['efield']
         except:
             return []
-        freqs = data.keys()
+        freqs = list(data.keys())
         freqs.sort()
-        ntuner = len(eval(data[freqs[0]].keys()[0]))   # ;-)
+        ntuner = len(eval(list(data[freqs[0]].keys())[0]))   # ;-)
         pos = []
         for n in range(ntuner):
             pos.append([])
         for f in freqs:
             for n in range(ntuner):
-                lst = [eval(data[f].keys()[i])[n] for i in range(len(data[f].keys()))]
+                lst = [eval(list(data[f].keys())[i])[n] for i in range(len(list(data[f].keys())))]
                 for l in lst:
                     if l not in pos[n]:
                         pos[n].append(l)
@@ -2146,13 +2146,13 @@ Quit: quit measurement.
             data = self.rawData_MainCal[description]['efield']
         except:
             return False
-        freqs = data.keys()
+        freqs = list(data.keys())
         freqs.sort()
         freqs.reverse()
         for fi in freqs:
             if f>= fi:
                 break
-        tlist = data[fi].keys()
+        tlist = list(data[fi].keys())
         if str(t) in tlist:
             return True
         else:
@@ -2267,28 +2267,28 @@ Quit: quit measurement.
         deslist = self.make_deslist(thedata, description)
         whatlist = self.make_whatlist(thedata, what)
         for d in deslist:
-            print "# Description:", d
+            print("# Description:", d)
             for w in whatlist:
-                print "# ", w
+                print("# ", w)
                 data = thedata[d][w]
                 try:
-                    freqs = data.keys()
+                    freqs = list(data.keys())
                     freqs.sort()
                     for f in freqs:
-                        tees = data[f].keys()
+                        tees = list(data[f].keys())
                         tees.sort()
                         for t in tees:
-                            pees = data[f][t].keys()
+                            pees = list(data[f][t].keys())
                             pees.sort()
                             for p in pees:
-                                print "f:", f,"t:", t, "p:", p,
+                                print("f:", f,"t:", t, "p:", p, end=' ')
                                 item = data[f][t][p]
                                 self.out(item)
-                                print
+                                print()
                 except:  # data has no keys
                     item = data
                     self.out(item)
-                    print
+                    print()
                         
     def OutputProcessedData_MainCal (self, description=None, what=None, fname=None):
         thedata = self.processedData_MainCal
@@ -2370,30 +2370,30 @@ Quit: quit measurement.
         whatlist = self.make_whatlist(thedata, what)
         for d in deslist:
             data = thedata[d]
-            print "Description:", d
+            print("Description:", d)
             for w in whatlist:
-                if data.has_key(w):
-                    print w, ":"
+                if w in data:
+                    print(w, ":")
                     try:
-                        freqs = data[w].keys()
+                        freqs = list(data[w].keys())
                         freqs.sort()
                         for f in freqs:
-                            print f,
+                            print(f, end=' ')
                             item = data[w][f]
                             self.out (item)
-                            print
+                            print()
                     except:
                         item=data[w]
                         self.out (item)
-                        print
+                        print()
             
 
     def GetKeys_MainCal(self):
-        return self.processedData_MainCal.keys()
+        return list(self.processedData_MainCal.keys())
 
     def GetFreqs_MainCal(self, description):
-        if self.rawData_MainCal.has_key(description):
-            freqs = self.rawData_MainCal[description]['efield'].keys()
+        if description in self.rawData_MainCal:
+            freqs = list(self.rawData_MainCal[description]['efield'].keys())
             freqs.sort()
             return freqs
         else:
@@ -2421,12 +2421,12 @@ Quit: quit measurement.
         ctx=Context()
         standard = self.getStandard(standard)
         self.messenger(util.tstamp()+" Start of evaluation of main calibration with description %s"%description, [])
-        if not self.rawData_MainCal.has_key(description):
+        if description not in self.rawData_MainCal:
             self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
             
         if not freqs:
-            freqs = self.rawData_MainCal[description]['efield'].keys()
+            freqs = list(self.rawData_MainCal[description]['efield'].keys())
         freqs.sort()
 
         # shortcuts to raw data
@@ -2460,9 +2460,9 @@ Quit: quit measurement.
             self.messenger(util.tstamp()+" Frequency: %.2f ..."%f, [])
             #print
             #print f,
-            tees = efields[f].keys() #tuner positions
-            pees = efields[f][tees[0]].keys() #e-field probe positions
-            prees = pref[f][tees[0]].keys() #ref antenna positions
+            tees = list(efields[f].keys()) #tuner positions
+            pees = list(efields[f][tees[0]].keys()) #e-field probe positions
+            prees = list(pref[f][tees[0]].keys()) #ref antenna positions
             #tees.sort()
             pees.sort()
             prees.sort()
@@ -2569,20 +2569,20 @@ Quit: quit measurement.
 
             # calc ACF and IL
             IL = Quantity(POWERRATIO, 0.0)
-            for pos,Pmax in PMaxRecL.items():            
+            for pos,Pmax in list(PMaxRecL.items()):            
                 IL = IL + Quantity(POWERRATIO, 1.0)*Pmax/PInputAL[pos]
-            IL = (IL / len(PMaxRecL.keys())).eval()
+            IL = (IL / len(list(PMaxRecL.keys()))).eval()
             ACF = Quantity(POWERRATIO, 0.0)
-            for pos,Pav in PAveRecL.items():            
+            for pos,Pav in list(PAveRecL.items()):            
                 ACF = ACF + Quantity(POWERRATIO, 1.0)*Pav/PInputAL[pos]
-            ACF = (ACF / len(PAveRecL.keys())).eval()
+            ACF = (ACF / len(list(PAveRecL.keys()))).eval()
             self.processedData_MainCal[description]['ACF'][f] = ACF
             self.processedData_MainCal[description]['IL'][f] = IL
 
             Avxyz = [Quantity(EFIELDPNORM,0.0) for _ in (1,2,3)] #umddevice.stdVectorUMDMResult()
             self.processedData_MainCal[description]['Enorm'][f]={}
             self.processedData_MainCal[description]['EnormT'][f]={}
-            for pos,Em in EMaxL.items():
+            for pos,Em in list(EMaxL.items()):
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos] 
                 v = numpy.sqrt(pin)
                 #sqrtv=math.sqrt(v)
@@ -2593,10 +2593,10 @@ Quit: quit measurement.
                 for k,_en_ in enumerate(en):
                     Avxyz[k] += _en_
                 self.processedData_MainCal[description]['Enorm'][f][pos]=[_.eval() for _ in en]
-            Npos=len(EMaxL.keys())
+            Npos=len(list(EMaxL.keys()))
             Avxyz = [_a_/float(Npos) for _a_ in Avxyz]
             AvT = Quantity(EFIELDPNORM,0.0)
-            for pos,Em in EMaxTL.items():
+            for pos,Em in list(EMaxTL.items()):
                 pin = self.processedData_MainCal[description]['PInputForEField'][f][pos]
                 v = numpy.sqrt(pin)
                 #sqrtv=math.sqrt(v)
@@ -2618,7 +2618,7 @@ Quit: quit measurement.
             Sxyz = [] # umddevice.stdVectorUMDMResult()
             list24 = []
             for k in (0,1,2):
-                lst = [enorm[p][k] for p in enorm.keys()]
+                lst = [enorm[p][k] for p in list(enorm.keys())]
                 list24 = list24 + lst
                 S = util.CalcSigma(lst, Avxyz[k])
                 Sxyz.append(S.eval())            
@@ -2660,16 +2660,16 @@ Quit: quit measurement.
             
 
         self.messenger(util.tstamp()+" Start of evaluation of emission measurement with description %s"%description, [])
-        if not self.rawData_Emission.has_key(description):
+        if description not in self.rawData_Emission:
             self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
-        if not self.rawData_MainCal.has_key(empty_cal):
+        if empty_cal not in self.rawData_MainCal:
             self.messenger(util.tstamp()+" Empty chamber cal not found. Description: %s"%empty_cal, [])
             return -1
-        if not self.rawData_MainCal.has_key(loaded_cal):
+        if loaded_cal not in self.rawData_MainCal:
             self.messenger(util.tstamp()+" Loaded chamber cal not found. Description: %s"%loaded_cal, [])
             return -1
-        if not EUTrawData.has_key(EUT_cal):
+        if EUT_cal not in EUTrawData:
             self.messenger(util.tstamp()+" EUT cal not found. Description: %s"%EUT_cal, [])
             return -1
 	
@@ -2677,16 +2677,16 @@ Quit: quit measurement.
         
         pref = self.rawData_Emission[description]['pref']
         noise= self.rawData_Emission[description]['noise']
-        freqs = pref.keys()
+        freqs = list(pref.keys())
         freqs.sort()
 
         # check loading
         empty_loaded = empty_cal +','+loaded_cal
-        if not self.processedData_MainCal.has_key(empty_loaded):
+        if empty_loaded not in self.processedData_MainCal:
             self.CalculateLoading_MainCal(empty_cal=empty_cal, loaded_cal=loaded_cal)
         maxload = self.processedData_MainCal[empty_loaded]['Loading']
         empty_eut = empty_cal +','+EUT_cal
-        if not EUTprocData.has_key(empty_eut):
+        if empty_eut not in EUTprocData:
             self.CalculateLoading_EUTCal(empty_cal=empty_cal, eut_cal=EUT_cal, freqs=freqs)
         eutload = EUTprocData[empty_eut]['Loading']
 
@@ -2697,9 +2697,9 @@ Quit: quit measurement.
 
         etaTx_org = {}
         etaTx = self.rawData_MainCal[empty_cal]['etaTx']
-        for f in etaTx.keys():
-            t = etaTx[f].keys()[0]
-            p = etaTx[f][t].keys()[0]
+        for f in list(etaTx.keys()):
+            t = list(etaTx[f].keys())[0]
+            p = list(etaTx[f][t].keys())[0]
             for ei in etaTx[f][t][p]:
                 if not ei['value'] is None:
                     break
@@ -2740,8 +2740,8 @@ Quit: quit measurement.
                 dmax_f=directivity(f)
             self.processedData_Emission[description]['Asumed_Directivity'][f]=Quantity(POWERRATIO, dmax_f)
             i = freqs.index(f)
-            tees = pref[f].keys()
-            prees = pref[f][tees[0]].keys()
+            tees = list(pref[f].keys())
+            prees = list(pref[f][tees[0]].keys())
             tees.sort()
             prees.sort()   
             ntees = len(tees)
@@ -2814,16 +2814,16 @@ Quit: quit measurement.
                           EUT_OK=None,
                           interpolation = 'linxliny'):
         self.messenger(util.tstamp()+" Start of evaluation of immunity measurement with description %s"%description, [])
-        if not self.rawData_Immunity.has_key(description):
+        if description not in self.rawData_Immunity:
             self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
-        if not self.rawData_MainCal.has_key(empty_cal):
+        if empty_cal not in self.rawData_MainCal:
             self.messenger(util.tstamp()+" Empty chamber cal not found. Description: %s"%empty_cal, [])
             return -1
-        if not self.rawData_MainCal.has_key(loaded_cal):
+        if loaded_cal not in self.rawData_MainCal:
             self.messenger(util.tstamp()+" Loaded chamber cal not found. Description: %s"%loaded_cal, [])
             return -1
-        if not self.rawData_EUTCal.has_key(EUT_cal):
+        if EUT_cal not in self.rawData_EUTCal:
             self.messenger(util.tstamp()+" WARNING: EUT cal not found. Description: %s"%EUT_cal, [])
             EUT_cal=None
 
@@ -2836,12 +2836,12 @@ Quit: quit measurement.
         
         pref = self.rawData_Immunity[description]['pref']
         eut = self.rawData_Immunity[description]['eutstatus']
-        freqs = pref.keys()
+        freqs = list(pref.keys())
         freqs.sort()
 
         # check loading
         empty_loaded = empty_cal +','+loaded_cal
-        if not self.processedData_MainCal.has_key(empty_loaded):
+        if empty_loaded not in self.processedData_MainCal:
             self.CalculateLoading_MainCal(empty_cal=empty_cal, loaded_cal=loaded_cal)
         maxload = self.processedData_MainCal[empty_loaded]['Loading']
         maxload_inter = util.InterpolateMResults([maxload[_f] for _f in freqs], freqs, interpolation)
@@ -2849,7 +2849,7 @@ Quit: quit measurement.
         relload={}
         if EUT_cal:
             empty_eut = empty_cal +','+EUT_cal
-            if not self.processedData_EUTCal.has_key(empty_eut):
+            if empty_eut not in self.processedData_EUTCal:
                 self.CalculateLoading_EUTCal(empty_cal=empty_cal, eut_cal=EUT_cal, freqs=freqs)
             eutload = self.processedData_EUTCal[empty_eut]['Loading']
             eutload_inter = util.InterpolateMResults([eutload[_f] for _f in freqs], freqs, interpolation)
@@ -2865,8 +2865,8 @@ Quit: quit measurement.
         self.processedData_Immunity[description]['EUTImmunityThreshold']={}
         
         for i,f in enumerate(freqs):
-            tees = pref[f].keys()
-            prees = pref[f][tees[0]].keys()
+            tees = list(pref[f].keys())
+            prees = list(pref[f][tees[0]].keys())
             tees.sort()
             prees.sort()   
 
@@ -2893,15 +2893,15 @@ Quit: quit measurement.
             self.processedData_Immunity[description]['PMaxRec'][f]=PMaxRecL.copy()
             self.processedData_Immunity[description]['PAveRec'][f]=PAveRecL.copy()
 
-        eutfreqs = eut.keys()
+        eutfreqs = list(eut.keys())
         eutfreqs.sort()
         for f in eutfreqs:
             thres = []
-            tees = eut[f].keys()
+            tees = list(eut[f].keys())
             tees.sort()
             real_tf = None
             for t in tees:
-                pees = eut[f][t].keys()
+                pees = list(eut[f][t].keys())
                 pees.sort()
                 for p in pees:
                     for val in eut[f][t][p]:
@@ -2951,7 +2951,7 @@ Quit: quit measurement.
         if skip is None:
             skip = []
         self.messenger(util.tstamp()+" Start of evaluation of autocorrelation measurement with description %s"%description, [])
-        if not self.rawData_AutoCorr.has_key(description):
+        if description not in self.rawData_AutoCorr:
             self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
         self.processedData_AutoCorr.setdefault(description,{})        
@@ -2959,7 +2959,7 @@ Quit: quit measurement.
         efields = self.rawData_AutoCorr[description]['efield']
         tpos = self.rawData_AutoCorr[description]['tpos']
         tpos.sort(self.TPosCmp)   # possibly plug in other cmp routine
-        freqs = efields.keys()
+        freqs = list(efields.keys())
         freqs.sort()
 
         if not 'DistributuionOfr'in skip:
@@ -2988,7 +2988,7 @@ Quit: quit measurement.
             #rpy.r.library('ctest')
             ray=distributions.RayleighDist()
             self.processedData_AutoCorr[description]['Statistic']={}
-        for _i,f in filter(lambda (_i,_f): not (_i+offset)%every, enumerate(freqs)):
+        for _i,f in [_i__f for _i__f in enumerate(freqs) if not (_i__f[0]+offset)%every]:
             try:
                 lagf=lag(f)
             except:
@@ -2997,7 +2997,7 @@ Quit: quit measurement.
                 self.messenger(util.tstamp()+" Calculating autocorrelation f = %e"%f, [])
                 self.processedData_AutoCorr[description]['AutoCorrelation'][f]={}
                 ac_f = self.processedData_AutoCorr[description]['AutoCorrelation'][f]
-                pees = efields[f][str(tpos[0])].keys()
+                pees = list(efields[f][str(tpos[0])].keys())
                 for p in pees:
                     self.messenger(util.tstamp()+" p = %d"%p, [])
                     ac_f[p]={}
@@ -3016,7 +3016,7 @@ Quit: quit measurement.
                 self.processedData_AutoCorr[description]['NIndependentBoundaries'][f]={}
                 ac_f = self.processedData_AutoCorr[description]['AutoCorrelation'][f]
                 nib_f = self.processedData_AutoCorr[description]['NIndependentBoundaries'][f]
-                pees = efields[f][str(tpos[0])].keys()
+                pees = list(efields[f][str(tpos[0])].keys())
                 for p in pees:
                     self.messenger(util.tstamp()+" p = %d"%p, [])
                     nib_f[p]={}
@@ -3043,7 +3043,7 @@ Quit: quit measurement.
                 self.processedData_AutoCorr[description]['Statistic'][f]={}
                 s_f = self.processedData_AutoCorr[description]['Statistic'][f]
                 ees24={}
-                pees = efields[f][str(tpos[0])].keys()
+                pees = list(efields[f][str(tpos[0])].keys())
                 for p in pees:
                     self.messenger(util.tstamp()+" p = %d"%p, [])
                     s_f[p]={}
@@ -3174,10 +3174,10 @@ Quit: quit measurement.
 
     def Evaluate_EUTCal(self, description="EUT", calibration="empty"):
         self.messenger(util.tstamp()+" Start of evaluation of EUT calibration with description %s"%description, [])
-        if not self.rawData_EUTCal.has_key(description):
+        if description not in self.rawData_EUTCal:
             self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
-        if not self.rawData_MainCal.has_key(calibration):
+        if calibration not in self.rawData_MainCal:
             self.messenger(util.tstamp()+" Calibration %s not found."%calibration, [])
             return -1
             
@@ -3188,7 +3188,7 @@ Quit: quit measurement.
         efields = self.rawData_EUTCal[description]['efield']
         pref = self.rawData_EUTCal[description]['pref']
         noise = self.rawData_EUTCal[description]['noise']
-        freqs = pref.keys()
+        freqs = list(pref.keys())
         freqs.sort()
 
         self.processedData_EUTCal.setdefault(description,{})        
@@ -3211,11 +3211,11 @@ Quit: quit measurement.
         self.processedData_EUTCal[description]['SigmaXYZ_dB'] = {}
         self.processedData_EUTCal[description]['Sigma24_dB'] = {}
         for f in freqs:
-            tees = pref[f].keys()
+            tees = list(pref[f].keys())
             pees = []
-            if efields.has_key(f):
-                pees = efields[f][tees[0]].keys()
-            prees = pref[f][tees[0]].keys()
+            if f in efields:
+                pees = list(efields[f][tees[0]].keys())
+            prees = list(pref[f][tees[0]].keys())
             tees.sort()
             pees.sort()
             prees.sort()
@@ -3293,20 +3293,20 @@ Quit: quit measurement.
 
             # calc CCF and CCF_from_PMaxRec
             CCF_from_PMaxRec = Quantity(POWERRATIO, 0.0)
-            for pos,Pmax in PMaxRecL.items():            
+            for pos,Pmax in list(PMaxRecL.items()):            
                 CCF_from_PMaxRec += Pmax/PInputAL[pos]
-            CCF_from_PMaxRec /= len(PMaxRecL.keys())
+            CCF_from_PMaxRec /= len(list(PMaxRecL.keys()))
             CCF = Quantity(POWERRATIO, 0.0)
-            for pos,Pav in PAveRecL.items():            
+            for pos,Pav in list(PAveRecL.items()):            
                 CCF += Pav/PInputAL[pos]
-            CCF /= len(PAveRecL.keys())
+            CCF /= len(list(PAveRecL.keys()))
             self.processedData_EUTCal[description]['CCF_from_PMaxRec'][f] = CCF_from_PMaxRec
             self.processedData_EUTCal[description]['CCF'][f] = CCF
 
             if npees > 0:
                 Avxyz = [Quantity(EFIELDPNORM,0.0)]*3
                 self.processedData_EUTCal[description]['Enorm'][f]={}
-                for pos,Em in EMaxL.items():
+                for pos,Em in list(EMaxL.items()):
                     pin = self.processedData_EUTCal[description]['PInputForEField'][f][pos] 
                     v = pin#.get_v()
                     sqrtv=numpy.sqrt(v)
@@ -3320,7 +3320,7 @@ Quit: quit measurement.
                     self.processedData_EUTCal[description]['Enorm'][f][pos]=en
                 Av24 = Quantity(EFIELDPNORM,0.0)
                 for k in range(3):
-                    Avxyz[k] /= len(EMaxL.keys())
+                    Avxyz[k] /= len(list(EMaxL.keys()))
                     Av24 += Avxyz[k]
                 Av24 /= 3.0
                 self.processedData_EUTCal[description]['EnormAveXYZ'][f]=Avxyz
@@ -3329,7 +3329,7 @@ Quit: quit measurement.
                 Sxyz = [] 
                 list24 = []
                 for k in range(3):
-                    lst = [enorm[p][k] for p in enorm.keys()]
+                    lst = [enorm[p][k] for p in list(enorm.keys())]
                     list24+=lst
                     S = util.CalcSigma(lst, Avxyz[k])
                     try:
@@ -3379,8 +3379,8 @@ Quit: quit measurement.
         If freqs is None, freqs are taken fron first ACF and second ACF is interpolated
         Else both are interpolated
         """
-        if (not self.processedData_MainCal.has_key(empty_cal))\
-           or (not self.processedData_MainCal.has_key(loaded_cal)):
+        if (empty_cal not in self.processedData_MainCal)\
+           or (loaded_cal not in self.processedData_MainCal):
             # one of the keys not present
             return -1
         des = str(empty_cal+','+loaded_cal)
@@ -3395,8 +3395,8 @@ Quit: quit measurement.
         If freqs is None, freqs are taken fron first ACF and second ACF is interpolated
         Else both are interpolated
         """
-        if (not self.processedData_MainCal.has_key(empty_cal))\
-           or (not self.processedData_EUTCal.has_key(eut_cal)):
+        if (empty_cal not in self.processedData_MainCal)\
+           or (eut_cal not in self.processedData_EUTCal):
             # one of the keys not present
             return -1
         des = str(empty_cal+','+eut_cal)
@@ -3412,7 +3412,7 @@ Quit: quit measurement.
         Else both are interpolated
         """
         if freqs is None:
-            freqs = acf1.keys()
+            freqs = list(acf1.keys())
         ldict={}
         cf1 = util.MResult_Interpol(acf1,interpolation)
         cf2 = util.MResult_Interpol(acf2,interpolation)
@@ -3437,10 +3437,10 @@ class stdImmunityKernel:
         self.keylist = keylist
     def _makeTestPlan(self):
         ret = []
-        freqs = self.tp.keys()
+        freqs = list(self.tp.keys())
         freqs.sort()
         for f in freqs:
-            has_f=self.in_as.has_key(f)
+            has_f=f in self.in_as
             if has_f:
                 continue
             ret.append(('LoopMarker', '', {}))
@@ -3488,9 +3488,9 @@ class stdImmunityKernel:
 class TestField:
     def __init__(self, instance, maincal='empty', eutcal=None):
         self.fail=False
-        if not instance.processedData_MainCal.has_key(maincal):
+        if maincal not in instance.processedData_MainCal:
             self.fail=True
-        if eutcal and not instance.rawData_EUTCal.has_key(eutcal):
+        if eutcal and eutcal not in instance.rawData_EUTCal:
             self.fail=True
         self.Enorm=util.MResult_Interpol(instance.processedData_MainCal[maincal]['EnormAve'].copy())
         try:
@@ -3535,9 +3535,9 @@ class TestPower:
     def __init__(self, instance, maincal='empty', eutcal=None):
         self.fail=False
         self.instance=instance
-        if not instance.processedData_MainCal.has_key(maincal):
+        if maincal not in instance.processedData_MainCal:
             self.fail=True
-        if eutcal and not instance.rawData_EUTCal.has_key(eutcal):
+        if eutcal and eutcal not in instance.rawData_EUTCal:
             self.fail=True
         self.Enorm=util.MResult_Interpol(instance.processedData_MainCal[maincal]['EnormAve'].copy())
         try:

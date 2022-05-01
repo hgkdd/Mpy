@@ -1,5 +1,5 @@
 import os
-import ConfigParser
+import configparser
 from mpy.tools.levensthein import fstrcmp as levfstrcmp
 
 fstrcmp=levfstrcmp 
@@ -16,19 +16,19 @@ def fstrcmp_old(word, possibilities, n=None, cutoff=None, ignorecase=True):
     The elements of the returned list are allway members of *possibilities*. 
     """
     import difflib as dl
-    longest=max(map(len,possibilities))
+    longest=max(list(map(len,possibilities)))
     if n is None:
         n=3  # difflibs default
     if cutoff is None:
         cutoff=0.0 # don't sort out not-so-good matches
     if ignorecase:
         word=word.lower()
-        possdict=dict(zip([p.lower().ljust(longest,'#') for p in possibilities],possibilities))
+        possdict=dict(list(zip([p.lower().ljust(longest,'#') for p in possibilities],possibilities)))
     else:
-        possdict=dict(zip([p.ljust(longest,'#') for p in possibilities],possibilities))
+        possdict=dict(list(zip([p.ljust(longest,'#') for p in possibilities],possibilities)))
     #print possdict
         
-    matches=dl.get_close_matches(word,possdict.keys(),n=n,cutoff=cutoff)
+    matches=dl.get_close_matches(word,list(possdict.keys()),n=n,cutoff=cutoff)
     return [possdict[m] for m in matches]
 
     
@@ -52,7 +52,7 @@ class Configuration(object):
             
         
         # read the whole ini file in to a dict
-        config=ConfigParser.SafeConfigParser()
+        config=configparser.SafeConfigParser()
         config.readfp(fp)
         #fp.close()
         
@@ -61,7 +61,7 @@ class Configuration(object):
         #print self.sections_in_ini
         for sec in self.sections_in_ini:
             #print sec.strip("'"), sec 
-            tmplsec=fstrcmp(sec, self.cnftmpl.keys(),n=1,cutoff=0,ignorecase=True)[0]
+            tmplsec=fstrcmp(sec, list(self.cnftmpl.keys()),n=1,cutoff=0,ignorecase=True)[0]
             thesec=tmplsec
             try:
                 #print sec,'\n', tmplsec,'\n','\n'
@@ -85,7 +85,7 @@ class Configuration(object):
             
             for key,val in config.items(sec):
                 #print  key, val
-                tmplkey=fstrcmp(key, self.cnftmpl[tmplsec].keys(),n=1,cutoff=0,ignorecase=True)[0]
+                tmplkey=fstrcmp(key, list(self.cnftmpl[tmplsec].keys()),n=1,cutoff=0,ignorecase=True)[0]
                 #print self.cnftmpl[tmplsec].keys()
                 if self.casesensitive:
                     tmplkey_c=tmplkey

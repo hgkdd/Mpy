@@ -20,7 +20,7 @@ class POWERMETER(PM):
         if self.gpib and not virtual:  # ignore virtual instruments
             key = self._hash() # here: gbib_ch
             if key in POWERMETER.instances:
-                raise UserError, "2Ch Powermeter: Instance allready in use: %s"%key
+                raise UserError("2Ch Powermeter: Instance allready in use: %s"%key)
             POWERMETER.instances.setdefault(key, self) # register this instance
         return self.error
 
@@ -74,8 +74,8 @@ class POWERMETER(PM):
         return a list of instances with same gpib but different ch than 'self'
         """
         instances=[]
-        for key,val in POWERMETER.instances.items():
-            g,c=map(int, key.split('_'))
+        for key,val in list(POWERMETER.instances.items()):
+            g,c=list(map(int, key.split('_')))
             if g==self.gpib and c!=self.ch:
                 instances.append(val)
         return instances

@@ -5,7 +5,7 @@ import re
 import time
 import struct
 import bidict
-import StringIO
+import io
 import serial
 from scuq import si,quantities,ucomponents
 from mpy.tools.Configuration import fstrcmp
@@ -168,7 +168,7 @@ def test():
                     name: EField
                     unit: Voverm
                     """)
-    ini=StringIO.StringIO(ini)
+    ini=io.StringIO(ini)
     dev=FIELDPROBE()
     dev.Init(ini)
     return dev
@@ -206,7 +206,7 @@ def main():
                         name: EField
                         unit: Voverm
                         """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
     dev=FIELDPROBE()
     ui=UI(dev,ini=ini)
     ui.configure_traits()

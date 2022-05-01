@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import ConfigParser
+import configparser
 import os
 import math
 import numpy
@@ -85,7 +85,7 @@ class Device(object):
             "UMD_SA_",
             "UMD_VNA_")
     # map instrument types to prefixes
-    _prefixdict=dict(zip(_types,_prefix))
+    _prefixdict=dict(list(zip(_types,_prefix)))
 
     # Class names in py-drivers, e.g. SIGNALGENERATOR 
     _pyprefix=("SIGNALGENERATOR",
@@ -102,7 +102,7 @@ class Device(object):
               "SPECTRUMANALYZER",
               "VECTORNETWORKANALYZER")
     # map instrument types to prefixes
-    _pyprefixdict=dict(zip(_types,_pyprefix))
+    _pyprefixdict=dict(list(zip(_types,_pyprefix)))
 
     def __init__(self, **kw):
         self.kw = kw
@@ -207,10 +207,10 @@ class Device(object):
         tmpfiles=[]
         if hasattr(ininame,'read'):  # file like object
             import tempfile
-            import ConfigParser
-            import StringIO
+            import configparser
+            import io
             from mpy.tools.util import format_block
-            cp=ConfigParser.SafeConfigParser()
+            cp=configparser.SafeConfigParser()
             cp.readfp(ininame)
             for section in cp.sections():
                 for option,value in cp.items(section):
@@ -269,7 +269,7 @@ class Device(object):
         # our lib
         self.library=lib
         #make attributes corresponding to the common methods os all instr. types
-        for post,klass in Device._postfix.items():
+        for post,klass in list(Device._postfix.items()):
             try:
                 # eg: self._Init = lib -> UMD_SG_init
                 setattr(self, "_%s"%klass, getattr(lib, "%s%s"%(self.prefix,post)))
@@ -381,7 +381,7 @@ class Device(object):
         return m
         
     def _getTypeAndDLL(self,ininame):
-        self.config=ConfigParser.SafeConfigParser()
+        self.config=configparser.SafeConfigParser()
         self.config.read(ininame)
         self.confsections=self.config.sections()
         sec=fstrcmp('description',self.confsections,n=1,cutoff=0,ignorecase=True)[0]
@@ -393,10 +393,10 @@ class Device(object):
         return self.error
 
     def GetLastErrorStr(self):
-        return '|'.join([err for i,err in self.__class__._ErrorDict.items() if ((self.error & 1<<i) != 0)])
+        return '|'.join([err for i,err in list(self.__class__._ErrorDict.items()) if ((self.error & 1<<i) != 0)])
 
     def _addAttributes(self):
-        for post,klass in self.__class__._postfix.items():
+        for post,klass in list(self.__class__._postfix.items()):
 ##            print self.__class__._postfix.items()
 ##            print dir(self)
 ##            stop
@@ -840,7 +840,7 @@ class Spectrumanalyzer(Powermeter):
                      "SetSweepCount", "GetSweepCount", "SetSweepTime",
                      "GetSweepTime", "GetSpectrum", "GetSpectrumNB",
                      "SetTriggerMode", "SetTriggerDelay", "SetWindow","SetSweepPoints","GetSweepPoints")
-    _postfix = dict(zip(_postfix_list,_postfix_list)) # spelling was OK
+    _postfix = dict(list(zip(_postfix_list,_postfix_list))) # spelling was OK
 
     def __init__(self, **kw):
         Powermeter.__init__(self, **kw)
@@ -1701,7 +1701,7 @@ class Fieldprobe(Device):
                 method.restype=ct.c_int
                 retval = method(ct.byref(c_state), c_instance, ct.byref(c_error))
                 #retval = method(c_instance, ct.byref(c_error))
-                print c_state.value
+                print(c_state.value)
                 self.error=c_error.value
                 return self.error, retval
         else:
@@ -2449,7 +2449,7 @@ class CONVERT(object):
 
     def __init__(self):    
         self.udct=dict(((l[0],l[1:]) for l in self.units_list))
-        self.cunits=self.udct.keys()
+        self.cunits=list(self.udct.keys())
         def _ident(x):
             return x
         def _mul(fac):
@@ -2633,7 +2633,7 @@ class CONVERT(object):
         def m(inp):
             try:
                 ret=dBfac*math.log10(inp*sifac)
-            except OverflowError, ValueError:
+            except OverflowError as ValueError:
                 ret=None
             return ret
         return m
@@ -2686,7 +2686,7 @@ def cbl_tst(ini):
                                                                 90 -10
                                             '''))
                          """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
 
     cbl=Cable()
     err=cbl.Init(ini)
@@ -2695,12 +2695,12 @@ def cbl_tst(ini):
         cbl.SetFreq(freq)
         err, uq = cbl.GetData(what='S21')
         val, unc, unit=ctx.value_uncertainty_unit(uq)
-        print freq, uq, abs(val), abs(unc), unit
+        print(freq, uq, abs(val), abs(unc), unit)
 
         
 if __name__ == '__main__':
     import sys
-    import StringIO
+    import io
     from mpy.tools.util import format_block
     import scuq
 

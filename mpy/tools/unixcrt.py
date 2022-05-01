@@ -80,8 +80,8 @@ def getch():
 def test():
     unbuffer_stdin()
     count = 0
-    print "A trail of '*'s will be written while I poll for keystrokes"
-    print "Press 'q' to quit"
+    print("A trail of '*'s will be written while I poll for keystrokes")
+    print("Press 'q' to quit")
     while 1:
         ready = kbhit()
         if ready:
@@ -89,7 +89,7 @@ def test():
             key = getch()
             os.write(sys.stdout.fileno(), key)
             if key=='q':
-                print
+                print()
                 break
         else:
             count = count + 1

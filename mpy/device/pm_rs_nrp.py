@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import time
-import StringIO
+import io
 from scuq import *
 from mpy.device.powermeter import POWERMETER as PWRMTR
     
@@ -234,7 +234,7 @@ class POWERMETER(PWRMTR):
     
     
 def test_init(ch):
-    import StringIO
+    import io
     from mpy.tools.util import format_block
     
     ini=format_block("""
@@ -269,13 +269,13 @@ def test_init(ch):
                     unit: 'W'
                     """)
  
-    ini=StringIO.StringIO(ini)
+    ini=io.StringIO(ini)
     inst=POWERMETER()
     inst.Init(ini,ch)
     return inst
             
 def main():
-    import StringIO
+    import io
     from mpy.tools.util import format_block
     from mpy.device.powermeter_ui import UI as UI
 
@@ -313,7 +313,7 @@ def main():
                         unit: 'W'
                         """)
         
-    ini=StringIO.StringIO(ini)
+    ini=io.StringIO(ini)
 
     pm=POWERMETER()
     ui=UI(pm,ini=ini)
@@ -328,10 +328,10 @@ if __name__ == '__main__':
     pm1=test_init(1)
     #pm1.update_internal_unit(None,'DB')
     pm1.InitSen(1)
-    print pm1.GetDataNB()
-    print pm1.GetDataNB()
-    print pm1.GetDataNB('True')
-    print pm1.GetDataNB()
+    print(pm1.GetDataNB())
+    print(pm1.GetDataNB())
+    print(pm1.GetDataNB('True'))
+    print(pm1.GetDataNB())
     #pm1.Zero()
     #print pm1.Reset()
     #print pm1.SetFreq(10.0)

@@ -1,4 +1,4 @@
-from __future__ import division
+
 import scipy.stats
 from scuq.quantities import Quantity
 

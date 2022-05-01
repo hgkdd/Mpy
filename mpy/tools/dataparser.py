@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from plyparser import Parser
+from .plyparser import Parser
 import math
 from scuq import *
 from mpy.tools.aunits import *
@@ -140,7 +140,7 @@ class DatFile(Parser):
         try:
             t.value = float(t.value)    
         except ValueError:
-            print "Line %d: Number %s is too large!" % (t.lineno,t.value)
+            print("Line %d: Number %s is too large!" % (t.lineno,t.value))
             t.value = 0
         return t
 
@@ -162,7 +162,7 @@ class DatFile(Parser):
 
     # Error handling rule
     def t_error(self, t):
-        print "Illegal character '%s'" % t.value[0]
+        print("Illegal character '%s'" % t.value[0])
         t.lexer.skip(1)
 
     # Parser starts here
@@ -252,7 +252,7 @@ class DatFile(Parser):
 
     # Error rule for syntax errors
     def p_error(self, p):
-        print "Syntax error in input!"
+        print("Syntax error in input!")
 
 
     def _makeuq(self, a,b,c, unit):
@@ -275,14 +275,14 @@ class DatFile(Parser):
 
 if __name__ == '__main__':
     import sys
-    import StringIO
+    import io
     from mpy.tools.util import format_block
 
     name=None
     if len(sys.argv)>1:
         name=sys.argv[1]
     else:
-        name=StringIO.StringIO(format_block("""
+        name=io.StringIO(format_block("""
                                             FUNIT: Hz
                                             UNIT: powerratio
                                             ABSERROR: [0.1, 1]
@@ -304,4 +304,4 @@ if __name__ == '__main__':
     for f in sorted(result):
         uq=result[f]
         val,err,unit=ctx.value_uncertainty_unit(uq)
-        print f, uq, val, err, unit
+        print(f, uq, val, err, unit)

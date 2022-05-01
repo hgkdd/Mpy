@@ -207,7 +207,7 @@ class MOTORCONTROLLER(MC):
             
 def main():
     import sys
-    import StringIO
+    import io
     import time
     
     from mpy.tools.util import format_block
@@ -231,24 +231,24 @@ def main():
                          FSTEP = 0.0
                          VIRTUAL = 0
                          """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
 
     dirmap={'u': 1, 'd': -1, 's': 0}
     mc=MOTORCONTROLLER()
     err=mc.Init(ini)
     while(True):
-        pos=raw_input("Pos / DEG: ")
+        pos=input("Pos / DEG: ")
         if pos in 'qQ':
             break
         try:
             pos=float(pos)
             err, ang = mc.Goto(pos)
-            print '%.2f -> %.2f'%(pos, ang)
+            print('%.2f -> %.2f'%(pos, ang))
         except ValueError:
             pos=pos.lower()
             if pos in dirmap:
                 err, dir = mc.Move(dirmap[pos])
-                print 'Direction: %d'%dir
+                print('Direction: %d'%dir)
     mc.Quit()
     
 if __name__ == '__main__':

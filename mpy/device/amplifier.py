@@ -80,7 +80,7 @@ class AMPLIFIER(NPORT):
 
 def main():
     import sys
-    import StringIO
+    import io
     from mpy.tools.util import format_block
     import scuq
 
@@ -126,7 +126,7 @@ def main():
                                                                 1e9 0
                                                                 '''))
                          """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
 
     amp=AMPLIFIER()
     err=amp.Init(ini)
@@ -137,7 +137,7 @@ def main():
         amp.SetFreq(freq)
         err, uq = amp.GetData(what='S21')
         val, unc, unit=ctx.value_uncertainty_unit(uq)
-        print freq, uq, val, unc, unit
+        print(freq, uq, val, unc, unit)
     amp.Standby()
     amp.Quit()
 

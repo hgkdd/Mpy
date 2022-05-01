@@ -9,7 +9,7 @@ class FieldLst:
         self.field=lst
         self.next=0
     def __call__(self):
-        ret = self.next
+        ret = self.__next__
         self.next+=1
         try:
             return self.field[ret]
@@ -17,7 +17,7 @@ class FieldLst:
             return None
     def next_freq(self):
         self.next=max(0,self.next-5)
-        return self.field[self.next]
+        return self.field[self.__next__]
 
 class ImmunityKernel_Thres:
     def __init__(self, messenger, UIHandler, locals, dwell, keylist='sS', tp=None, field=None, testfreqs=None):
@@ -26,7 +26,7 @@ class ImmunityKernel_Thres:
         self.goto_next_freq=False
         self.mg=locals['mg']
         if self.field is None:
-            self.field=FieldLst(range(10,110,10))            
+            self.field=FieldLst(list(range(10,110,10)))            
         if not callable(self.field):
             self.field=FieldLst(self.field)
         self.tp=tp
@@ -47,7 +47,7 @@ class ImmunityKernel_Thres:
 ##                       'M:\\umd-config\\largeMSC\\ini\\umd-narda-emc300-6-real.ini',
 ##                       'M:\\umd-config\\largeMSC\\ini\\umd-narda-emc300-7-real.ini',
 ##                       'M:\\umd-config\\largeMSC\\ini\\umd-narda-emc300-8-real.ini']
-        self.ports=range(3,11)
+        self.ports=list(range(3,11))
         self.eut={}
         testtime = 100
         for p in self.ports:
@@ -84,7 +84,7 @@ class ImmunityKernel_Thres:
         if self.tp is None:
             freqs = self.testfreqs[:]
         else:
-            freqs = self.tp.keys()
+            freqs = list(self.tp.keys())
         freqs.sort()
         for f in freqs:
             ret.append(('LoopMarker', '', {}))
@@ -149,7 +149,7 @@ class ImmunityKernel_Thres:
                         dev = theprobe['dev']
                         ans = dev.getSenType()
                         if ans != dev.sensor:
-                            print 'FAIL on COM %d'%p
+                            print('FAIL on COM %d'%p)
                             theprobe['ok']=False
                             dct[p] = 'EUT Failure. Sensor = %r'%ans
                 time.sleep(intervall)
@@ -160,7 +160,7 @@ class ImmunityKernel_Thres:
                     self.goto_next_freq=True
                 self.messenger(umdutil.tstamp()+" RFOff ...", [])
                 self.mg.RFOff_Devices()
-                notok=dct.keys()
+                notok=list(dct.keys())
                 while len(notok):
                     umdutil.wait(1, self.callerlocals, self.UIHandler)
                     self.messenger(umdutil.tstamp()+" EUTs not ok: %r"%notok, [])

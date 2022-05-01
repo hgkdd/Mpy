@@ -2,7 +2,7 @@
 
 import imp
 import re
-import StringIO
+import io
 import math
 import time
 from mpy.tools.Configuration import Configuration,strbool,fstrcmp
@@ -934,10 +934,10 @@ class POWERMETER(PWRMTR):
     _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
         
     def __init__(self, **kw):
-        self.ini20dBLF=StringIO.StringIO(ini20dBLF)
-        self.ini20dBHF=StringIO.StringIO(ini20dBHF)
-        self.ini0dBHF=StringIO.StringIO(ini0dBHF)
-        self.ini0dBLF=StringIO.StringIO(ini0dBLF)
+        self.ini20dBLF=io.StringIO(ini20dBLF)
+        self.ini20dBHF=io.StringIO(ini20dBHF)
+        self.ini0dBHF=io.StringIO(ini0dBHF)
+        self.ini0dBLF=io.StringIO(ini0dBLF)
 
         self.SearchPaths=kw.get('SearchPaths', ['.'])
         if self.SearchPaths == None:
@@ -966,7 +966,7 @@ class POWERMETER(PWRMTR):
     def Init(self, ininame, channel=1):
         self.conf=Configuration(ininame, self.conftmpl).conf
         pmini=self.conf['description']['pmini']
-        pmini=locate(pmini, paths=self.SearchPaths).next()
+        pmini=next(locate(pmini, paths=self.SearchPaths))
         self.pm_instance=getattr(device, 'Powermeter')(SearchPaths=self.SearchPaths)
         stat = self.pm_instance.Init(pmini, channel)
         methods = ('Quit',
@@ -998,7 +998,7 @@ class POWERMETER(PWRMTR):
                         SWFREQ = %f
                         VIRTUAL = 0
                         """%(self.swfreq))
-        swini=StringIO.StringIO(swini)
+        swini=io.StringIO(swini)
         self.sw_instance.Init(swini)
         self.sw_instance.SetAtt(True)
         return stat
@@ -1067,7 +1067,7 @@ class POWERMETER(PWRMTR):
         return 0
                 
 def test_init(ch):
-    import StringIO
+    import io
     from mpy.tools.util import format_block
     inst=POWERMETER()
     ini=format_block("""
@@ -1089,7 +1089,7 @@ def test_init(ch):
                     name: A
                     unit: dBm
                     """)
-    ini=StringIO.StringIO(ini)
+    ini=io.StringIO(ini)
 
 
     ini_pm=format_block("""
@@ -1124,12 +1124,12 @@ def test_init(ch):
                     unit: 'W'
                     trg_threshold: 0.5
                     """)
-    ini_pm=StringIO.StringIO(ini_pm)
+    ini_pm=io.StringIO(ini_pm)
     inst.Init(ini,ch)
     return inst
             
 def main():
-    import StringIO
+    import io
     from mpy.tools.util import format_block
     from mpy.device.powermeter_ui import UI as UI
 
@@ -1168,7 +1168,7 @@ def main():
                         unit: 'W'
                         trg_threshold: 0.5
                         """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
 
     pm=POWERMETER()	
     ui=UI(pm,ini=ini)
@@ -1180,6 +1180,6 @@ if __name__ == '__main__':
     pm1.SetFreq(200e6)
     while True:
         pm1.Trigger()
-        print pm1.GetData()
+        print(pm1.GetData())
         time.sleep(1)
     pm1.Quit()

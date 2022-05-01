@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import StringIO
+import io
 import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
 import enthought.traits.ui.menu as tuim
@@ -32,7 +32,7 @@ std_ini=format_block("""
                 name: EField
                 unit: Voverm
                 """)
-std_ini=StringIO.StringIO(std_ini)
+std_ini=io.StringIO(std_ini)
 
 
 class UI(tapi.HasTraits):
@@ -51,7 +51,7 @@ class UI(tapi.HasTraits):
         self.INI=ini.read()
     
     def _Init_fired(self):
-        ini=StringIO.StringIO(self.INI)
+        ini=io.StringIO(self.INI)
         self.ch=self.CHANNEL
         self.dev.Init(ini,self.ch)
         self.unit=self.dev.conf['channel_%d'%self.ch]['unit']

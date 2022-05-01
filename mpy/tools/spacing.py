@@ -26,7 +26,7 @@ def logspace(start,stop,factor=1.01,endpoint=0,precision=2):
             factor = pow((stop/start),1/(nf))
         except ArithmeticError:
             return []
-    lst = [round(start*factor**i, precision) for i in xrange(int(floor(nf))+1)]
+    lst = [round(start*factor**i, precision) for i in range(int(floor(nf))+1)]
     return lst
 
 def logspaceN(start,stop,number,endpoint=0,precision=2):
@@ -45,7 +45,7 @@ def logspaceN(start,stop,number,endpoint=0,precision=2):
         factor = pow(stop/start, 1.0/(nf-1))
     except ArithmeticError:
         return []
-    lst = [round(start*factor**i,precision) for i in xrange(number)]
+    lst = [round(start*factor**i,precision) for i in range(number)]
     return lst
 
 def linspace(start,stop,step,endpoint=0,precision=2):
@@ -66,7 +66,7 @@ def linspace(start,stop,step,endpoint=0,precision=2):
             step = (stop-start)/float(nf-1)
         except ArithmeticError:
             return []
-    lst = [round(start+step*i,precision) for i in xrange(int(floor(nf)))]
+    lst = [round(start+step*i,precision) for i in range(int(floor(nf)))]
     return lst
 
 def linspaceN(start,stop,number,endpoint=0,precision=2):
@@ -85,7 +85,7 @@ def linspaceN(start,stop,number,endpoint=0,precision=2):
         step = (stop-start)/float(nf-1)
     except ArithmeticError:
         return []
-    lst = [round(start+step*i,precision) for i in xrange(number)]
+    lst = [round(start+step*i,precision) for i in range(number)]
     return lst
 
 def logspaceTab(start, end, ftab=[1,3,6,10,100,1000], nftab=[20,15,10,20,20], endpoint=True):
@@ -134,7 +134,7 @@ def idxset(n, m):
     if n==0:
         return []
     if n>=m:
-        return range(m)
+        return list(range(m))
     step=1.0*m/n
     lst = []
     for i in range(n):

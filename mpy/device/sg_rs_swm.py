@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import StringIO
+import io
 import visa
 
 from scuq import *
@@ -108,7 +108,7 @@ def main():
                         unit: 'dBm'
                         outpoutstate: 0
                         """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
 
     sg=SIGNALGENERATOR()
     ui=UI(sg,ini=ini)

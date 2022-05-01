@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import StringIO
+import io
 import atexit
 import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
@@ -38,7 +38,7 @@ std_ini=format_block("""
                 name: B
                 unit: 'W'
                 """)
-std_ini=StringIO.StringIO(std_ini)
+std_ini=io.StringIO(std_ini)
 
 
 class UI(tapi.HasTraits):
@@ -64,7 +64,7 @@ class UI(tapi.HasTraits):
         self.INI=ini.read()
     
     def _Init_fired(self):
-        ini=StringIO.StringIO(self.INI)
+        ini=io.StringIO(self.INI)
         self.ch=self.CHANNEL
         self.pm.Init(ini,self.ch)
         atexit.register(self.pm.Quit)

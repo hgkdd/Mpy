@@ -3,7 +3,7 @@
 import functools
 import re
 import sys
-import StringIO
+import io
 from scuq import *
 from mpy.device.spectrumanalyzer import SPECTRUMANALYZER as SPECTRUMAN
 from mpy.tools.Configuration import fstrcmp
@@ -513,7 +513,7 @@ def main():
                         sweeppoints: 500
                         """)
                         # rbw: 3e6
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
         
     # #
     # # Zum Test des Treibers werden sogenannte Konsistenzabfragen ('assert' Bedingungen) verwendet, welche einen 'AssertationError' liefern,
@@ -560,13 +560,13 @@ def main():
             if test == "assert":
                 assert ret==value, '%s() returns freq=%s instead of %s'%(funk,ret,value)
             else:
-                print '%s(): Rückgabewert: %s   Sollwert: %s'%(funk,ret,value)
+                print('%s(): Rückgabewert: %s   Sollwert: %s'%(funk,ret,value))
         else:
-            print '%s(): Rückgabewert: %s'%(funk,ret)
+            print('%s(): Rückgabewert: %s'%(funk,ret))
 
     err,spectrum=sp.GetSpectrum()
     assert err==0, 'GetSpectrum() fails with error %d'%(err)
-    print spectrum
+    print(spectrum)
     
     #err=sp.Quit()
     #assert err==0, 'Quit() fails with error %d'%(err)

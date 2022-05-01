@@ -60,11 +60,11 @@ if __name__ == '__main__':
              l=2)
         return l
 
-    print t2(1,2  ,  4\
+    print(t2(1,2  ,  4\
 \
-,t=0)
+,t=0))
 
     c='l=t1()'
     exec(c)
-    print l
+    print(l)
 

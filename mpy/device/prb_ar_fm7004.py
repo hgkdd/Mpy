@@ -3,7 +3,7 @@
 import sys
 import visa
 import time
-import StringIO
+import io
 from scuq import si,quantities,ucomponents
 from mpy.tools.Configuration import fstrcmp
 from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
@@ -96,7 +96,7 @@ def test():
                         name: EField
                         unit: Voverm
                         """)
-    ini=StringIO.StringIO(ini)
+    ini=io.StringIO(ini)
     dev=FIELDPROBE()
     dev.Init(ini)
     return dev
@@ -132,7 +132,7 @@ def main():
                         name: EField
                         unit: Voverm
                         """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
     dev=FIELDPROBE()
     ui=UI(dev,ini=ini)
     ui.configure_traits()

@@ -89,7 +89,7 @@ class NPORT(DRIVER):
 
     def GetData(self, what):
         self.error=0
-        allwhat=self.data.keys()
+        allwhat=list(self.data.keys())
         whatguess=None
         for w in allwhat:
             if what.lower().replace(' ','') == w.lower().replace(' ',''):
@@ -106,7 +106,7 @@ ANTENNA=CABLE=NPORT
 
 def main():
     import sys
-    import StringIO
+    import io
     from mpy.tools.util import format_block
     import scuq
 
@@ -148,7 +148,7 @@ def main():
                                                                 #90 [0.2, 50]
                                             '''))
                          """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
 
     cbl=NPORT()
     err=cbl.Init(ini)
@@ -157,7 +157,7 @@ def main():
         cbl.SetFreq(freq)
         err, uq = cbl.GetData(what='S21')
         val, unc, unit=ctx.value_uncertainty_unit(uq)
-        print freq, uq, abs(val), abs(unc), unit
+        print(freq, uq, abs(val), abs(unc), unit)
 
 if __name__ == '__main__':
     main()

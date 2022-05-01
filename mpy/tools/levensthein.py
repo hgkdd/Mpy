@@ -51,7 +51,7 @@ def fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
         if (ignorecase and a.lower()==p.lower()) or a==p:
             dists[i]=1
 
-    pairs=zip(dists,possibilities)
+    pairs=list(zip(dists,possibilities))
     #print pairs
     return [v for d,v in sorted(pairs,None,None,True) if d >= cutoff]
 
@@ -64,7 +64,7 @@ def levenshtein(a,b, ch_cost=1, add_cost=1, del_cost=1):
         a,b = b,a
         n,m = m,n
         
-    current = range(n+1)
+    current = list(range(n+1))
     for i in range(1,m+1):
         previous, current = current, [i]+[0]*n
         for j in range(1,n+1):
@@ -79,4 +79,4 @@ def levenshtein(a,b, ch_cost=1, add_cost=1, del_cost=1):
 if __name__=="__main__":
     from sys import argv
     #print levenshtein(argv[1],argv[2],ch_cost=float(argv[3]), add_cost=float(argv[4]), del_cost=float(argv[5]))
-    print fstrcmp(argv[1], ('ON','OFF'))
+    print(fstrcmp(argv[1], ('ON','OFF')))

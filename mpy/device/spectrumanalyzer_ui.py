@@ -2,7 +2,7 @@
 
 #Es wird benötigt enthought.chaco und enthought.enable
 
-import StringIO
+import io
 import enthought.traits.api as tapi
 import enthought.traits.ui.api as tuiapi
 import enthought.traits.ui.menu as tuim
@@ -50,7 +50,7 @@ std_ini=format_block("""
                 sweeptime: 10e-3
                 sweeppoints: 500
                 """)
-std_ini=StringIO.StringIO(std_ini)
+std_ini=io.StringIO(std_ini)
 
 
 
@@ -199,7 +199,7 @@ class UI(tapi.HasTraits):
         self.SPECTRUM=str(self.power[0])+"\n\n\n"+str(self.power[1])
                             
     def _Init_fired(self):
-        ini=StringIO.StringIO(self.INI)
+        ini=io.StringIO(self.INI)
         self.sp.Init(ini)
         
         #Alle Get Funktionen einmal aufrufen und so die Anzeige mit aktuellen Werten belegen.

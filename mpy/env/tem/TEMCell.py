@@ -151,7 +151,7 @@ class TEMCell(Measure):
                     if hassg:
                         try:
                             level = self.setLevel(mg, names, SGLevel)
-                        except AmplifierProtectionError, _e:
+                        except AmplifierProtectionError as _e:
                             self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
 
                     # set frequency for all devices
@@ -287,7 +287,7 @@ class TEMCell(Measure):
 ##          pprint.pprint(self.processedData_e0y[e0y_description]['e0y'])
             e0y_xydict={}
             e0ydata=self.processedData_e0y[e0y_description]['e0y']
-            e0yfreqs=e0ydata.keys()
+            e0yfreqs=list(e0ydata.keys())
             e0yfreqs.sort()
             for e0yf in e0yfreqs:
                 e0y_xydict[e0yf]=e0ydata[e0yf][0][0][comp_index]
@@ -295,7 +295,7 @@ class TEMCell(Measure):
         if not callable(e0y):
             self.messenger(util.tstamp()+" ERROR: e0y is not callable. Abording evaluation.", [])
             return None
-        if not self.rawData_Emission.has_key(description):
+        if description not in self.rawData_Emission:
             self.messenger(util.tstamp()+" ERROR: description '%s' not found. Abording evaluation."%description, [])
             return None
 
@@ -310,12 +310,12 @@ class TEMCell(Measure):
 
         voltages = self.rawData_Emission[description]['voltage']
         noise=self.rawData_Emission[description]['noise']
-        freqs = voltages.keys()
+        freqs = list(voltages.keys())
         freqs.sort()
         for f in freqs:
             self.processedData_Emission[description]['Prad'][f]={}
             self.processedData_Emission[description]['Prad_noise'][f]={}
-            ports=voltages[f].keys()
+            ports=list(voltages[f].keys())
             ports.sort()
             for port in ports:
                 self.processedData_Emission[description]['Prad'][f][port]=[]
@@ -324,7 +324,7 @@ class TEMCell(Measure):
                 ndata=noise[f][port]
                 #import pprint
                 #pprint.pprint(data)
-                positions=data.keys()
+                positions=list(data.keys())
                 #print positions
                 for k in range(len(data[positions[0]])):
                     maxv = Quantity(VOLT, -1)
@@ -427,7 +427,7 @@ class TEMCell(Measure):
                         cc = math.sqrt(dmax_f*TEMCell.eta0/(4*math.pi)*pr)
                         Emax[f][port]=[]
                         dct={}
-                        for _k, _val in gmax.items():
+                        for _k, _val in list(gmax.items()):
                             dct[_k]=cc*_val
                         dct['total'] = max(dct['v'],dct['h'])
                         Emax[f][port].append(dct)
@@ -455,7 +455,7 @@ class TEMCell(Measure):
            
         """
         sum=0.0
-        for m in xrange(1,max_m+1,2):
+        for m in range(1,max_m+1,2):
             M=m*math.pi/a
             ch=math.cosh(M*y)
             c=math.cos(M*x)
@@ -556,7 +556,7 @@ class TEMCell(Measure):
 
             if receiverconf is None:
                 receiverconf = {}
-            rcfreqs = receiverconf.keys()
+            rcfreqs = list(receiverconf.keys())
             rcfreqs.sort()
             rcfreqs.reverse()
 
@@ -568,7 +568,7 @@ class TEMCell(Measure):
                 noise=self.rawData_Emission[description]['noise'].copy()
                 try:
                     voltage=self.rawData_Emission[description]['voltage'].copy()
-                    eut_positions=voltage[0].keys()
+                    eut_positions=list(voltage[0].keys())
                     positions=[_p for _p in positions if not _p in eut_positions]
                 except KeyError:   # as after noise -> no voltages yet
                     pass
@@ -630,15 +630,15 @@ Quit: quit measurement.
                 while 1:
                     self._HandleUserInterrupt(locals())    
                     nbresult = mg.NBRead(receiverlist, nbresult)
-                    new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                    olddevs = nbresult.keys()[:]
+                    new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                    olddevs = list(nbresult.keys())[:]
                     if len(new_devs):
                         self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                     if len(nbresult)==len(receiverlist):
                         break
                 for i in range(nports):
                     n = names['receiver'][i]
-                    if nbresult.has_key(n):
+                    if n in nbresult:
                         # add path correction here
                         # print n, nbresult[n]
                         PPort = nbresult[n]
@@ -740,8 +740,8 @@ Select EUT position.
                     while 1:
                         self._HandleUserInterrupt(locals())    
                         nbresult = mg.NBRead(nblist, nbresult)
-                        new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                        olddevs = nbresult.keys()[:]
+                        new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                        olddevs = list(nbresult.keys())[:]
                         if len(new_devs):
                             self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])                            
                         if len(nbresult)==len(nblist):
@@ -751,7 +751,7 @@ Select EUT position.
                     # ports                
                     for i in range(nports):
                         n = names['receiver'][i]
-                        if nbresult.has_key(n):
+                        if n in nbresult:
                             # add path correction here
                             PPort = nbresult[n]
                             self.__addLoggerBlock(block, n, 'Reading of the receiver for position %d'%i, nbresult[n], {})
@@ -870,7 +870,7 @@ Select EUT position.
 
         mg=mgraph.MGraph(dotfile)
         ddict=mg.CreateDevices()
-        for k,v in ddict.items():
+        for k,v in list(ddict.items()):
             globals()[k] = v
             
         self.messenger(util.tstamp()+" Init devices...", [])
@@ -887,7 +887,7 @@ Select EUT position.
 
             try:
                 level = self.setLevel(mg, names, SGLevel)
-            except AmplifierProtectionError, _e:
+            except AmplifierProtectionError as _e:
                 self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
                 raise  # re raise to reach finaly clause
                 
@@ -898,7 +898,7 @@ Select EUT position.
                 efields=self.rawData_e0y[description]['efield'].copy()
                 
                 edat = self.rawData_e0y[description]['efield']
-                fr=edat.keys()
+                fr=list(edat.keys())
                 freqs=[f for f in freqs if not f in fr]
                 msg = "List of remaining frequencies:\n%r\n"%(freqs)
                 but = []
@@ -965,8 +965,8 @@ Select EUT position.
                 while 1:
                     self._HandleUserInterrupt(locals())    
                     nbresult = mg.NBRead(nblist, nbresult)
-                    new_devs=[i for i in nbresult.keys() if i not in olddevs]
-                    olddevs = nbresult.keys()[:]
+                    new_devs=[i for i in list(nbresult.keys()) if i not in olddevs]
+                    olddevs = list(nbresult.keys())[:]
                     if len(new_devs):
                         self.messenger(util.tstamp()+" Got answer from: "+str(new_devs), [])
                     if len(nbresult)==len(nblist):
@@ -975,7 +975,7 @@ Select EUT position.
 
                 # pfwd
                 n = names['pmfwd']
-                if nbresult.has_key(n):
+                if n in nbresult:
                     PFwd = nbresult[n]
                     self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
                     self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -989,7 +989,7 @@ Select EUT position.
                     self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                 # pbwd
                 n = names['pmbwd']
-                if nbresult.has_key(n):
+                if n in nbresult:
                     PBwd = nbresult[n]
                     self.__addLoggerBlock(block, n, 'Reading of the bwd power meter', nbresult[n], {})
                     self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
@@ -1003,7 +1003,7 @@ Select EUT position.
                 # read field probes
                 for i in range(nprb):
                     n = names['fp'][i]
-                    if nbresult.has_key(n):
+                    if n in nbresult:
                         self.__addLoggerBlock(block, n, 'Reading of the e-field probe number %d'%i, nbresult[n], {})
                         self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {}) 
                         efields = self.__insert_it (efields, nbresult[n], PFwd, PBwd, f, 0, 0)
@@ -1096,28 +1096,28 @@ Select EUT position.
         deslist = self.MakeDeslist(thedata, description)
         whatlist = self.MakeWhatlist(thedata, what)
         for d in deslist:
-            print "# Description:", d
+            print("# Description:", d)
             for w in whatlist:
-                print "# ", w
+                print("# ", w)
                 data = thedata[d][w]
                 try:
-                    freqs = data.keys()
+                    freqs = list(data.keys())
                     freqs.sort()
                     for f in freqs:
-                        pees = data[f].keys()
+                        pees = list(data[f].keys())
                         pees.sort()
                         for p in pees:
-                            poses=data[f][p].keys()
+                            poses=list(data[f][p].keys())
                             poses.sort()
                             for pos in poses:
-                                print "f:", f, "port:", p, "pos:", pos,
+                                print("f:", f, "port:", p, "pos:", pos, end=' ')
                                 item = data[f][p][pos]
                                 self.out(item)
-                                print
+                                print()
                 except:  # data has no keys
                     item = data
                     self.out(item)
-                    print
+                    print()
 
     def OutputProcessedData_e0y (self, description=None, what=None, fname=None):
         thedata = self.processedData_e0y
@@ -1155,34 +1155,34 @@ Select EUT position.
         whatlist = self.MakeWhatlist(thedata, what)
         for d in deslist:
             data = thedata[d]
-            print "Description:", d
+            print("Description:", d)
             for w in whatlist:
-                if data.has_key(w):
-                    print w, ":"
+                if w in data:
+                    print(w, ":")
                     try:
-                        freqs = data[w].keys()
+                        freqs = list(data[w].keys())
                         freqs.sort()
                         for f in freqs:
-                            print f,
+                            print(f, end=' ')
                             item = data[w][f]
                             self.out (item)
-                            print
+                            print()
                     except:
                         item=data[w]
                         self.out (item)
-                        print
+                        print()
 
     def Evaluate_e0y(self, description=None):
         """
         """
         self.messenger(util.tstamp()+" Start of evaluation of e0y calibration with description %s"%description, [])
-        if not self.rawData_e0y.has_key(description):
+        if description not in self.rawData_e0y:
             self.messenger(util.tstamp()+" Description %s not found."%description, [])
             return -1
 
         efields = self.rawData_e0y[description]['efield']
         #pprint.pprint(efields)
-        freqs = efields.keys()
+        freqs = list(efields.keys())
         freqs.sort()
         #print 'Freqs:', freqs
 
@@ -1191,7 +1191,7 @@ Select EUT position.
         for f in freqs:
             self.processedData_e0y[description]['e0y'][f]={}
             e0yf=self.processedData_e0y[description]['e0y'][f]
-            ports =efields[f].keys()
+            ports =list(efields[f].keys())
             ports.sort()
             #print 'Ports:', ports
             for port in ports:

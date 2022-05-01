@@ -18,7 +18,7 @@ from scuq import *
 from mpy.device.device import CONVERT, Device
 
 #from mpy.device.driver import DRIVER
-from driver_new import DRIVER
+from .driver_new import DRIVER
 
 
 class NETWORKANALYZER(DRIVER):
@@ -544,6 +544,6 @@ if __name__ == '__main__':
         d.SetVirtual(False)
 
     err, des=d.GetDescription()
-    print "Description: %s"%des
+    print("Description: %s"%des)
 
     d.Quit()

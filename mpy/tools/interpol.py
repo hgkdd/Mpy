@@ -137,7 +137,7 @@ class UQ_interpol(object):
         self.vdct={}
         self.edct={}
         ctx=ucomponents.Context()
-        for f,d in self.dct.items():
+        for f,d in list(self.dct.items()):
             self.vdct[f],self.edct[f],self.unit=ctx.value_uncertainty_unit(d)
         self.vi=cplx_interpol(self.vdct)
         self.ei=cplx_interpol(self.edct)
@@ -155,15 +155,15 @@ if __name__ == '__main__':
     data={}
     for i in range(1,N):
         data[i]=i*dm*cmath.exp(1j*math.radians(i*da))
-        print i, data[i].real, data[i].imag
-    print
-    print
+        print(i, data[i].real, data[i].imag)
+    print()
+    print()
 
     ci=cplx_interpol(data)
     for i in range(10,9*N):
         j=i*0.1
         d=ci(j)
-        print j, d.real, d.imag
+        print(j, d.real, d.imag)
         
         
     

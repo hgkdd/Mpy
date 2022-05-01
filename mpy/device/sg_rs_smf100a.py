@@ -2,7 +2,7 @@
 #
 import sys
 import bidict
-import StringIO
+import io
 #from scuq import *
 from mpy.tools.Configuration import fstrcmp
 from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
@@ -203,7 +203,7 @@ def main():
                         unit: dBm
                         outpoutstate: 0
                         """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
     sg=SIGNALGENERATOR()
     ui=UI(sg,ini=ini)
     ui.configure_traits()
@@ -241,7 +241,7 @@ def test():
                         unit: dBm
                         outpoutstate: 0
                         """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
     sg=SIGNALGENERATOR()
     sg.Init(ini)
     return sg

@@ -10,7 +10,7 @@ def switch (swstr=None, fstr=None, fs=None):
     '''
     f = get_var_from_nearest_outerframe(fstr)
     sw = get_var_from_nearest_outerframe(swstr)
-    print "In switch: f = %s, fs = %s, sw = %s"%(str(f),str(fs),str(sw))
+    print("In switch: f = %s, fs = %s, sw = %s"%(str(f),str(fs),str(sw)))
     if None in (f, sw, fs):
         return -1
     

@@ -102,7 +102,7 @@ class AmplifierTest(Measure):
                     if hassg:
                         try:
                             level = self.setLevel(mg, names, SGLevel)
-                        except AmplifierProtectionError, _e:
+                        except AmplifierProtectionError as _e:
                             self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
 
                     # set frequency for all devices
@@ -337,7 +337,7 @@ Quit: quit measurement.
             out=file(fname, 'w')
             
         pd=self.processedData
-        if not pd.has_key(description):
+        if description not in pd:
             #return silently
             return 0
         pdd=pd[description]
@@ -408,7 +408,7 @@ FILE = StringIO.StringIO(format_block('''
         pdic3=pd.setdefault('input_compression_3dB', {})
         pdoc1=pd.setdefault('output_compression_1dB', {})
         pdoc3=pd.setdefault('output_compression_3dB', {})
-        freqs=rd['amp_pin'].keys()
+        freqs=list(rd['amp_pin'].keys())
         r=re.compile(r'[(Quantity)\(, \)]*')
         idx=0
         while True:
@@ -423,7 +423,7 @@ FILE = StringIO.StringIO(format_block('''
                 pdic3.setdefault(f, [])
                 pdoc1.setdefault(f, [])
                 pdoc3.setdefault(f, [])
-                sglvs=pin.keys()  # e.g. "Quantity(W, 1e-6)"
+                sglvs=list(pin.keys())  # e.g. "Quantity(W, 1e-6)"
                 u_l=[r.split(lv)[1:3] for lv in sglvs]
                 for u,lv in sorted(u_l, key=lambda l: float(l[1])):
                     sgkey="Quantity(%s, %s)"%(u, lv)
@@ -514,7 +514,7 @@ FILE = StringIO.StringIO(format_block('''
                 
 
 if __name__ == '__main__':
-    import cPickle as pickle
+    import pickle as pickle
     from numpy import linspace
     from scuq.quantities import Quantity
     from scuq.si import WATT

@@ -23,7 +23,7 @@ class AMPLIFIER(AMP):
 
 def main():
     import sys
-    import StringIO
+    import io
     import time
     
     from mpy.tools.util import format_block
@@ -72,20 +72,20 @@ def main():
                                                                 4.2e9 0
                                                                 '''))
                          """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
 
     amp=AMPLIFIER()
     err=amp.Init(ini)
-    print amp.GetDescription()
+    print(amp.GetDescription())
     ctx=scuq.ucomponents.Context()
     while(True):
-        freq=float(raw_input("Freq / Hz: "))
+        freq=float(input("Freq / Hz: "))
         if freq < 0:
             break
         amp.SetFreq(freq)
         err, uq = amp.GetData(what='S21')
         val, unc, unit=ctx.value_uncertainty_unit(uq)
-        print freq, uq, val, unc, unit
+        print(freq, uq, val, unc, unit)
     err=amp.Quit()
 
 if __name__ == '__main__':

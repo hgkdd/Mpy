@@ -17,7 +17,7 @@ def extrap1d(interpolator):
     def ufunclike(xs):
         if not hasattr(xs, '__iter__'):
             xs=[xs]
-        return scipy.array(map(pointwise, scipy.array(xs)))
+        return scipy.array(list(map(pointwise, scipy.array(xs))))
 
     return ufunclike
 
@@ -44,7 +44,7 @@ class SG(object):
     def __init__(self):
         pass
     def SetLevel(self, lv):
-        print "SG:", lv
+        print("SG:", lv)
 
 class Leveler(object):
     def __init__(self, sg, amp, pin=None):
@@ -90,7 +90,7 @@ class Leveler(object):
             re=abs(pout-soll)/soll
             self.x.append(pin)
             self.y.append(pout)
-            print i, pin, pout, soll, re
+            print(i, pin, pout, soll, re)
             if re<=relerr:
                 break
             if (pin==self.amp.PinMax) and (pout <= soll):
@@ -113,8 +113,8 @@ if __name__ == '__main__':
     #interp=regler.extrap
     #print interp(2e-2), amp.Pout(2e-2)
     regler.adjust_level(soll,maxiter=10)
-    sampx=regler.samples.keys()
-    sampy=regler.samples.values()
+    sampx=list(regler.samples.keys())
+    sampy=list(regler.samples.values())
     x=scipy.linspace(min(sampx),2*max(sampx),100)
     y=amp.Pout(x)
     pl.plot(regler.x,regler.y, 'ro', sampx, sampy, 'bx', x, y, 'k-')

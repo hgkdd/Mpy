@@ -5,7 +5,7 @@
 # System-specific parameters and functions
 import sys
 # implements a file-like class, StringIO, that reads and writes a string buffer
-import StringIO
+import io
 # enables you to control all kinds of measurement equipment through various busses (GPIB, RS232, USB)
 import visa
 
@@ -141,7 +141,7 @@ def main():
                         unit: 'dBm'
                         outputstate: 0
                         """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
 
     # define a signal level
     lv=quantities.Quantity(si.WATT, 1e-2)

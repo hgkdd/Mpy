@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
-import StringIO
+import io
 from scuq import *
-from signalgenerator import SIGNALGENERATOR
+from .signalgenerator import SIGNALGENERATOR
 #import pprint
 
 class SMR(SIGNALGENERATOR):
@@ -67,7 +67,7 @@ class SMR(SIGNALGENERATOR):
                       [(':OUTPUT1:STATE ON', None)])]
 
         for k, vals, actions in presets:
-            print k, vals, actions
+            print(k, vals, actions)
             try:
                 v=self.conf[sec][k]
                 #print sec, k, v
@@ -115,7 +115,7 @@ def main():
                         unit: 'dBm'
                         outpoutstate: 0
                         """)
-        ini=StringIO.StringIO(ini)
+        ini=io.StringIO(ini)
 
 
     lv=quantities.Quantity(si.WATT, 1e-4)
