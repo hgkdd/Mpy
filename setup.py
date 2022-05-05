@@ -12,7 +12,12 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url='http://tu-dresden.de/et/tet',
-    packages=setuptools.find_packages(),
-    #package_dir = {'':'mpy'},
-    #data_files=[('mpy', ['mpy/LICENSE'])],
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: all rights reserved",
+        "Operating System :: OS Independent",
+    ],
+    package_dir={"": "src"},
+    packages=setuptools.find_packages(where="src"),
+    python_requires=">=3.6",
 )

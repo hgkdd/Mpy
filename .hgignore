@@ -14,8 +14,14 @@ docs/html/*
 docs/latex/*
 .ropeproject/*
 mpy/__version__.py
+src/mpy/_version.py
+venv/*
+.idea/*
+*egg-info*
 
 syntax: regexp
 .*\#.*\#$
 syntax: regexp
 ^mpy/device/plyparser_DatFile_parsetab\.py$
+# Default ignored files
+.idea/workspace.xml

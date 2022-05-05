@@ -5,10 +5,10 @@ class _Getch(object):
     def __init__(self):
         try:
             self.impl = _GetchWindows()
-        except ImportError:
+        except (ModuleNotFoundError,ImportError):
             try:
                 self.impl = _GetchMacCarbon()
-            except AttributeError:
+            except (ModuleNotFoundError,AttributeError):
                 self.impl = _GetchUnix()
 
     def __call__(self): 

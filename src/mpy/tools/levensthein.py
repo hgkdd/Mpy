@@ -53,8 +53,8 @@ def fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
 
     pairs=list(zip(dists,possibilities))
     #print pairs
-    return [v for d,v in sorted(pairs,None,None,True) if d >= cutoff]
-
+    #return [v for d,v in sorted(pairs,None,None,True) if d >= cutoff] 2.7
+    return [v for d,v in sorted(pairs,key=None,reverse=True) if d >= cutoff]
 
 def levenshtein(a,b, ch_cost=1, add_cost=1, del_cost=1):
     "Calculates the Levenshtein distance between a and b."

@@ -210,7 +210,7 @@ def main():
 
 def test():
     from mpy.tools.util import format_block
-    from mpy.device.signalgenerator_ui import UI as UI
+    #from mpy.device.signalgenerator_ui import UI as UI
     #
     # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
@@ -256,5 +256,5 @@ def test():
 # Methoden importiert.
 #
 if __name__ == '__main__':
-    main()
+    test()
 

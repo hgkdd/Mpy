@@ -43,7 +43,7 @@ class Device(object):
     # Err Codes of the CVI drivers
     _ErrorDict=dict([(2**i, n) for i,n in enumerate(_ErrorNames)])
     _Errors=dict([(n, 2**i) for i,n in enumerate(_ErrorNames)])
-    del i,n
+    #del i,n
 
     # common functions of all CVI drivers
     # keys are dll function names
@@ -68,8 +68,8 @@ class Device(object):
             "Spectrumanalyzer",
             "VectorNetworkanalyser")
     _types=tuple([a.lower() for a in _types])
-    del a
-    
+    #del a
+
     # prefixes of function names used in CVI drivers, e.g. UMD_SG_init, UMD_PM_init, ... 
     _prefix=("UMD_SG_",
             "UMD_PM_",
