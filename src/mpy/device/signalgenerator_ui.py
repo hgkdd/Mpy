@@ -2,9 +2,12 @@
 
 import io
 #from mpy.device.signalgenerator import SIGNALGENERATOR
-import enthought.traits.api as tapi
-import enthought.traits.ui.api as tuiapi
-import enthought.traits.ui.menu as tuim
+import traits.api as tapi
+from traits.etsconfig.api import ETSConfig
+ETSConfig.toolkit = "wx"
+
+import traitsui.api as tuiapi
+import traitsui.menu as tuim
 
 from scuq.quantities import Quantity
 from mpy.tools.util import format_block

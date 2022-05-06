@@ -15,7 +15,7 @@ class DRIVER(object):
     """
     Parent class for all py-drivers.
     
-    Beside the common API methoth for all drivers (see below) this class 
+    Beside the common API method for all drivers (see below) this class
     also implements the following low level methods:
 
        .. method:: write(cmd)

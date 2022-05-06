@@ -8,11 +8,11 @@
 
 
 
-from enthought.traits.has_traits import MetaHasTraits
-import enthought.traits.api as tapi
-import enthought.traits.ui.api as tuiapi
-import enthought.traits.ui.menu as tuim
-
+import traits.api as tapi
+from traits.etsconfig.api import ETSConfig
+ETSConfig.toolkit = "wx"
+import traitsui.api as tuiapi
+import traitsui.menu as tuim
 import io
 import re
 import inspect

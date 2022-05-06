@@ -2,11 +2,13 @@
 #Es wird benötigt enthought.chaco und enthought.enable
 
 import io
-import enthought.traits.api as tapi
-import enthought.traits.ui.api as tuiapi
-import enthought.traits.ui.menu as tuim
-from enthought.chaco.api import Plot, ArrayPlotData
-from enthought.enable.component_editor import ComponentEditor
+import traits.api as tapi
+from traits.etsconfig.api import ETSConfig
+ETSConfig.toolkit = "wx"
+import traitsui.api as tuiapi
+import traitsui.menu as tuim
+from chaco.api import Plot, ArrayPlotData
+from enable.component_editor import ComponentEditor
 
 from scuq.quantities import Quantity
 from mpy.tools.util import format_block
