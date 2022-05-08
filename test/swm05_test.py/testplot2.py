@@ -9,7 +9,7 @@ from numpy.random import uniform
 #y = uniform(-2,2,npts)
 #z = x*np.exp(-x**2-y**2)
 
-infile=file("test.dat",'r')
+infile=open("test.dat",'r')
 x=[]
 y=[]
 z=[]

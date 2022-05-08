@@ -36,7 +36,7 @@ class AmplifierTest(Measure):
         if dct['logfilename'] is None:
             logfile = None
         else:
-            logfile = file(dct['logfilename'], "a+")
+            logfile = open(dct['logfilename'], "a+")
         self.__dict__.update(dct)
         self.logfile = logfile
         self.messenger=self.stdUserMessenger
@@ -110,7 +110,7 @@ class AmplifierTest(Measure):
                     if hassg:
                         try:
                             level = self.setLevel(mg, names, SGLevel)
-                        except AmplifierProtectionError, _e:
+                        except AmplifierProtectionError as _e:
                             self.messenger(util.tstamp()+" Can not set signal generator level. Amplifier protection raised with message: %s"%_e.message, [])
 
                     # set frequency for all devices
@@ -365,4 +365,4 @@ if __name__ == '__main__':
                names=names,
                freqs=linspace(10e3,200e6,10),
                levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-30, 0, 3)])
-    pickle.dump (AT, file('at.p', 'wb'), 2)
+    pickle.dump (AT, open('at.p', 'wb'), 2)

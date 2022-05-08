@@ -28,7 +28,7 @@ class AmplifierTest(Measure):
         # if dct['logfilename'] is None:
             # logfile = None
         # else:
-            # logfile = file(dct['logfilename'], "a+")
+            # logfile = open(dct['logfilename'], "a+")
         # self.__dict__.update(dct)
         # self.logfile = logfile
         # self.messenger=self.stdUserMessenger
@@ -334,7 +334,7 @@ Quit: quit measurement.
         if fname==None:
             out=sys.stdout
         else:
-            out=file(fname, 'w')
+            out=open(fname, 'w')
             
         pd=self.processedData
         if description not in pd:
@@ -368,7 +368,7 @@ VIRTUAL = 0
 NAME = S21
 UNIT = dB
 INTERPOLATION = LOG
-FILE = StringIO.StringIO(format_block('''
+FILE = io.StringIO(format_block('''
                                     FUNIT: Hz
                                     UNIT: dB
                                     ABSERROR: 0.0
@@ -377,7 +377,7 @@ FILE = StringIO.StringIO(format_block('''
 NAME = MAXIN
 UNIT = dBm
 INTERPOLATION = LOG
-FILE = StringIO.StringIO(format_block('''
+FILE = io.StringIO(format_block('''
                                     FUNIT: Hz
                                     UNIT: dBm
                                     ABSERROR: 0.0

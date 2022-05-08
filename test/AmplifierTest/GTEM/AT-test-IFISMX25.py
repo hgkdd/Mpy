@@ -44,10 +44,10 @@ if arg.startswith('m'):
                names=names,
                freqs=freqs,
                levels=levels, virtual=False, delay=1.0)
-    pickle.dump (AT, file('%s.p'%description, 'wb'), 2)
+    pickle.dump (AT, open('%s.p'%description, 'wb'), 2)
 else:
-    AT=pickle.load (file('%s.p'%description, 'rb'))
+    AT=pickle.load (open('%s.p'%description, 'rb'))
     AT.GetGainAndCompression(description=description)
-    pickle.dump (AT, file('%s-processed.p'%description, 'wb'), 2)
-    AT=pickle.load (file('%s-processed.p'%description, 'rb'))
+    pickle.dump (AT, open('%s-processed.p'%description, 'wb'), 2)
+    AT=pickle.load (open('%s-processed.p'%description, 'rb'))
     AT.OutputIniFile(description=description, fname='amp_ifi_smx25.ini', driver="amp_ifi_smx25.py", gpib=9)

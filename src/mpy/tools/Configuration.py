@@ -44,7 +44,7 @@ class Configuration(object):
         
         try:
             # try to open file
-            fp=file(os.path.normpath(ininame),'r')
+            fp=open(os.path.normpath(ininame),'r')
             
         except:
             # assume a file like object

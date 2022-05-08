@@ -33,8 +33,8 @@ if True:
                names=names,
                freqs=freqs,
                levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-30, 3, 34)])
-    pickle.dump (AT, file('%s-new.p'%description, 'wb'), 2)
+    pickle.dump (AT, open('%s-new.p'%description, 'wb'), 2)
 else:
-    AT=pickle.load (file('%s-new.p'%description, 'rb'))
+    AT=pickle.load (open('%s-new.p'%description, 'rb'))
     AT.GetGainAndCompression(description=description)
-    pickle.dump (AT, file('%s-new-processed.p'%description, 'wb'), 2)
+    pickle.dump (AT, open('%s-new-processed.p'%description, 'wb'), 2)

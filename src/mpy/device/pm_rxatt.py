@@ -33,7 +33,7 @@ ini20dBLF=format_block("""
                     NAME = S21
                     UNIT = dB
                     INTERPOLATION = LOG
-                    FILE = StringIO.StringIO(format_block('''
+                    FILE = io.StringIO(format_block('''
                                                         FUNIT: Hz
                                                         UNIT: dB
                                                         0.000000e+07 [-20.25, -82.65] [-20.05, -81.65] [-19.85, -80.65]
@@ -262,7 +262,7 @@ ini20dBHF=format_block("""
                     NAME = S21
                     UNIT = dB
                     INTERPOLATION = LOG
-                    FILE = StringIO.StringIO(format_block('''
+                    FILE = io.StringIO(format_block('''
                                                         FUNIT: Hz
                                                         UNIT: dB
                                                         0.000000e+07 [-20.27, -75.63] [-20.07, -74.63] [-19.87, -73.63]
@@ -490,7 +490,7 @@ ini0dBHF=format_block("""
                     NAME = S21
                     UNIT = dB
                     INTERPOLATION = LOG
-                    FILE = StringIO.StringIO(format_block('''
+                    FILE = io.StringIO(format_block('''
                                                         FUNIT: Hz
                                                         UNIT: dB
                                                         0.000000e+07 [-0.15, -58.03] [0.05, -57.03] [0.25, -56.03]
@@ -718,7 +718,7 @@ ini0dBLF=format_block("""
                     NAME = S21
                     UNIT = dB
                     INTERPOLATION = LOG
-                    FILE = StringIO.StringIO(format_block('''
+                    FILE = io.StringIO(format_block('''
                                                         FUNIT: Hz
                                                         UNIT: dB
                                                         0.000000e+07 [-0.11, -65.75] [0.09, -64.75] [0.29, -63.75]

@@ -26,7 +26,7 @@ amp_ini=format_block("""
                          NAME = S21
                          UNIT = dB
                          INTERPOLATION = LOG
-                         FILE = StringIO.StringIO(format_block('''
+                         FILE = io.StringIO(format_block('''
                                                                 FUNIT: Hz
                                                                 UNIT: dB
                                                                 ABSERROR: 0.5
@@ -37,7 +37,7 @@ amp_ini=format_block("""
                          NAME = MAXIN
                          UNIT = dBm
                          INTERPOLATION = LOG
-                         FILE = StringIO.StringIO(format_block('''
+                         FILE = io.StringIO(format_block('''
                                                                 FUNIT: Hz
                                                                 UNIT: dBm
                                                                 ABSERROR: 0.0
@@ -45,7 +45,7 @@ amp_ini=format_block("""
                                                                 1e9 0
                                                                 '''))
                          """)
-amp_ini=StringIO.StringIO(amp_ini)
+amp_ini=io.StringIO(amp_ini)
         
 sg_ini=format_block("""
                         [DESCRIPTION]
@@ -69,7 +69,7 @@ sg_ini=format_block("""
                         unit: 'dBm'
                         outpoutstate: 0
                         """)
-sg_ini=StringIO.StringIO(sg_ini)
+sg_ini=io.StringIO(sg_ini)
 
 lv=quantities.Quantity(si.WATT, 1e-4)
 

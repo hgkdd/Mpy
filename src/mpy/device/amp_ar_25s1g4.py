@@ -53,7 +53,7 @@ def main():
                          NAME = S21
                          UNIT = dB
                          INTERPOLATION = LOG
-                         FILE = StringIO.StringIO(format_block('''
+                         FILE = io.StringIO(format_block('''
                                                                 FUNIT: Hz
                                                                 UNIT: dB
                                                                 ABSERROR: 0.0
@@ -64,7 +64,7 @@ def main():
                          NAME = MAXIN
                          UNIT = dBm
                          INTERPOLATION = LOG
-                         FILE = StringIO.StringIO(format_block('''
+                         FILE = io.StringIO(format_block('''
                                                                 FUNIT: Hz
                                                                 UNIT: dBm
                                                                 ABSERROR: 0.0

@@ -3,8 +3,9 @@
 import ply.lex as lex
 import ply.yacc as yacc
 import os
-import io # for evaluation of a string containing a file like object
-from mpy.tools.util import format_block, get_var_from_nearest_outerframe, locate
+import io
+from mpy.tools.util import format_block, locate
+
 
 class Parser(object):
     """
@@ -16,17 +17,17 @@ class Parser(object):
     def __init__(self, **kw):
         self.debug = kw.get('debug', 0)
         self.filename = kw.get('filename', None)
-        self.SearchPaths=kw.get('SearchPaths', None)
-        if self.SearchPaths == None:
-            self.SearchPaths=[os.getcwd()]
-        self.names = { }
+        self.SearchPaths = kw.get('SearchPaths', None)
+        if self.SearchPaths is None:
+            self.SearchPaths = [os.getcwd()]
+        self.names = {}
         try:
             modname = os.path.split(os.path.splitext(__file__)[0])[1] + "_" + self.__class__.__name__
         except:
-            modname = "parser"+"_"+self.__class__.__name__
+            modname = "parser" + "_" + self.__class__.__name__
         self.debugfile = modname + ".dbg"
         self.tabmodule = modname + "_" + "parsetab"
-        #print self.debugfile, self.tabmodule
+        # print self.debugfile, self.tabmodule
 
         # Build the lexer and parser
         lex.lex(module=self, debug=self.debug)
@@ -38,15 +39,15 @@ class Parser(object):
     def run(self):
         if self.filename:
             try:
-                data=self.filename.read()  # file like object
+                data = self.filename.read()  # file like object
             except AttributeError:
                 try:
-                    #paths=get_var_from_nearest_outerframe('SearchPaths')
-                    #print self.SearchPaths, self.filename, locate(self.filename, paths=self.SearchPaths).next()
-                    data=file(next(locate(self.filename, paths=self.SearchPaths))).read() # name of an existing file
+                    # paths=get_var_from_nearest_outerframe('SearchPaths')
+                    # print self.SearchPaths, self.filename, locate(self.filename, paths=self.SearchPaths).next()
+                    data = open(next(locate(self.filename, paths=self.SearchPaths))).read()  # name of an existing file
                 except (IOError, StopIteration):
-                    data=eval(self.filename).read() # eval to a file like object
-            self.parseresult=yacc.parse(data)
+                    data = eval(self.filename).read()  # eval to a file like object
+            self.parseresult = yacc.parse(data)
         else:
             while 1:
                 try:
@@ -54,7 +55,6 @@ class Parser(object):
                 except EOFError:
                     break
                 if not s:
-                    continue     
-                self.parseresult=yacc.parse(s)
+                    continue
+                self.parseresult = yacc.parse(s)
         return self.parseresult
-

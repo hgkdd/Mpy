@@ -37,7 +37,7 @@ pm1ini=format_block("""
                 unit: 'dBm'
                 trg_threshold: 0.5
                 """)
-pm1ini=StringIO.StringIO(pm1ini)
+pm1ini=io.StringIO(pm1ini)
 pm2ini=format_block("""
                 [DESCRIPTION]
                 description: 'GigaTronics 8542C Universal Power Meter'
@@ -70,7 +70,7 @@ pm2ini=format_block("""
                 unit: 'dBm'
                 trg_threshold: 0.5
                 """)
-pm2ini=StringIO.StringIO(pm2ini)
+pm2ini=io.StringIO(pm2ini)
 
 sgini=format_block("""
                 [DESCRIPTION]
@@ -94,7 +94,7 @@ sgini=format_block("""
                 unit: dBm
                 outpoutstate: 0
                 """)
-sgini=StringIO.StringIO(sgini)
+sgini=io.StringIO(sgini)
 
 class Actor(object):
     def __init__(self, sg):

@@ -97,7 +97,7 @@ if __name__ == '__main__':
                     SWFREQ = 1e9
                     VIRTUAL = 0
                     """)
-    ini=StringIO.StringIO(ini)
+    ini=io.StringIO(ini)
     
     sw=SWController()
     sw.Init(ini)

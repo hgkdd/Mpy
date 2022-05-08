@@ -232,7 +232,7 @@ class Device(object):
         else:
             try:
                 self.ininame=os.path.normpath(ininame)
-                file(self.ininame,'r')  # try to open the file
+                open(self.ininame,'r')  # try to open the file
             except (IOError,AttributeError):
                 raise "Unable to open '%s' for read."%self.ininame
         
@@ -2670,7 +2670,7 @@ def cbl_tst(ini):
                          NAME = S21
                          UNIT = dB
                          INTERPOLATION = LOG
-                         FILE = StringIO.StringIO(format_block('''
+                         FILE = io.StringIO(format_block('''
                                                                 FUNIT: Hz
                                                                 UNIT: powerratio
                                                                 ABSERROR: [0.1, 1]

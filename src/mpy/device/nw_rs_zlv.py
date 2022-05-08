@@ -896,7 +896,7 @@ def main():
 #                        SetSweepPoints: 50
 #                        SetSweepType: 'LINEAR'
 #                        """)
-#        ini2=StringIO.StringIO(ini2)
+#        ini2=io.StringIO(ini2)
         
     # #
     # # Zum Test des Treibers werden sogenannte Konsistenzabfragen ('assert' Bedingungen) verwendet, welche einen 'AssertationError' liefern,

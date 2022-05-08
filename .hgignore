@@ -15,9 +15,11 @@ docs/latex/*
 .ropeproject/*
 mpy/__version__.py
 src/mpy/_version.py
-venv/*
+venv*
 .idea/*
 *egg-info*
+.pytest*
+2to3.log
 
 syntax: regexp
 .*\#.*\#$

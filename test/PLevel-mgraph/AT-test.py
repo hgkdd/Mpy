@@ -31,8 +31,8 @@ def W2dBm (v):
            # names=names,
            # freqs=freqs,
            # levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-30, 0, 31)])
-# pickle.dump (AT, file('at-smx25.p', 'wb'), 2)
+# pickle.dump (AT, open('at-smx25.p', 'wb'), 2)
 
-AT=pickle.load (file('at-smx25.p', 'rb'))
+AT=pickle.load (open('at-smx25.p', 'rb'))
 AT.GetGainAndCompression(description="IFI SMX25")
-pickle.dump (AT, file('at-smx25-processed.p', 'wb'), 2)
+pickle.dump (AT, open('at-smx25-processed.p', 'wb'), 2)

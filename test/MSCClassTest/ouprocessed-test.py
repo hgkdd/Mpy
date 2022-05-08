@@ -1,4 +1,4 @@
 import pickle
 
-msc = pickle.load(file("AfterMeasure.p", "rb"))
+msc = pickle.load(open("AfterMeasure.p", "rb"))
 msc.OutputProcessedData_MainCal()

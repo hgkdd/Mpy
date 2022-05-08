@@ -4,7 +4,7 @@ import sys
 
 name=sys.argv[1]
 
-msc=pickle.load(file(name, 'rb'))
+msc=pickle.load(open(name, 'rb'))
 
 ef=msc.rawData_MainCal['empty']['efield']
 freqs=ef.keys()

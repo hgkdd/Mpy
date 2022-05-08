@@ -10,7 +10,7 @@
 import cmath
 import math
 import scipy
-scipy.pkgload('interpolate')
+import scipy.interpolate
 from numpy import nan_to_num
 from scuq import *
 

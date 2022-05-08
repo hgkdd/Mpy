@@ -74,7 +74,7 @@ class Graph(object):
                         if not we maybe come from a pickle file and haven't found the graph
                         in this case we restore the graph from self.dotcontets -> except clause
                         """
-                        self.dotcontents=(file(fname_or_data, 'r')).read()  # 
+                        self.dotcontents=(open(fname_or_data, 'r')).read()  #
                         dotgraph=meth(fname_or_data)
                     except StopIteration: # not found
                         #print "Hey", self.instance_from_pickle

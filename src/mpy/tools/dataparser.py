@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .plyparser import Parser
+from mpy.tools.plyparser import Parser
 import math
 from scuq import *
 from mpy.tools.aunits import *
@@ -61,7 +61,7 @@ class DatFile(Parser):
     A typical usage is like so::
 
         import sys
-        import StringIO
+        import io
         import scuq
         from mpy.tools.util import format_block
         from mpy.tools.dataparser import DatFile
@@ -70,7 +70,7 @@ class DatFile(Parser):
         if len(sys.argv)>1:
             name=sys.argv[1]
         else:
-            name=StringIO.StringIO(format_block('''
+            name=io.StringIO(format_block('''
                                                 FUNIT: Hz
                                                 UNIT: powerratio
                                                 ABSERROR: [0.1, 1]

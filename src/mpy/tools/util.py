@@ -133,7 +133,7 @@ def secant_solve(f,x1,x2,ftol,xtol):
     while abs(x2 - x1) > xtol :
         slope = (f2 - f1)/(x2 - x1)
         if slope == 0:
-        	return None
+            return None
 #      sys.stderr.write("Division by 0 due to vanishing slope - exit!\n")
 #      sys.exit(1)
         x3 = x2 - f2/slope               # the new approximate zero

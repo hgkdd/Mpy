@@ -54,7 +54,7 @@ def myopen (name, mode):
    if name[-3:] == '.gz':
       return gzip.open(name, mode)
    else:
-      return file(name, mode)
+      return open(name, mode)
 
 def update_conf (cdict):
     try:
@@ -99,10 +99,10 @@ def load_from_autosave(fname):
                     del cmd
                     msc=None
                     cmd=None
-        except IOError, m:
+        except IOError as m:
             # this is no problem
             msc.messenger("IOError during check for autosave-file: %s\nContinue with normal operation..."%m, [])
-        except (UnpicklingError, AttributeError, EOFError, ImportError, IndexError), m:
+        except (UnpicklingError, AttributeError, EOFError, ImportError, IndexError) as m:
             # unpickle was not succesful, but we will continue anyway
             # user can decide later if he want to finish.
             msc.messenger("Error during unpickle of autosave-file: %s\nContinue with normal operation..."%m, []) 
@@ -122,13 +122,13 @@ def make_logger_list(msc, clogger):
         elif len(_lst)==2:
             try:
                 _mod = __import__(_lst[0])
-            except ImportError, m:
+            except ImportError as m:
                 _mod = None
                 msc.messenger("ImportError: %s"%m, [])
         if _mod:
             try:
                 logger.append(getattr(msc,_l))
-            except AttributeError, m:
+            except AttributeError as m:
                 msc.messenger("Logger not found: %s"%m, [])
     if not len(logger):  #empty
         logger=[msc.stdLogger] # fall back to stdlogger
@@ -197,7 +197,7 @@ if __name__ == '__main__':
                     continue
             if domeas:        
                 msc.Measure_MainCal(**mp)
-                pickle.dump(msc, file('AfterMeasure.p', 'wb') , 2)
+                pickle.dump(msc, open('AfterMeasure.p', 'wb') , 2)
             if doeval:
                 msc.OutputRawData_MainCal(description=_des, fname=cdict["rawdata_output_filename"]%_des)
                 msc.Evaluate_MainCal(description=_des)
@@ -205,7 +205,7 @@ if __name__ == '__main__':
                 msc.CalculateLoading_MainCal (empty_cal=_passedcal, loaded_cal=_des)
                 descriptions.append( "%s+%s"%(_passedcal,_des) )
         dest_str='_'.join(descriptions)
-        pickle.dump(msc, file('AfterEval.p', 'wb') , 2)
+        pickle.dump(msc, open('AfterEval.p', 'wb') , 2)
         msc.OutputProcessedData_MainCal( fname = (cdict["processeddata_output_filename"])%(dest_str) )
     else:
         msg="Select description to use.\n"

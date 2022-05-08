@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
     if option==2:
         outname="FieldProbeTest_02.p" 
-        DataDct=pickle.load(file(outname,'rb'))
+        DataDct=pickle.load(open(outname,'rb'))
         #
         params = {'backend': 'ps',
                     'font.size': 10,

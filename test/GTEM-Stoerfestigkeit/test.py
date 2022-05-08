@@ -65,7 +65,7 @@ class GTEM_SUSCEPTIBILITY(object):
 def dat_interpol(cfile):
     flist=[]
     plist=[]
-    for line in file(cfile):
+    for line in open(cfile):
         if line.startswith('#'):
             continue
         freq, power = map(float,line.split())

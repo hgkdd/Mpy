@@ -75,7 +75,7 @@ class SAMPLES(object):
 if __name__ == '__main__':
     import pylab as pl
     infile = sys.argv[1]
-    dct=pickle.load(file(infile, 'rb'))
+    dct=pickle.load(open(infile, 'rb'))
     
     ray=stats.rayleigh(loc=0,scale=1)
     
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     
 # if __name__ == '__main__':
     # infile = sys.argv[1]
-    # dct=pickle.load(file(infile, 'rb'))
+    # dct=pickle.load(open(infile, 'rb'))
     
     # freqs = sorted(dct.keys())
     # tpos = sorted(dct[freqs[0]].keys())

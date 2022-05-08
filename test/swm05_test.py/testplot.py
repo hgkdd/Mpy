@@ -10,7 +10,7 @@ zorig = x**2 + y**2                      # z is a function of the form z = f(x, 
 noise = npr.normal(scale=1.0, size=npts) # add a good amount of noise
 z = zorig + noise                    # z = f(x, y) = x**2 + y**2
 
-# infile=file("test.dat",'r')
+# infile=open("test.dat",'r')
 # x=[]
 # y=[]
 # z=[]

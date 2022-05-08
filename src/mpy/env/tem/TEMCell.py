@@ -69,7 +69,7 @@ class TEMCell(Measure):
         if dct['logfilename'] is None:
             logfile = None
         else:
-            logfile = file(dct['logfilename'], "a+")
+            logfile = open(dct['logfilename'], "a+")
         self.__dict__.update(dct)
         self.logfile = logfile
         self.messenger=self.stdUserMessenger

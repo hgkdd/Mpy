@@ -27,15 +27,15 @@ from scuq.quantities import Quantity
 from scuq.si import WATT
 
 try:
-    import pyttsx
-    _tts=pyttsx.init()
+    import pyttsx3
+    _tts=pyttsx3.init()
     _tts.setProperty('volume', 1.0)
-    vs=_tts.getProperty('voices')
-    #for v in vs:
-    #    if v.name == 'Microsoft Mary':
-    #        _tts.setProperty('voice', v.id)
-    #_tts.SetVoiceByName('MSMary')
-    raise ImportError
+    # vs=_tts.getProperty('voices')
+    # for v in vs:
+    #     if v.name == 'Microsoft Mary':
+    #         _tts.setProperty('voice', v.id)
+    # _tts.SetVoiceByName('MSMary')
+    # raise ImportError
 except ImportError:
     _tts=None
 
@@ -65,7 +65,7 @@ class Measure(object):
         if dct['logfilename'] is None:
             logfile = None
         else:
-            logfile = file(dct['logfilename'], "a+")
+            logfile = open(dct['logfilename'], "a+")
         self.__dict__.update(dct)
         self.logfile = logfile
         self.messenger=self.stdUserMessenger
@@ -542,7 +542,7 @@ class Error(Exception):
     pass
 
 class AmplifierProtectionError(Error):
-    def __init__ (self, message):
+    def __init__(self, message):
         self.message = message
 
         

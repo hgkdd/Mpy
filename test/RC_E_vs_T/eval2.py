@@ -514,7 +514,7 @@ class Data(object):
 if __name__ == '__main__':
     
     infile = sys.argv[1]
-    dct=pickle.load(file(infile, 'rb'))
+    dct=pickle.load(open(infile, 'rb'))
     #
     params = {'backend': 'ps',
             'font.size': 10,

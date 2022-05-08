@@ -30,7 +30,7 @@ ini=format_block("""
                 unit: 'dBm'
                 outpoutstate: 0
                 """)
-ini=StringIO.StringIO(ini)
+ini=io.StringIO(ini)
 
 sg=SIGNALGENERATOR()
 sg.Init(ini)
@@ -67,7 +67,7 @@ ini=format_block("""
                 unit: 'W'
                 trg_threshold: 0.5
                 """)
-ini=StringIO.StringIO(ini)
+ini=io.StringIO(ini)
 pm=POWERMETER()
 pm.Init(ini,2)
 sg.RFOn()

@@ -53,7 +53,7 @@ fp=instrumentation[mg.name.fp] # Feldsonde
 try:
     mg.Init_Devices()  # Geraete Initialisieren
     try:
-        dct=pickle.load(file(outname, 'rb'))  # Weiter nach Abbruch?
+        dct=pickle.load(open(outname, 'rb'))  # Weiter nach Abbruch?
         completed_tp=set(tpos) # liste der bereits vollstaendig gemessenen Tuner Pos
         for f in freqs:
             t=set([a for a in dct[f].keys() if dct[f][a] != None])
