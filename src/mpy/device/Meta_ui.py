@@ -179,21 +179,22 @@ class Metaui(MetaHasTraits):
             else:
                 items="%s tuiapi.Item('%s',label='%s',style='readonly',width=70),"%(items,command_name.upper(),'Wert'.rjust(38))
                 class_dict[command_name.upper()]=Erzeuge_TapiVar(str)
-            
-            
 
-            param_list=[]
+            param_list = []
             for param_name in command.getParameterTuple():
-                param=command.getParameter()[param_name]
+                param = command.getParameter()[param_name]
                 if param.isClass_attr():
                     continue
             
-                if hasattr(driverclass,command_name):
-                    if param_name not in inspect.getargspec(getattr(driverclass,command_name))[0]:
+                if hasattr(driverclass, command_name):
+                    if param_name not in inspect.getfillargspec(getattr(driverclass, command_name))[0]:
                         continue
                 
-                items="%s tuiapi.Item('param_%s_%s',label='%s',width=60),"%(items,command_name,param_name.upper(),param_name)
-                class_dict['param_%s_%s'%(command_name,param_name.upper())]=Erzeuge_TapiVar(param.Getptype())
+                items = "%s tuiapi.Item('param_%s_%s',label='%s',width=60),"%(items,
+                                                                              command_name,
+                                                                              param_name.upper(),
+                                                                              param_name)
+                class_dict['param_%s_%s'%(command_name,param_name.upper())] = Erzeuge_TapiVar(param.Getptype())
                 param_list.append('self.param_%s_%s'%(command_name,param_name.upper()))
                 
                 

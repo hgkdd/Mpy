@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This is :mod:`mpy.env.Measure` with :class:`mpy.env.Measure.Mearure` being the base class for e.g. :class:`mpy.env.msc.MSC.MSC`
+"""This is :mod:`mpy.env.Measure` with :class:`mpy.env.Measure.Measure` being the base class for e.g. :class:`mpy.env.msc.MSC.MSC`
 
    :author: Hans Georg Krauthäuser (main author)
    :copyright: All rights reserved
@@ -13,66 +13,71 @@ import pickle as pickle
 import gzip
 import re
 import tempfile
+
 try:
     import mpy.tools.unixcrt as crt
 except ImportError:
     class CRT:
         def unbuffer_stdin(self): pass
+
         def restore_stdin(self): pass
-    crt=CRT()
-    
+
+
+    crt = CRT()
+
 from mpy.device import device
-from mpy.tools import util,calling
+from mpy.tools import util, calling
 from scuq.quantities import Quantity
 from scuq.si import WATT
 
 try:
     import pyttsx3
-    _tts=pyttsx3.init()
+    _tts = pyttsx3.init()
     _tts.setProperty('volume', 1.0)
-    # vs=_tts.getProperty('voices')
-    # for v in vs:
-    #     if v.name == 'Microsoft Mary':
-    #         _tts.setProperty('voice', v.id)
-    # _tts.SetVoiceByName('MSMary')
-    # raise ImportError
+    vs = _tts.getProperty('voices')
+    for v in vs:
+        if 'en_GB' in v.languages:  # take first british speaker
+            _tts.setProperty('voice', v.id)
+            break
 except ImportError:
-    _tts=None
+    _tts = None
+
 
 class Measure(object):
     """Base class for measurements.
     """
+
     def __init__(self, SearchPaths=None):
         """constructor"""
-        if SearchPaths==None:
-            SearchPaths=[os.getcwd()]
-        self.SearchPaths=SearchPaths
-        self.asname=None
-        self.ascmd=None
+        if SearchPaths is None:
+            SearchPaths = [os.getcwd()]
+        self.SearchPaths = SearchPaths
+        self.asname = None
+        self.ascmd = None
         self.autosave = False
         self.autosave_interval = 3600
         self.lastautosave = time.time()
-        self.logger=[self.stdLogger]
-        self.logfile=None
-        self.logfilename=None
-        self.messenger=self.stdUserMessenger
-        self.UserInterruptTester=self.stdUserInterruptTester
-        self.PreUserEvent=self.stdPreUserEvent
-        self.PostUserEvent=self.stdPostUserEvent        
+        self.logger = [self.stdLogger]
+        self.logfile = None
+        self.logfilename = None
+        self.messenger = self.stdUserMessenger
+        self.UserInterruptTester = self.stdUserInterruptTester
+        self.PreUserEvent = self.stdPreUserEvent
+        self.PostUserEvent = self.stdPostUserEvent
 
     def __setstate__(self, dct):
-        """used instead of __init__ when instance is created from pickle file""" 
+        """used instead of __init__ when instance is created from pickle file"""
         if dct['logfilename'] is None:
             logfile = None
         else:
             logfile = open(dct['logfilename'], "a+")
         self.__dict__.update(dct)
         self.logfile = logfile
-        self.messenger=self.stdUserMessenger
-        self.logger=[self.stdLogger]
-        self.UserInterruptTester=self.stdUserInterruptTester
-        self.PreUserEvent=self.stdPreUserEvent
-        self.PostUserEvent=self.stdPostUserEvent        
+        self.messenger = self.stdUserMessenger
+        self.logger = [self.stdLogger]
+        self.UserInterruptTester = self.stdUserInterruptTester
+        self.PreUserEvent = self.stdPreUserEvent
+        self.PostUserEvent = self.stdPostUserEvent
 
     def __getstate__(self):
         """prepare a dict for pickling"""
@@ -82,7 +87,7 @@ class Measure(object):
         del odict['messenger']
         del odict['UserInterruptTester']
         del odict['PreUserEvent']
-        del odict['PostUserEvent']        
+        del odict['PostUserEvent']
         return odict
 
     def wait(self, delay, dct, uitester, intervall=0.1):
@@ -98,7 +103,7 @@ class Measure(object):
         start = time.time()
         delay = abs(delay)
         intervall = abs(intervall)
-        while (time.time()-start < delay):
+        while (time.time() - start < delay):
             uitester(dct)
             time.sleep(intervall)
 
@@ -119,7 +124,7 @@ class Measure(object):
         if hasattr(item, 'keys'):  # a dict like object
             print("{", end=' ')
             for k in list(item.keys()):
-                print(str(k)+":", end=' ')
+                print(str(k) + ":", end=' ')
                 self.out(item[k])
             print("}", end=' ')
         elif hasattr(item, 'append'):  # a list like object
@@ -134,8 +139,8 @@ class Measure(object):
             print(")", end=' ')
         else:
             print(item, end=' ')
-            
-    def set_autosave_interval (self, interval):
+
+    def set_autosave_interval(self, interval):
         """Set the intervall between auto save.
 
            *intervall*: seconds between auto save
@@ -143,7 +148,7 @@ class Measure(object):
            This method returns `None`.
         """
         self.autosave_interval = interval
-        
+
     def stdLogger(self, block, *args):
         """The standard method to write messages to log file.
 
@@ -156,6 +161,7 @@ class Measure(object):
 
            Return value: `None`
         """
+
         def out_block(b):
             """Helper function to log something.
             """
@@ -166,7 +172,7 @@ class Measure(object):
                 pass
             try:
                 par = b['parameter']
-                for des,p in par.items():
+                for des, p in par.items():
                     print(des, end=' ')
                     out_block(p)
                 try:
@@ -177,23 +183,22 @@ class Measure(object):
             except KeyError:
                 pass
             sys.stdout.flush()
-            
-        stdout = sys.stdout #save stdout
+
+        stdout = sys.stdout  # save stdout
         if self.logfile is not None:
             sys.stdout = self.logfile
         try:
             try:
-                for des,bd in block.items():
+                for des, bd in block.items():
                     print(util.tstamp(), des, end=' ')
                     out_block(bd)
-                    print() # New Line
+                    print()  # New Line
             except AttributeError:
                 print(block)
         finally:
-            sys.stdout=stdout #restore stdout
+            sys.stdout = stdout  # restore stdout
 
-
-    def stdUserMessenger(self, msg="Are you ready?", but=["Ok","Quit"], level='', dct={}):
+    def stdUserMessenger(self, msg="Are you ready?", but=None, level='', dct=None):
         """The standard (default) method to present messages to the user.
 
            The behaviour depends on the value of the parameter *but*.
@@ -211,39 +216,43 @@ class Measure(object):
         
            Return value: the index of the selected button (starting from `0`), or `-1` if `len(but)` is `False`.
         """
+        if but is None:
+            but = ["Ok", "Quit"]
+        if dct is None:
+            dct = {}
         print(msg)
         for l in self.logger:
-            l(msg,but,level,dct)                
+            l(msg, but, level, dct)
         if level in ('email',):
             try:
                 send_email(to=dct['to'], fr=dct['from'], subj=dct['subject'], msg=msg)
-            except KeyError:
+            except (NameError, KeyError):
                 util.LogError(self.messenger)
 
-        if len(but): # button(s) are given -> wait
+        if len(but):  # button(s) are given -> wait
             if _tts:
                 _tts.say(msg)
                 _tts.runAndWait()
             while True:
-                key=chr(util.keypress())
-                key=key.lower()
+                key = chr(util.keypress())
+                key = key.lower()
                 for s in but:
                     if s.lower().startswith(key):
                         if _tts:
-                            _tts.say(s)#, pyTTS.tts_purge_before_speak)
+                            _tts.say(s)  # , pyTTS.tts_purge_before_speak)
                             _tts.runAndWait()
                         return but.index(s)
         else:
             return -1
-    
+
     def stdUserInterruptTester(self):
         """The standard (default) user interrupt tester.
 
            Returns return value of :meth:`mpy.util.anykeyevent()`
         """
         return util.anykeyevent()
-        
-    def set_logfile (self, name):
+
+    def set_logfile(self, name):
         """Tries to open a file with the given name with mode `'a+'`.
            If this fails, nothing will happen, else :meth:`stdloogger` will log to this file.
 
@@ -261,35 +270,35 @@ class Measure(object):
             except TypeError:
                 cleanedFilename = unicodedata.normalize('NFKD', str(filename)).encode('ASCII', 'ignore')
             return ''.join(c for c in cleanedFilename if c in validFilenameChars)
-                
+
         log = None
-        name=removeDisallowedFilenameChars(name)
+        name = removeDisallowedFilenameChars(name)
         try:
-            log = open (name, "a+")
+            log = open(name, "a+")
         except IOError:
-            util.LogError (self.messenger)
+            util.LogError(self.messenger)
         else:
             if self.logfile is not None:
                 try:
                     self.logfile.close()
                 except IOError:
-                    util.LogError (self.messenger)            
+                    util.LogError(self.messenger)
 
-            self.logfilename=name
-            self.logfile=log
+            self.logfilename = name
+            self.logfile = log
 
     def set_logger(self, logger=None):
         """Set up the list of logger fuctions (`self.logger`).
 
-           If `logger is None`, :meth:`std_logger` is used.
+           If `logger is None`, :meth:`stdlogger` is used.
 
            Parameter *logger*: list of functions called to log events
         
            Return: *None*
         """
         if logger is None:
-            logger = [self.std_logger]
-        logger=util.flatten(logger) # ensure flat list
+            logger = [self.stdlogger]
+        logger = util.flatten(logger)  # ensure flat list
         self.logger = [l for l in logger if callable(l)]
 
     def set_messenger(self, messenger):
@@ -300,7 +309,7 @@ class Measure(object):
            Return: *None*
         """
         if callable(messenger):
-            self.messenger=messenger
+            self.messenger = messenger
 
     def set_user_interrupt_Tester(self, tester):
         """Set function to test for user interrupt.
@@ -310,7 +319,7 @@ class Measure(object):
            Return: *None*
         """
         if callable(tester):
-            self.UserInterruptTester=tester
+            self.UserInterruptTester = tester
 
     def set_autosave(self, name):
         """Setter for the class attribute *asname* (name of the auto save file).
@@ -338,63 +347,62 @@ class Measure(object):
            Return: *None*
         """
         if depth is None:
-            depth=1
+            depth = 1
         if name_or_obj is None:
-            name_or_obj=getattr(self, 'asname', None)
+            name_or_obj = getattr(self, 'asname', None)
 
         # we want to save the cmd that has been used
         # (in order to get all the calling parameters)
         try:
             self.autosave = True  # mark the state
             calling_sequence = calling.get_calling_sequence(prefixes=prefixes)
-            calling_sequence=[cs for cs in calling_sequence if cs != '<string>']
-            #print calling_sequence
+            calling_sequence = [cs for cs in calling_sequence if cs != '<string>']
+            # print calling_sequence
             try:
-                ascmd=calling_sequence[depth]
+                ascmd = calling_sequence[depth]
             except IndexError:
-                ascmd=calling_sequence[-1]
+                ascmd = calling_sequence[-1]
             if ascmd.startswith('exec'):
                 # print self.ascmd
-                ascmd = ascmd[ascmd.index( '(' )+1: ascmd.rindex(')')].strip() # part between brackets
-                var=util.get_var_from_nearest_outerframe(ascmd)
+                ascmd = ascmd[ascmd.index('(') + 1: ascmd.rindex(')')].strip()  # part between brackets
+                var = util.get_var_from_nearest_outerframe(ascmd)
                 if var:
-                    ascmd=var
-            self.ascmd=ascmd
+                    ascmd = var
+            self.ascmd = ascmd
             # print "Measure.py; 363:", self.ascmd
             # now, we can serialize 'self'
-            pfile=None
-            if isinstance(name_or_obj, str):   # it's a string (filename)
+            pfile = None
+            if isinstance(name_or_obj, str):  # it's a string (filename)
                 try:
-                    if name_or_obj.endswith(('.gz','.zip')):  # gzip
-                        pfile = gzip.open(self.asname,"wb")
+                    if name_or_obj.endswith(('.gz', '.zip')):  # gzip
+                        pfile = gzip.open(self.asname, "wb")
                     else:
-                        pfile = open(self.asname,"wb")   # regular pickle                     
+                        pfile = open(self.asname, "wb")  # regular pickle
                 except IOError:
-                    util.LogError (self.messenger)
+                    util.LogError(self.messenger)
             elif hasattr(name_or_obj, 'write'):  # file-like object
-                pfile=name_or_obj
+                pfile = name_or_obj
             if pfile is None:
-                fd, fname=tempfile.mkstemp(suffix='.p', prefix='autosave', dir='.', text=False)
-                pfile=os.fdopen(fd, 'wb')
-            #print pfile, type(pfile)
+                fd, fname = tempfile.mkstemp(suffix='.p', prefix='autosave', dir='.', text=False)
+                pfile = os.fdopen(fd, 'wb')
+            # print pfile, type(pfile)
 
-                
             try:
                 try:
                     pickle.dump(self, pfile, 2)
                     self.lastautosave = time.time()
                 except IOError:
-                    util.LogError (self.messenger)
+                    util.LogError(self.messenger)
             finally:
                 try:
                     pfile.close()
                 except IOError:
-                    util.LogError (self.messenger)            
+                    util.LogError(self.messenger)
         finally:
             self.autosave = False
 
-        #print self.ascmd
-                
+        # print self.ascmd
+
     def stdPreUserEvent(self):
         """Just calls :meth:`mpy.tools.unixcrt.unbuffer_stdin()`.
            See there...
@@ -406,70 +414,70 @@ class Measure(object):
            See there...
         """
         crt.restore_stdin()
-        
+
     # def do_leveling(self, leveling, mg, names, dct):
-        # """Perform leveling on the measurement graph.
-        
-           # - *leveling*: sequence of dicts with leveling records. Each record is a dict with keys 
-             # 'conditions', 'actor', 'watch', 'nominal', 'reader', 'path', 'actor_min', and 'actor_max'.
-        
-             # The meaning is:
+    # """Perform leveling on the measurement graph.
 
-               # - condition: has to be True in order that this lewveling takes place. The condition is evaluated in the global namespace and in C{dct}.
-               # - actor: at the moment, this can only be a signalgenerator 'sg'
-               # - watch: the point in the graph to be monitored (e.g. antena input)
-               # - nominal: the desired value at watch
-               # - reader: the device reading the value for watch (e.g. forward poer meter)
-               # - path: Path between reader and watch
-               # - actor_min, actor_max: valid range for actor values
+    # - *leveling*: sequence of dicts with leveling records. Each record is a dict with keys
+    # 'conditions', 'actor', 'watch', 'nominal', 'reader', 'path', 'actor_min', and 'actor_max'.
 
-           # - *mg*: the measurement graph
-           # - *names*: mapping between symbolic names and real names in the dot file
-           # - *dct*: namespace used for the evaluation of *condition*  
+    # The meaning is:
 
-           # Return: the level set at the actor 
-        # """
-        # for l in leveling:
-            # if eval(l['condition'], globals(), dct):
-                # actor = l['actor']
-                # watch = l['watch']
-                # nominal = l['nominal']
-                # reader = l['reader']
-                # path = l['path']
-                # ac_min = l['actor_min']
-                # ac_max = l['actor_max']
+    # - condition: has to be True in order that this lewveling takes place. The condition is evaluated in the global namespace and in C{dct}.
+    # - actor: at the moment, this can only be a signalgenerator 'sg'
+    # - watch: the point in the graph to be monitored (e.g. antena input)
+    # - nominal: the desired value at watch
+    # - reader: the device reading the value for watch (e.g. forward poer meter)
+    # - path: Path between reader and watch
+    # - actor_min, actor_max: valid range for actor values
 
-                # if actor not in ['sg']:
-                    # self.messenger(util.tstamp()+" Only signal generator can be used as leveling actor.", [])
-                    # break
-                # for dev in [watch, reader]: 
-                    # if dev not in names:
-                        # self.messenger(util.tstamp()+" Device '%s' not found"%dev, [])
-                        # break
-                # c_level = device.UMDCMResult(complex(0.0,mg.zero(umddevice.UMD_dB)),umddevice.UMD_dB)
-                # for cpath in path:
-                    # if mg.find_shortest_path(names[cpath[0]],names[cpath[-1]]):
-                        # c_level *= mg.get_path_correction(names[cpath[0]],names[cpath[-1]], umddevice.UMD_dB)['total']
-                    # elif mg.find_shortest_path(names[cpath[-1]],names[cpath[0]]):
-                        # c_level /= mg.get_path_correction(names[cpath[-1]],names[cpath[0]], umddevice.UMD_dB)['total']
-                    # else:
-                        # self.messenger(util.tstamp()+" can't find path from %s tp %s (looked for both directions)."%(cpath[0],cpath[-1]), [])
-                        # break
-                
-                # if ac_min == ac_max:
-                    # return self.set_level(mg, names, ac_min)
+    # - *mg*: the measurement graph
+    # - *names*: mapping between symbolic names and real names in the dot file
+    # - *dct*: namespace used for the evaluation of *condition*
 
-                # def __objective (x, mg=mg):
-                    # self.set_level(mg, names, x)
-                    # actual = mg.Read([names[reader]])[names[reader]]
-                    # actual = device.UMDCMResult(actual)
-                    # cond, a, n = self.__test_leveling_condition(actual, nominal, c_level)
-                    # return a-n
+    # Return: the level set at the actor
+    # """
+    # for l in leveling:
+    # if eval(l['condition'], globals(), dct):
+    # actor = l['actor']
+    # watch = l['watch']
+    # nominal = l['nominal']
+    # reader = l['reader']
+    # path = l['path']
+    # ac_min = l['actor_min']
+    # ac_max = l['actor_max']
 
-                # l = util.secant_solve(__objective, ac_min, ac_max, nominal.get_u()-nominal.get_v(), 0.1)
-                # return self.set_level(mg, names, l)
-                # #break  # only first true condition ie evaluated
-        # return None
+    # if actor not in ['sg']:
+    # self.messenger(util.tstamp()+" Only signal generator can be used as leveling actor.", [])
+    # break
+    # for dev in [watch, reader]:
+    # if dev not in names:
+    # self.messenger(util.tstamp()+" Device '%s' not found"%dev, [])
+    # break
+    # c_level = device.UMDCMResult(complex(0.0,mg.zero(umddevice.UMD_dB)),umddevice.UMD_dB)
+    # for cpath in path:
+    # if mg.find_shortest_path(names[cpath[0]],names[cpath[-1]]):
+    # c_level *= mg.get_path_correction(names[cpath[0]],names[cpath[-1]], umddevice.UMD_dB)['total']
+    # elif mg.find_shortest_path(names[cpath[-1]],names[cpath[0]]):
+    # c_level /= mg.get_path_correction(names[cpath[-1]],names[cpath[0]], umddevice.UMD_dB)['total']
+    # else:
+    # self.messenger(util.tstamp()+" can't find path from %s tp %s (looked for both directions)."%(cpath[0],cpath[-1]), [])
+    # break
+
+    # if ac_min == ac_max:
+    # return self.set_level(mg, names, ac_min)
+
+    # def __objective (x, mg=mg):
+    # self.set_level(mg, names, x)
+    # actual = mg.Read([names[reader]])[names[reader]]
+    # actual = device.UMDCMResult(actual)
+    # cond, a, n = self.__test_leveling_condition(actual, nominal, c_level)
+    # return a-n
+
+    # l = util.secant_solve(__objective, ac_min, ac_max, nominal.get_u()-nominal.get_v(), 0.1)
+    # return self.set_level(mg, names, l)
+    # #break  # only first true condition ie evaluated
+    # return None
 
     def set_level(self, mg, l, leveler=None):
         """
@@ -477,73 +485,72 @@ class Measure(object):
 
         sg = mg.instrumentation[mg.name.sg]
         # l is in dBm -> convert to WATT
-        l=Quantity(WATT, 10**(0.1*l)*0.001)
-        
-        if leveler is None: # try to use instance leveler
+        l = Quantity(WATT, 10 ** (0.1 * l) * 0.001)
+
+        if leveler is None:  # try to use instance leveler
             try:
-                leveler=self.leveler_inst#(**self.leveler_par)
+                leveler = self.leveler_inst  # (**self.leveler_par)
             except AttributeError:
                 pass  # stay with None
 
-        if leveler: #use MaxSafe
+        if leveler:  # use MaxSafe
             l = min(l, leveler.MaxSafe)
-        err, lv = sg.SetLevel (l)
-        
-        #is_save, message = mg.AmplifierProtect (names['sg'], names['a2'], l, sg_unit, typ='lasy')
-        #if not is_save:
+        err, lv = sg.SetLevel(l)
+
+        # is_save, message = mg.AmplifierProtect (names['sg'], names['a2'], l, sg_unit, typ='lasy')
+        # if not is_save:
         #    raise AmplifierProtectionError, message
 
-        self.messenger(util.tstamp()+" Signal Generator set to %s"%(lv), [])
+        self.messenger(util.tstamp() + " Signal Generator set to %s" % (lv), [])
         return lv
 
     # def __test_leveling_condition(self, actual, nominal, c_level):
-        # cond = True
-        # actual = util.flatten(actual)  # ensure lists
-        # nominal= util.flatten(nominal)
-        # for ac,nom in zip(actual,nominal):
-            # ac *= c_level
-            # if hasattr(nom.get_v(), 'mag'): # a complex
-                # nom = nom.mag()
-                # ac = ac.mag()
-            # ac = ac.convert(nominal.unit)
-            # cond &= (nom.get_l() <= ac.get_v() <= nom.get_u())
-        # return cond, actual.get_v(), nominal.get_v()
+    # cond = True
+    # actual = util.flatten(actual)  # ensure lists
+    # nominal= util.flatten(nominal)
+    # for ac,nom in zip(actual,nominal):
+    # ac *= c_level
+    # if hasattr(nom.get_v(), 'mag'): # a complex
+    # nom = nom.mag()
+    # ac = ac.mag()
+    # ac = ac.convert(nominal.unit)
+    # cond &= (nom.get_l() <= ac.get_v() <= nom.get_u())
+    # return cond, actual.get_v(), nominal.get_v()
 
     def make_deslist(self, thedata, description):
         if description is None:
             description = list(thedata.keys())
-        if util.issequence(description): # a sequence
+        if util.issequence(description):  # a sequence
             deslist = [des for des in description if des in thedata]
         else:
             if description in thedata:
-                deslist=[description]
+                deslist = [description]
             else:
-                deslist=[]
+                deslist = []
         return deslist
 
-    def make_whatlist (self, thedata, what):
+    def make_whatlist(self, thedata, what):
         allwhat_withdupes = util.flatten([list(v.keys()) for v in thedata.values()])
-        allwhat=list(set(allwhat_withdupes))
+        allwhat = list(set(allwhat_withdupes))
 
         if what is None:
             whatlist = allwhat
         else:
             whatlist = []
-            what=util.flatten(what)
+            what = util.flatten(what)
             whatlist = [w for w in what if w in allwhat]
         return whatlist
 
     def stdEutStatusChecker(self, status):
         return status in ['ok', 'OK']
 
+
 class Error(Exception):
     """Base class for all exceptions of this module
     """
     pass
 
+
 class AmplifierProtectionError(Error):
     def __init__(self, message):
         self.message = message
-
-        
-        

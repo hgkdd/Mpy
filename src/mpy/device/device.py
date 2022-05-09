@@ -2,19 +2,39 @@
 import configparser
 import os
 import math
+from functools import cmp_to_key
+
 import numpy
 import time
 from mpy.tools.Configuration import fstrcmp
 from mpy.tools.aunits import *
-
+import mpy.tools.umd_types as umd_types
+from scuq import *
 
 try:
     import ctypes as ct
 except ImportError:
+    ct = None
     pass
-import mpy.tools.umd_types as umd_types
 
-from scuq import *
+
+def cmp(a, b):
+    return (a > b) - (a < b)
+
+
+def cplx_cmp(a, b):
+    # magnituide * sgn(real part)
+    try:
+        ma = abs(a) * a.real / abs(a.real)
+        # ma=a._abs()*a.r/abs(a.r)
+    except AttributeError:
+        ma = a
+    try:
+        mb = abs(b) * b.real / abs(b.real)
+        # mb=b._abs()*b.r/abs(b.r)
+    except AttributeError:
+        mb = b
+    return cmp(ma, mb)
 
 
 class Device(object):
@@ -118,86 +138,73 @@ class Device(object):
     #    tstamp=time.mktime((c_data.t.wYear, c_data.t.wMonth, c_data.t.wDay,
     #                        c_data.t.wHour, c_data.t.wMinute, c_data.t.wSecond,
     #                        c_data.t.wMilliseconds, -1, 1))
-        def cplx_cmp(a,b):
-            # magnituide * sgn(real part)
-            try:
-                ma=abs(a)*a.real/abs(a.real)
-                #ma=a._abs()*a.r/abs(a.r)
-            except AttributeError:
-                ma=a
-            try:
-                mb=abs(b)*b.real/abs(b.real)
-                #mb=b._abs()*b.r/abs(b.r)
-            except AttributeError:
-                mb=b  
-            return cmp(ma,mb)
 
-        DD=[getattr(c_data,attr) for attr in ('x','y','z','r') if hasattr(c_data,attr)]
+        DD = [getattr(c_data,attr) for attr in ('x','y','z','r') if hasattr(c_data, attr)]
         if not len(DD):
-            DD=(c_data,)
+            DD = (c_data,)
             
-        values=[]
-        sigmas=[]
+        values = []
+        sigmas = []
         for d in DD:
-            triple,scuq_unit=self.convert.c2scuq(c_data.unit, (d.v,d.l,d.u))
-            l,v,u=sorted(triple, cplx_cmp)        
-            sigma=0.5*(u-l)
+            triple, scuq_unit = self.convert.c2scuq(c_data.unit, (d.v, d.l, d.u))
+            l, v, u = sorted(triple, key=cmp_to_key(cplx_cmp))
+            sigma = 0.5*(u-l)
             values.append(v)
             sigmas.append(sigma)
 
         if len(DD) == 1:
-            values=values[0]
-            sigmas=sigmas[0]
+            values = values[0]
+            sigmas = sigmas[0]
 #        print values, sigmas, c_data.v.r, c_data.v.i, c_data.unit
-        ui=ucomponents.UncertainInput(values, sigmas)
-        obj=quantities.Quantity(scuq_unit, ui)
+        ui = ucomponents.UncertainInput(values, sigmas)
+        obj = quantities.Quantity(scuq_unit, ui)
         return obj
 
-    def obj_to_cdata(obj, typ=None):
+    def obj_to_cdata(self, obj, typ=None):
         if typ is None:
-            typ=umd_types.UMD_CMRESULT
-        s_unit=obj.__unit__
+            typ = umd_types.UMD_CMRESULT
+        s_unit = obj.__unit__
         try:
-            s_value=obj.get_value(s._unit).get_value()
-            s_sig=obj.get_value(s._unit).get_uncertainty(obj.get_value(s_unit))
+            s_value = obj.get_value(s_unit).get_value()
+            s_sig = obj.get_value(s_unit).get_uncertainty(obj.get_value(s_unit))
         except AttributeError:
             s_value=obj.get_value(s_unit)
             s_sig=0.0
         c_unit=None
-        for idx,cu in enumerate(self.convert.units_list):
-            if cu[1]==s_unit and c[2] is None:  # got a lin. unit
-                c_unit=idx
+        for idx, cu in enumerate(self.convert.units_list):
+            if cu[1] == s_unit and cu[2] is None:  # got a lin. unit
+                c_unit = idx
                 break
         
-        cdata=typ()
-        v=s_value
-        u=s_value+s_sig
-        l=s_value-s_sig
-        l,v,u=self.convert.squc2c(s_unit, c_unit, (l,v,u))
-        l,v,u=sorted((l,v,u), cplx_cmp)
-        if typ==umd_types.UMD_CMRESULT:
-            for attr in ('l','v','u'):
+        cdata = typ()
+        v = s_value
+        u = s_value+s_sig
+        l = s_value-s_sig
+        l, v, u = self.convert.scuq2c(s_unit, c_unit, (l,v,u))
+        l, v, u = sorted((l ,v , u), key=cmp_to_key(cplx_cmp))
+        if typ == umd_types.UMD_CMRESULT:
+            for attr in ('l', 'v', 'u'):
                 try:
-                    setattr(getattr(cdata,attr),'r',locals()[attr].real)
-                    setattr(getattr(cdata,attr),'i',locals()[attr].imag)
+                    setattr(getattr(cdata,attr), 'r', locals()[attr].real)
+                    setattr(getattr(cdata,attr), 'i', locals()[attr].imag)
                 except AttributeError:
-                    setattr(getattr(cdata,attr),'r',locals()[attr])
-                    setattr(getattr(cdata,attr),'i',0)
+                    setattr(getattr(cdata,attr), 'r', locals()[attr])
+                    setattr(getattr(cdata,attr), 'i', 0)
         else:                
-            for attr in ('l','v','u'):
-                setattr(cdata,attr, locals()[attr])
-        cdata.unit=c_unit
-        Y,M,D,h,m,s,wd,yd,dst=time.localtime()
-        tt=umd_types.SYSTEMTIME()
-        tt.wYear=Y
-        tt.wMonth=M
-        tt.wDayOfWeek=wd
-        tt.wDay=D
-        tt.wHour=h
-        tt.wMinute=m
-        tt.wSecond=s
-        tt.wMilliseconds=0
-        cdata.t=tt
+            for attr in ('l', 'v', 'u'):
+                setattr(cdata, attr, locals()[attr])
+        cdata.unit = c_unit
+        Y, M, D, h, m, s, wd, yd, dst = time.localtime()
+        tt = umd_types.SYSTEMTIME()
+        tt.wYear = Y
+        tt.wMonth = M
+        tt.wDayOfWeek = wd
+        tt.wDay = D
+        tt.wHour = h
+        tt.wMinute = m
+        tt.wSecond = s
+        tt.wMilliseconds = 0
+        cdata.t = tt
         return cdata
 
     def Init(self, ininame, channel=None):
@@ -211,7 +218,7 @@ class Device(object):
             import io
             from mpy.tools.util import format_block
             cp=configparser.SafeConfigParser()
-            cp.readfp(ininame)
+            cp.read_file(ininame)
             for section in cp.sections():
                 for option,value in cp.items(section):
                     try:
@@ -241,33 +248,39 @@ class Device(object):
         self.TypeOfInstrument=self.TypeOfInstrument.lower()
         try:
             # fuzzy type matching...
-            best_type_guess=fstrcmp(self.TypeOfInstrument,self.__class__._types,n=1,cutoff=0,ignorecase=True)[0]
+            best_type_guess = fstrcmp(self.TypeOfInstrument,
+                                      self.__class__._types,
+                                      n=1,
+                                      cutoff=0,
+                                      ignorecase=True)[0]
         except IndexError:
-            raise 'Instrument type %s from file %s not in list of valid instrument types: %r'%(self.TypeOfInstrument,ininame,_types)
+            raise 'Instrument type %s from file %s not in list of valid instrument types: %r'%(self.TypeOfInstrument,
+                                                                                               ininame,
+                                                                                               self.__class__._types)
         # split extension to see if we have a DLL or a pyd
-        (DLLbase,DLLext)=os.path.splitext(self.DLLname)
-        DLLbasename=os.path.split(DLLbase)[1]
-        DLLext=DLLext.lower()
+        (DLLbase,DLLext) = os.path.splitext(self.DLLname)
+        DLLbasename = os.path.split(DLLbase)[1]
+        DLLext = DLLext.lower()
         # the prefix of the current instrument
-        self.prefix=self.__class__._prefixdict[best_type_guess]
-        self.pyprefix=self.__class__._pyprefixdict[best_type_guess]
+        self.prefix = self.__class__._prefixdict[best_type_guess]
+        self.pyprefix = self.__class__._pyprefixdict[best_type_guess]
         # depending on the type we use diffent strategies to load the lib
         # print self.DLLname
         if DLLext in ('.dll', '.so'):
-            lib=ct.cdll.LoadLibrary(self.DLLname)
-        elif DLLext in ('.pyd','.py','.pyc','.pyo'):
-            mod=__import__(DLLbasename, globals(),locals(),[])
+            lib = ct.cdll.LoadLibrary(self.DLLname)
+        elif DLLext in ('.pyd', '.py', '.pyc', '.pyo'):
+            mod = __import__(DLLbasename, globals(),locals(),[])
             for i in DLLbasename.split(".")[1:]:  # emulate from ... import ...
-                mod=getattr(mod,i)
+                mod = getattr(mod, i)
             try:
-                lib=getattr(mod,self.pyprefix)(**self.kw)
+                lib = getattr(mod, self.pyprefix)(**self.kw)
             except TypeError:  # keyword argument unknown
-                lib=getattr(mod,self.pyprefix)()
+                lib = getattr(mod, self.pyprefix)()
             # import DLLbasename as lib
         else:
             raise "Unknown driver type '%s'."%(DLLext)
         # our lib
-        self.library=lib
+        self.library = lib
         #make attributes corresponding to the common methods os all instr. types
         for post,klass in list(Device._postfix.items()):
             try:
@@ -289,7 +302,7 @@ class Device(object):
                 setattr(self, "%s"%klass, getattr(self, "_%s_wrap"%klass)(getattr(self, "_%s"%klass)))
         # call the init method
         # print self._lib_Init
-        ret=self._lib_Init(self.ininame, channel=channel)
+        ret = self._lib_Init(self.ininame, channel=channel)
         for tt in tmpfiles:
             tt.close()
         # update self.virtual
@@ -609,42 +622,42 @@ class Signalgenerator(Device):
                       (waveform, ('SINE', 'SQUARE', 'TRIANGLE',
                                   'NOISE','SAWTOOTH'), ct.c_int),
                       (LFOut,    ('OFF','ON'),          ct.c_int)) 
-                for (par,MD,tp) in pars:
-                    guess=fstrcmp(par,MD,n=1,cutoff=0,ignorecase=True)[0]
+                for (par, MD, tp) in pars:
+                    guess = fstrcmp(par, MD, n=1, cutoff=0, ignorecase=True)[0]
                     globals()['c_%s'%par] = eval('%s(MD.index(guess))'%(tp))
-                c_freq=ct.c_double(freq)
-                c_depth=ct.c_int(depth)   # in %
-                c_error=ct.c_int(0)
-                method.restype=ct.c_int
+                c_freq = ct.c_double(freq)
+                c_depth = ct.c_int(depth)   # in %
+                c_error = ct.c_int(0)
+                method.restype = ct.c_int
                 retval = method(c_source, c_freq, c_depth, c_waveform, c_LFOut, c_instance, ct.byref(c_error))
-                c_instance=ct.c_int(self.instance)
-                self.error=c_error.value
+                c_instance = ct.c_int(self.instance)
+                self.error = c_error.value
                 return self.error, retval
         else:
-            m=method
+            m = method
         return m
 
     def _ConfPM_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             def m(source, freq, pol, width, delay):
-                pars=(('source', source,    ['INT','EXT1','EXT2','OFF'],'ct.c_int'),
-                      ('pol',  pol,    ['NORMAL', 'INVERTED'], 'ct.c_int'))
-                for (name,par,MD,tp) in pars:
-                    guess=fstrcmp(par,MD,n=1,cutoff=0,ignorecase=True)[0]
+                pars = (('source', source, ['INT','EXT1','EXT2','OFF'], 'ct.c_int'),
+                      ('pol',  pol, ['NORMAL', 'INVERTED'], 'ct.c_int'))
+                for (name, par, MD, tp) in pars:
+                    guess = fstrcmp(par, MD, n=1, cutoff=0, ignorecase=True)[0]
                     ##print MD.index(guess),'%s(MD.index(guess))'%tp
                     globals()['c_%s'%name] = eval('%s(MD.index(guess))'%tp)
                     ##print 'wert:',globals()['c_%s'%par]
-                c_freq=ct.c_double(freq)
-                c_width=ct.c_double(width)
-                c_delay=ct.c_double(delay)
-                c_instance=ct.c_int(self.instance)
-                c_error=ct.c_int(0)
-                method.restype=ct.c_int
+                c_freq = ct.c_double(freq)
+                c_width = ct.c_double(width)
+                c_delay = ct.c_double(delay)
+                c_instance = ct.c_int(self.instance)
+                c_error = ct.c_int(0)
+                method.restype = ct.c_int
                 retval = method(c_source, c_freq, c_pol, c_width, c_delay, c_instance, ct.byref(c_error))
-                self.error=c_error.value
+                self.error = c_error.value
                 return self.error, retval
         else:
-            m=method
+            m = method
         return m
     
     def _SetAM_wrap(self, method):

@@ -1,6 +1,6 @@
 import os
 #import re
-import imp
+import importlib.machinery
 import inspect
 import pydot
 import configparser
@@ -463,11 +463,12 @@ class MGraph(Graph):
                 driver = dct['inidic']['description']['driver']
                 cls = dct['inidic']['description']['class']
                 drvfile=next(locate(driver, self.SearchPaths))
-                m = imp.load_source('m', drvfile)
+                # m = imp.load_source('m', drvfile)
+                m = importlib.machinery.SourceFileLoader(driver, drvfile).load_module()
                 d = getattr(m, cls)()
             else:    
-                d=getattr(device, dtype)(SearchPaths=self.SearchPaths)
-            ddict[name]=dct['inst']=d # save instances in nodes dict and in return value
+                d = getattr(device, dtype)(SearchPaths=self.SearchPaths)
+            ddict[name]=dct['inst'] = d  # save instances in nodes dict and in return value
             #self.CallerGlobals['d']=d
             #exec str(key)+'=d' in self.CallerGlobals # valiable in caller context
             #exec 'self.'+str(key)+'=d'   # as member variable
@@ -968,7 +969,7 @@ class MGraph(Graph):
             """
             configVals = configparser.SafeConfigParser()
             if hasattr(filename, 'readline'):  # file like object
-                configVals.readfp(filename)
+                configVals.read_file(filename)
             else:
                 configVals.read(filename)  # filename
             return (configVals)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import imp
+import importlib.machinery
 import re
 import io
 import math
@@ -977,7 +977,8 @@ class POWERMETER(PWRMTR):
         for m in methods:
             setattr(self, m, getattr(self.pm_instance, m))
         
-        sw=imp.load_source('sw', 'c:\\MpyConfig\\LargeRC\\script\\sw_rc_rx.py')
+        # sw=imp.load_source('sw', 'c:\\MpyConfig\\LargeRC\\script\\sw_rc_rx.py')
+        sw = importlib.machinery.SourceFileLoader('sw', 'c:\\MpyConfig\\LargeRC\\script\\sw_rc_rx.py').load_module()
         self.sw_instance=sw.SWController()
         swini=format_block("""
                         [DESCRIPTION]

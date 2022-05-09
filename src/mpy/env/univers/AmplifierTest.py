@@ -6,7 +6,7 @@ from scipy.interpolate import interp1d
 from scipy.optimize import fminbound, fsolve
 
 from scuq import quantities,si,units
-from mpy.env.Measure import Measure
+from mpy.env.Measure import Measure, AmplifierProtectionError
 from mpy.tools.mgraph import MGraph
 from mpy.tools.aunits import POWERRATIO
 from mpy.tools import util
@@ -536,4 +536,4 @@ if __name__ == '__main__':
                names=names,
                freqs=linspace(10e3,200e6,10),
                levels=[Quantity(WATT, dBm2W(dBmval)) for dBmval in linspace(-30, 0, 3)])
-    pickle.dump (AT, file('at.p', 'wb'), 2)
+    pickle.dump (AT, open('at.p', 'wb'), 2)

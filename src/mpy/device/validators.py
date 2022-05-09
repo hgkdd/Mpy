@@ -13,6 +13,7 @@
 """
 import re
 
+
 class IN_RANGE(object):
     """ Dieser Validator prüft, ob eine Zahl in einem bestimmten Intervall liegt.
     
@@ -32,22 +33,22 @@ class IN_RANGE(object):
     Liegt die Zahl außerhalb, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
     
     """
-    
-    def __init__(self,min,max,message=''):
+
+    def __init__(self, mini, maxi, message=''):
         """
-        :param min:  Minimal Wert für die Zahl
-        :param max:  Maximal Wert für die Zahl
+        :param mini:  Minimal Wert für die Zahl
+        :param maxi:  Maximal Wert für die Zahl
         :param message: Error Message, falls Zahl nicht im gewünschten Intervall liegt.
                         Wird message nicht definiert, wird eine default Error Message verwendet.
         """
-        self.min=min
-        self.max=max
+        self.min = mini
+        self.max = maxi
         if message != '':
-            self.message='Argument out of Range. Argument must be between %s and %s'%(self.min,self.max)
+            self.message = 'Argument out of Range. Argument must be between %s and %s' % (self.min, self.max)
         else:
-            self.message=message
-    
-    def __call__(self,value):
+            self.message = message
+
+    def __call__(self, value):
         """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
            Der Validator kann somit genauso wie eine Funktion verwendet werden.
            Nähre Infos zur Verwendung, siehe Klassen Beschreibung
@@ -55,11 +56,11 @@ class IN_RANGE(object):
            :param value: Wert der geprüft werden soll.
         """
         if not isinstance(value, (int, float)):
-            return (value,'The Validator IN_RANGE can only used for int, long or float')
+            return (value, 'The Validator IN_RANGE can only used for int, long or float')
         if value > self.max or value < self.min:
-            return (value,self.message)
-        return (value,None)
-    
+            return (value, self.message)
+        return (value, None)
+
 
 class IS_LOWER_THAN(object):
     """ Dieser Validator prüft, ob eine Zahl kleiner als ein bestimmter Wert ist.
@@ -80,19 +81,20 @@ class IS_LOWER_THAN(object):
     Ist die Zahl größer oder gleich, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
     
     """
-    def __init__(self,max,message=''):
+
+    def __init__(self, maxi, message=''):
         """
-        :param max:  Maximal Wert für die Zahl
+        :param maxi:  Maximal Wert für die Zahl
         :param message: Error Message, falls Zahl größer oder gleich dem vorgegebenen Wert ist.
                         Wird message nicht definiert, wird eine default Error Message verwendet.
         """
-        self.max=max
+        self.max = maxi
         if message != '':
-            self.message='Argument is greater than or equal %s. Argument must be lower.'%(self.max)
+            self.message = 'Argument is greater than or equal %s. Argument must be lower.' % (self.max)
         else:
-            self.message=message
-    
-    def __call__(self,value):
+            self.message = message
+
+    def __call__(self, value):
         """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
            Der Validator kann somit genauso wie eine Funktion verwendet werden.
            Nähre Infos zur Verwendung, siehe Klassen Beschreibung
@@ -100,10 +102,10 @@ class IS_LOWER_THAN(object):
            :param value: Wert der geprüft werden soll.
         """
         if not isinstance(value, (int, float)):
-            return (value,'The Validator IS_LOWER_THAN can only used for int, long or float')
+            return (value, 'The Validator IS_LOWER_THAN can only used for int, long or float')
         if value >= self.max:
-            return (value,self.message)
-        return (value,None)
+            return (value, self.message)
+        return (value, None)
 
 
 class IS_GREATER_THAN(object):
@@ -125,19 +127,20 @@ class IS_GREATER_THAN(object):
     Ist die Zahl kleiner oder gleich, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
     
     """
-    def __init__(self,min,message=''):
+
+    def __init__(self, mini, message=''):
         """
-        :param min:  Minimal Wert für die Zahl
+        :param mini:  Minimal Wert für die Zahl
         :param message: Error Message, falls die Zahl kleiner oder gleich dem vorgegebenen Wert ist.
                         Wird message nicht definiert, wird eine default Error Message verwendet.
         """
-        self.min=min
+        self.min = mini
         if message != '':
-            self.message='Argument is lower than or equal %s. Argument must be greater.'%(self.min)
+            self.message = 'Argument is lower than or equal %s. Argument must be greater.' % (self.min)
         else:
-            self.message=message
-    
-    def __call__(self,value):
+            self.message = message
+
+    def __call__(self, value):
         """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
            Der Validator kann somit genauso wie eine Funktion verwendet werden.
            Nähre Infos zur Verwendung, siehe Klassen Beschreibung
@@ -145,10 +148,10 @@ class IS_GREATER_THAN(object):
            :param value: Wert der geprüft werden soll.
         """
         if not isinstance(value, (int, float)):
-            return (value,'The Validator IS_GREATER_THAN can only used for int, long or float')
+            return (value, 'The Validator IS_GREATER_THAN can only used for int, long or float')
         if value <= self.min:
-            return (value,self.message)
-        return (value,None)
+            return (value, self.message)
+        return (value, None)
 
 
 class IS_LOWER_EQUAL_THAN(object):
@@ -170,24 +173,25 @@ class IS_LOWER_EQUAL_THAN(object):
     Ist die Zahl größer, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
     
     """
-    def __init__(self,max,message=''):
+
+    def __init__(self, maxi, message=''):
         """
-        :param max:  Maximal Wert für die Zahl
+        :param maxi:  Maximal Wert für die Zahl
         :param message: Error Message, falls Zahl größer als der vorgegebenen Wert ist.
                         Wird message nicht definiert, wird eine default Error Message verwendet.
         """
-        self.max=max
+        self.max = maxi
         if message != '':
-            self.message='Argument is greater than %s. Argument must be lower or equal.'%(self.max)
+            self.message = 'Argument is greater than %s. Argument must be lower or equal.' % (self.max)
         else:
-            self.message=message
-    
-    def __call__(self,value):
+            self.message = message
+
+    def __call__(self, value):
         if not isinstance(value, (int, float)):
-            return (value,'The Validator IS_LOWER_THAN can only used for int, long or float')
+            return (value, 'The Validator IS_LOWER_THAN can only used for int, long or float')
         if value > self.max:
-            return (value,self.message)
-        return (value,None)
+            return (value, self.message)
+        return (value, None)
 
 
 class IS_GREATER_EQUAL_THAN(object):
@@ -209,19 +213,20 @@ class IS_GREATER_EQUAL_THAN(object):
     Ist die Zahl kleiner, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
     
     """
-    def __init__(self,min,message=''):
+
+    def __init__(self, mini, message=''):
         """
-        :param min:  Minimal Wert für die Zahl
+        :param mini:  Minimal Wert für die Zahl
         :param message: Error Message, falls Zahl kleiner als vorgegebenen Wert ist.
                         Wird message nicht definiert, wird eine default Error Message verwendet.
         """
-        self.min=min
+        self.min = mini
         if message != '':
-            self.message='Argument is lower than %s. Argument must be greater or equal.'%(self.min)
+            self.message = 'Argument is lower than %s. Argument must be greater or equal.' % (self.min)
         else:
-            self.message=message
-    
-    def __call__(self,value):
+            self.message = message
+
+    def __call__(self, value):
         """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
            Der Validator kann somit genauso wie eine Funktion verwendet werden.
            Nähre Infos zur Verwendung, siehe Klassen Beschreibung
@@ -229,13 +234,13 @@ class IS_GREATER_EQUAL_THAN(object):
            :param value: Wert der geprüft werden soll.
         """
         if not isinstance(value, (int, float)):
-            return (value,'The Validator IS_GREATER_THAN can only used for int, long or float')
+            return (value, 'The Validator IS_GREATER_THAN can only used for int, long or float')
         if value < self.min:
-            return (value,self.message)
-        return (value,None)
+            return (value, self.message)
+        return (value, None)
 
 
-class  IS_IN_SET(object):
+class IS_IN_SET(object):
     """ Dieser Validator prüft, ob ein Argument (z.B. ein String) in einer Menge vorhanden ist.
     
     .. rubric:: Verwendung:
@@ -254,19 +259,20 @@ class  IS_IN_SET(object):
     Ist der Wert nicht in der Menge vorhanden, wird ein Tupel mit der Zahl und einer Error Message zurückgegeben.
     
     """
-    def __init__(self,set,message=''):
+
+    def __init__(self, seti, message=''):
         """
-        :param set:  Menge gegen die der Wert geprüft werden soll.
+        :param seti:  Menge gegen die der Wert geprüft werden soll.
         :param message: Error Message, falls Argument nicht in der vorgegebenen Menge vorhanden ist.
                         Wird message nicht definiert, wird eine default Error Message verwendet.
         """
-        self.set=set
+        self.set = seti
         if message != '':
-            self.message='Argument must be in Set %s.'%(self.set)
+            self.message = 'Argument must be in Set %s.' % (self.set)
         else:
-            self.message=message
-            
-    def __call__(self,value):
+            self.message = message
+
+    def __call__(self, value):
         """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
            Der Validator kann somit genauso wie eine Funktion verwendet werden.
            Nähre Infos zur Verwendung, siehe Klassen Beschreibung
@@ -274,6 +280,5 @@ class  IS_IN_SET(object):
            :param value: Wert der geprüft werden soll.
         """
         if not value in self.set:
-            return (value,self.message)
-        return (value,None)
-    
+            return (value, self.message)
+        return (value, None)

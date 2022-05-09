@@ -49,9 +49,10 @@ def get_calling_sequence(prefixes=None):
         del obj
     return cmds[1:]
 
+
 if __name__ == '__main__':
     def t1(*args, **kwargs):
-        l=get_calling_sequence()
+        l = get_calling_sequence()
         return l
 
     def t2(*arg, **kwargs):
@@ -60,11 +61,8 @@ if __name__ == '__main__':
              l=2)
         return l
 
-    print(t2(1,2  ,  4\
-\
-,t=0))
-
-    c='l=t1()'
+    print(t2(1, 2, 4, t=0))
+    c = 'l=t1()'
     exec(c)
     print(l)
 

@@ -1,33 +1,43 @@
 nodes = {}
 graph = {}
 
+
 def init_nodes_graph():
     for n in list(nodes.keys()):
         del(nodes[str(n)])
     for n in list(graph.keys()):
         del(graph[str(n)])
 
-def add_node(i, dir={}):
+
+def add_node(i, dr=None):
+    if dr is None:
+        dr = {}
     if i not in list(nodes.keys()):
-        nodes[i] = dir.copy()         # new node
+        nodes[i] = dr.copy()         # new node
     else:                             # node already exist
-        for (k,v) in list(dir.items()): 
-             nodes[i][k]=v
-            
-def add_edge(left, right=[], attr={}):
+        for (k, v) in dr.items():
+            nodes[i][k] = v
+
+
+def add_edge(left, right=None, attr=None):
+    if right is None:
+        right = []
+    if attr is None:
+        attr = {}
+
     # add nodes
-    add_node (left)
+    add_node(left)
     for r in right:
         add_node (r)
-    if left not in list(graph.keys()):   # new left side (source)
-        right_dict ={}
+    if left not in graph.keys():   # new left side (source)
+        right_dict = {}
         for r in right:
-            right_dict[r]=attr.copy()
+            right_dict[r] = attr.copy()
     else:
         right_dict = graph[left].copy()
         for r in right:
-            right_dict[r]=attr.copy()
-    graph[left]=right_dict.copy()
+            right_dict[r] = attr.copy()
+    graph[left] = right_dict.copy()
         
 
 
@@ -104,26 +114,39 @@ class DOT(yappsrt.Parser):
     def stmt(self, _parent=None):
         _context = self.Context(_parent, self._scanner, self._pos, 'stmt', [])
         _token = self._peek("'subgraph|SUBGRAPH'", "'{'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM')
+        idn = None
+        i = None
+        j = None
+        l = None
         if _token not in ["'subgraph|SUBGRAPH'", "'{'", 'ID', 'STR', 'NUM']:
             attr_stmt = self.attr_stmt(_context)
         elif _token not in ["'subgraph|SUBGRAPH'", "'{'"]:
-            id = self.id(_context)
-            i = id
-            _token = self._peek("'='", "'--|->'", "'\\\\['", "':'", "'@'", "';'", "'}'", "'subgraph|SUBGRAPH'", "'{'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM')
+            idn = self.id(_context)
+            i = idn
+            _token = self._peek("'='", "'--|->'", "'\\\\['", "':'", "'@'", "';'", "'}'",
+                                "'subgraph|SUBGRAPH'",
+                                "'{'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM')
             if _token == "'='":
                 self._scan("'='")
-                id = self.id(_context)
-                j = id
+                idn = self.id(_context)
+                j = idn
             elif _token in ["':'", "'@'"]:
                 port = self.port(_context)
-                _token = self._peek("'--|->'", "';'", "'}'", "'subgraph|SUBGRAPH'", "'{'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM')
+                _token = self._peek("'--|->'", "';'", "'}'",
+                                    "'subgraph|SUBGRAPH'", "'{'",
+                                    "'graph|GRAPH'", "'node|NODE'",
+                                    "'edge|EDGE'", 'ID', 'STR', 'NUM')
                 if _token == "'--|->'":
                     edgeRHS = self.edgeRHS(_context)
                     l = {}
-                    if self._peek("'\\\\['", "';'", "'}'", "'subgraph|SUBGRAPH'", "'{'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM') == "'\\\\['":
+                    if self._peek("'\\\\['", "';'", "'}'", "'subgraph|SUBGRAPH'",
+                                  "'{'", "'graph|GRAPH'",
+                                  "'node|NODE'",
+                                  "'edge|EDGE'",
+                                  'ID', 'STR', 'NUM') == "'\\\\['":
                         attr_list = self.attr_list(None, _context)
-                        l=attr_list
-                    add_edge(i,edgeRHS,l)
+                        l = attr_list
+                    add_edge(i, edgeRHS, l)
                 else:
                     add_node(i)
             elif _token == "'--|->'":
@@ -135,7 +158,7 @@ class DOT(yappsrt.Parser):
                 add_edge(i,edgeRHS,l)
             elif _token == "'\\\\['":
                 attr_list = self.attr_list(None, _context)
-                add_node (i, attr_list )
+                add_node(i, attr_list)
             else:
                 add_node(i)
         elif _token == "'subgraph|SUBGRAPH'":
@@ -146,24 +169,26 @@ class DOT(yappsrt.Parser):
                 l = {}
                 if self._peek("'\\\\['", "';'", "'}'", "'subgraph|SUBGRAPH'", "'{'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM') == "'\\\\['":
                     attr_list = self.attr_list(None, _context)
-                    l=attr_list
-                add_edge(i,edgeRHS,l)
+                    l = attr_list
+                add_edge(i, edgeRHS, l)
             elif _token == "'{'":
                 self._scan("'{'")
                 stmt_list = self.stmt_list(_context)
                 self._scan("'}'")
-            else: # in ['ID', 'STR', 'NUM']
-                id = self.id(_context)
-                _token = self._peek("'{'", "';'", "'}'", "'subgraph|SUBGRAPH'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM')
+            else:  # in ['ID', 'STR', 'NUM']
+                idn = self.id(_context)
+                _token = self._peek("'{'", "';'", "'}'", "'subgraph|SUBGRAPH'",
+                                    "'graph|GRAPH'", "'node|NODE'",
+                                    "'edge|EDGE'", 'ID', 'STR', 'NUM')
                 if _token == "'{'":
                     self._scan("'{'")
                     stmt_list = self.stmt_list(_context)
                     self._scan("'}'")
-                elif 1:
+                elif True:
                     pass
                 else:
                     raise yappsrt.SyntaxError(_token[0], 'Could not match stmt')
-        else: # == "'{'"
+        else:  # == "'{'"
             self._scan("'{'")
             stmt_list = self.stmt_list(_context)
             self._scan("'}'")
@@ -175,36 +200,40 @@ class DOT(yappsrt.Parser):
             self._scan("'graph|GRAPH'")
         elif _token == "'node|NODE'":
             self._scan("'node|NODE'")
-        else: # == "'edge|EDGE'"
+        else:  # == "'edge|EDGE'"
             self._scan("'edge|EDGE'")
         attr_list = self.attr_list(None, _context)
         return attr_list
 
     def attr_list(self, adir, _parent=None):
         _context = self.Context(_parent, self._scanner, self._pos, 'attr_list', [adir])
-        while 1:
+        while True:
             self._scan("'\\\\['")
             if adir is None: adir={}
             if self._peek("'\\\\]'", 'ID', 'STR', 'NUM') != "'\\\\]'":
                 a_list = self.a_list(adir, _context)
             
             self._scan("'\\\\]'")
-            if self._peek("'\\\\['", "';'", "'}'", "'subgraph|SUBGRAPH'", "'{'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM') != "'\\\\['": break
+            if self._peek("'\\\\['", "';'", "'}'", "'subgraph|SUBGRAPH'",
+                          "'{'", "'graph|GRAPH'", "'node|NODE'",
+                          "'edge|EDGE'", 'ID', 'STR', 'NUM') != "'\\\\['":
+                break
         return adir
 
     def a_list(self, adir, _parent=None):
         _context = self.Context(_parent, self._scanner, self._pos, 'a_list', [adir])
-        while 1:
-            id = self.id(_context)
-            k = id
+        while True:
+            idn = self.id(_context)
+            k = idn
             if self._peek("'='", "','", 'ID', 'STR', 'NUM', "'\\\\]'") == "'='":
                 self._scan("'='")
-                id = self.id(_context)
-                adir[k]=id
+                idn = self.id(_context)
+                adir[k] = idn
             if self._peek("','", 'ID', 'STR', 'NUM', "'\\\\]'") == "','":
                 self._scan("','")
-            if self._peek('ID', 'STR', 'NUM', "'\\\\]'") not in ['ID', 'STR', 'NUM']: break
-        return (adir)
+            if self._peek('ID', 'STR', 'NUM', "'\\\\]'") not in ['ID', 'STR', 'NUM']:
+                break
+        return(adir)
 
     def subgraph_stmt(self, _parent=None):
         _context = self.Context(_parent, self._scanner, self._pos, 'subgraph_stmt', [])
@@ -213,16 +242,18 @@ class DOT(yappsrt.Parser):
             self._scan("'subgraph|SUBGRAPH'")
             _token = self._peek("'{'", 'ID', 'STR', 'NUM')
             if _token != "'{'":
-                id = self.id(_context)
-                if self._peek("'{'", "'--|->'", "'\\\\['", "';'", "'}'", "'subgraph|SUBGRAPH'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM') == "'{'":
+                idn = self.id(_context)
+                if self._peek("'{'", "'--|->'", "'\\\\['", "';'", "'}'",
+                              "'subgraph|SUBGRAPH'", "'graph|GRAPH'", "'node|NODE'",
+                              "'edge|EDGE'", 'ID', 'STR', 'NUM') == "'{'":
                     self._scan("'{'")
                     stmt_list = self.stmt_list(_context)
                     self._scan("'}'")
-            else: # == "'{'"
+            else:  # == "'{'"
                 self._scan("'{'")
                 stmt_list = self.stmt_list(_context)
                 self._scan("'}'")
-        else: # == "'{'"
+        else:  # == "'{'"
             self._scan("'{'")
             stmt_list = self.stmt_list(_context)
             self._scan("'}'")
@@ -232,7 +263,7 @@ class DOT(yappsrt.Parser):
         _token = self._peek("'subgraph|SUBGRAPH'", "'{'", 'ID', 'STR', 'NUM')
         if _token not in ["'subgraph|SUBGRAPH'", "'{'"]:
             node_id = self.node_id(_context)
-        else: # in ["'subgraph|SUBGRAPH'", "'{'"]
+        else:  # in ["'subgraph|SUBGRAPH'", "'{'"]
             subgraph_stmt = self.subgraph_stmt(_context)
         edgeRHS = self.edgeRHS(_context)
         if self._peek("'\\\\['", "';'", "'}'", "'subgraph|SUBGRAPH'", "'{'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM') == "'\\\\['":
@@ -240,44 +271,57 @@ class DOT(yappsrt.Parser):
 
     def edgeRHS(self, _parent=None):
         _context = self.Context(_parent, self._scanner, self._pos, 'edgeRHS', [])
-        while 1:
-            list=[]
+        while True:
+            liste = []
             self._scan("'--|->'")
             _token = self._peek("'subgraph|SUBGRAPH'", "'{'", 'ID', 'STR', 'NUM')
             if _token not in ["'subgraph|SUBGRAPH'", "'{'"]:
                 node_id = self.node_id(_context)
-                list.append (node_id)
-            else: # in ["'subgraph|SUBGRAPH'", "'{'"]
+                liste.append(node_id)
+            else:  # in ["'subgraph|SUBGRAPH'", "'{'"]
                 subgraph_stmt = self.subgraph_stmt(_context)
-            if self._peek("'--|->'", "'\\\\['", "';'", "'}'", "'subgraph|SUBGRAPH'", "'{'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM') != "'--|->'": break
-        return (list)
+            if self._peek("'--|->'", "'\\\\['", "';'", "'}'", "'subgraph|SUBGRAPH'",
+                          "'{'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", 'ID', 'STR', 'NUM') != "'--|->'":
+                break
+        return (liste)
 
     def node_stmt(self, _parent=None):
         _context = self.Context(_parent, self._scanner, self._pos, 'node_stmt', [])
         node_id = self.node_id(_context)
         nodes[node_id] = {}
-        if 1:
+        if True:
             attr_list = self.attr_list(None, _context)
             nodes[node_id] = attr_list
         return (nodes)
 
     def node_id(self, _parent=None):
         _context = self.Context(_parent, self._scanner, self._pos, 'node_id', [])
-        id = self.id(_context)
-        if self._peek("':'", "'@'", "'--|->'", "'{'", "','", "'\\\\)'", "'\\\\['", "'='", "';'", 'ID', 'STR', 'NUM', "'}'", "'subgraph|SUBGRAPH'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", "'\\\\]'") in ["':'", "'@'"]:
+        idn = self.id(_context)
+        if self._peek("':'", "'@'", "'--|->'", "'{'", "','", "'\\\\)'",
+                      "'\\\\['", "'='", "';'", 'ID', 'STR', 'NUM', "'}'",
+                      "'subgraph|SUBGRAPH'", "'graph|GRAPH'", "'node|NODE'",
+                      "'edge|EDGE'", "'\\\\]'") in ["':'", "'@'"]:
             port = self.port(_context)
-        return (id)
+        return (idn)
 
     def port(self, _parent=None):
         _context = self.Context(_parent, self._scanner, self._pos, 'port', [])
         _token = self._peek("':'", "'@'")
         if _token == "':'":
             port_location = self.port_location(_context)
-            if self._peek("'@'", "'{'", "','", "'\\\\)'", "':'", "'='", "'--|->'", "'\\\\['", "';'", 'ID', 'STR', 'NUM', "'}'", "'subgraph|SUBGRAPH'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", "'\\\\]'") == "'@'":
+            if self._peek("'@'", "'{'", "','", "'\\\\)'",
+                          "':'", "'='", "'--|->'",
+                          "'\\\\['", "';'", 'ID', 'STR', 'NUM', "'}'",
+                          "'subgraph|SUBGRAPH'", "'graph|GRAPH'",
+                          "'node|NODE'", "'edge|EDGE'", "'\\\\]'") == "'@'":
                 port_angle = self.port_angle(_context)
-        else: # == "'@'"
+        else:  # == "'@'"
             port_angle = self.port_angle(_context)
-            if self._peek("':'", "'{'", "'@'", "','", "'\\\\)'", "'='", "'--|->'", "'\\\\['", "';'", 'ID', 'STR', 'NUM', "'}'", "'subgraph|SUBGRAPH'", "'graph|GRAPH'", "'node|NODE'", "'edge|EDGE'", "'\\\\]'") == "':'":
+            if self._peek("':'", "'{'", "'@'", "','", "'\\\\)'",
+                          "'='", "'--|->'",
+                          "'\\\\['", "';'", 'ID', 'STR', 'NUM', "'}'",
+                          "'subgraph|SUBGRAPH'", "'graph|GRAPH'",
+                          "'node|NODE'", "'edge|EDGE'", "'\\\\]'") == "':'":
                 port_location = self.port_location(_context)
 
     def port_location(self, _parent=None):
@@ -285,21 +329,21 @@ class DOT(yappsrt.Parser):
         self._scan("':'")
         _token = self._peek("'\\\\('", 'ID', 'STR', 'NUM')
         if _token != "'\\\\('":
-            id = self.id(_context)
+            idn = self.id(_context)
         else: # == "'\\\\('"
             self._scan("'\\\\('")
-            id = self.id(_context)
+            idn = self.id(_context)
             self._scan("','")
-            id = self.id(_context)
+            idn = self.id(_context)
             self._scan("'\\\\)'")
 
     def port_angle(self, _parent=None):
         _context = self.Context(_parent, self._scanner, self._pos, 'port_angle', [])
         self._scan("'@'")
-        id = self.id(_context)
+        idn = self.id(_context)
 
     def id(self, _parent=None):
-        _context = self.Context(_parent, self._scanner, self._pos, 'id', [])
+        _context = self.Context(_parent, self._scanner, self._pos, 'idn', [])
         _token = self._peek('ID', 'STR', 'NUM')
         if _token == 'ID':
             ID = self._scan('ID')
@@ -316,13 +360,15 @@ def parse(rule, text):
     P = DOT(DOTScanner(text))
     return yappsrt.wrap_error_reporter(P, rule)
 
+
 if __name__ == '__main__':
     from sys import argv, stdin
     if len(argv) >= 2:
         if len(argv) >= 3:
-            f = open(argv[2],'r')
+            f = open(argv[2], 'r')
         else:
             f = stdin
         print(parse(argv[1], f.read()))
-    else: print('Args:  <rule> [<filename>]', file=sys.stderr)
+    else:
+        print('Args:  <rule> [<filename>]', file=sys.stderr)
 # End -- grammar generated by Yapps

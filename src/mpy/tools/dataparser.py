@@ -5,6 +5,11 @@ import math
 from scuq import *
 from mpy.tools.aunits import *
 
+
+def cmp(a, b):
+    return (a > b) - (a < b)
+
+
 class UConv(object):
     def _ident(v):
         return v

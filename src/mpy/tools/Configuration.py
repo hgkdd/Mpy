@@ -53,7 +53,7 @@ class Configuration(object):
         
         # read the whole ini file in to a dict
         config=configparser.SafeConfigParser()
-        config.readfp(fp)
+        config.read_file(fp)
         #fp.close()
         
         self.sections_in_ini=config.sections()

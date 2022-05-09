@@ -11,15 +11,16 @@
 import re
 
 from types import FunctionType
-from .r_types import *
-from .validators import *
+from mpy.device.r_types import *
+from mpy.device.validators import *
 
 from mpy.tools.Configuration import fstrcmp
 
-from .driver_new import DRIVER
-from .mpy_exceptions import *
+from mpy.device.driver_new import DRIVER
+# from .mpy_exceptions import *
 import inspect
 import copy
+
 
 class Meta_Driver(type):
     """ Meta-Klasse für Driver.
@@ -116,133 +117,129 @@ class Meta_Driver(type):
     
         Das Vorgehen für Functions ist äquivalent. 
     """
-    
-    def __new__(cls,cls_name,bases,dict):
-        #print "__new__: \n"
-        #print "DriverMetaClass:\n NAME: %s \n\n BASES:\n %s\n\n DICT:\n%s"%(cls_name,str(bases),str(dict))
-        #print "\n\n\n"
-        
-        #*********************
-        #Erstellen und Kompilieren der Methoden
-        #*********************
-        for cmd_func_name,cmd_func in list(dict['_cmds'].items()):
-            #Prüfen ob Methode schon existiert, wenn ja, dann private Methode erzeugen.       
+
+    def __new__(mcs, cls_name, bases, dict):
+        # print "__new__: \n"
+        # print "DriverMetaClass:\n NAME: %s \n\n BASES:\n %s\n\n DICT:\n%s"%(cls_name,str(bases),str(dict))
+        # print "\n\n\n"
+
+        # *********************
+        # Erstellen und Kompilieren der Methoden
+        # *********************
+        for cmd_func_name, cmd_func in list(dict['_cmds'].items()):
+            # Prüfen ob Methode schon existiert, wenn ja, dann private Methode erzeugen.
             if cmd_func_name in dict:
-                cmd_func_name = "_"+cmd_func_name
-            func_str={}
-            func_str['name']=cmd_func_name
-            func_str['args']=cmd_func.getParameterStr()
-            
-            
-            M_code="""def create_Methode(command,function=None):
+                cmd_func_name = "_" + cmd_func_name
+            func_str = {}
+            func_str['name'] = cmd_func_name
+            func_str['args'] = cmd_func.getParameterStr()
+
+            M_code = """def create_Methode(command,function=None):
                           def %(name)s(self,%(args)s):
                               return command(self,%(args)s)
                           m= %(name)s
                           if function:
                               m.commands=function
-                          return m"""%func_str
-                        
+                          return m""" % func_str
+
             code = compile(M_code, '<string>', 'single')
-            evaldict={}
+            evaldict = {}
             exec(code, evaldict)
-            
+
             if isinstance(cmd_func, Function):
-                dict[cmd_func_name]=evaldict["create_Methode"](cmd_func,function=cmd_func)
+                dict[cmd_func_name] = evaldict["create_Methode"](cmd_func, function=cmd_func)
             else:
-                dict[cmd_func_name]=evaldict["create_Methode"](cmd_func)
-            
-            
-            #********************
-            #Übergeben von Possibilities-tupel/dicts, Return-dicts an die
-            #Funktionen oder Parameter
-            #********************
-            
+                dict[cmd_func_name] = evaldict["create_Methode"](cmd_func)
+
+            # ********************
+            # Übergeben von Possibilities-tupel/dicts, Return-dicts an die
+            # Funktionen oder Parameter
+            # ********************
+
             if isinstance(cmd_func, Function):
-                for command_name,command in list(cmd_func.items()):
+                for command_name, command in list(cmd_func.items()):
                     try:
-                        return_map=dict['%s_rmap'%command_name]
+                        return_map = dict['%s_rmap' % command_name]
                         command.setReturn_map(return_map)
-                        #print return_map
+                        # print return_map
                     except KeyError:
                         pass
-            else:    
+            else:
                 try:
-                    return_map=dict['%s_rmap'%cmd_func_name]
+                    return_map = dict['%s_rmap' % cmd_func_name]
                     cmd_func.setReturn_map(return_map)
-                    #print return_map
+                    # print return_map
                 except KeyError:
                     pass
-            
-            for para_name,para in list(cmd_func.getParameter().items()):
-                
+
+            for para_name, para in list(cmd_func.getParameter().items()):
+
                 try:
-                    possib=dict['%s_possib'%para_name]
+                    possib = dict['%s_possib' % para_name]
                     para.setPossibilities(possib)
-                    #print possib
+                    # print possib
                 except KeyError:
                     pass
-                
+
                 try:
-                    possib=getattr(bases[0],'%s_possib'%para_name)
+                    possib = getattr(bases[0], '%s_possib' % para_name)
                     para.setPossibilities(possib)
-                    #print possib
+                    # print possib
                 except AttributeError:
                     pass
-                
+
                 try:
-                    possib_map=dict['%s_possib_map'%para_name]
+                    possib_map = dict['%s_possib_map' % para_name]
                     para.setPossibilities_map(possib_map)
-                    #print possib_map
+                    # print possib_map
                 except KeyError:
                     pass
-            
-        #**********************
-        #Syntaxcheck der Methoden anhand des _commands dicts in der Elternklasse
-        #Existiert eine Methode nicht, wir eine erstellt welche einen NotImplementedError Exception wirft
+
+        # **********************
+        # Syntaxcheck der Methoden anhand des _commands dicts in der Elternklasse
+        # Existiert eine Methode nicht, wir eine erstellt welche einen NotImplementedError Exception wirft
         #
-        #Syntaxcheck heißt: Es wird geprüft, ob die Parameter der implementierte Methoden mit den 
-        #Angaben des _commands dict übereinstimmen (Name, Reihenfolge).
-        #***********************    
-        for commands_name,commad_map in list(bases[0]._commands.items()):
-            para_command=commad_map['parameter']
+        # Syntaxcheck heißt: Es wird geprüft, ob die Parameter der implementierte Methoden mit den
+        # Angaben des _commands dict übereinstimmen (Name, Reihenfolge).
+        # ***********************
+        for commands_name, commad_map in list(bases[0]._commands.items()):
+            para_command = commad_map['parameter']
             if isinstance(para_command, str):
-                para_command=(para_command,)
-        
+                para_command = (para_command,)
+
             try:
-                args=['self']
+                args = ['self']
                 if para_command:
                     args.extend(para_command)
-                    
-                if not args == inspect.getargspec(dict[commands_name])[0]:
-                    raise DriverImplementedError('The function %s is not correct implemented\n            args current: %s      args should be: %s'%(commands_name,inspect.getargspec(dict[commands_name])[0],args))
-            
-            except KeyError:
-                
-                if para_command:
-                    args= ", ".join(para_command)
-                else:
-                    args="" 
-                
-                func_str={'name': commands_name,
-                          'args': args}
-                
-                M_code="""def %(name)s(self,%(args)s): 
-                              raise NotImplementedError('The function %(name)s is not implemented yet')"""%func_str
-                        
-                code = compile(M_code, '<string>', 'single')
-                evaldict={}
-                exec(code, evaldict)
-                dict[commands_name]=evaldict["%(name)s"%func_str]
 
-        return type.__new__(cls,cls_name,bases,dict)
-    
-    
-    #def __init__(cls, name, bases, dct):
+                if args != inspect.getfullargspec(dict[commands_name])[0]:
+                    raise DriverImplementedError(
+                        'The function %s is not correct implemented\n            args current: %s      args should be: %s' % (
+                        commands_name, inspect.getfullargspec(dict[commands_name])[0], args))
+            except KeyError:
+                if para_command:
+                    args = ", ".join(para_command)
+                else:
+                    args = ""
+
+                func_str = {'name': commands_name,
+                            'args': args}
+
+                M_code = """def %(name)s(self,%(args)s): 
+                              raise NotImplementedError('The function %(name)s is not implemented yet')""" % func_str
+
+                code = compile(M_code, '<string>', 'single')
+                evaldict = {}
+                exec(code, evaldict)
+                dict[commands_name] = evaldict["%(name)s" % func_str]
+
+        return type.__new__(mcs, cls_name, bases, dict)
+
+    # def __init__(cls, name, bases, dct):
     #        print "\n__init_: \n"
     #        print "DriverMetaClass:\n NAME: %s \n\n BASES:\n %s\n\n DICT:\n%s"%(name,str(bases),str(dict))
     #        print "\n\n\n"        
     #        super(Meta_Driver, cls).__init__(name, bases, dct)
-
 
 
 class CommandsStorage(dict):
@@ -262,21 +259,18 @@ class CommandsStorage(dict):
         
             c=CommandsStorage(item1,item2,.....)
     """
-    
-    def __init__(self,driver,*items):
+
+    def __init__(self, driver, *items):
         """
         :param driver: Superklasse das Drivers
         :param *items: itemts müssen eine Methode .getName() besitzen. 
-        """        
-        self.driver = None  
+        """
+        super().__init__()
+        self.driver = None
         for i in items:
             self[i.getName()] = i
             setattr(self, i.getName(), i)
             i.init(driver)
-
-
-
-
 
 
 class Function(dict):
@@ -295,7 +289,7 @@ class Function(dict):
 
         f ist ein Aufrufbares Objekt (callable object), das heißt es kann wie ein Methode/Funktion verwenden::
     
-            print f(self,Argumente)
+            print (f(self,Argumente))
 
         Die Parameter die Function besitzt, richten sich nach den Parametern der Commands. 
         Bei dem oben aufgeführten Beispiel hätte das Function Objekt zwei Parameter, in folgender Reihenfolge:: 
@@ -377,54 +371,52 @@ class Function(dict):
 
         .. rubric:: Methods
     """
- 
-    
-    def __init__(self,name,commands,rtmpl=None,rtype=None):
+
+    def __init__(self, name, commands, rtmpl=None, rtype=None):
         """
         :param name: name der Function
         :param commands: Command oder tuple/list mit Commands
         :param rtmple: Template für Rückgabe (siehe Klassen Beschreibung)
         :param rtype: Gewünschter Type der Rückgabe (z.B. float) (siehe Klassen Beschreibung)
         """
-        
-        self.rtmpl=rtmpl
-        self.rtype=rtype
-        self.name=name
-        
-        self.parameter={}
-        self.intance_param={}
-        
+        super().__init__()
+        self.rtmpl = rtmpl
+        self.rtype = rtype
+        self.name = name
+
+        self.parameter = {}
+        self.intance_param = {}
+
         self.return_class = None
-        
-        #Falls commands keine Liste ist -> umwandeln in List
+
+        # Falls commands keine Liste ist -> umwandeln in List
         if not isinstance(commands, (list, tuple)):
             commands = [commands]
         elif isinstance(commands, tuple):
             commands = list(commands)
-        
-        self.commands=commands
-        
-        #Parameter aus den Commands holen und
-        #für Function aufbereiten
-        parameterTuple =[] 
+
+        self.commands = commands
+
+        # Parameter aus den Commands holen und
+        # für Function aufbereiten
+        parameterTuple = []
         for c in commands:
             self[c.getName()] = c
             setattr(self, c.getName(), c)
             self.parameter.update(c.getParameter())
-            
-            c_para_tmp=c.getParameterTuple()
-            c_para=[]
+
+            c_para_tmp = c.getParameterTuple()
+            c_para = []
             for i in c_para_tmp:
                 if i in parameterTuple:
                     continue
                 c_para.append(i)
             parameterTuple.extend(c_para)
-        self.parameterTuple=tuple(parameterTuple)
-    
-        self.is_init=False
-    
-    
-    def init(self,driver_super):
+        self.parameterTuple = tuple(parameterTuple)
+
+        self.is_init = False
+
+    def init(self, driver_super):
         """Init() führt einige, für die Initialisierung des Objekts, nötigen Schritte durch, 
            sie muss aufgerufen werden, bevor das objekt verwendet werden kann.
 
@@ -433,93 +425,90 @@ class Function(dict):
            :param driver_super: Driver Super Klasse, !nicht Instanze! 
         """
         for c in self.commands:
-            c.init(driver_super,f_name=self.name)
-        
+            c.init(driver_super, f_name=self.name)
+
         rtype = None
         if self.rtype == '<default>':
-            rtype=driver_super._commands[self.name]['returntype']
+            rtype = driver_super._commands[self.name]['returntype']
         else:
             rtype = self.rtype
-        
+
         if rtype:
             if isinstance(rtype, R_TYPES):
                 self.return_class = rtype
-            elif isinstance(rtype, str): 
+            elif isinstance(rtype, str):
                 self.return_class = R_REGEX(rtype)
             else:
-                self.return_class = R_DEFAULT(rtype,command=self)
-    
-    
-    def __call__(self,driver,*para):
+                self.return_class = R_DEFAULT(rtype, command=self)
+
+    def __call__(self, driver, *para):
         """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
         Nähre Infos zur Verwendung des Function Objekt siehe Klassen Beschreibung
         
         :param driver: Instanze eines Drivers
         :param para: Argumente für die Parameter des Function objekts 
         """
-        
-        #Prüfen ob das erste Argument auch wircklich ein Instanze von Driver ist:
+
+        # Prüfen ob das erste Argument auch wircklich ein Instanze von Driver ist:
         if not isinstance(driver, DRIVER):
-            raise TypeError('First argument of Function %s(driver,%s) must be a instance of DRIVER'%(self.name,self.getParameterStr())) 
-       
-        #Anzahl der übergebenen Argumente prüfen
+            raise TypeError('First argument of Function %s(driver,%s) must be a instance of DRIVER' % (
+            self.name, self.getParameterStr()))
+
+            # Anzahl der übergebenen Argumente prüfen
         if len(para) > len(self.parameterTuple) or len(para) < len(self.parameterTuple):
-            raise TypeError('Function %s(driver,%s) takes exactly %d arguments (%d given)'%(self.name,self.getParameterStr(),len(self.parameterTuple)+1,len(para)+1))
-   
-   
-        #Eine Kopie der Parameter für jeder Driver Instanz anlegen und die Parameter Initialisieren
+            raise TypeError('Function %s(driver,%s) takes exactly %d arguments (%d given)' % (
+            self.name, self.getParameterStr(), len(self.parameterTuple) + 1, len(para) + 1))
+
+        # Eine Kopie der Parameter für jeder Driver Instanz anlegen und die Parameter Initialisieren
         if driver not in self.intance_param:
             p = copy.deepcopy(self.parameter)
             for v in list(p.values()):
-                v.init(self,driver)
-            self.intance_param[driver]=p
-            
-        prameter=self.intance_param[driver]
-   
-   
-        #Die Übergebnen Argumente den Parametern Objekten übergeben: 
-        i=0
+                v.init(self, driver)
+            self.intance_param[driver] = p
+
+        prameter = self.intance_param[driver]
+
+        # Die Übergebnen Argumente den Parametern Objekten übergeben:
+        i = 0
         for p in self.parameterTuple:
             prameter[p](para[i])
-            i = i+1
-        
+            i = i + 1
 
-        return_map={}
+        return_map = {}
         for c in self.commands:
-            return_map[c.getName()]=c._do_command(driver,prameter)
-        
+            return_map[c.getName()] = c._do_command(driver, prameter)
+
         if self.rtmpl:
             if self.return_class:
-                return self.return_class(self.rtmpl%return_map) 
+                return self.return_class(self.rtmpl % return_map)
             else:
-                return self.rtmpl%return_map
-            
+                return self.rtmpl % return_map
+
         return return_map
 
     def getName(self):
         """Gibt den Namen des Function Objekts zurück
         """
         return self.name
-    
+
     def getParameterTuple(self):
         """Gibt die Parameter des Function Objekts als Tuple zurück
         """
         return self.parameterTuple
-    
+
     def getParameterStr(self):
         """Gibt die Parameter des Function Objekts als String zurück
         """
-        return ", ".join(self.parameterTuple) 
-        
+        return ", ".join(self.parameterTuple)
+
     def getParameter(self):
         """Gibt alle Parameter der integrierten Commands, des Function Objekts, als dict zurück
         """
         return self.parameter
-       
-       
+
     def Rfunction(self):
         return None
-       
+
 
 class Command(object):
     """ Command kümmert sich um die Verwaltung und Ausführung von VISA Kommandos
@@ -623,9 +612,8 @@ class Command(object):
         
         .. rubric:: Methods:
     """
-    
-    
-    def __init__(self,name,command,parameter,rfunction=None,rtype=None,return_map=None):
+
+    def __init__(self, name, command, parameter, rfunction=None, rtype=None, return_map=None):
         """ Zur Verwendung von Command, siehe Klassen Beschreibung
         
         :param name:        Der Name des Commands
@@ -636,52 +624,48 @@ class Command(object):
         :param rtype:       Rückgabe Type (siehe Klassen Beschreibung) 
         :param return_map:  Rückgabe Map (siehe Klassen Beschreibung)
         """
-        
+
         self.return_map = return_map
         self.name = name
-        self.function_name=None
+        self.function_name = None
 
-        self.intance_param ={}
-        
-        
+        self.intance_param = {}
+
         if isinstance(command, str):
-            self.command=command
+            self.command = command
         else:
             pass
-            #error!!!!!!!!!!!
-        
-        self.rfunction=rfunction
-        
-        
-        if self.rfunction and  not isinstance(self.rfunction, str):
-            raise TypeError('Value for rfunction must be type of String. Command: %s'%self.name)
-            
-        
-        self.rtype=rtype
-        
-        self.tmpl=None
-      
-        #Parameter in eine List umwandeln, falls Tuple oder nur ein Parameter übergeben wurde. 
+            # error!!!!!!!!!!!
+
+        self.rfunction = rfunction
+
+        if self.rfunction and not isinstance(self.rfunction, str):
+            raise TypeError('Value for rfunction must be type of String. Command: %s' % self.name)
+
+        self.rtype = rtype
+
+        self.tmpl = None
+
+        # Parameter in eine List umwandeln, falls Tuple oder nur ein Parameter übergeben wurde.
         if not isinstance(parameter, (list, tuple)):
             parameter = [parameter]
         elif isinstance(parameter, tuple):
             parameter = list(parameter)
-        
-        ParameterTuple=[]
+
+        ParameterTuple = []
         self.parameter = {}
-        
-        #Parameter in einem Dict speichern. 
+
+        # Parameter in einem Dict speichern.
         for para in parameter:
             self.parameter[para.getName()] = para
             if not para.isClass_attr():
                 ParameterTuple.append(para.getName())
-        
-        self.parameterTuple=tuple(ParameterTuple)
-        
+
+        self.parameterTuple = tuple(ParameterTuple)
+
         self.isinit = False
-    
-        
-    def init(self,driver_super,f_name=None):
+
+    def init(self, driver_super, f_name=None):
         """Init() führt einige, für die Initialisierung des Commands, nötigen Schritte durch, 
            sie muss aufgerufen werden bevor das Command Objekt verwendet werden kann.
 
@@ -690,69 +674,69 @@ class Command(object):
            :param driver_super: Driver Super Klasse, !nicht Instanze! 
            :param f_name: Name der Function welche das Command umschließt 
         """
-        
-        #Wenn default angegeben wurde, den rtype aus dem _command dict der Eltern Klasse holen.
+
+        # Wenn default angegeben wurde, den rtype aus dem _command dict der Eltern Klasse holen.
         if self.rtype == '<default>':
             if self.function_name:
                 raise TypeError('<default> is not allowed if Command is component of function')
             try:
-                rtype=driver_super._commands[self.name]['returntype']
+                rtype = driver_super._commands[self.name]['returntype']
             except:
-                raise DriverImplementedError('%s is not defined in the superclass %s, argument <default> is not allowed'%(self.name,driver_super))
+                raise DriverImplementedError(
+                    '%s is not defined in the superclass %s, argument <default> is not allowed' % (
+                    self.name, driver_super))
         else:
             rtype = self.rtype
-        
-        #Zum rtype passendes R_TYPES Objekt speichern, falls nicht direkt ein R_TYPES Objekt angegeben wurde. 
+
+        # Zum rtype passendes R_TYPES Objekt speichern, falls nicht direkt ein R_TYPES Objekt angegeben wurde.
         if rtype:
             if isinstance(rtype, R_TYPES):
                 self.tmpl = rtype
-            elif isinstance(rtype, str): 
+            elif isinstance(rtype, str):
                 self.tmpl = R_REGEX(rtype)
             else:
-                self.tmpl = R_DEFAULT(rtype,command=self)
-        
+                self.tmpl = R_DEFAULT(rtype, command=self)
+
         self.isinit = True
-        
+
         return 1
-        
-        
-        
-    def __call__(self,driver,*para):
+
+    def __call__(self, driver, *para):
         """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
            Nähre Infos zur Verwendung des Command Objekt siehe Klassen Beschreibung
         
         :param driver: Instanze eines Drivers
         :param para: Argumente für die Parameter des Command objekts 
-        """         
-        
-        #Überprüfen, ob das erste Argument eine Instanze von Driver ist
+        """
+
+        # Überprüfen, ob das erste Argument eine Instanze von Driver ist
         if not isinstance(driver, DRIVER):
-            raise TypeError('First argument of Command %s(driver,%s) must be a instance of DRIVER'%(self.name,self.getParameterStr())) 
-       
-        #Die Anzahl der Argumente prüfen
+            raise TypeError('First argument of Command %s(driver,%s) must be a instance of DRIVER' % (
+            self.name, self.getParameterStr()))
+
+            # Die Anzahl der Argumente prüfen
         if len(para) > len(self.parameterTuple) or len(para) < len(self.parameterTuple):
-            raise TypeError('Command %s(driver,%s) takes exactly %d arguments (%d given)'%(self.name,self.getParameterStr(),len(self.parameterTuple)+1,len(para)+1))
-   
-        #Eine Kopie der Parameter für jeder Driver Instanz anlegen und die Parameter Initialisieren
+            raise TypeError('Command %s(driver,%s) takes exactly %d arguments (%d given)' % (
+            self.name, self.getParameterStr(), len(self.parameterTuple) + 1, len(para) + 1))
+
+        # Eine Kopie der Parameter für jeder Driver Instanz anlegen und die Parameter Initialisieren
         if driver not in self.intance_param:
             p = copy.deepcopy(self.parameter)
             for v in list(p.values()):
-                v.init(self,driver)
-            self.intance_param[driver]=p
-   
-        prameter=self.intance_param[driver]
-        
-        #Den Parameter die Werte übergeben
-        i=0
+                v.init(self, driver)
+            self.intance_param[driver] = p
+
+        prameter = self.intance_param[driver]
+
+        # Den Parameter die Werte übergeben
+        i = 0
         for p in self.parameterTuple:
             prameter[p](para[i])
-            i = i+1
+            i = i + 1
 
-        return self._do_command(driver,prameter)
-        
-   
-   
-    def _do_command(self,driver,parameters):
+        return self._do_command(driver, prameter)
+
+    def _do_command(self, driver, parameters):
         """Diese Methode führt das VISA Command aus.
 
            Diese Methode sollte nie direkt verwendet werden, es sollte immer das Objekt selbst 
@@ -764,90 +748,85 @@ class Command(object):
            :param parameters:   Paramter für den VISA Kommando String  
         """
 
-        #Prüfen, ob von Driver schon die init() Methode aufgerufen wurde.
-        #Diese muss immer zu erst aufgerufen werden
+        # Prüfen, ob von Driver schon die init() Methode aufgerufen wurde.
+        # Diese muss immer zu erst aufgerufen werden
         if not driver.isInit():
             raise InitError()
-        
-        communication_obj=driver.getCommunication_obj()
-        
-        #Das Kommando mit Hilfe des Communication Objektes ausführen.
-        #und die Rückegabe mit Hilfe eines R_TYPES Objekt laut vorgabe umwandeln  
-        try: 
+
+        communication_obj = driver.getCommunication_obj()
+
+        # Das Kommando mit Hilfe des Communication Objektes ausführen.
+        # und die Rückegabe mit Hilfe eines R_TYPES Objekt laut vorgabe umwandeln
+        try:
             if self.command == "":
                 ans = communication_obj.read()
                 ans = self.tmpl(ans)
-            
+
             elif self.rtype:
-                ans = communication_obj.query(self.command%parameters)
+                ans = communication_obj.query(self.command % parameters)
                 ans = self.tmpl(ans)
             else:
-                ans = communication_obj.write(self.command%parameters)
-        
-        except (TypeError,ValueError) as e:
-                if isinstance(e,TypeError):
-                    if 'number' in str(e):
-                        raise TypeError("Value of one Parameter of the Command %s can not convert into int."%self.name) 
-                    elif 'float' in str(e):
-                         raise TypeError("Value of one Parameter of the Command %s can not convert into float."%self.name) 
-                    else:
-                        raise TypeError(e)
-                else:
-                    if 'unsupported format character' in str(e):
-                        raise ValueError("""Command string of the Command %s not correct
-                        %s"""%(self.name,e))
-                    else: 
-                        raise ValueError(e)
+                ans = communication_obj.write(self.command % parameters)
 
-        #Wenn eine rfunction angegeben wurde, diese Auführen und zurückgeben. 
+        except (TypeError, ValueError) as e:
+            if isinstance(e, TypeError):
+                if 'number' in str(e):
+                    raise TypeError("Value of one Parameter of the Command %s can not convert into int." % self.name)
+                elif 'float' in str(e):
+                    raise TypeError("Value of one Parameter of the Command %s can not convert into float." % self.name)
+                else:
+                    raise TypeError(e)
+            else:
+                if 'unsupported format character' in str(e):
+                    raise ValueError("""Command string of the Command %s not correct
+                        %s""" % (self.name, e))
+                else:
+                    raise ValueError(e)
+
+        # Wenn eine rfunction angegeben wurde, diese Auführen und zurückgeben.
         if self.rfunction:
             try:
-                return getattr(driver,self.rfunction)()
+                return getattr(driver, self.rfunction)()
             except AttributeError as e:
-                raise AttributeError("%s\n           Failure at Command: %s  Parameter: rfunction"%(e,self.name))
-        
-        #Wenn ein return_map definiert wurdeh, mappen:
+                raise AttributeError("%s\n           Failure at Command: %s  Parameter: rfunction" % (e, self.name))
+
+        # Wenn ein return_map definiert wurdeh, mappen:
         if self.return_map:
             try:
                 ans = self.return_map[ans]
             except:
                 pass
-            
-        return 0,ans
-        
-          
-    
+
+        return 0, ans
+
     def getName(self):
         """Gibt den Namen des Commands zurück
         """
         return self.name
-    
+
     def getParameter(self):
         """Gibt alle Parameter des Commands als Map zurück
         """
         return self.parameter
-    
+
     def getParameterTuple(self):
         """Gibt die Namen der Parameter des Commands, welche nicht an globale Attribute der Driver Klasse gebunden sind, als Tubel zurück.
         """
         return self.parameterTuple
-    
+
     def getParameterStr(self):
         """Gibt die Parameter des Commands, welche nicht an globale Attribute der Driver Klasse gebunden sind, als String zurück
         """
-        return ", ".join(self.parameterTuple) 
-    
-    def setReturn_map(self,return_map):
+        return ", ".join(self.parameterTuple)
+
+    def setReturn_map(self, return_map):
         """Mit dieser Methode kann nachträglich die return_Map des Commands gesetzt werden.
            Wird von der Meta-Klasse verwendet.
         """
-        self.return_map=return_map
-    
+        self.return_map = return_map
+
     def Rfunction(self):
         return self.rfunction
-
-
-
 
 
 class Parameter(object):
@@ -923,10 +902,8 @@ class Parameter(object):
         
         .. rubric:: Methods:
     """
-    
-    
-    
-    def __init__(self,name,class_attr=None,ptype=None,requires=None,possibilities_map=None,possibilities=None):
+
+    def __init__(self, name, class_attr=None, ptype=None, requires=None, possibilities_map=None, possibilities=None):
         """Zur Verwendung von Parameters, siehe Klassen Beschreibung
         
         :param name:                Der Name des Parameters
@@ -936,18 +913,17 @@ class Parameter(object):
         :param possibilities_map:   Possibilities_map für den Parameter (siehe Klassen Beschreibung) 
         :param possibilities:       Rossibilities für den Parameter (siehe Klassen Beschreibung)
         """
-        self.name=name
-        self.class_attr=class_attr
-        self.ptype=ptype
-        self.requires=requires
-        self.value=None
-        self.driver=None
-        self.command=None
-        self.possib=possibilities
-        self.possib_map=possibilities_map
-    
-    
-    def init(self,cmd,driver):
+        self.name = name
+        self.class_attr = class_attr
+        self.ptype = ptype
+        self.requires = requires
+        self.value = None
+        self.driver = None
+        self.command = None
+        self.possib = possibilities
+        self.possib_map = possibilities_map
+
+    def init(self, cmd, driver):
         """Init() führt einige, für die Initialisierung des Parameters, nötigen Schritte durch, 
            sie muss aufgerufen werden bevor das Parameter Objekt verwendet werden kann.
 
@@ -956,90 +932,87 @@ class Parameter(object):
            :param cmd: Command Instanz zu dem der Parameter gehört. 
            :param driver: Driver Instanz zu dem der Parameter gehört.
         """
-        self.command=cmd
-        self.driver=driver
-    
-    
+        self.command = cmd
+        self.driver = driver
+
     def getValue(self):
         """Gibt den aktuellen Wert des Parametes zurück.
         """
         if self.class_attr:
-            return getattr(self.driver,self.class_attr)
+            return getattr(self.driver, self.class_attr)
         return self.value
 
-
-
-    def __call__(self,value):
+    def __call__(self, value):
         """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
            Nähre Infos zur Verwendung des Parameters Objekt siehe Klassen Beschreibung
 
         :param para: Neuer Wert für den Parameter
-        """         
-                
+        """
+
         if self.ptype:
-            if not isinstance(value,self.ptype):
+            if not isinstance(value, self.ptype):
                 try:
-                    value=self.ptype(value)
+                    value = self.ptype(value)
                 except:
-                    raise TypeError('Attribute %s of %s must be of type %s'%(self.name,self.command.getName(),str(self.ptype)))
-        
+                    raise TypeError(
+                        'Attribute %s of %s must be of type %s' % (self.name, self.command.getName(), str(self.ptype)))
+
         self._validate(value)
-        
-        if self.possib and isinstance(value,str):
-            value =fstrcmp(value, self.possib, n=1,cutoff=0,ignorecase=True)[0]
-            #print 'value after fsrtrcmp ',value
-        
+
+        if self.possib and isinstance(value, str):
+            value = fstrcmp(value, self.possib, n=1, cutoff=0, ignorecase=True)[0]
+            # print 'value after fsrtrcmp ',value
+
         if self.possib_map:
             try:
                 value = self.possib_map[value]
             except:
                 pass
-            #print 'value after maping:',value
-               
+            # print 'value after maping:',value
+
         self.value = value
-    
-    
-    #def __repr__(self):
+
+    # def __repr__(self):
     #    #print 'repr'
     #    return self.getValue()
-        
+
     def __str__(self):
         """Dieser Slot wird verwendet wenn der Parameter in einen String umgewandelt werden soll.
         """
-        #print 'str'
-        try:     
+        # print 'str'
+        try:
             return str(self.getValue())
         except ValueError as e:
-            raise ValueError ("""Can not convert the value " %s " from the Parameter %s of the Command %s into str
-                  %s"""%(self.getValue(),self.name,self.command.getName(),e))
-    
+            raise ValueError("""Can not convert the value " %s " from the Parameter %s of the Command %s into str
+                  %s""" % (self.getValue(), self.name, self.command.getName(), e))
+
     def __int__(self):
         """Dieser Slot wird verwendet wenn der Parameter in ein Int umgewandelt werden soll.
         """
-        #print 'to init',self.getValue()
+        # print 'to init',self.getValue()
         try:
             return int(self.getValue())
         except ValueError as e:
-            raise ValueError ("""Can not convert the value " %s " from the Parameter %s of the Command %s into int
-                  %s"""%(self.getValue(),self.name,self.command.getName(),e))
-    
+            raise ValueError("""Can not convert the value " %s " from the Parameter %s of the Command %s into int
+                  %s""" % (self.getValue(), self.name, self.command.getName(), e))
+
     def __float__(self):
         """Dieser Slot wird verwendet wenn der Parameter in ein Float umgewandelt werden soll.
         """
-        #print 'float'
+        # print 'float'
         try:
             return float(self.getValue())
         except ValueError as e:
-            raise ValueError ("""Can not convert the value " %s " from the Parameter %s of the Command %s into float
-                  %s"""%(self.getValue(),self.name,self.command.getName(),e))
-            
+            raise ValueError("""Can not convert the value " %s " from the Parameter %s of the Command %s into float
+                  %s""" % (self.getValue(), self.name, self.command.getName(), e))
+
     def getName(self):
         """Gibt den Namen des Parameters zurück.
         """
         return self.name
-    
+
     def _validate(self, value):
-        #print self.requires
+        # print self.requires
         if not self.requires:
             return value
         requires = self.requires
@@ -1048,7 +1021,7 @@ class Parameter(object):
         for validator in requires:
             (value, error) = validator(value)
             if error:
-                raise ValidateError(error,parameter=self.name,command=self.command.getName())
+                raise ValidateError(error, parameter=self.name, command=self.command.getName())
         return value
 
     def isClass_attr(self):
@@ -1059,22 +1032,21 @@ class Parameter(object):
         if self.class_attr:
             r = True
         return r
-    
-    def setPossibilities_map(self,map):
+
+    def setPossibilities_map(self, map):
         """ Diese Methode ermöglicht das nachträgliche setzen einer Possibilities_map.
             Nähre Infos zur Verwendung des Parameters Objekt siehe Klassen Beschreibung
         """
-        self.possib_map=map
-    
-    def setPossibilities(self,possib):
+        self.possib_map = map
+
+    def setPossibilities(self, possib):
         """ Diese Methode ermöglicht das nachträgliche setzen von Possibilities.
             Nähre Infos zur Verwendung des Parameters Objekt siehe Klassen Beschreibung
         """
-        self.possib=possib
-        
+        self.possib = possib
+
     def Getptype(self):
         """ Gibt den Typ des Parameters zurück.
             (siehe Klassen Beschreibung)
         """
         return self.ptype
-    

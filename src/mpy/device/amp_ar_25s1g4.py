@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
-import visa
+import pyvisa
+import pyvisa.constants
 import time
 from mpy.device.amplifier import AMPLIFIER as AMP
 
+
 class AMPLIFIER(AMP):
-    conftmpl=AMP.conftmpl
-    conftmpl['init_value']['gpib']=int
+    conftmpl = AMP.conftmpl
+    conftmpl['init_value']['gpib'] = int
+
     def __init__(self):
         AMP.__init__(self)
         self._cmds={'POn':  [("P1", None)],
@@ -15,11 +18,12 @@ class AMPLIFIER(AMP):
                     'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
     def Init(self, ini=None, channel=None):
-        self.term_chars=visa.CR+visa.LF
-        self.error=AMP.Init(self, ini, channel)
+        self.term_chars = '\r\n'
+        self.error = AMP.Init(self, ini, channel)
         self.POn()
         self.Operate()
         return self.error
+
 
 def main():
     import sys
@@ -30,9 +34,9 @@ def main():
     import scuq
 
     try:
-        ini=sys.argv[1]
+        ini = sys.argv[1]
     except IndexError:
-        ini=format_block("""
+        ini = format_block("""
                          [description]
                          DESCRIPTION = 25s1g4
                          TYPE = AMPLIFIER
@@ -74,19 +78,20 @@ def main():
                          """)
         ini=io.StringIO(ini)
 
-    amp=AMPLIFIER()
-    err=amp.Init(ini)
+    amp = AMPLIFIER()
+    err = amp.Init(ini)
     print(amp.GetDescription())
-    ctx=scuq.ucomponents.Context()
-    while(True):
-        freq=float(input("Freq / Hz: "))
+    ctx = scuq.ucomponents.Context()
+    while (True):
+        freq = float(input("Freq / Hz: "))
         if freq < 0:
             break
         amp.SetFreq(freq)
         err, uq = amp.GetData(what='S21')
-        val, unc, unit=ctx.value_uncertainty_unit(uq)
+        val, unc, unit = ctx.value_uncertainty_unit(uq)
         print(freq, uq, val, unc, unit)
-    err=amp.Quit()
+    err = amp.Quit()
+
 
 if __name__ == '__main__':
     main()
