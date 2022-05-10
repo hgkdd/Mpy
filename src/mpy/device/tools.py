@@ -1,25 +1,16 @@
 # -*- coding: utf-8 -*-
 """This is :mod:`mpy.device.tools`:
 
-   :author: Christian Albrecht
+   :author: Christian Albrecht, Hans Georg Krauthaeuser
    :copyright: All rights reserved
    :license: no licence yet
-
-
 """
 
-import re
-
-from types import FunctionType
-from mpy.device.r_types import *
-from mpy.device.validators import *
-
-from mpy.tools.Configuration import fstrcmp
-
-from mpy.device.driver_new import DRIVER
-# from .mpy_exceptions import *
 import inspect
 import copy
+from mpy.device.r_types import *
+from mpy.tools.Configuration import fstrcmp
+from mpy.device.driver_new import DRIVER
 
 
 class Meta_Driver(type):
@@ -118,7 +109,7 @@ class Meta_Driver(type):
         Das Vorgehen für Functions ist äquivalent. 
     """
 
-    def __new__(mcs, cls_name, bases, dict):
+    def __new__(mcs, cls_name, bases, dct):
         # print "__new__: \n"
         # print "DriverMetaClass:\n NAME: %s \n\n BASES:\n %s\n\n DICT:\n%s"%(cls_name,str(bases),str(dict))
         # print "\n\n\n"
@@ -126,9 +117,9 @@ class Meta_Driver(type):
         # *********************
         # Erstellen und Kompilieren der Methoden
         # *********************
-        for cmd_func_name, cmd_func in list(dict['_cmds'].items()):
+        for cmd_func_name, cmd_func in list(dct['_cmds'].items()):
             # Prüfen ob Methode schon existiert, wenn ja, dann private Methode erzeugen.
-            if cmd_func_name in dict:
+            if cmd_func_name in dct:
                 cmd_func_name = "_" + cmd_func_name
             func_str = {}
             func_str['name'] = cmd_func_name
@@ -147,9 +138,9 @@ class Meta_Driver(type):
             exec(code, evaldict)
 
             if isinstance(cmd_func, Function):
-                dict[cmd_func_name] = evaldict["create_Methode"](cmd_func, function=cmd_func)
+                dct[cmd_func_name] = evaldict["create_Methode"](cmd_func, function=cmd_func)
             else:
-                dict[cmd_func_name] = evaldict["create_Methode"](cmd_func)
+                dct[cmd_func_name] = evaldict["create_Methode"](cmd_func)
 
             # ********************
             # Übergeben von Possibilities-tupel/dicts, Return-dicts an die
@@ -159,14 +150,14 @@ class Meta_Driver(type):
             if isinstance(cmd_func, Function):
                 for command_name, command in list(cmd_func.items()):
                     try:
-                        return_map = dict['%s_rmap' % command_name]
+                        return_map = dct['%s_rmap' % command_name]
                         command.setReturn_map(return_map)
                         # print return_map
                     except KeyError:
                         pass
             else:
                 try:
-                    return_map = dict['%s_rmap' % cmd_func_name]
+                    return_map = dct['%s_rmap' % cmd_func_name]
                     cmd_func.setReturn_map(return_map)
                     # print return_map
                 except KeyError:
@@ -175,7 +166,7 @@ class Meta_Driver(type):
             for para_name, para in list(cmd_func.getParameter().items()):
 
                 try:
-                    possib = dict['%s_possib' % para_name]
+                    possib = dct['%s_possib' % para_name]
                     para.setPossibilities(possib)
                     # print possib
                 except KeyError:
@@ -189,7 +180,7 @@ class Meta_Driver(type):
                     pass
 
                 try:
-                    possib_map = dict['%s_possib_map' % para_name]
+                    possib_map = dct['%s_possib_map' % para_name]
                     para.setPossibilities_map(possib_map)
                     # print possib_map
                 except KeyError:
@@ -212,10 +203,10 @@ class Meta_Driver(type):
                 if para_command:
                     args.extend(para_command)
 
-                if args != inspect.getfullargspec(dict[commands_name])[0]:
+                if args != inspect.getfullargspec(dct[commands_name])[0]:
                     raise DriverImplementedError(
                         'The function %s is not correct implemented\n            args current: %s      args should be: %s' % (
-                        commands_name, inspect.getfullargspec(dict[commands_name])[0], args))
+                            commands_name, inspect.getfullargspec(dct[commands_name])[0], args))
             except KeyError:
                 if para_command:
                     args = ", ".join(para_command)
@@ -231,9 +222,9 @@ class Meta_Driver(type):
                 code = compile(M_code, '<string>', 'single')
                 evaldict = {}
                 exec(code, evaldict)
-                dict[commands_name] = evaldict["%(name)s" % func_str]
+                dct[commands_name] = evaldict["%(name)s" % func_str]
 
-        return type.__new__(mcs, cls_name, bases, dict)
+        return type.__new__(mcs, cls_name, bases, dct)
 
     # def __init__(cls, name, bases, dct):
     #        print "\n__init_: \n"
@@ -437,7 +428,7 @@ class Function(dict):
             if isinstance(rtype, R_TYPES):
                 self.return_class = rtype
             elif isinstance(rtype, str):
-                self.return_class = R_REGEX(rtype)
+                self.return_class = R_STR(rtype)
             else:
                 self.return_class = R_DEFAULT(rtype, command=self)
 
@@ -693,7 +684,7 @@ class Command(object):
             if isinstance(rtype, R_TYPES):
                 self.tmpl = rtype
             elif isinstance(rtype, str):
-                self.tmpl = R_REGEX(rtype)
+                self.tmpl = R_STR(rtype)
             else:
                 self.tmpl = R_DEFAULT(rtype, command=self)
 

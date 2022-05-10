@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-import pyvisa
-import pyvisa.constants
-import time
 from mpy.device.amplifier import AMPLIFIER as AMP
 
 
@@ -11,14 +8,15 @@ class AMPLIFIER(AMP):
 
     def __init__(self):
         AMP.__init__(self)
-        self._cmds={'POn':  [("P1", None)],
-                    'POff':  [("P0", None)],
-                    'Operate': [("G4095", None)],
-                    'Standby':  [("G0000", None)],
-                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+        self._cmds = {'POn': [("P1", None)],
+                      'POff': [("P0", None)],
+                      'Operate': [("G4095", None)],
+                      'Standby': [("G0000", None)],
+                      'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+        self.term_chars = '\r\n'
+        self.error = None
 
     def Init(self, ini=None, channel=None):
-        self.term_chars = '\r\n'
         self.error = AMP.Init(self, ini, channel)
         self.POn()
         self.Operate()
@@ -28,8 +26,7 @@ class AMPLIFIER(AMP):
 def main():
     import sys
     import io
-    import time
-    
+
     from mpy.tools.util import format_block
     import scuq
 
@@ -76,13 +73,13 @@ def main():
                                                                 4.2e9 0
                                                                 '''))
                          """)
-        ini=io.StringIO(ini)
+        ini = io.StringIO(ini)
 
     amp = AMPLIFIER()
     err = amp.Init(ini)
     print(amp.GetDescription())
     ctx = scuq.ucomponents.Context()
-    while (True):
+    while True:
         freq = float(input("Freq / Hz: "))
         if freq < 0:
             break
@@ -95,4 +92,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

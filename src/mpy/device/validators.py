@@ -11,7 +11,6 @@
 
 
 """
-import re
 
 
 class IN_RANGE(object):

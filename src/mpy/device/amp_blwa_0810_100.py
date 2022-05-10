@@ -1,56 +1,58 @@
 # -*- coding: utf-8 -*-
-import visa
 import time
+
 from mpy.device.amplifier import AMPLIFIER as AMP
 
+
 class AMPLIFIER(AMP):
-    conftmpl=AMP.conftmpl
-    conftmpl['init_value']['gpib']=int
+    conftmpl = AMP.conftmpl
+    conftmpl['init_value']['gpib'] = int
+
     def __init__(self):
         AMP.__init__(self)
-        self.operating=False
-        self._cmds={'POn':  [("AMP_OFF", None)],
-                    'POff':  [("AMP_OFF", None)],
-                    'Operate': [("AMP_ON", None)],
-                    'Standby':  [("AMP_OFF", None)],
-                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+        self.operating = False
+        self._cmds = {'POn': [("AMP_OFF", None)],
+                      'POff': [("AMP_OFF", None)],
+                      'Operate': [("AMP_ON", None)],
+                      'Standby': [("AMP_OFF", None)],
+                      'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+        self.term_chars = '\n'
 
     def Init(self, ini=None, channel=None):
-        self.term_chars=visa.LF
-        self.error=AMP.Init(self, ini, channel)
-        #self.POn()
+        self.error = AMP.Init(self, ini, channel)
+        # self.POn()
         self.Standby()
-        #time.sleep(2)
+        # time.sleep(2)
         return self.error
-        
-    def SetFreq(self, freq):
-        self.error=0
 
-        if (80e6<=freq<=1e9) and (not self.operating):
+    def SetFreq(self, freq):
+        self.error = 0
+
+        if (80e6 <= freq <= 1e9) and (not self.operating):
             self.Operate()
             time.sleep(2)
-            self.operating=True
-        elif (not 80e6<=freq<=1e9) and self.operating:
+            self.operating = True
+        elif (not 80e6 <= freq <= 1e9) and self.operating:
             self.Standby()
-            self.operating=False
+            self.operating = False
             return self.error, freq
-            
-        self.error, freq=AMP.SetFreq(self,freq)
+
+        self.error, freq = AMP.SetFreq(self, freq)
         time.sleep(0.2)
         return self.error, freq
+
 
 def main():
     import sys
     import io
-    import time
-    
+
     from mpy.tools.util import format_block
     import scuq
 
     try:
-        ini=sys.argv[1]
+        ini = sys.argv[1]
     except IndexError:
-        ini=format_block("""
+        ini = format_block("""
                          [description]
                          DESCRIPTION = BLMA0810 100
                          TYPE = AMPLIFIER
@@ -90,20 +92,20 @@ def main():
                                                                 1e9 -5
                                                                 '''))
                          """)
-        ini=io.StringIO(ini)
+        ini = io.StringIO(ini)
 
-    amp=AMPLIFIER()
-    err=amp.Init(ini)
-    ctx=scuq.ucomponents.Context()
-    while(True):
-        freq=float(input("Freq / Hz: "))
+    amp = AMPLIFIER()
+    err = amp.Init(ini)
+    ctx = scuq.ucomponents.Context()
+    while True:
+        freq = float(input("Freq / Hz: "))
         if freq < 0:
             break
         amp.SetFreq(freq)
         err, uq = amp.GetData(what='S21')
-        val, unc, unit=ctx.value_uncertainty_unit(uq)
+        val, unc, unit = ctx.value_uncertainty_unit(uq)
         print(freq, uq, val, unc, unit)
+
 
 if __name__ == '__main__':
     main()
-

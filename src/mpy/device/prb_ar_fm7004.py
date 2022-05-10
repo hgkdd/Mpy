@@ -1,81 +1,83 @@
 # -*- coding: utf-8 -*-
 #
-import sys
-import visa
-import time
 import io
-from scuq import si,quantities,ucomponents
-from mpy.tools.Configuration import fstrcmp
+import sys
+import time
+from scuq import si, quantities, ucomponents
+
 from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
+
 
 class FIELDPROBE(FLDPRB):
     def __init__(self):
         FLDPRB.__init__(self)
-        self._internal_unit=si.VOLT/si.METER
-        self.freq=None
-        self._cmds={'Zero':     [],
-                    'Trigger':     [],
-                    'GetBatteryState':     [("Battery?", r'(?P<BATT>\d+)')],
-                    'Quit':     [],
-                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+        self._internal_unit = si.VOLT / si.METER
+        self.freq = None
+        self._cmds = {'Zero': [],
+                      'Trigger': [],
+                      'GetBatteryState': [("Battery?", r'(?P<BATT>\d+)')],
+                      'Quit': [],
+                      'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
     def Init(self, ini=None, channel=None):
-        self.term_chars=visa.CR
-        self.error=FLDPRB.Init(self, ini, channel)
+        self.term_chars = '\r'
+        self.error = FLDPRB.Init(self, ini, channel)
         self.write('CORR,ON')
         return self.error
 
     def SetFreq(self, freq):
-        self.error=0
+        self.error = 0
         if freq >= 1e9:
-            fs="FREQ,%07.3fG"%(freq*1e-9)
+            fs = "FREQ,%07.3fG" % (freq * 1e-9)
         elif freq >= 1e6:
-            fs="FREQ,%07.3fM"%(freq*1e-6)
+            fs = "FREQ,%07.3fM" % (freq * 1e-6)
         else:
-            fs="FREQ,%07.3fK"%(freq*1e-3)
+            fs = "FREQ,%07.3fK" % (freq * 1e-3)
         self.write(fs)
         time.sleep(0.1)
-        tmpl=r"FREQ,(?P<f>\d{3}\.\d{3})(?P<u>[KMG])"
-        ans=self.query("FREQ?", tmpl)
+        tmpl = r"FREQ,(?P<f>\d{3}\.\d{3})(?P<u>[KMG])"
+        ans = self.query("FREQ?", tmpl)
         if ans:
-            factors={'K':1e3, 'M':1e6, 'G':1e9}
-            freq=float(ans['f'])*factors[ans['u']]
+            factors = {'K': 1e3, 'M': 1e6, 'G': 1e9}
+            freq = float(ans['f']) * factors[ans['u']]
         else:
-            self.error=1
-            freq=None
-        self.freq=freq
+            self.error = 1
+            freq = None
+        self.freq = freq
         return self.error, freq
 
     def GetData(self):
         time.sleep(0.5)
-        self.error=0
-        cmd="D,%d?"%self.channel
-        tmpl=r"D,%d,(?P<x>[\d.]{5}),(?P<y>[\d.]{5}),(?P<z>[\d.]{5}),(?P<t>[\d.]{5})"%self.channel
+        self.error = 0
+        cmd = "D,%d?" % self.channel
+        tmpl = r"D,%d,(?P<x>[\d.]{5}),(?P<y>[\d.]{5}),(?P<z>[\d.]{5}),(?P<t>[\d.]{5})" % self.channel
         for i in range(5):  # 5 tries
-            ans=self.query(cmd,tmpl)
+            ans = self.query(cmd, tmpl)
             if ans:
                 break
             time.sleep(0.1)
-        #print ans
+        # print ans
         if self.freq <= 1e9:
-            relerr=0.096  # 0.8 dB
+            relerr = 0.096  # 0.8 dB
         else:
-            relerr=0.17  # 1.4 dB
-        
-        data=[quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(float(ans[i]),float(ans[i])*relerr) ) for i in 'xyz']
+            relerr = 0.17  # 1.4 dB
+
+        data = [
+            quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(float(ans[i]), float(ans[i]) * relerr))
+            for i in 'xyz']
         return self.error, data
 
     def GetDataNB(self, retrigger):
         return self.GetData()
 
     def GetBatteryState(self):
-        self.error=0
+        self.error = 0
         return self.error, 1.0
 
-        
+
 def test():
     from mpy.tools.util import format_block
-    ini=format_block("""
+    ini = format_block("""
                         [DESCRIPTION]
                         description: 'FL7018@FM7004'
                         description: 'FL7018@FM7004'
@@ -96,11 +98,12 @@ def test():
                         name: EField
                         unit: Voverm
                         """)
-    ini=io.StringIO(ini)
-    dev=FIELDPROBE()
+    ini = io.StringIO(ini)
+    dev = FIELDPROBE()
     dev.Init(ini)
     return dev
-        
+
+
 def main():
     from mpy.tools.util import format_block
     from mpy.device.fieldprobe_ui import UI as UI
@@ -110,9 +113,9 @@ def main():
     # 'StringIO' in eine virtuelle Datei umgewandelt.
     #
     try:
-        ini=sys.argv[1]
+        ini = sys.argv[1]
     except IndexError:
-        ini=format_block("""
+        ini = format_block("""
                         [DESCRIPTION]
                         description: 'FL7018@FM7004'
                         type:        'FIELDPROBE'
@@ -132,11 +135,11 @@ def main():
                         name: EField
                         unit: Voverm
                         """)
-        ini=io.StringIO(ini)
-    dev=FIELDPROBE()
-    ui=UI(dev,ini=ini)
+        ini = io.StringIO(ini)
+    dev = FIELDPROBE()
+    ui = UI(dev, ini=ini)
     ui.configure_traits()
+
 
 if __name__ == '__main__':
     main()
-

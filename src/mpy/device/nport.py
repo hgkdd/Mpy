@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from mpy.tools.Configuration import Configuration, strbool, fstrcmp
+from mpy.device.driver import DRIVER
+from mpy.tools.Configuration import strbool, fstrcmp
 from mpy.tools.dataparser import DatFile
 from mpy.tools.interpol import UQ_interpol
-from mpy.device.driver import DRIVER
 
 
 class NPORT(DRIVER):

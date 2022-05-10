@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 
-import re
 import math
-from mpy.tools.Configuration import Configuration,strbool,fstrcmp
+
 from scuq import *
-from mpy.device.device import CONVERT, Device
+
 from mpy.device.driver import DRIVER
+from mpy.tools.Configuration import strbool
+
 
 class POWERMETER(DRIVER):
     """
@@ -70,16 +71,16 @@ class POWERMETER(DRIVER):
         - *sensor*: string specifying the used power sensor. May be used in uncertainty calculations.
 
     """
-    ZeroCorrection=('OFF', 'ON')
-    RANGE=('MANUAL', 'AUTO', 'AUTOONCE')
-    
-    conftmpl={'description': 
-                 {'description': str,
-                  'type': str,
-                  'vendor': str,
-                  'serialnr': str,
-                  'deviceid': str,
-                  'driver': str},
+    ZeroCorrection = ('OFF', 'ON')
+    RANGE = ('MANUAL', 'AUTO', 'AUTOONCE')
+
+    conftmpl = {'description':
+                    {'description': str,
+                     'type': str,
+                     'vendor': str,
+                     'serialnr': str,
+                     'deviceid': str,
+                     'driver': str},
                 'init_value':
                     {'fstart': float,
                      'fstop': float,
@@ -98,24 +99,24 @@ class POWERMETER(DRIVER):
                      'swr2': float,
                      'sensor': str}}
 
-    _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
-        
+    _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
+
     def __init__(self):
         DRIVER.__init__(self)
-        self._cmds={'SetFreq':  [("'FREQ %s HZ'%freq", None)],
-                    'GetFreq':  [('FREQ?', r'FREQ (?P<freq>%s) HZ'%self._FP)],
-                    'GetData':  [('POW?', r'POW (?P<power>%s) (?P<unit>)\S+'%self._FP)],
-                    'GetDataNB':  [('POW?', r'POW (?P<power>%s) (?P<unit>)\S+'%self._FP)],
-                    'Trigger': [('TRG', None)],
-                    'ZeroOn':  [('ZERO ON', None)],
-                    'ZeroOff':  [('ZERO OFF', None)],
-                    'Quit':     [('QUIT', None)],
-                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
-        self.freq= None
-        self.power=None
-        self.unit=None
-        self.channel=None
-        self._internal_unit='dBm'
+        self._cmds = {'SetFreq': [("'FREQ %s HZ'%freq", None)],
+                      'GetFreq': [('FREQ?', r'FREQ (?P<freq>%s) HZ' % self._FP)],
+                      'GetData': [('POW?', r'POW (?P<power>%s) (?P<unit>)\S+' % self._FP)],
+                      'GetDataNB': [('POW?', r'POW (?P<power>%s) (?P<unit>)\S+' % self._FP)],
+                      'Trigger': [('TRG', None)],
+                      'ZeroOn': [('ZERO ON', None)],
+                      'ZeroOff': [('ZERO OFF', None)],
+                      'Quit': [('QUIT', None)],
+                      'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+        self.freq = None
+        self.power = None
+        self.unit = None
+        self.channel = None
+        self._internal_unit = 'dBm'
 
     def SetFreq(self, freq):
         """
@@ -126,18 +127,18 @@ class POWERMETER(DRIVER):
         
         ``(self.error, self.freq)`` is returned.
         """
-        self.error=0
-        #print freq
-        dct=self._do_cmds('SetFreq', locals())
+        self.error = 0
+        # print freq
+        dct = self._do_cmds('SetFreq', locals())
         self._update(dct)
-        dct=self._do_cmds('GetFreq', locals())
+        dct = self._do_cmds('GetFreq', locals())
         self._update(dct)
         if self.error == 0:
             if not dct:
-                self.freq=freq
+                self.freq = freq
             else:
-                self.freq=float(self.freq)
-            #print self.freq
+                self.freq = float(self.freq)
+            # print self.freq
         return self.error, self.freq
 
     def Trigger(self):
@@ -146,10 +147,10 @@ class POWERMETER(DRIVER):
         
         ``self.error`` is returned.
         """
-        self.error=0
-        dct=self._do_cmds('Trigger', locals())
+        self.error = 0
+        dct = self._do_cmds('Trigger', locals())
         self._update(dct)
-        #if self.error == 0:
+        # if self.error == 0:
         #    print "Device triggered."
         return self.error
 
@@ -159,13 +160,13 @@ class POWERMETER(DRIVER):
 
         (self.error, 0) is returned.
         """
-        self.error=0
-        #print 'aca tambien'
+        self.error = 0
+        # print 'aca tambien'
         if state.lower() == 'on':
-            dct=self._do_cmds('ZeroOn', locals())
+            dct = self._do_cmds('ZeroOn', locals())
             self._update(dct)
         else:
-            dct=self._do_cmds('ZeroOff', locals())
+            dct = self._do_cmds('ZeroOff', locals())
             self._update(dct)
         return self.error, 0
 
@@ -176,23 +177,23 @@ class POWERMETER(DRIVER):
         ``(self.error, obj)`` is returned where ``obj`` is a instance of 
         :class:`scuq.quantities.Quantity`.
         """
-        self.error=0
-        dct=self._do_cmds('GetData', locals()) 
+        self.error = 0
+        dct = self._do_cmds('GetData', locals())
         self._update(dct)
 
-        if self.error==0 and self.power:
+        if self.error == 0 and self.power:
             self.update_internal_unit()
-            swr_err=self.get_standard_mismatch_uncertainty()
-            self.power=float(self.power)
+            swr_err = self.get_standard_mismatch_uncertainty()
+            self.power = float(self.power)
             try:
-                obj=quantities.Quantity(eval(self._internal_unit), 
-                                        ucomponents.UncertainInput(self.power, self.power*swr_err))
+                obj = quantities.Quantity(eval(self._internal_unit),
+                                          ucomponents.UncertainInput(self.power, self.power * swr_err))
             except (AssertionError, NameError):
-                self.power,self.unit=self.convert.c2scuq(self._internal_unit, float(self.power))
-                obj=quantities.Quantity(self.unit, 
-                                        ucomponents.UncertainInput(self.power, self.power*swr_err))
+                self.power, self.unit = self.convert.c2scuq(self._internal_unit, float(self.power))
+                obj = quantities.Quantity(self.unit,
+                                          ucomponents.UncertainInput(self.power, self.power * swr_err))
         else:
-            obj=None
+            obj = None
         return self.error, obj
 
     def GetDataNB(self, retrigger):
@@ -212,7 +213,7 @@ class POWERMETER(DRIVER):
             self.Trigger()
         return self.error, obj
 
-    def update_internal_unit(self,ch=None,unit='DBM'):
+    def update_internal_unit(self, ch=None, unit='DBM'):
         """
         Selects the output unit for the measured power values.
        
@@ -230,15 +231,14 @@ class POWERMETER(DRIVER):
               dBuV           DBUV
 
         """
-        unit=unit 
-        channel=ch
+        unit = unit
+        channel = ch
         if not channel:
-            channel =self.channel
-        dct=self._do_cmds('Unit', locals()) 
-        self._internal_unit=unit
-       
-    
-    def get_standard_mismatch_uncertainty (self):
+            channel = self.channel
+        dct = self._do_cmds('Unit', locals())
+        self._internal_unit = unit
+
+    def get_standard_mismatch_uncertainty(self):
         """
         Returns the standard uncertainty (relative error) due to the mismatch between generator and load.
         
@@ -249,43 +249,42 @@ class POWERMETER(DRIVER):
         The expanded uncertainty is obtained by multiplying with the correct coverage factor. 
         Here, this is 0.997*sqrt(2) approx 1.4 (U-shaped distribution) for 95% coverage.
         """
-        chdict=self.conf['channel_%d'%self.channel]
-        vswr1=chdict.get('swr1', 1.0)
-        vswr2=chdict.get('swr2', 1.0)
+        chdict = self.conf['channel_%d' % self.channel]
+        vswr1 = chdict.get('swr1', 1.0)
+        vswr2 = chdict.get('swr2', 1.0)
         # calculate reflection coefficients from vswr
-        G1=(vswr1-1.)/(vswr1+1.)
-        G2=(vswr2-1.)/(vswr2+1.)
-        umax=(1.+G1*G2)**2
-        umin=(1.-G1*G2)**2
-        #print G1, G2, umax, umin
-        width=umax-umin
-        sigma=width/(2.*math.sqrt(2.))
+        G1 = (vswr1 - 1.) / (vswr1 + 1.)
+        G2 = (vswr2 - 1.) / (vswr2 + 1.)
+        umax = (1. + G1 * G2) ** 2
+        umin = (1. - G1 * G2) ** 2
+        # print G1, G2, umax, umin
+        width = umax - umin
+        sigma = width / (2. * math.sqrt(2.))
         return sigma
+
 
 if __name__ == '__main__':
     import sys
 
     try:
-        ini=sys.argv[1]
+        ini = sys.argv[1]
     except IndexError:
-        ini=None
+        ini = None
 
-
-    d=POWERMETER()
+    d = POWERMETER()
     d.Init(ini)
     if not ini:
         d.SetVirtual(False)
 
-    err, des=d.GetDescription()
-    print("Description: %s"%des)
+    err, des = d.GetDescription()
+    print("Description: %s" % des)
 
     for freq in [100]:
-        print("Set freq to %e Hz"%freq)
+        print("Set freq to %e Hz" % freq)
         err, rfreq = d.SetFreq(freq)
         if err == 0:
-            print("Freq set to %e Hz"%rfreq)
+            print("Freq set to %e Hz" % rfreq)
         else:
             print("Error setting freq")
-
 
     d.Quit()

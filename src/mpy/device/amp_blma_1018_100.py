@@ -1,93 +1,96 @@
 # -*- coding: utf-8 -*-
-import visa
+import pyvisa
 import time
 from mpy.device.amplifier import AMPLIFIER as AMP
 
+
 class AMPLIFIER(AMP):
-    conftmpl=AMP.conftmpl
-    conftmpl['init_value']['gpib']=int
+    conftmpl = AMP.conftmpl
+    conftmpl['init_value']['gpib'] = int
+
     def __init__(self):
         AMP.__init__(self)
-        self.operating=False
-        self._cmds={'POn':  [("AMP_OFF", None)],
-                    'POff':  [("AMP_OFF", None)],
-                    'Operate': [("AMP_ON", None)],
-                    'Standby':  [("AMP_OFF", None)],
-                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+        self.operating = False
+        self._cmds = {'POn': [("AMP_OFF", None)],
+                      'POff': [("AMP_OFF", None)],
+                      'Operate': [("AMP_ON", None)],
+                      'Standby': [("AMP_OFF", None)],
+                      'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+        self.term_chars = '\n'
+        self.error = None
 
     def Init(self, ini=None, channel=None):
-        self.term_chars=visa.LF
-        self.error=AMP.Init(self, ini, channel)
-        #self.POn()
+        self.error = AMP.Init(self, ini, channel)
+        # self.POn()
         self.Standby()
-        #time.sleep(2)
+        # time.sleep(2)
         return self.error
 
     def _ask(self, cmd, N=5, sleep=0.2):
-        ans=None
+        ans = None
         for _ in range(N):
             try:
-                ans=self.dev.ask(cmd)
-                break # no exception
-            except visa.VisaIOError:
+                ans = self.dev.ask(cmd)
+                break  # no exception
+            except pyvisa.VisaIOError:
                 time.sleep(sleep)
-                continue # try again
+                continue  # try again
         else:
-            raise #re raise exception
+            raise  # re raise exception
         return ans
 
     def _wait(self, state=False):
         while True:
-            ans=self._ask('AMP?')
-            rstate=(ans=='AMP_ON')
+            ans = self._ask('AMP?')
+            rstate = (ans == 'AMP_ON')
             if state == rstate:
                 break
             time.sleep(0.1)
-        
+
     def SetFreq(self, freq):
-        self.error=0
-        if (1e9<=freq<=18e9) and (not self.operating):
+        self.error = 0
+        if (1e9 <= freq <= 18e9) and (not self.operating):
             self.Operate()
             time.sleep(2)
-            self.operating=True
-        elif (not 1e9<=freq<=18e9) and self.operating:
+            self.operating = True
+        elif (not 1e9 <= freq <= 18e9) and self.operating:
             self.Standby()
-            self.operating=False
+            self.operating = False
             return self.error, freq
 
-        swstat=self._ask('SW01?')
+        swstat = self._ask('SW01?')
         assert swstat.startswith('SW01_')
-        swstat=int(swstat[-1])
-        if freq<=2e9:
-            sw=1
-        elif freq<=6e9:
-            sw=2
+        swstat = int(swstat[-1])
+        if freq <= 2e9:
+            sw = 1
+        elif freq <= 6e9:
+            sw = 2
         else:
-            sw=3
-        
-        if sw!=swstat:
+            sw = 3
+
+        if sw != swstat:
             self.Standby()
             self._wait(False)
-            self.write('SW01_%d'%sw)
+            self.write('SW01_%d' % sw)
             self.Operate()
             self._wait(True)
             time.sleep(2)
-        self.error, freq=AMP.SetFreq(self,freq)
+        self.error, freq = AMP.SetFreq(self, freq)
         time.sleep(0.2)
         return self.error, freq
+
 
 def main():
     import sys
     import io
-    import time
-    
+
     from mpy.tools.util import format_block
     import scuq
 
     try:
-        ini=sys.argv[1]
+        ini = sys.argv[1]
     except IndexError:
-        ini=format_block("""
+        ini = format_block("""
                          [description]
                          DESCRIPTION = BLMA1018 100
                          TYPE = AMPLIFIER
@@ -131,21 +134,21 @@ def main():
                                                                 18e9 -5
                                                                 '''))
                          """)
-        ini=io.StringIO(ini)
+        ini = io.StringIO(ini)
 
-    amp=AMPLIFIER()
-    err=amp.Init(ini)
-    ctx=scuq.ucomponents.Context()
-    while(True):
-        freq=float(input("Freq / Hz: "))
+    amp = AMPLIFIER()
+    err = amp.Init(ini)
+    ctx = scuq.ucomponents.Context()
+    while True:
+        freq = float(input("Freq / Hz: "))
         if freq < 0:
             break
         amp.SetFreq(freq)
         err, uq = amp.GetData(what='S21')
-        val, unc, unit=ctx.value_uncertainty_unit(uq)
+        val, unc, unit = ctx.value_uncertainty_unit(uq)
         print(freq, uq, val, unc, unit)
     amp.POff()
-        
+
+
 if __name__ == '__main__':
     main()
-

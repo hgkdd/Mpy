@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from mpy.device.nport import NPORT   # parent class
-from mpy.tools.Configuration import fstrcmp # fuzzy string compare
+from mpy.device.nport import NPORT  # parent class
+from mpy.tools.Configuration import fstrcmp  # fuzzy string compare
+
 
 class AMPLIFIER(NPORT):
     """
@@ -14,17 +15,18 @@ class AMPLIFIER(NPORT):
 
     The class is base class for all drivers of remote controlled amplifies. 
     """
-    STATES=('Operate', 'Standby', 'POn', 'POff') 
-    _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
+    STATES = ('Operate', 'Standby', 'POn', 'POff')
+    _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
+
     def __init__(self):
         NPORT.__init__(self)
-        self._cmds={'Pon':  [("Set to POn", None)],
-                    'Standby':  [("Set to Standby", None)],
-                    'Operate':  [("Set to Operate", None)],
-                    'POff':  [("Set to POff", None)],
-                    'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+        self._cmds = {'Pon': [("Set to POn", None)],
+                      'Standby': [("Set to Standby", None)],
+                      'Operate': [("Set to Operate", None)],
+                      'POff': [("Set to POff", None)],
+                      'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
-    def SetState (self, state):
+    def SetState(self, state):
         """
         Switch the state of the amplifier (in remote operation).
 
@@ -34,38 +36,38 @@ class AMPLIFIER(NPORT):
 
         Returns 0 if succesfull or an error code < 0.
         """
-        state=fstrcmp(state,AMPLIFIER.STATES,n=1,cutoff=0,ignorecase=True)[0]
-        #print state
-        self.error=0
-        dct=self._do_cmds(state, locals())
+        state = fstrcmp(state, AMPLIFIER.STATES, n=1, cutoff=0, ignorecase=True)[0]
+        # print state
+        self.error = 0
+        dct = self._do_cmds(state, locals())
         self._update(dct)
         return self.error
-    
-    def Operate (self):
+
+    def Operate(self):
         """
         Switch to mode 'Operate'.
 
         Calls SetState.
         """
         return self.SetState('Operate')
-    
-    def Standby (self):
+
+    def Standby(self):
         """
         Switch to mode 'Standby'.
 
         Calls SetState.
         """
         return self.SetState('Standby')
-    
-    def POn (self):
+
+    def POn(self):
         """
         Switch to mode 'Power On'.
 
         Calls SetState.
         """
         return self.SetState('POn')
-    
-    def POff (self):
+
+    def POff(self):
         """
         Switch to mode 'Power Off'.
 
@@ -73,10 +75,11 @@ class AMPLIFIER(NPORT):
         """
         return self.SetState('POff')
 
-    def Quit (self):
+    def Quit(self):
         self.error = NPORT.Quit(self)
         self.error += self.POff()
         return self.error
+
 
 def main():
     import sys
@@ -85,9 +88,9 @@ def main():
     import scuq
 
     try:
-        ini=sys.argv[1]
+        ini = sys.argv[1]
     except IndexError:
-        ini=format_block("""
+        ini = format_block("""
                          [description]
                          DESCRIPTION = Test Amplifier
                          TYPE = AMPLIFIER
@@ -126,20 +129,21 @@ def main():
                                                                 1e9 0
                                                                 '''))
                          """)
-        ini=io.StringIO(ini)
+        ini = io.StringIO(ini)
 
-    amp=AMPLIFIER()
-    err=amp.Init(ini)
+    amp = AMPLIFIER()
+    err = amp.Init(ini)
     amp.POn()
     amp.Operate()
-    ctx=scuq.ucomponents.Context()
-    for freq in (80e6,500e6,1e9):
+    ctx = scuq.ucomponents.Context()
+    for freq in (80e6, 500e6, 1e9):
         amp.SetFreq(freq)
         err, uq = amp.GetData(what='S21')
-        val, unc, unit=ctx.value_uncertainty_unit(uq)
+        val, unc, unit = ctx.value_uncertainty_unit(uq)
         print(freq, uq, val, unc, unit)
     amp.Standby()
     amp.Quit()
+
 
 if __name__ == '__main__':
     main()

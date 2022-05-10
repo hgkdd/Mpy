@@ -11,13 +11,9 @@
 ###Refers to the currently active Trace. See also SetTrace()
 
 
-import re
-import functools
-from mpy.tools.Configuration import Configuration,strbool,fstrcmp
-from scuq import *
-from mpy.device.device import CONVERT, Device
+from mpy.tools.Configuration import strbool
 
-#from mpy.device.driver import DRIVER
+# from mpy.device.driver import DRIVER
 from .driver_new import DRIVER
 
 
@@ -373,19 +369,14 @@ class NETWORKANALYZER(DRIVER):
             :return: Trigger Delay which is set on the Device 
             :rtype: Float
     """
-    
-    
 
-    
-    
-
-    conftmpl={'description': 
-                 {'description': str,
-                  'type': str,
-                  'vendor': str,
-                  'serialnr': str,
-                  'deviceid': str,
-                  'driver': str},
+    conftmpl = {'description':
+                    {'description': str,
+                     'type': str,
+                     'vendor': str,
+                     'serialnr': str,
+                     'deviceid': str,
+                     'driver': str},
                 'init_value':
                     {'fstart': float,
                      'fstop': float,
@@ -404,146 +395,139 @@ class NETWORKANALYZER(DRIVER):
                      'SetSweepType': str
                      }}
 
-
-
     # Die "possibilities" Listen:
-    sweepType_possib=('LINEAR','LOGARITHMIC')
-    
-    triggerMode_possib=('IMMEDIATE', 'EXTERNAL')
+    sweepType_possib = ('LINEAR', 'LOGARITHMIC')
 
-    sweepMode_possib=('CONTINUOUS','SINGEL')
-    
-    sparam_possib=('S11', 'S12', 'S21', 'S22')
- 
- 
- 
- 
-    _commands={"SetCenterFreq" :   {'parameter': ('cfreq'),
-                                     'returntype': float},
-               "GetCenterFreq":     {'parameter': None, 
-                                     'returntype': float},
-    
-               "SetSpan":           {'parameter':  'span',
-                                     'returntype': float},
-                      
-               "GetSpan":           {'parameter': None, 
-                                     'returntype': float},
-               
-               "SetStartFreq":      {'parameter': 'stfreq',
-                                     'returntype': float},
-               
-               "GetStartFreq":      {'parameter': None,
-                                     'returntype': float},
-               
-               "SetStopFreq":       {'parameter': "spfreq",
-                                     'returntype': float},
-               
-               "GetStopFreq":       {'parameter': None,
-                                     'returntype': float} ,
-                
-               "SetRBW":            {'parameter': 'rbw',
-                                     'returntype': float},
-               
-               "GetRBW":            {'parameter': None,
-                                     'returntype': float},
-               
-               "SetRefLevel":       {'parameter': "reflevel",
-                                     'returntype': float},
-               
-               "GetRefLevel":       {'parameter': None,
-                                     'returntype': float},
-               
-               "SetDivisionValue":  {'parameter': 'divivalue',
-                                     'returntype': float},
-    
-               "GetDivisionValue":  {'parameter': None,
-                                     'returntype': float},
-                                     
-               "CreateTrace":       {'parameter': ('tracename','sparam'),
-                                     'returntype': str},
-                                     
-               "DelTrace":          {'parameter': None,
-                                     'returntype': str}, 
-               
-               "SetTrace":          {'parameter': "traceName",
-                                     'returntype': str},
-               
-               "GetTrace":          {'parameter': None,
-                                     'returntype': str},
-              
-               "SetSparameter":     {'parameter': "sparam",
-                                     'returntype': str},
-               
-               "GetSparameter":     {'parameter': None,
-                                     'returntype': str},
-                 
-               "SetChannel":        {'parameter': "chan",
-                                     'returntype': int},
-               
-               "GetChannel":        {'parameter': None,
-                                     'returntype': int},
+    triggerMode_possib = ('IMMEDIATE', 'EXTERNAL')
 
-               "SetSweepType":      {'parameter': "sweepType",
-                                     'returntype': str},
-    
-               "GetSweepType":      {'parameter': None,
-                                     'returntype': str},
+    sweepMode_possib = ('CONTINUOUS', 'SINGEL')
 
-               "SetSweepCount":     {'parameter': "sweepCount",
+    sparam_possib = ('S11', 'S12', 'S21', 'S22')
+
+    _commands = {"SetCenterFreq": {'parameter': ('cfreq'),
+                                   'returntype': float},
+                 "GetCenterFreq": {'parameter': None,
+                                   'returntype': float},
+
+                 "SetSpan": {'parameter': 'span',
+                             'returntype': float},
+
+                 "GetSpan": {'parameter': None,
+                             'returntype': float},
+
+                 "SetStartFreq": {'parameter': 'stfreq',
+                                  'returntype': float},
+
+                 "GetStartFreq": {'parameter': None,
+                                  'returntype': float},
+
+                 "SetStopFreq": {'parameter': "spfreq",
+                                 'returntype': float},
+
+                 "GetStopFreq": {'parameter': None,
+                                 'returntype': float},
+
+                 "SetRBW": {'parameter': 'rbw',
+                            'returntype': float},
+
+                 "GetRBW": {'parameter': None,
+                            'returntype': float},
+
+                 "SetRefLevel": {'parameter': "reflevel",
+                                 'returntype': float},
+
+                 "GetRefLevel": {'parameter': None,
+                                 'returntype': float},
+
+                 "SetDivisionValue": {'parameter': 'divivalue',
+                                      'returntype': float},
+
+                 "GetDivisionValue": {'parameter': None,
+                                      'returntype': float},
+
+                 "CreateTrace": {'parameter': ('tracename', 'sparam'),
+                                 'returntype': str},
+
+                 "DelTrace": {'parameter': None,
+                              'returntype': str},
+
+                 "SetTrace": {'parameter': "traceName",
+                              'returntype': str},
+
+                 "GetTrace": {'parameter': None,
+                              'returntype': str},
+
+                 "SetSparameter": {'parameter': "sparam",
+                                   'returntype': str},
+
+                 "GetSparameter": {'parameter': None,
+                                   'returntype': str},
+
+                 "SetChannel": {'parameter': "chan",
+                                'returntype': int},
+
+                 "GetChannel": {'parameter': None,
+                                'returntype': int},
+
+                 "SetSweepType": {'parameter': "sweepType",
+                                  'returntype': str},
+
+                 "GetSweepType": {'parameter': None,
+                                  'returntype': str},
+
+                 "SetSweepCount": {'parameter': "sweepCount",
+                                   'returntype': int},
+
+                 "GetSweepCount": {'parameter': None,
+                                   'returntype': int},
+
+                 "NewSweepCount": {'parameter': None,
+                                   'returntype': None},
+
+                 "SetSweepPoints": {'parameter': "spoints",
                                     'returntype': int},
-               
-               "GetSweepCount":     {'parameter': None,
-                                     'returntype': int},
-            
-               "NewSweepCount":     {'parameter': None,
-                                     'returntype': None},
 
-               "SetSweepPoints":    {'parameter': "spoints",
-                                     'returntype': int},
-               
-               "GetSweepPoints":    {'parameter': None,
-                                      'returntype': int},
+                 "GetSweepPoints": {'parameter': None,
+                                    'returntype': int},
 
-               "SetSweepMode":      {'parameter': "sweepMode",
-                                     'returntype': str}, 
-               
-               "GetSweepMode":      {'parameter': None,
-                                     'returntype': str}, 
-            
-               "SetTriggerMode":    {'parameter': "triggerMode",
-                                     'returntype': str},
-               
-               "GetTriggerMode":    {'parameter': None,
-                                     'returntype': str},
-               
-               "SetTriggerDelay":   {'parameter': "tdelay",
+                 "SetSweepMode": {'parameter': "sweepMode",
+                                  'returntype': str},
+
+                 "GetSweepMode": {'parameter': None,
+                                  'returntype': str},
+
+                 "SetTriggerMode": {'parameter': "triggerMode",
+                                    'returntype': str},
+
+                 "GetTriggerMode": {'parameter': None,
+                                    'returntype': str},
+
+                 "SetTriggerDelay": {'parameter': "tdelay",
                                      'returntype': float},
 
-               "GetTriggerDelay":   {'parameter': None,
+                 "GetTriggerDelay": {'parameter': None,
                                      'returntype': float}
-            }
+                 }
 
-        
     def __init__(self):
         DRIVER.__init__(self)
-        self._cmds={}
+        self._cmds = {}
 
 
 if __name__ == '__main__':
     import sys
 
     try:
-        ini=sys.argv[1]
+        ini = sys.argv[1]
     except IndexError:
-        ini=None
+        ini = None
 
-
-    d=SPECTRUMANALYZER()
+    d = NETWORKANALYZER()
     d.Init(ini)
     if not ini:
         d.SetVirtual(False)
 
-    err, des=d.GetDescription()
-    print("Description: %s"%des)
+    err, des = d.GetDescription()
+    print("Description: %s" % des)
 
     d.Quit()

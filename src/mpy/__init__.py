@@ -1,6 +1,7 @@
-version='unknown'
+__version__ = 'unknown'
 try:
-    from . import __version__
-    version=__version__.version
+    from _version import version
+
+    __version__ = version
 except ImportError:
     pass

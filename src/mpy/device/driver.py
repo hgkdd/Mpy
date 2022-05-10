@@ -56,13 +56,11 @@ class DRIVER(object):
     """
 
     def __init__(self, SearchPaths=None):
-        if SearchPaths == None:
+        if SearchPaths is None:
             SearchPaths = [os.getcwd()]
         self.SearchPaths = SearchPaths
         self.error = 0
-        self.conf = {}
-        self.conf['description'] = {}
-        self.conf['init_value'] = {}
+        self.conf = {'description': {}, 'init_value': {}}
         self.IDN = ''
         self.convert = CONVERT()
         self.errors = Device._Errors
@@ -88,16 +86,17 @@ class DRIVER(object):
             self.query = self._debug_query
             return self.dev
         else:  # Normal mode
-            import pyvisa as visa
-            self.rm = visa.ResourceManager('@py')
+            import pyvisa
+            import pyvisa.constants
+            self.rm = pyvisa.ResourceManager('@py')
             if lock is None:
-                lock = visa.constants.AccessModes.no_lock
+                lock = pyvisa.constants.AccessModes.no_lock
             self.dev = self.rm.open_resource(f'GPIB::{gpib}',
-                                              timeout=timeout*1000,
-                                              chunk_size=chunk_size,
-                                              send_end=send_end,
-                                              query_delay=delay,
-                                              lock=lock)
+                                             timeout=timeout * 1000,
+                                             chunk_size=chunk_size,
+                                             send_end=send_end,
+                                             query_delay=delay,
+                                             lock=lock)
             # if values_format in (None, 'ascii', 'ASCII'):
             #     self.dev.values_format.is_binary = False
             # else:
@@ -199,7 +198,7 @@ class DRIVER(object):
                     pass
 
             self.dev = self._init_bus(**buspars)
-            if self.dev != None:
+            if self.dev is not None:
                 dct = self._do_cmds('Init', locals())
                 self._update(dct)
         # print self.error

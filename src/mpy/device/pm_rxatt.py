@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 
 import importlib.machinery
-import re
 import io
-import math
 import time
-from mpy.tools.Configuration import Configuration,strbool,fstrcmp
-from scuq import *
-from mpy.device import device
-from mpy.device.powermeter import POWERMETER as PWRMTR
-from mpy.device.nport import NPORT
-from mpy.tools.util import locate
-from mpy.tools.util import format_block
 
-ini20dBLF=format_block("""
+from scuq import *
+
+from mpy.device import device
+from mpy.device.nport import NPORT
+from mpy.device.powermeter import POWERMETER as PWRMTR
+from mpy.tools.Configuration import Configuration
+from mpy.tools.util import format_block
+from mpy.tools.util import locate
+
+ini20dBLF = format_block("""
                     [description]
                     DESCRIPTION = 20 dB rx path, LF
                     TYPE = NPORT
@@ -241,8 +241,7 @@ ini20dBLF=format_block("""
                                                         '''))
                     """)
 
-
-ini20dBHF=format_block("""
+ini20dBHF = format_block("""
                     [description]
                     DESCRIPTION = 20 dB rx path, HF
                     TYPE = NPORT
@@ -470,7 +469,7 @@ ini20dBHF=format_block("""
                                                         '''))
                     """)
 
-ini0dBHF=format_block("""
+ini0dBHF = format_block("""
                     [description]
                     DESCRIPTION = 0 dB rx path, HF
                     TYPE = NPORT
@@ -698,7 +697,7 @@ ini0dBHF=format_block("""
                                                         '''))
                     """)
 
-ini0dBLF=format_block("""
+ini0dBLF = format_block("""
                     [description]
                     DESCRIPTION = 0 dB rx path, LF
                     TYPE = NPORT
@@ -928,46 +927,47 @@ ini0dBLF=format_block("""
 
 
 class POWERMETER(PWRMTR):
-    conftmpl=PWRMTR.conftmpl
+    conftmpl = PWRMTR.conftmpl
     conftmpl['description']['pmini'] = str
 
-    _FP=r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
-        
-    def __init__(self, **kw):
-        self.ini20dBLF=io.StringIO(ini20dBLF)
-        self.ini20dBHF=io.StringIO(ini20dBHF)
-        self.ini0dBHF=io.StringIO(ini0dBHF)
-        self.ini0dBLF=io.StringIO(ini0dBLF)
+    _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
 
-        self.SearchPaths=kw.get('SearchPaths', ['.'])
-        if self.SearchPaths == None:
-            self.SearchPaths=['.']
+    def __init__(self, **kw):
+        super().__init__()
+        self.ini20dBLF = io.StringIO(ini20dBLF)
+        self.ini20dBHF = io.StringIO(ini20dBHF)
+        self.ini0dBHF = io.StringIO(ini0dBHF)
+        self.ini0dBLF = io.StringIO(ini0dBLF)
+
+        self.SearchPaths = kw.get('SearchPaths', ['.'])
+        if self.SearchPaths is None:
+            self.SearchPaths = ['.']
         self.pm_instance = None
-        self.freq= None
-        self.power=None
-        self.unit=None
-        self._internal_unit='dBm'
-        self.np20L=NPORT()
+        self.freq = None
+        self.power = None
+        self.unit = None
+        self._internal_unit = 'dBm'
+        self.np20L = NPORT()
         self.np20L.Init(self.ini20dBLF)
-        self.np20H=NPORT()
+        self.np20H = NPORT()
         self.np20H.Init(self.ini20dBHF)
-        self.np0L=NPORT()
+        self.np0L = NPORT()
         self.np0L.Init(self.ini0dBLF)
-        self.np0H=NPORT()
+        self.np0H = NPORT()
         self.np0H.Init(self.ini0dBHF)
-        self.swfreq=1e9
-        self.att20=None
-        self.att0=None
-        self.np20=None
-        self.np0=None
-        self.pfac=None
-        self.plimit=quantities.Quantity(si.WATT, 1.0)   # 1 Watt max power for the sensor
-                   
+        self.swfreq = 1e9
+        self.att20 = None
+        self.att0 = None
+        self.np20 = None
+        self.np0 = None
+        self.pfac = None
+        self.plimit = quantities.Quantity(si.WATT, 1.0)  # 1 Watt max power for the sensor
+
     def Init(self, ininame, channel=1):
-        self.conf=Configuration(ininame, self.conftmpl).conf
-        pmini=self.conf['description']['pmini']
-        pmini=next(locate(pmini, paths=self.SearchPaths))
-        self.pm_instance=getattr(device, 'Powermeter')(SearchPaths=self.SearchPaths)
+        self.conf = Configuration(ininame, self.conftmpl).conf
+        pmini = self.conf['description']['pmini']
+        pmini = next(locate(pmini, paths=self.SearchPaths))
+        self.pm_instance = getattr(device, 'Powermeter')(SearchPaths=self.SearchPaths)
         stat = self.pm_instance.Init(pmini, channel)
         methods = ('Quit',
                    'SetVirtual',
@@ -976,11 +976,11 @@ class POWERMETER(PWRMTR):
                    'Zero')
         for m in methods:
             setattr(self, m, getattr(self.pm_instance, m))
-        
+
         # sw=imp.load_source('sw', 'c:\\MpyConfig\\LargeRC\\script\\sw_rc_rx.py')
         sw = importlib.machinery.SourceFileLoader('sw', 'c:\\MpyConfig\\LargeRC\\script\\sw_rc_rx.py').load_module()
-        self.sw_instance=sw.SWController()
-        swini=format_block("""
+        self.sw_instance = sw.SWController()
+        swini = format_block("""
                         [DESCRIPTION]
                         DESCRIPTION = RC RX Switch
                         TYPE = Custom
@@ -998,26 +998,26 @@ class POWERMETER(PWRMTR):
                         OUTPUT = POWERMETER
                         SWFREQ = %f
                         VIRTUAL = 0
-                        """%(self.swfreq))
-        swini=io.StringIO(swini)
+                        """ % (self.swfreq))
+        swini = io.StringIO(swini)
         self.sw_instance.Init(swini)
         self.sw_instance.SetAtt(True)
         return stat
 
     def _check(self, obj):
-        att=self.att20
-        if (obj*self.pfac).get_expectation_value() <= self.plimit: # save to remove the att
+        att = self.att20
+        if (obj * self.pfac).get_expectation_value() <= self.plimit:  # save to remove the att
             self.sw_instance.SetAtt(False)
-            att=self.att0
+            att = self.att0
             self.error, obj = self.pm_instance.GetData()
-        r=abs(obj/att)
-        r=r.reduce_to(obj._unit)
+        r = abs(obj / att)
+        r = r.reduce_to(obj._unit)
         return r
-        
+
     def GetData(self):
         self.sw_instance.SetAtt(True)
         self.error, obj = self.pm_instance.GetData()
-        obj=self._check(obj)
+        obj = self._check(obj)
         self.sw_instance.SetAtt(True)
         return self.error, obj
 
@@ -1025,39 +1025,39 @@ class POWERMETER(PWRMTR):
         self.sw_instance.SetAtt(True)
         self.error, obj = self.pm_instance.GetDataNB(retrigger)
         if obj:
-            obj=self._check(obj)
+            obj = self._check(obj)
         self.sw_instance.SetAtt(True)
         return self.error, obj
 
     def SetFreq(self, freq):
         self.error, rfreq = self.pm_instance.SetFreq(freq)
-        #print rfreq
-        #assert rfreq==freq
+        # print rfreq
+        # assert rfreq==freq
         self.error, rfreq = self.sw_instance.SetFreq(freq)
-        #print rfreq
-        #assert rfreq==freq
+        # print rfreq
+        # assert rfreq==freq
         self.freq = freq
         if freq <= self.swfreq:
-            ext='L'
+            ext = 'L'
         else:
-            ext='H'
+            ext = 'H'
         for s in (0, 20):
-            setattr(self, 'np%d'%s, getattr(self, 'np%d%s'%(s,ext)))
+            setattr(self, 'np%d' % s, getattr(self, 'np%d%s' % (s, ext)))
         self.np20.SetFreq(freq)
         self.np0.SetFreq(freq)
         err, self.att20 = self.np20.GetData(what='S21')
-        err, self.att0  = self.np0.GetData(what='S21')
-        self.pfac=abs(self.att0/self.att20).get_expectation_value_as_float()
-        #print freq, abs(self.att0), abs(self.att20), self.pfac
+        err, self.att0 = self.np0.GetData(what='S21')
+        self.pfac = abs(self.att0 / self.att20).get_expectation_value_as_float()
+        # print freq, abs(self.att0), abs(self.att20), self.pfac
         return self.error, freq
-        
+
     def GetDescription(self):
-        self.error, pm_des = self.pm_instance.GetDescription()  
-        return self.error, str(self.conf['description'])+pm_des
-    
+        self.error, pm_des = self.pm_instance.GetDescription()
+        return self.error, str(self.conf['description']) + pm_des
+
     def Quit(self):
-        #self.np20.Quit()
-        #self.np0.Quit()
+        # self.np20.Quit()
+        # self.np0.Quit()
         self.np0L.Quit()
         self.np0H.Quit()
         self.np20L.Quit()
@@ -1066,12 +1066,13 @@ class POWERMETER(PWRMTR):
         self.pm_instance.Quit()
         self.sw_instance.Quit()
         return 0
-                
+
+
 def test_init(ch):
     import io
     from mpy.tools.util import format_block
-    inst=POWERMETER()
-    ini=format_block("""
+    inst = POWERMETER()
+    ini = format_block("""
                     [DESCRIPTION]
                     description: add 20 dB to power meter
                     type:        POWERMETER
@@ -1090,10 +1091,9 @@ def test_init(ch):
                     name: A
                     unit: dBm
                     """)
-    ini=io.StringIO(ini)
+    ini = io.StringIO(ini)
 
-
-    ini_pm=format_block("""
+    ini_pm = format_block("""
                     [DESCRIPTION]
                     description: 'GigaTronics 8542C Universal Power Meter'
                     type:        'POWERMETER'
@@ -1125,19 +1125,21 @@ def test_init(ch):
                     unit: 'W'
                     trg_threshold: 0.5
                     """)
-    ini_pm=io.StringIO(ini_pm)
-    inst.Init(ini,ch)
+    ini_pm = io.StringIO(ini_pm)
+    inst.Init(ini, ch)
     return inst
-            
+
+
 def main():
     import io
+    import sys
     from mpy.tools.util import format_block
     from mpy.device.powermeter_ui import UI as UI
 
     try:
-        ini=sys.argv[1]
+        ini = sys.argv[1]
     except IndexError:
-        ini=format_block("""
+        ini = format_block("""
                         [DESCRIPTION]
                         description: 'GigaTronics 8542C Universal Power Meter'
                         type:        'POWERMETER'
@@ -1169,15 +1171,16 @@ def main():
                         unit: 'W'
                         trg_threshold: 0.5
                         """)
-        ini=io.StringIO(ini)
+        ini = io.StringIO(ini)
 
-    pm=POWERMETER()	
-    ui=UI(pm,ini=ini)
+    pm = POWERMETER()
+    ui = UI(pm, ini=ini)
     ui.configure_traits()
-    
+
+
 if __name__ == '__main__':
-#    main()
-    pm1=test_init(1)
+    #    main()
+    pm1 = test_init(1)
     pm1.SetFreq(200e6)
     while True:
         pm1.Trigger()

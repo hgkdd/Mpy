@@ -1,25 +1,24 @@
 # -*- coding: utf-8 -*-
-#Es wird benötigt enthought.chaco und enthought.enable
+# Es wird benötigt enthought.chaco und enthought.enable
 
 import io
+
 import traits.api as tapi
 from traits.etsconfig.api import ETSConfig
+
 ETSConfig.toolkit = "wx"
 import traitsui.api as tuiapi
-import traitsui.menu as tuim
 from chaco.api import Plot, ArrayPlotData
 from enable.component_editor import ComponentEditor
 
-from scuq.quantities import Quantity
 from mpy.tools.util import format_block
 from mpy.device.device import CONVERT
 
-
 import numpy as np
 
-conv=CONVERT()
+conv = CONVERT()
 
-std_ini=format_block("""
+std_ini = format_block("""
                 [DESCRIPTION]
                 description: sp template
                 type:        'SPECTRUMANALYZER'
@@ -46,7 +45,7 @@ std_ini=format_block("""
                 SetSweepPoints: 50
                 SetSweepType: 'LINEAR'
                 """)
-std_ini=io.StringIO(std_ini)
+std_ini = io.StringIO(std_ini)
 
 
 class UI(tapi.HasTraits):
@@ -73,26 +72,23 @@ class UI(tapi.HasTraits):
     GROUPS={'Name des Taps' : tuiapi.Group(...)}
     
     """
-    
-    Init=tapi.Button()
-    INI=tapi.Str()    
-    int_unit='dBm'
-    
-    
-    
-    GetSpectrum=tapi.Button("GetSpectrum")
-    SPECTRUM=tapi.Str()
-    power=()
-    
-    
+
+    Init = tapi.Button()
+    INI = tapi.Str()
+    int_unit = 'dBm'
+
+    GetSpectrum = tapi.Button("GetSpectrum")
+    SPECTRUM = tapi.Str()
+    power = ()
+
     def __init__(self, instance, ini=None):
         # Wenn keine ini übergeben wurde wird die Standard ini verwendet.
-        self.dv=instance
+        self.dv = instance
         if not ini:
-            ini=std_ini
-        self.ini=ini
-        self.INI=ini.read()
-        
+            ini = std_ini
+        self.ini = ini
+        self.INI = ini.read()
+
         # Plot Fenster erstellen.
         x = np.array([])
         y = np.array([])
@@ -100,52 +96,44 @@ class UI(tapi.HasTraits):
         plot = Plot(self.plotdata)
         plot.plot(("x", "y"), type="line", color="blue")
         plot.title = "Spectrum"
-        plot.index_axis.title='Frequenz in Hz'
-        plot.value_axis.title='Amplitude in dBm'
+        plot.index_axis.title = 'Frequenz in Hz'
+        plot.value_axis.title = 'Amplitude in dBm'
         self.plot = plot
-    
-    
-    
-    
-          
-    #*************************************************************************
+
+    # *************************************************************************
     #
     # Funktionen die aufgerufen werden wenn ein Button gedrückt wird. 
-    #**************************************************************************
-    
+    # **************************************************************************
+
     # Spectrum holen und in Fester und Plot schreiben.
     def _GetSpectrum_fired(self):
-        
+
         if self.dv.GetSweepType()[1] == 'LOGARITHMIC':
-            self.plot.index_scale = 'log' 
+            self.plot.index_scale = 'log'
         else:
             self.plot.index_scale = 'linear'
-        
-        self.power=self.dv.GetSpectrum()[1]
+
+        self.power = self.dv.GetSpectrum()[1]
         x = np.array(self.power[0])
         y = np.array(self.power[1])
         self.plotdata.set_data('x', x)
         self.plotdata.set_data('y', y)
         self.plot.request_redraw()
-        
-        self.SPECTRUM=str(self.power[0])+"\n\n\n"+str(self.power[1])
-    
-    
-    
-    #*********************************************************************
+
+        self.SPECTRUM = str(self.power[0]) + "\n\n\n" + str(self.power[1])
+
+    # *********************************************************************
     #
-    #Fenster erstellen:
-    #**********************************************************************
-    
+    # Fenster erstellen:
+    # **********************************************************************
+
     plot = tapi.Instance(Plot)
-    
-    GROUPS={'Spectrum':tuiapi.Group(tuiapi.Item('SPECTRUM', style='custom',springy=True,width=500,height=200,show_label=False),
-                         tuiapi.Item('GetSpectrum', show_label=False),
-                         label='Spectrum'),
-    
-            'Plot': tuiapi.Group(tuiapi.Item('plot',editor=ComponentEditor(), show_label=False),
-                         tuiapi.Item('GetSpectrum', show_label=False),
-                         label='Plot')}
-    
-  
-        
+
+    GROUPS = {'Spectrum': tuiapi.Group(
+        tuiapi.Item('SPECTRUM', style='custom', springy=True, width=500, height=200, show_label=False),
+        tuiapi.Item('GetSpectrum', show_label=False),
+        label='Spectrum'),
+
+              'Plot': tuiapi.Group(tuiapi.Item('plot', editor=ComponentEditor(), show_label=False),
+                                   tuiapi.Item('GetSpectrum', show_label=False),
+                                   label='Plot')}

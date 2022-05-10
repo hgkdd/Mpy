@@ -10,8 +10,8 @@ class POWERMETER(PWRMTR):
     Driver for the R&S NRP
     """
 
-    def __init__(self, **kw):
-        PWRMTR.__init__(self, **kw)
+    def __init__(self):
+        super().__init__()
         self._internal_unit = 'dBm'
         self._data_ = 0
         self.sensor = {}
@@ -51,7 +51,7 @@ class POWERMETER(PWRMTR):
         for k, vals, actions in presets:
             try:
                 v = self.conf[sec][k]
-                if (vals is None):  # no comparision
+                if vals is None:  # no comparision
                     # print actions[0], self.convert.c2c(self.levelunit, self._internal_unit, float(v)), float(v), self.levelunit
                     self._cmds['Preset'].append((eval(actions[0]), actions[1]))
                 else:

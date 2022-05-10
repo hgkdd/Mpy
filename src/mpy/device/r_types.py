@@ -13,7 +13,7 @@
 """
 import re
 
-from .mpy_exceptions import *
+from mpy.device.mpy_exceptions import *
 
 
 class R_TYPES(object):
@@ -32,26 +32,24 @@ class R_DEFAULT(R_TYPES):
     objekt aus dem R-Types pool und ruft diese zur Umwandlung auf.
     """
 
-    def __init__(self, type, command=None):
+    def __init__(self, typ, command=None):
         """
-        :param type: Python standard type (wie z.B. int).  
+        :param typ: Python standard type (wie z.B. int).
         :param command: Command in dem der R_Type verwendet wird (Optimal). Wird das Command angegeben, so wird der Name des 
                         Commands in der Execption Nachricht aufgeführt, welche geworfen wird falls ein String nicht 
                         umgewandelt werden kann. 
         """
         super().__init__()
-        self.type = type
+        self.type = typ
         self.command = command
-        if type == float:
+        if typ == float:
             self.validator = R_FLOAT(command=command)
-        elif type == int:
+        elif typ == int:
             self.validator = R_INT(command=command)
-        elif type == str:
+        elif typ == str:
             self.validator = R_STR(command=command)
-
-        elif type == bool:
+        elif typ == bool:
             self.validator = R_BOOL(command=command)
-
         else:
             mess = ''
             if self.command:
