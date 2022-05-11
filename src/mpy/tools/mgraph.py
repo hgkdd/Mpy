@@ -1,4 +1,5 @@
 import os
+import io
 # import re
 import importlib.machinery
 import inspect
@@ -11,7 +12,7 @@ import mpy.device.device as device
 from scuq import *
 from mpy.tools.aunits import *
 from mpy.tools.Configuration import fstrcmp
-from mpy.tools.util import extrap1d, locate
+from mpy.tools.util import extrap1d, locate, format_block
 
 
 def _stripstr(s):
@@ -95,7 +96,7 @@ class Graph(object):
             else:
                 break
         if dotgraph:
-            self.graph = dotgraph
+            self.graph = dotgraph[0]
             self.edges = self.graph.get_edges()
         else:
             raise "Graph could no be created"
