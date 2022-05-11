@@ -31,8 +31,11 @@
 import sys
 import os
 import termios
-#import TERMIOS
+# import TERMIOS
 import select
+
+old_termios = None
+
 
 # prepare stdin for kbhit usage
 def unbuffer_stdin():
@@ -46,8 +49,9 @@ def unbuffer_stdin():
     old_termios = termios.tcgetattr(fd)
     new = termios.tcgetattr(fd)
     # turn off canonical mode and echo
-    new[3]=new[3] & ~termios.ICANON & ~termios.ECHO
+    new[3] = new[3] & ~termios.ICANON & ~termios.ECHO
     termios.tcsetattr(fd, termios.TCSANOW, new)
+
 
 # stop using stdin for kbhit
 def restore_stdin():
@@ -56,7 +60,8 @@ def restore_stdin():
     """
     global old_termios
     termios.tcsetattr(sys.stdin.fileno(),
-        termios.TCSAFLUSH, old_termios)
+                      termios.TCSAFLUSH, old_termios)
+
 
 # returns 0 if no key ready, or 1 if a key is ready
 def kbhit():
@@ -64,11 +69,12 @@ def kbhit():
     kbhit always returns immediately.
     """
     (read_ready, write_ready, except_ready) = \
-        select.select( [sys.stdin], [], [], 0.0)
+        select.select([sys.stdin], [], [], 0.0)
     if read_ready:
         return 1
     else:
         return 0
+
 
 # get the last key hit
 def getch():
@@ -76,6 +82,7 @@ def getch():
     is not a key available.
     """
     return os.read(sys.stdin.fileno(), 1)
+
 
 def test():
     unbuffer_stdin()
@@ -88,17 +95,17 @@ def test():
             count = 0
             key = getch()
             os.write(sys.stdout.fileno(), key)
-            if key=='q':
+            if key == 'q':
                 print()
                 break
         else:
             count = count + 1
-            if count==1000:
+            if count == 1000:
                 os.write(sys.stdout.fileno(), '*')
                 count = 0
 
     restore_stdin()
 
-if __name__=='__main__':
-    test()
 
+if __name__ == '__main__':
+    test()

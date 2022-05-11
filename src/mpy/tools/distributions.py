@@ -9,25 +9,25 @@ class RayleighDist:
         self.dist = scipy.stats.rayleigh
 
     def pdf(self, r, s):
-        #s = 1.0*s
-        #return self.chi.pdf(r/s)/s
+        # s = 1.0*s
+        # return self.chi.pdf(r/s)/s
         return self.dist.pdf(r, scale=s)
 
     def cdf(self, r, s):
         return self.dist.cdf(r, scale=s)
-    
-    def mean(self,s):
+
+    def mean(self, s):
         return self.dist.mean(scale=s)
 
-    def variance (self, s):
+    def variance(self, s):
         return self.dist.var(scale=s)
 
-    def mode(self,s):
+    def mode(self, s):
         # position of the max of pdf
         # return s*self.chi.mode()  # actually, this is s
         return s
 
-    def median(self,s):
+    def median(self, s):
         return self.dist.median(scale=s)
 
     def rv(self, s, n=1):
@@ -42,7 +42,7 @@ def ECDF(seq):
     """
     N = len(seq)
     sseq = np.sort(seq)
-    ecdf = np.linspace(1./N, 1, N)
+    ecdf = np.linspace(1. / N, 1, N)
     return scipy.interpolate.interp1d(sseq, ecdf, bounds_error=False)
 
 
@@ -54,5 +54,5 @@ class Chi2Cost:
         self.f = f
 
     def __call__(self, par):
-        _sum = sum([(y - self.f(x,par))**2 for x, y in self.xy])
+        _sum = sum([(y - self.f(x, par)) ** 2 for x, y in self.xy])
         return _sum

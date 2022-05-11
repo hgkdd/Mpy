@@ -18,7 +18,7 @@ cdict = {"autosave_filename": 'msc-autosave.p',
          "rawdata_output_filename": 'out_raw_maincal-%s.dat',
          "processeddata_output_filename": 'out_processed_maincal-%s.dat',
          "log_filename": 'msc.log',
-         "logger": ['stdLogger'],
+         "logger": ['stdlogger'],
          "minimal_autosave_interval": 3600,
          "descriptions": ['empty', 'loaded'],
          "measure_parameters": [{'dotfile': 'mvk-immunity.dot',
@@ -131,7 +131,7 @@ def make_logger_list(msc, clogger):
             except AttributeError as m:
                 msc.messenger("Logger not found: %s"%m, [])
     if not len(logger):  #empty
-        logger=[msc.stdLogger] # fall back to stdlogger
+        logger=[msc.stdlogger] # fall back to stdlogger
     return logger[:]
 
 

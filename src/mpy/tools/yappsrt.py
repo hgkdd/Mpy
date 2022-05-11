@@ -20,23 +20,30 @@ keeps track of the parse stack.
 # TODO: it should be possible to embed yappsrt into the generated
 # grammar to make a standalone module.
 
-import sys, re
+import sys
+import re
+
 
 class SyntaxError(Exception):
     """When we run into an unexpected token, this is the exception to use"""
+
     def __init__(self, charpos=-1, msg="Bad Token", context=None):
         Exception.__init__(self)
         self.charpos = charpos
         self.msg = msg
         self.context = context
-        
+
     def __str__(self):
-        if self.charpos < 0: return 'SyntaxError'
-        else: return 'SyntaxError@char%s(%s)' % (repr(self.charpos), self.msg)
+        if self.charpos < 0:
+            return 'SyntaxError'
+        else:
+            return 'SyntaxError@char%s(%s)' % (repr(self.charpos), self.msg)
+
 
 class NoMoreTokens(Exception):
     """Another exception object, for when we run out of tokens"""
     pass
+
 
 class Scanner:
     """Yapps scanner.
@@ -49,7 +56,7 @@ class Scanner:
     restriction (the set is always the full set of tokens).
     
     """
-    
+
     def __init__(self, patterns, ignore, input):
         """Initialize the scanner.
 
@@ -63,18 +70,18 @@ class Scanner:
         Note that the patterns parameter expects uncompiled regexes,
         whereas the self.patterns field expects compiled regexes.
         """
-        self.tokens = [] # [(begin char pos, end char pos, token name, matched text), ...]
+        self.tokens = []  # [(begin char pos, end char pos, token name, matched text), ...]
         self.restrictions = []
         self.input = input
         self.pos = 0
         self.ignore = ignore
         self.first_line_number = 1
-        
+
         if patterns is not None:
             # Compile the regex strings into regex objects
             self.patterns = []
             for terminal, regex in patterns:
-                self.patterns.append( (terminal, re.compile(regex)) )
+                self.patterns.append((terminal, re.compile(regex)))
 
     def get_token_pos(self):
         """Get the current token position in the input text."""
@@ -83,13 +90,15 @@ class Scanner:
     def get_char_pos(self):
         """Get the current char position in the input text."""
         return self.pos
-    
+
     def get_prev_char_pos(self, i=None):
         """Get the previous position (one token back) in the input text."""
-        if self.pos == 0: return 0
-        if i is None: i = -1
+        if self.pos == 0:
+            return 0
+        if i is None:
+            i = -1
         return self.tokens[i][0]
-    
+
     def get_line_number(self):
         """Get the line number of the current position in the input text."""
         # TODO: make this work at any token/char position
@@ -98,9 +107,9 @@ class Scanner:
     def get_column_number(self):
         """Get the column number of the current position in the input text."""
         s = self.get_input_scanned()
-        i = s.rfind('\n') # may be -1, but that's okay in this case
-        return len(s) - (i+1)
-    
+        i = s.rfind('\n')  # may be -1, but that's okay in this case
+        return len(s) - (i + 1)
+
     def get_input_scanned(self):
         """Get the portion of the input that has been tokenized."""
         return self.input[:self.pos]
@@ -134,14 +143,14 @@ class Scanner:
                         raise NotImplementedError("Unimplemented: restriction set changed")
             return self.tokens[i]
         raise NoMoreTokens()
-    
+
     def __repr__(self):
         """Print the last 10 tokens that have been scanned in"""
         output = ''
         for t in self.tokens[-10:]:
-            output = '%s\n  (@%s)  %s  =  %s' % (output,t[0],t[2],repr(t[3]))
+            output = '%s\n  (@%s)  %s  =  %s' % (output, t[0], t[2], repr(t[3]))
         return output
-    
+
     def scan(self, restrict):
         """Should scan another token and add it to the list, self.tokens,
         and add the restriction to self.restrictions"""
@@ -160,19 +169,19 @@ class Scanner:
                     # We got a match that's better than the previous one
                     best_pat = p
                     best_match = len(m.group(0))
-                    
+
             # If we didn't find anything, raise an error
             if best_pat == '(error)' and best_match < 0:
                 msg = 'Bad Token'
                 if restrict:
-                    msg = 'Trying to find one of '+', '.join(restrict)
+                    msg = 'Trying to find one of ' + ', '.join(restrict)
                 raise SyntaxError(self.pos, msg)
 
             # If we found something that isn't to be ignored, return it
             if best_pat not in self.ignore:
                 # Create a token with this data
-                token = (self.pos, self.pos+best_match, best_pat,
-                         self.input[self.pos:self.pos+best_match])
+                token = (self.pos, self.pos + best_match, best_pat,
+                         self.input[self.pos:self.pos + best_match])
                 self.pos = self.pos + best_match
                 # Only add this token if it's not in the list
                 # (to prevent looping)
@@ -184,28 +193,31 @@ class Scanner:
                 # This token should be ignored ..
                 self.pos = self.pos + best_match
 
+
 class Parser:
     """Base class for Yapps-generated parsers.
 
     """
-    
+
     def __init__(self, scanner):
         self._scanner = scanner
         self._pos = 0
-        
+
     def _peek(self, *types):
         """Returns the token type for lookahead; if there are any args
         then the list of args is the set of token types to allow"""
         tok = self._scanner.token(self._pos, types)
         return tok[2]
-        
+
     def _scan(self, type):
         """Returns the matched text, and moves to the next token"""
         tok = self._scanner.token(self._pos, [type])
         if tok[2] != type:
-            raise SyntaxError(tok[0], 'Trying to find '+type+' :'+ ' ,'.join(self._scanner.restrictions[self._pos]))
+            raise SyntaxError(tok[0],
+                              'Trying to find ' + type + ' :' + ' ,'.join(self._scanner.restrictions[self._pos]))
         self._pos = 1 + self._pos
         return tok[3]
+
 
 class Context:
     """Class to represent the parser's call stack.
@@ -214,7 +226,7 @@ class Context:
     contexts can be used for debugging.
 
     """
-    
+
     def __init__(self, parent, scanner, tokenpos, rule, args=()):
         """Create a new context.
 
@@ -234,10 +246,12 @@ class Context:
 
     def __str__(self):
         output = ''
-        if self.parent: output = str(self.parent) + ' > '
+        if self.parent:
+            output = str(self.parent) + ' > '
         output += self.rule
         return output
-    
+
+
 def print_line_with_pointer(text, p):
     """Print the line of 'text' that includes position 'p',
     along with a second line with a single caret (^) at position p"""
@@ -245,23 +259,25 @@ def print_line_with_pointer(text, p):
     # TODO: separate out the logic for determining the line/character
     # location from the logic for determining how to display an
     # 80-column line to stderr.
-    
+
     # Now try printing part of the line
-    text = text[max(p-80, 0):p+80]
-    p = p - max(p-80, 0)
+    text = text[max(p - 80, 0):p + 80]
+    p = p - max(p - 80, 0)
 
     # Strip to the left
     i = text[:p].rfind('\n')
     j = text[:p].rfind('\r')
-    if i < 0 or (0 <= j < i): i = j
+    if i < 0 or (0 <= j < i):
+        i = j
     if 0 <= i < p:
         p = p - i - 1
-        text = text[i+1:]
+        text = text[i + 1:]
 
     # Strip to the right
     i = text.find('\n', p)
     j = text.find('\r', p)
-    if i < 0 or (0 <= j < i): i = j
+    if i < 0 or (0 <= j < i):
+        i = j
     if i >= 0:
         text = text[:i]
 
@@ -272,9 +288,10 @@ def print_line_with_pointer(text, p):
         p = p - 7
 
     # Now print the string, along with an indicator
-    print('> ',text, file=sys.stderr)
-    print('> ',' '*p + '^', file=sys.stderr)
-    
+    print('> ', text, file=sys.stderr)
+    print('> ', ' ' * p + '^', file=sys.stderr)
+
+
 def print_error(input, err, scanner):
     """Print error messages, the parser stack, and the input text -- for human-readable error messages."""
     # NOTE: this function assumes 80 columns :-(
@@ -286,12 +303,13 @@ def print_error(input, err, scanner):
     context = err.context
     if not context:
         print_line_with_pointer(input, err.charpos)
-        
+
     while context:
         # TODO: add line number
         print('while parsing %s%s:' % (context.rule, tuple(context.args)), file=sys.stderr)
         print_line_with_pointer(input, context.scanner.get_prev_char_pos(context.tokenpos))
         context = context.parent
+
 
 def wrap_error_reporter(parser, rule):
     try:

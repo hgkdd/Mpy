@@ -2,9 +2,9 @@
 
 from scuq import units, si
 
-AMPLITUDERATIO=units.AlternateUnit('(V/V)', si.VOLT/si.VOLT)
-POWERRATIO=AMPLITUDERATIO**2
-EFIELD=si.VOLT/si.METER
-EFIELDPNORM=EFIELD/si.WATT.sqrt()
-HFIELD=si.AMPERE/si.METER
-POYNTING=si.WATT/(si.METER**2)
+AMPLITUDERATIO = units.AlternateUnit('(V/V)', si.VOLT / si.VOLT)
+POWERRATIO = AMPLITUDERATIO ** 2
+EFIELD = si.VOLT / si.METER
+EFIELDPNORM = EFIELD / si.WATT.sqrt()
+HFIELD = si.AMPERE / si.METER
+POYNTING = si.WATT / (si.METER ** 2)

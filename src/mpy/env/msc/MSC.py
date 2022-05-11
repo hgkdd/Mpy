@@ -4,30 +4,28 @@ MSC: class for MSC measurements
 
 Author: Dr. Hans Georg Krauthaeuser, hgk@ieee.org
 
-Copyright (c) 2001-2011 All rights reserved
+Copyright (c) 2001-2022 All rights reserved
 """
 
-import math
-import sys
 import os
+import pprint
 import shutil
+import sys
 import time
+
 # import rpy
 import numpy
 import scipy
 import scipy.interpolate
 import scipy.optimize
 import scipy.stats
-import pprint
-
-from mpy.device import device
-from mpy.tools import util, mgraph, spacing, distributions, correlation
-from mpy.env import Measure
-from mpy.tools.aunits import *
-
 from scuq.quantities import Quantity
+from scuq.si import WATT, METER
 from scuq.ucomponents import Context
-from scuq.si import WATT, VOLT, METER
+
+from mpy.env import Measure
+from mpy.tools import util, mgraph, spacing, distributions, correlation
+from mpy.tools.aunits import *
 
 # from win32com.client import Dispatch
 # import sys
@@ -125,28 +123,42 @@ class MSC(Measure.Measure):
                         InputLevel=None,
                         leveler=None,
                         leveler_par=None,
-                        ftab=[1, 3, 6, 10, 100, 1000],
-                        nftab=[20, 15, 10, 20, 20],
-                        ntuntab=[[50, 18, 12, 12, 12]],
-                        tofftab=[[7, 14, 28, 28, 28]],
-                        nprbpostab=[8, 8, 8, 8, 8],
-                        nrefantpostab=[8, 8, 8, 8, 8],
+                        ftab=None,
+                        nftab=None,
+                        ntuntab=None,
+                        tofftab=None,
+                        nprbpostab=None,
+                        nrefantpostab=None,
                         SearchPaths=None,
-                        names={'sg': 'sg',
-                               'a1': 'a1',
-                               'a2': 'a2',
-                               'ant': 'ant',
-                               'pmfwd': 'pm1',
-                               'pmbwd': 'pm2',
-                               'fp': ['fp1', 'fp2', 'fp3', 'fp4', 'fp5', 'fp6', 'fp7', 'fp8'],
-                               'tuner': ['tuner1'],
-                               'refant': ['refant1'],
-                               'pmref': ['pmref1']}):
+                        names=None):
         """Performs a msc main calibration according to IEC 61000-4-21
         """
+        if names is None:
+            names = {'sg': 'sg',
+                     'a1': 'a1',
+                     'a2': 'a2',
+                     'ant': 'ant',
+                     'pmfwd': 'pm1',
+                     'pmbwd': 'pm2',
+                     'fp': ['fp1', 'fp2', 'fp3', 'fp4', 'fp5', 'fp6', 'fp7', 'fp8'],
+                     'tuner': ['tuner1'],
+                     'refant': ['refant1'],
+                     'pmref': ['pmref1']}
+        if nrefantpostab is None:
+            nrefantpostab = [8, 8, 8, 8, 8]
+        if nprbpostab is None:
+            nprbpostab = [8, 8, 8, 8, 8]
+        if tofftab is None:
+            tofftab = [[7, 14, 28, 28, 28]]
+        if ntuntab is None:
+            ntuntab = [[50, 18, 12, 12, 12]]
+        if nftab is None:
+            nftab = [20, 15, 10, 20, 20]
+        if ftab is None:
+            ftab = [1, 3, 6, 10, 100, 1000]
         ctx = Context()
         self.PreUserEvent()
-        ftab = LUF * scipy.array(ftab)
+        ftab = LUF * numpy.array(ftab)
 
         if self.autosave:
             self.messenger(util.tstamp() + " Resume main calibration measurement from autosave...", [])
@@ -625,19 +637,25 @@ class MSC(Measure.Measure):
                                 SGLevel=-20,
                                 leveling=None,
                                 freqs=None,
-                                toffsets=[1],
-                                ntunerpos=[360],
+                                toffsets=None,
+                                ntunerpos=None,
                                 SearchPaths=None,
-                                names={'sg': 'sg',
-                                       'a1': 'a1',
-                                       'a2': 'a2',
-                                       'ant': 'ant',
-                                       'pmfwd': 'pm1',
-                                       'pmbwd': 'pm2',
-                                       'fp': ['fp1', 'fp2', 'fp3', 'fp4', 'fp5', 'fp6', 'fp7', 'fp8'],
-                                       'tuner': ['tuner1']}):
+                                names=None):
         """Performs a msc autocorrelation measurement
         """
+        if names is None:
+            names = {'sg': 'sg',
+                     'a1': 'a1',
+                     'a2': 'a2',
+                     'ant': 'ant',
+                     'pmfwd': 'pm1',
+                     'pmbwd': 'pm2',
+                     'fp': ['fp1', 'fp2', 'fp3', 'fp4', 'fp5', 'fp6', 'fp7', 'fp8'],
+                     'tuner': ['tuner1']}
+        if ntunerpos is None:
+            ntunerpos = [360]
+        if toffsets is None:
+            toffsets = [1]
         self.PreUserEvent()
         if self.autosave:
             self.messenger(util.tstamp() + " Resume autocorrelation measurement from autosave...", [])
@@ -953,7 +971,7 @@ class MSC(Measure.Measure):
                     level = level2
             try:
                 # wait delay seconds
-                self.messenger(util.tstamp() + " Going to sleep for %d seconds ..."%delay, [])
+                self.messenger(util.tstamp() + " Going to sleep for %d seconds ..." % delay, [])
                 self.wait(delay, dct, self.__HandleUserInterrupt)
                 self.messenger(util.tstamp() + " ... back.", [])
             except ValueError:
@@ -969,18 +987,20 @@ class MSC(Measure.Measure):
                        leveling=None,
                        calibration='empty',
                        SearchPaths=None,
-                       names={'sg': 'sg',
-                              'a1': 'a1',
-                              'a2': 'a2',
-                              'ant': 'ant',
-                              'pmfwd': 'pm1',
-                              'pmbwd': 'pm2',
-                              'tuner': ['tuner1'],
-                              'refant': ['refant1'],
-                              'pmref': ['pmref1']}):
+                       names=None):
         """Performs a msc EUT calibration according to IEC 61000-4-21
         """
 
+        if names is None:
+            names = {'sg': 'sg',
+                     'a1': 'a1',
+                     'a2': 'a2',
+                     'ant': 'ant',
+                     'pmfwd': 'pm1',
+                     'pmbwd': 'pm2',
+                     'tuner': ['tuner1'],
+                     'refant': ['refant1'],
+                     'pmref': ['pmref1']}
         self.PreUserEvent()
         if self.autosave:
             self.messenger(util.tstamp() + " Resume EUT calibration measurement from autosave...", [])
@@ -1318,19 +1338,21 @@ class MSC(Measure.Measure):
                          leveling=None,
                          freqs=None,
                          SearchPaths=None,
-                         names={'sg': 'sg',
-                                'a1': 'a1',
-                                'a2': 'a2',
-                                'ant': 'ant',
-                                'fp': [],
-                                'pmfwd': 'pm1',
-                                'pmbwd': 'pm2',
-                                'tuner': ['tuner1'],
-                                'refant': ['refant1'],
-                                'pmref': ['pmref1']}):
+                         names=None):
         """Performs a msc immunity measurement according to IEC 61000-4-21
         """
 
+        if names is None:
+            names = {'sg': 'sg',
+                     'a1': 'a1',
+                     'a2': 'a2',
+                     'ant': 'ant',
+                     'fp': [],
+                     'pmfwd': 'pm1',
+                     'pmbwd': 'pm2',
+                     'tuner': ['tuner1'],
+                     'refant': ['refant1'],
+                     'pmref': ['pmref1']}
         self.PreUserEvent()
         if kernel[0] is None:
             if kernel[1] is None:
@@ -1863,12 +1885,14 @@ class MSC(Measure.Measure):
                          freqs=None,
                          receiverconf=None,
                          SearchPaths=None,
-                         names={'tuner': ['tuner1'],
-                                'refant': ['refant1'],
-                                'receiver': ['saref1']}):
+                         names=None):
         """Performs a msc emission measurement according to IEC 61000-4-21
         """
 
+        if names is None:
+            names = {'tuner': ['tuner1'],
+                     'refant': ['refant1'],
+                     'receiver': ['saref1']}
         self.PreUserEvent()
         if self.autosave:
             self.messenger(util.tstamp() + " Resume MSC emission measurement from autosave...", [])
@@ -2730,7 +2754,7 @@ Quit: quit measurement.
                           hg=0.8,
                           RH=(0.8, 0.8),
                           isoats=None):
-        if isoats == None:
+        if isoats is None:
             isoats = False
         if isoats:
             gmax = util.gmax_oats
@@ -2911,7 +2935,7 @@ Quit: quit measurement.
             self.messenger(util.tstamp() + " WARNING: EUT cal not found. Description: %s" % EUT_cal, [])
             EUT_cal = None
 
-        if EUT_OK == None:
+        if EUT_OK is None:
             EUT_OK = self.std_eut_status_checker
 
         # zeroPR = Quantity (POWERRATIO, 0.0)
@@ -3006,7 +3030,8 @@ Quit: quit measurement.
         self.messenger(util.tstamp() + " End of evaluation of Immunity measurement", [])
         return 0
 
-    def stdTPosCmp(self, t1, t2):
+    @staticmethod
+    def stdTPosCmp(t1, t2):
         # t is a list of tuner pos: ['[0,...]', '[10,...]', ...]
         # eval strings first..
         try:
@@ -3508,12 +3533,12 @@ Quit: quit measurement.
 
 
 class stdImmunityKernel:
-    def __init__(self, field, tp, messenger, UIHandler, locals, dwell, keylist='sS'):
+    def __init__(self, field, tp, messenger, UIHandler, lcls, dwell, keylist='sS'):
         self.field = field
         self.tp = tp
         self.messenger = messenger
         self.UIHandler = UIHandler
-        self.callerlocals = locals
+        self.callerlocals = lcls
         try:
             self.in_as = self.callerlocals['in_as']
         except KeyError:

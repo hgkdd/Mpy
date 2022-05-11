@@ -22,7 +22,7 @@ class AmplifierTest(Measure):
         self.autosave = False
         self.autosave_interval = 3600
         self.lastautosave = time.time()
-        self.logger=[self.stdLogger]
+        self.logger=[self.stdlogger]
         self.logfile=None
         self.logfilename=None
         self.messenger=self.stdUserMessenger

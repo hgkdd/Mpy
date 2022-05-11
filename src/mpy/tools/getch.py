@@ -1,25 +1,30 @@
-
 class _Getch(object):
     """Gets a single character from standard input.  
     Does not echo to the screen."""
+
     def __init__(self):
         try:
             self.impl = _GetchWindows()
-        except (ModuleNotFoundError,ImportError):
+        except (ModuleNotFoundError, ImportError):
             try:
                 self.impl = _GetchMacCarbon()
-            except (ModuleNotFoundError,AttributeError):
+            except (ModuleNotFoundError, AttributeError):
                 self.impl = _GetchUnix()
 
-    def __call__(self): 
+    def __call__(self):
         return self.impl()
+
 
 class _GetchUnix(object):
     def __init__(self):
-        import tty, sys, termios # import termios now or else you'll get the Unix version on the Mac
+        import tty
+        import sys
+        import termios  # import termios now or else you'll get the Unix version on the Mac
 
     def __call__(self):
-        import sys, tty, termios
+        import sys
+        import tty
+        import termios
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
@@ -29,6 +34,7 @@ class _GetchUnix(object):
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         return ch
 
+
 class _GetchWindows(object):
     def __init__(self):
         import msvcrt
@@ -37,6 +43,7 @@ class _GetchWindows(object):
         import msvcrt
         return msvcrt.getch()
 
+
 class _GetchMacCarbon(object):
     """
     A function which returns the current ASCII key that is down;
@@ -44,13 +51,14 @@ class _GetchMacCarbon(object):
     page http://www.mactech.com/macintosh-c/chap02-1.html was
     very helpful in figuring out how to do this.
     """
+
     def __init__(self):
         import Carbon
-        Carbon.Evt #see if it has this (in Unix, it doesn't)
+        Carbon.Evt  # see if it has this (in Unix, it doesn't)
 
     def __call__(self):
         import Carbon
-        if Carbon.Evt.EventAvail(0x0008)[0]==0: # 0x0008 is the keyDownMask
+        if Carbon.Evt.EventAvail(0x0008)[0] == 0:  # 0x0008 is the keyDownMask
             return ''
         else:
             #
@@ -62,16 +70,18 @@ class _GetchMacCarbon(object):
             # number is converted to an ASCII character with chr() and
             # returned
             #
-            (what,msg,when,where,mod)=Carbon.Evt.GetNextEvent(0x0008)[1]
+            (what, msg, when, where, mod) = Carbon.Evt.GetNextEvent(0x0008)[1]
             return chr(msg & 0x000000FF)
+
 
 getch = _Getch()
 
-if __name__ == '__main__': # a little test
+if __name__ == '__main__':  # a little test
     import sys
+
     while True:
-       print('Press a key')
-       k=getch()
-       print(k)
-       if k=='q':
-           break
+        print('Press a key')
+        k = getch()
+        print(k)
+        if k == 'q':
+            break

@@ -2,7 +2,8 @@
 
 from mpy.tools.util import get_var_from_nearest_outerframe
 
-def my_switch (swstr, fstr, fs=1e9):
+
+def my_switch(swstr, fstr, fs=1e9):
     """Function to switch a switch *swstr* depending from the value of the
        variable *fstr* with respect to *fs*. 
     """
@@ -11,9 +12,9 @@ def my_switch (swstr, fstr, fs=1e9):
     # print "In custom.my_switch: f = %s, fs = %s, sw = %s"%(str(f),str(fs),str(sw))
     if f is None or sw is None:
         return -1
-    
+
     err = 0
-    if (f<=fs):
+    if f <= fs:
         to_ch = 1
     else:
         to_ch = 2

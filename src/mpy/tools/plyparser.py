@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
+import os
+
 import ply.lex as lex
 import ply.yacc as yacc
-import os
-import io
-from mpy.tools.util import format_block, locate
+
+from mpy.tools.util import locate
 
 
 class Parser(object):
@@ -37,6 +38,7 @@ class Parser(object):
                   tabmodule=self.tabmodule)
 
     def run(self):
+        parser = yacc.yacc()
         if self.filename:
             try:
                 data = self.filename.read()  # file like object
@@ -47,7 +49,7 @@ class Parser(object):
                     data = open(next(locate(self.filename, paths=self.SearchPaths))).read()  # name of an existing file
                 except (IOError, StopIteration):
                     data = eval(self.filename).read()  # eval to a file like object
-            self.parseresult = yacc.parse(data)
+            self.parseresult = parser.parse(data)
         else:
             while 1:
                 try:
@@ -56,5 +58,5 @@ class Parser(object):
                     break
                 if not s:
                     continue
-                self.parseresult = yacc.parse(s)
+                self.parseresult = parser.parse(s)
         return self.parseresult

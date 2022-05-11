@@ -6,13 +6,12 @@
    :license: no licence yet
 """
 
-import sys
-import os
-import time
-import pickle as pickle
 import gzip
-import re
+import os
+import pickle as pickle
+import sys
 import tempfile
+import time
 
 try:
     import mpy.tools.unixcrt as crt
@@ -25,7 +24,6 @@ except ImportError:
 
     crt = CRT()
 
-from mpy.device import device
 from mpy.tools import util, calling
 from scuq.quantities import Quantity
 from scuq.si import WATT
@@ -57,7 +55,7 @@ class Measure(object):
         self.autosave = False
         self.autosave_interval = 3600
         self.lastautosave = time.time()
-        self.logger = [self.stdLogger]
+        self.logger = [self.stdlogger]
         self.logfile = None
         self.logfilename = None
         self.messenger = self.stdUserMessenger
@@ -74,7 +72,7 @@ class Measure(object):
         self.__dict__.update(dct)
         self.logfile = logfile
         self.messenger = self.stdUserMessenger
-        self.logger = [self.stdLogger]
+        self.logger = [self.stdlogger]
         self.UserInterruptTester = self.stdUserInterruptTester
         self.PreUserEvent = self.stdPreUserEvent
         self.PostUserEvent = self.stdPostUserEvent
@@ -103,7 +101,7 @@ class Measure(object):
         start = time.time()
         delay = abs(delay)
         intervall = abs(intervall)
-        while (time.time() - start < delay):
+        while time.time() - start < delay:
             uitester(dct)
             time.sleep(intervall)
 
@@ -149,7 +147,7 @@ class Measure(object):
         """
         self.autosave_interval = interval
 
-    def stdLogger(self, block, *args):
+    def stdlogger(self, block, *args):
         """The standard method to write messages to log file.
 
            Print *block* to `self.logfile` or to `stdout` (if `self.logfile` is `None`).
@@ -245,7 +243,8 @@ class Measure(object):
         else:
             return -1
 
-    def stdUserInterruptTester(self):
+    @staticmethod
+    def stdUserInterruptTester():
         """The standard (default) user interrupt tester.
 
            Returns return value of :meth:`mpy.util.anykeyevent()`
@@ -403,13 +402,15 @@ class Measure(object):
 
         # print self.ascmd
 
-    def stdPreUserEvent(self):
+    @staticmethod
+    def stdPreUserEvent():
         """Just calls :meth:`mpy.tools.unixcrt.unbuffer_stdin()`.
            See there...
         """
         crt.unbuffer_stdin()
 
-    def stdPostUserEvent(self):
+    @staticmethod
+    def stdPostUserEvent():
         """Just calls :meth:`mpy.tools.unixcrt.restore_stdin()`
            See there...
         """
@@ -541,7 +542,8 @@ class Measure(object):
             whatlist = [w for w in what if w in allwhat]
         return whatlist
 
-    def stdEutStatusChecker(self, status):
+    @staticmethod
+    def stdEutStatusChecker(status):
         return status in ['ok', 'OK']
 
 
