@@ -1,16 +1,17 @@
-from enthought.traits.api import *
-#from enthought.traits.ui.api import *
-import wx 
+from traits.api import *
+# from enthought.traits.ui.api import *
+import wx
 import scipy
 from scuq import *
 from mpy.tools.mgraph import MGraph
 
+
 class Measurement(HasTraits):
     dot = String('test.dot')
-    
+
+
 Measurement().edit_traits()
 wx.PySimpleApp().MainLoop()
-
 
 # dot='test.dot'
 # mg=MGraph(dot)
@@ -42,4 +43,4 @@ wx.PySimpleApp().MainLoop()
 
 # finally:    
 #     mg.RFOff_Devices()
-#     mg.Quit_Devices() 
+#     mg.Quit_Devices()

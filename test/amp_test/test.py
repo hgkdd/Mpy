@@ -1,11 +1,11 @@
-import sys
-import StringIO
-import time
-from mpy.tools.util import format_block
-from mpy.device import sg_rs_swm, amp_ifi_smx25 
+import io
+
 from scuq import *
 
-amp_ini=format_block("""
+from mpy.device import sg_rs_swm, amp_ifi_smx25
+from mpy.tools.util import format_block
+
+amp_ini = format_block("""
                          [description]
                          DESCRIPTION = SMX25
                          TYPE = AMPLIFIER
@@ -45,9 +45,9 @@ amp_ini=format_block("""
                                                                 1e9 0
                                                                 '''))
                          """)
-amp_ini=io.StringIO(amp_ini)
-        
-sg_ini=format_block("""
+amp_ini = io.StringIO(amp_ini)
+
+sg_ini = format_block("""
                         [DESCRIPTION]
                         description: 'SWM'
                         type:        'SIGNALGENERATOR'
@@ -69,22 +69,22 @@ sg_ini=format_block("""
                         unit: 'dBm'
                         outpoutstate: 0
                         """)
-sg_ini=io.StringIO(sg_ini)
+sg_ini = io.StringIO(sg_ini)
 
-lv=quantities.Quantity(si.WATT, 1e-4)
+lv = quantities.Quantity(si.WATT, 1e-4)
 
-sg=sg_rs_swm.SWM()
-amp=amp_ifi_smx25.SMX25()
-err=sg.Init(sg_ini)
-err=amp.Init(amp_ini)
-err, _ =sg.RFOn()
-err,level=sg.SetLevel(lv)
-while(True):
-    fr=float(raw_input("Freq / Hz: "))
+sg = sg_rs_swm.SIGNALGENERATOR()
+amp = amp_ifi_smx25.AMPLIFIER()
+err = sg.Init(sg_ini)
+err = amp.Init(amp_ini)
+err, _ = sg.RFOn()
+err, level = sg.SetLevel(lv)
+while True:
+    fr = float(input("Freq / Hz: "))
     if fr < 0:
         break
     sg.SetFreq(fr)
     amp.SetFreq(fr)
-    #time.sleep(2)
-err=sg.Quit()
-err=amp.Quit()
+    # time.sleep(2)
+err = sg.Quit()
+err = amp.Quit()

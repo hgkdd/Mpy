@@ -23,10 +23,10 @@ for freq in (100e6, 500e6, 900e6):
     amp.SetFreq(freq)
     pm1.SetFreq(freq)
     pm2.SetFreq(freq)
-    
-    print pm1.GetData()[1]
-    print pm2.GetData()[1]
-    
+
+    print(pm1.GetData()[1])
+    print(pm2.GetData()[1])
+
 sg.RFOff()
 
 amp.Quit()

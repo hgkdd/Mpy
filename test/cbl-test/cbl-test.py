@@ -1,16 +1,14 @@
 import sys
-sys.path.insert(0,'..')
+import mpy.device.nport as nport
 
-import nport
+ini = sys.argv[1]
 
-ini=sys.argv[1]
-
-cbl=nport.CABLE()
+cbl = nport.CABLE()
 cbl.init(ininame=ini)
 
-for freq in (1e9,): #range(10,90):
+for freq in (1e9,):  # range(10,90):
     cbl.setFreq(freq)
-    err, uq=cbl.getData(what='S21')
-    val=uq.get_value(uq.__unit__).get_value()
-    err=uq.get_value(uq.__unit__).get_uncertainty(uq.get_value(uq.__unit__))
-    print freq, val.real, val.imag, err.real, err.imag
+    err, uq = cbl.getData(what='S21')
+    val = uq.get_value(uq.__unit__).get_value()
+    err = uq.get_value(uq.__unit__).get_uncertainty(uq.get_value(uq.__unit__))
+    print(freq, val.real, val.imag, err.real, err.imag)
