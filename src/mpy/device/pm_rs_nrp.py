@@ -324,9 +324,9 @@ def main():
 
 
 if __name__ == '__main__':
-    # import sys
-    # main()
-    # sys.exit()
+    import sys
+    main()
+    sys.exit()
     pm1 = test_init(1)
     # pm1.update_internal_unit(None,'DB')
     pm1.InitSen(1)

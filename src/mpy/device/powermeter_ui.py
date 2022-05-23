@@ -108,7 +108,7 @@ class UI(tapi.HasTraits):
                            tuiapi.Item('QUERY', show_label=False),
                            # tuiapi.Item('WRITE',show_label=False),
                            # tuiapi.Item('READ',show_label=False),
-                           tuiapi.Item('ANSWER', show_label=False),
+                           tuiapi.Item('ANS', show_label=False),
                            label='CMD', style='simple'
                            )
 
