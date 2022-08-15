@@ -37,8 +37,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Mpy'
-copyright = u'2009, Hans Georg Krauthäuser'
+project = 'Mpy'
+copyright = '2009, Hans Georg Krauthäuser'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -174,8 +174,8 @@ htmlhelp_basename = 'Mpydoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Mpy.tex', u'Mpy Documentation',
-   u'Hans Georg Krauthäuser', 'manual'),
+  ('index', 'Mpy.tex', 'Mpy Documentation',
+   'Hans Georg Krauthäuser', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

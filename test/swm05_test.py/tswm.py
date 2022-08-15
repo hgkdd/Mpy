@@ -1,6 +1,6 @@
 import random
 import sys
-import StringIO
+import io
 from math import log10
 from mpy.tools.util import format_block
 from mpy.device.sg_rs_swm import SIGNALGENERATOR
@@ -82,7 +82,7 @@ while True:
     err, pist=pm.GetData()
     dbist=pist.get_expectation_value_as_float()
     dbist=10*log10(dbist*1000)
-    print freq, level, dbist, level-dbist
+    print((freq, level, dbist, level-dbist))
     sys.stdout.flush()
 sg.Quit()
 pm.Quit()

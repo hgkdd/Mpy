@@ -16,9 +16,9 @@ while True:
     pm.write("INIT%d:IMM"%ch)
     while not finished:
         time.sleep(.01)
-        print '.',
+        print('.', end=' ')
         stat=int(pm.ask("STAT:OPER:MEAS:SUMM:COND?"))
         if not (stat & mask):
             finished=True
     val=pm.ask("FETCH%d?"%ch)
-    print val
+    print(val)

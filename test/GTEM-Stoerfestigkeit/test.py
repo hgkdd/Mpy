@@ -25,7 +25,7 @@ class GTEM_SUSCEPTIBILITY(object):
 
     def Measure(self):
         flist = [self.fstart + i * self.fstep for i in range(self.nf)]
-        p_soll_list = map(dBm2Watt, self.soll_leistung(flist))
+        p_soll_list = list(map(dBm2Watt, self.soll_leistung(flist)))
         self.mg.Zero_Devices()
         self.mg.RFOn_Devices()
         for f, psoll in zip(flist, p_soll_list):
@@ -45,9 +45,9 @@ class GTEM_SUSCEPTIBILITY(object):
                 pist = pist.__value__.get_value()
                 cfactor = psoll / pist
                 sg_power = sg_power * cfactor
-            print(f, sg_power, psoll, pist, cfactor)
+            print((f, sg_power, psoll, pist, cfactor))
             eutlevel = self.eut.getLevel()
-            print("EUT:", eutlevel)
+            print(("EUT:", eutlevel))
         self.mg.RFOff_Devices()
 
     def adjust_power(self, psoll):
@@ -68,7 +68,7 @@ def dat_interpol(cfile):
     for line in open(cfile):
         if line.startswith('#'):
             continue
-        freq, power = map(float, line.split())
+        freq, power = list(map(float, line.split()))
         freq = freq * 1e6
         flist.append(freq)
         plist.append(power)

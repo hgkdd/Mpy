@@ -117,10 +117,10 @@ if __name__ == '__main__':
     # print "Description: %s"%des
 
     for freq in [100]:
-        print("Set freq to %e Hz" % freq)
+        print(("Set freq to %e Hz" % freq))
         err, rfreq = dev.SetFreq(freq)
         if err == 0:
-            print("Freq set to %e Hz" % rfreq)
+            print(("Freq set to %e Hz" % rfreq))
         else:
             print("Error setting freq")
 

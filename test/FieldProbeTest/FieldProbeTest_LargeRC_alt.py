@@ -1,5 +1,5 @@
 import sys
-import cPickle as pickle
+import pickle as pickle
 import scipy
 import numpy
 import pylab
@@ -50,18 +50,18 @@ Pn3=20
 Emax=600
 #
 try:
-    print ' '
-    print 'Please wait!'
-    print ' --> devices initiated' 
+    print(' ')
+    print('Please wait!')
+    print(' --> devices initiated') 
     mg.Init_Devices()  
     #
-    print ' --> stirrer position adjusted'
+    print(' --> stirrer position adjusted')
     tuner.Goto(stirrer)
     #
-    print ' --> data set created'
+    print(' --> data set created')
     DataDct=dict.fromkeys(freq, {})
     #
-    print ' --> measurement started'
+    print(' --> measurement started')
     for f in freq:
         #DataDct[f]={}
         #
@@ -106,7 +106,7 @@ try:
             DataDct[f][Preal]['Ez'] =e_val[2].get_expectation_value_as_float()        
             DataDct[f][Preal]['Emag']=scipy.sqrt(DataDct[f][Preal]['Ex']**2+DataDct[f][Preal]['Ey']**2+DataDct[f][Preal]['Ez']**2)
             #             
-            print 'f:  %dMHZ  P:  %.3fW  Preal: %.3fW Ex: %.2f  Ey: %.2f  Ez:  %.2f  Emag: %.2f' %(f/1e6,P,Preal,DataDct[f][Preal]['Ex'],DataDct[f][Preal]['Ey'],DataDct[f][Preal]['Ez'],DataDct[f][Preal]['Emag']) 
+            print(('f:  %dMHZ  P:  %.3fW  Preal: %.3fW Ex: %.2f  Ey: %.2f  Ez:  %.2f  Emag: %.2f' %(f/1e6,P,Preal,DataDct[f][Preal]['Ex'],DataDct[f][Preal]['Ey'],DataDct[f][Preal]['Ez'],DataDct[f][Preal]['Emag']))) 
             # 
             if DataDct[f][Preal]['Emag']>Emax:
                 break

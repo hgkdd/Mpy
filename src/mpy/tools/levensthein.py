@@ -85,4 +85,4 @@ if __name__ == "__main__":
     from sys import argv
 
     # print levenshtein(argv[1],argv[2],ch_cost=float(argv[3]), add_cost=float(argv[4]), del_cost=float(argv[5]))
-    print(fstrcmp(argv[1], ('ON', 'OFF')))
+    print((fstrcmp(argv[1], ('ON', 'OFF'))))

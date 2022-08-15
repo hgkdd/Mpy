@@ -1,7 +1,7 @@
 import sys
 import random
 from itertools import combinations
-import cPickle as pickle
+import pickle as pickle
 import pylab as pl
 import numpy as np
 import scipy as sp
@@ -13,7 +13,7 @@ def random_combination(iterable, r):
     "Random selection from itertools.combinations(iterable, r)"
     pool = tuple(iterable)
     n = len(pool)
-    indices = sorted(random.sample(xrange(n), r))
+    indices = sorted(random.sample(list(range(n)), r))
     return tuple(pool[i] for i in indices)
 
 
@@ -36,7 +36,7 @@ class SAMPLES(object):
         
         completed_tp=set(tpos)
         for f in self.freqs:
-            t=set([a for a in dct[f].keys() if dct[f][a] != None])
+            t=set([a for a in list(dct[f].keys()) if dct[f][a] != None])
             completed_tp=completed_tp.intersection(t)
         self.ctp=sorted(list(completed_tp))
         self.Ntp=len(self.ctp)

@@ -596,7 +596,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
 
         # Existierende Traces im Window löschen:
         trace = re.split(r",", self._GetTrace()[1][1:-1])
-        print(self._GetTrace())
+        print((self._GetTrace()))
         if trace[0] != '':
             i = 0
             while i < len(trace):
@@ -893,9 +893,9 @@ def main():
             if test == "assert":
                 assert ret == value, '%s() returns freq=%s instead of %s' % (funk, ret, value)
             else:
-                print('%s(): Rückgabewert: %s   Sollwert: %s' % (funk, ret, value))
+                print(('%s(): Rückgabewert: %s   Sollwert: %s' % (funk, ret, value)))
         else:
-            print('%s(): Rückgabewert: %s' % (funk, ret))
+            print(('%s(): Rückgabewert: %s' % (funk, ret)))
 
     err, spec = nw.GetSpectrum()
     assert err == 0, 'GetSpectrum() fails with error %d' % (err)

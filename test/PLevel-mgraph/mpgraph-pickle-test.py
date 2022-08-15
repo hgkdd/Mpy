@@ -1,4 +1,4 @@
-import cPickle as pickle
+import pickle as pickle
 from mpy.tools.mgraph import MGraph
 
 MpyDIRS=['\\MpyConfig\\LargeGTEM', '.']

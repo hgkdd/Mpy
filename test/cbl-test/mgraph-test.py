@@ -12,11 +12,11 @@ mg.CreateDevices()
 mg.Init_Devices()
 
 for f in (500e6, 2000e6):
-    print("Freq:", f)
+    print(("Freq:", f))
     mg.SetFreq_Devices(f)
     mg.EvaluateConditions()
     corr = mg.get_path_correction(fr, to, POWERRATIO)
-    for k, v in corr.items():
-        print(k, v)
+    for k, v in list(corr.items()):
+        print((k, v))
 
 mg.Quit_Devices()

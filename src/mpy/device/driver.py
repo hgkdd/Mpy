@@ -139,20 +139,20 @@ class DRIVER(object):
         return dct
 
     def _debug_write(self, cmd):
-        print("%s out:" % self.IDN, cmd)
+        print(("%s out:" % self.IDN, cmd))
         return 0
 
     def _debug_read(self, tmpl):
-        print("In read", tmpl)
+        print(("In read", tmpl))
         dct = None
-        ans = input('%s in: %s -> ' % (self.IDN, tmpl))
+        ans = eval(input('%s in: %s -> ' % (self.IDN, tmpl)))
         m = re.match(tmpl, ans)
         if m:
             dct = m.groupdict()
         return dct
 
     def _debug_query(self, cmd, tmpl):
-        print("In query", cmd, tmpl)
+        print(("In query", cmd, tmpl))
         self.write(cmd)
         return self.read(tmpl)
 

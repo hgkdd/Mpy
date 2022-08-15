@@ -330,7 +330,7 @@ Quit: quit measurement.
         
 
 if __name__ == '__main__':
-    import cPickle as pickle
+    import pickle as pickle
     from numpy import linspace
     from scuq.quantities import Quantity
     from scuq.si import WATT

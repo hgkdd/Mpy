@@ -65,7 +65,7 @@ f_stop=13.2e9
 f_step=200e6
 f=1e9
 
-vor_f=range(int((f_stop-f_start)/f_step))
+vor_f=list(range(int((f_stop-f_start)/f_step)))
 alle_f=[i*f_step+f_start for i in vor_f]
 
 
@@ -211,7 +211,7 @@ for f in alle_f:
 
 ##plot(values_dB)
 ##show()
-print "guete:",Q
+print(("guete:",Q))
 fig=plot(Q)
 savepath=pfad_bilder+r"\Q.png"
 savefig(savepath)
@@ -219,7 +219,7 @@ savefig(savepath)
 
 
 fd.close()
-print 'gut!'
+print('gut!')
 sg.Quit()
 sa.Quit()
 

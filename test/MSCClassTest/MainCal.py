@@ -67,13 +67,13 @@ def update_conf(cdict):
             try:
                 _mod = __import__(name[:name.rindex('.')])
                 cdict.update(getattr(_mod, 'cdict'))
-                print("Configuration updated from '%s'." % name)
+                print(("Configuration updated from '%s'." % name))
             except:
                 try:
                     dct = eval(name)
                     if isinstance(dct, dict):
                         cdict.update(dct)
-                        print("Configuration updated from '%s'." % str(dct))
+                        print(("Configuration updated from '%s'." % str(dct)))
                 except:
                     pass
 
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     if not msc:
         if cdict['pickle_input_filename']:
             pfile = myopen(cdict['pickle_input_filename'], "rb")
-            print("Loading input pickle file '%s'..." % cdict['pickle_input_filename'])
+            print(("Loading input pickle file '%s'..." % cdict['pickle_input_filename']))
             msc = pickle.load(pfile)
             pfile.close()
             print("...done")

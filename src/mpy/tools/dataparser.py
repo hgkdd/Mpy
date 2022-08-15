@@ -145,7 +145,7 @@ class DatFile(Parser):
         try:
             t.value = float(t.value)    
         except ValueError:
-            print("Line %d: Number %s is too large!" % (t.lineno,t.value))
+            print(("Line %d: Number %s is too large!" % (t.lineno,t.value)))
             t.value = 0
         return t
 
@@ -167,7 +167,7 @@ class DatFile(Parser):
 
     # Error handling rule
     def t_error(self, t):
-        print("Illegal character '%s'" % t.value[0])
+        print(("Illegal character '%s'" % t.value[0]))
         t.lexer.skip(1)
 
     # Parser starts here
@@ -309,4 +309,4 @@ if __name__ == '__main__':
     for f in sorted(result):
         uq=result[f]
         val,err,unit=ctx.value_uncertainty_unit(uq)
-        print(f, uq, val, err, unit)
+        print((f, uq, val, err, unit))

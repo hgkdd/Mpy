@@ -222,18 +222,18 @@ if __name__ == '__main__':
     # print "Description: %s"%des
 
     for freq in [100]:
-        print("Set freq to %e Hz" % freq)
+        print(("Set freq to %e Hz" % freq))
         err, rfreq = sg.SetFreq(freq)
         if err == 0:
-            print("Freq set to %e Hz" % rfreq)
+            print(("Freq set to %e Hz" % rfreq))
         else:
             print("Error setting freq")
 
     lv = quantities.Quantity(si.VOLT, 10)
-    print("Set level to %s" % lv)
+    print(("Set level to %s" % lv))
     err, lv = sg.SetLevel(lv)
     if err == 0:
-        print("Level set to: %s" % lv)
+        print(("Level set to: %s" % lv))
     else:
         print("Error setting level")
 
@@ -241,11 +241,11 @@ if __name__ == '__main__':
 
     err = sg.ConfPM('int', 100e3, 'NORMAL', 1e-3, 0)
 
-    print(sg.SetState('On'))
-    print(sg.SetState('Off'))
-    print(sg.SetPM('On'))
-    print(sg.SetPM('OFF'))
-    print(sg.SetAM('On'))
-    print(sg.SetAM('off'))
+    print((sg.SetState('On')))
+    print((sg.SetState('Off')))
+    print((sg.SetPM('On')))
+    print((sg.SetPM('OFF')))
+    print((sg.SetAM('On')))
+    print((sg.SetAM('off')))
 
     sg.Quit()

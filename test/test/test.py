@@ -22,7 +22,7 @@ fehler,wert=c.setFreq(9e8)
 ##            print 'Fehler bei der Objekterstellung; Nr.', err, '=>', c.ErrorDict[err]
 w='S42'
 err, obj=c.getData(w)
-print obj, err
+print((obj, err))
 ##
 
 #print wert, fehler

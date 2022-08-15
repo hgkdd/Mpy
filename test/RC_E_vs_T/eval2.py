@@ -1,6 +1,6 @@
 from scuq import *
 import sys
-import cPickle as pickle
+import pickle as pickle
 import pylab
 import numpy
 import scipy
@@ -132,7 +132,7 @@ class Data(object):
                 threshold=self.thresholds[j]
                 self.ISP_ACC[i,j]=ac.Nind(Templist,threshold)
         #
-        print self.ISP_ACC            
+        print((self.ISP_ACC))
         #
         pylab.rcParams['figure.figsize']=(6,3) 
         pylab.axes([0.125,0.125,0.825,0.825])
@@ -218,7 +218,7 @@ class Data(object):
         pylab.show()
     
     def CalcIndependentStirrerPositionsPearson_draft(self):
-        print 'Algorithm 1:'
+        print('Algorithm 1:')
         for i in range(0,3,1):
             #positions=sorted(self.data[self.freq_freqs[0]].keys())
             positions=[0,1,2,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18,19,20]
@@ -227,18 +227,18 @@ class Data(object):
             #
             while len(positions)>pos1index:
                 pcc=scipy.stats.pearsonr(self.Enorm_freqstir[i,positions[pos0index],:],self.Enorm_freqstir[i,positions[pos1index],:])
-                print positions
-                print len(positions), pos0index, positions[pos0index], pos1index, positions[pos1index], pcc[0]
+                print(positions)
+                print((len(positions), pos0index, positions[pos0index], pos1index, positions[pos1index], pcc[0]))
                 if pcc[0]>0.6:
                     del positions[pos1index]
                 else:
                     pos0index=pos1index
                     pos1index=pos1index+1
             #
-            print positions
-            print 'E-Component %d: %d positions' %(i,len(positions))
+            print(positions)
+            print(('E-Component %d: %d positions' %(i,len(positions))))
         #        
-        print 'Algorithm 2:'
+        print('Algorithm 2:')
         for i in range(0,3,1):
             #positions=sorted(self.data[self.freq_freqs[0]].keys())
             positions=[0,1,2,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18,19,20]
@@ -249,15 +249,15 @@ class Data(object):
                 pos1index=pos0index+1
                 while len(positions)>pos1index:
                     pcc=scipy.stats.pearsonr(self.Enorm_freqstir[i,positions[pos0index],:],self.Enorm_freqstir[i,positions[pos1index],:])
-                    print positions
-                    print len(positions), pos0index, positions[pos0index], pos1index, positions[pos1index], pcc[0]
+                    print(positions)
+                    print((len(positions), pos0index, positions[pos0index], pos1index, positions[pos1index], pcc[0]))
                     if pcc[0]>0.6:
                         del positions[pos1index]
                     else:
                         pos1index=pos1index+1
                 pos0index=pos0index+1
             #
-            print 'E-Component %d: %d positions' %(i,len(positions))
+            print(('E-Component %d: %d positions' %(i,len(positions))))
     
     def CalcIndependentStirrerPositionsPearson(self):
         for n in range(0,len(self.thresholds),1):
@@ -303,7 +303,7 @@ class Data(object):
         a=numpy.array((positions))
         b=numpy.ones((len(positions)))
         #
-        print self.ISP_Eabs
+        print((self.ISP_Eabs))
         #
         #print self.thresholds
         #print self.ISP_PCC1
@@ -452,13 +452,13 @@ class Data(object):
                     # var_Emeas_sum=sum([scipy.stats.tvar(self.Enorm_freqstir[i,j,:]) for j in list])
                     # print var_Emeas, var_Emeas_sum,' --> ',len(list),' : ', var_Emeas_sum/var_Emeas
                        
-            print 'E_ij mit i stirrer position and j frequency'
+            print('E_ij mit i stirrer position and j frequency')
             for i in [0,1,2,3]:
-                print 'Component: ', i
-                print 'Var Eij: '  , scipy.stats.tvar(self.Emeas_freqstir[i,:,:])
-                print 'Var E0j: '  , scipy.stats.tvar(self.Emeas_freqstir[i,0,:])
-                print 'Var <Ej>i: ', scipy.stats.tvar(self.Emean_stirpos[i,:])
-                print 'N: ', scipy.stats.tvar(self.Emeas_freqstir[i,:,:])/scipy.stats.tvar(self.Emean_stirpos[i,:])
+                print(('Component: ', i))
+                print(('Var Eij: '  , scipy.stats.tvar(self.Emeas_freqstir[i,:,:])))
+                print(('Var E0j: '  , scipy.stats.tvar(self.Emeas_freqstir[i,0,:])))
+                print(('Var <Ej>i: ', scipy.stats.tvar(self.Emean_stirpos[i,:])))
+                print(('N: ', scipy.stats.tvar(self.Emeas_freqstir[i,:,:])/scipy.stats.tvar(self.Emean_stirpos[i,:])))
                    
     def PlotPearsonCorrelationCoeffForEfieldOverStirrerposition(self):
         for i in self.stir_pos:

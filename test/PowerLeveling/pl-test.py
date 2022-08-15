@@ -1,4 +1,4 @@
-import StringIO
+import io
 from mpy.tools.util import format_block
 from mpy.device.pm_gt_8540c import POWERMETER as PM
 from mpy.device.sg_rs_smb100a import SIGNALGENERATOR as SG
@@ -137,7 +137,7 @@ for soll in [1e-4,5e-4,1e-3,1e-2]: #soll=1e-4
     pmOUT.Trigger()
     err, pout=pmOUT.GetData()
     pout=10**(0.1*pout)*1e-3
-    print "Pin: %.3e, Soll: %.2e, Mon: %.2e, Out: %.2e\n"%(pin, soll, pmon, pout)
+    print(("Pin: %.3e, Soll: %.2e, Mon: %.2e, Out: %.2e\n"%(pin, soll, pmon, pout)))
 
 sg.RFOff()
 sg.Quit()

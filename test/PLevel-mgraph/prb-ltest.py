@@ -35,7 +35,7 @@ for f in freqs:
     lev=Leveler(mg, mg.name.sg, mg.name.output, mg.name.fp, mg.name.fp, datafunc=ycor)
     sglv, fpval = lev.adjust_level(soll)
     field=mg.fp.GetData()
-    print f, sglv, field
+    print((f, sglv, field))
     mg.RFOff_Devices()
 
     

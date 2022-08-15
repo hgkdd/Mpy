@@ -72,7 +72,7 @@ class SMR(SIGNALGENERATOR):
                     [(':OUTPUT1:STATE ON', None)])]
 
         for k, vals, actions in presets:
-            print(k, vals, actions)
+            print((k, vals, actions))
             try:
                 v = self.conf[sec][k]
                 # print sec, k, v

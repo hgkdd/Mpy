@@ -11,4 +11,4 @@ for freq in (1e9,):  # range(10,90):
     err, uq = cbl.getData(what='S21')
     val = uq.get_value(uq.__unit__).get_value()
     err = uq.get_value(uq.__unit__).get_uncertainty(uq.get_value(uq.__unit__))
-    print(freq, val.real, val.imag, err.real, err.imag)
+    print((freq, val.real, val.imag, err.real, err.imag))

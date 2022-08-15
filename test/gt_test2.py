@@ -79,5 +79,5 @@ if __name__ == "__main__":
             b=pm2.GetData()
             if b:
                 b='%+7.2f'%b
-        print "%d %d %s %s"%(t, r, a, b)
+        print(("%d %d %s %s"%(t, r, a, b)))
         

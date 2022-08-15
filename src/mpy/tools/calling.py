@@ -61,7 +61,7 @@ if __name__ == '__main__':
              l=2)
         return l
 
-    print(t2(1, 2, 4, t=0))
+    print((t2(1, 2, 4, t=0)))
     l = None
     c = 'l=t1()'
     exec(c)

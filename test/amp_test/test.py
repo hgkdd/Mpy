@@ -80,7 +80,7 @@ err = amp.Init(amp_ini)
 err, _ = sg.RFOn()
 err, level = sg.SetLevel(lv)
 while True:
-    fr = float(input("Freq / Hz: "))
+    fr = float(eval(input("Freq / Hz: ")))
     if fr < 0:
         break
     sg.SetFreq(fr)

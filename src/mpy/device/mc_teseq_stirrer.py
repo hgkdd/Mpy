@@ -239,18 +239,18 @@ def main():
     mc = MOTORCONTROLLER()
     err = mc.Init(ini)
     while True:
-        pos = input("Pos / DEG: ")
+        pos = eval(input("Pos / DEG: "))
         if pos in 'qQ':
             break
         try:
             pos = float(pos)
             err, ang = mc.Goto(pos)
-            print('%.2f -> %.2f' % (pos, ang))
+            print(('%.2f -> %.2f' % (pos, ang)))
         except ValueError:
             pos = pos.lower()
             if pos in dirmap:
                 err, dir = mc.Move(dirmap[pos])
-                print('Direction: %d' % dir)
+                print(('Direction: %d' % dir))
     mc.Quit()
 
 

@@ -36,7 +36,7 @@ class PMM(object):
                                baudrate=115200)
 
         ans=self._query('#?IDN*')
-        print ans, repr(ans)
+        print((ans, repr(ans)))
 
 if __name__ == '__main__':
     rec=PMM()

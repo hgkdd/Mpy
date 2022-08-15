@@ -161,7 +161,7 @@ if __name__ == '__main__':
     data = {}
     for i in range(1, N):
         data[i] = i * dm * cmath.exp(1j * math.radians(i * da))
-        print(i, data[i].real, data[i].imag)
+        print((i, data[i].real, data[i].imag))
     print()
     print()
 
@@ -169,4 +169,4 @@ if __name__ == '__main__':
     for i in range(10, 9 * N):
         j = i * 0.1
         d = ci(j)
-        print(j, d.real, d.imag)
+        print((j, d.real, d.imag))

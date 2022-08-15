@@ -43,7 +43,7 @@ class DataGen(object):
     def __init__(self, init=50):
         self.data = self.init = init
         
-    def next(self):
+    def __next__(self):
         self._recalc_data()
         return self.data
     
@@ -118,7 +118,7 @@ class GraphFrame(wx.Frame):
         wx.Frame.__init__(self, None, -1, self.title)
         
         self.datagen = DataGen()
-        self.data = [self.datagen.next()]
+        self.data = [next(self.datagen)]
         self.paused = False
         
         self.create_menu()
@@ -307,7 +307,7 @@ class GraphFrame(wx.Frame):
         # (to respond to scale modifications, grid change, etc.)
         #
         if not self.paused:
-            self.data.append(self.datagen.next())
+            self.data.append(next(self.datagen))
         
         self.draw_plot()
     

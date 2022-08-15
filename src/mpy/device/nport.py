@@ -162,7 +162,7 @@ def main():
         cbl.SetFreq(freq)
         err, uq = cbl.GetData(what='S21')
         val, unc, unit = ctx.value_uncertainty_unit(uq)
-        print(freq, uq, abs(val), abs(unc), unit)
+        print((freq, uq, abs(val), abs(unc), unit))
 
 
 if __name__ == '__main__':

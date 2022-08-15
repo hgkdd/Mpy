@@ -149,7 +149,7 @@ class ImmunityKernel_Thres:
                         dev = theprobe['dev']
                         ans = dev.getSenType()
                         if ans != dev.sensor:
-                            print('FAIL on COM %d'%p)
+                            print(('FAIL on COM %d'%p))
                             theprobe['ok']=False
                             dct[p] = 'EUT Failure. Sensor = %r'%ans
                 time.sleep(intervall)

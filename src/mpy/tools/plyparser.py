@@ -54,7 +54,7 @@ class Parser(object):
         else:
             while 1:
                 try:
-                    s = input('input > ')
+                    s = eval(input('input > '))
                 except EOFError:
                     break
                 if not s:

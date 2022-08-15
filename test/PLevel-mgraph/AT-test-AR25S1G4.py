@@ -1,4 +1,4 @@
-import cPickle as pickle
+import pickle as pickle
 from numpy import linspace,concatenate, log10
 from scuq.quantities import Quantity
 from scuq.si import WATT

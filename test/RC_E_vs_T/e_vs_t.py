@@ -1,5 +1,5 @@
 import sys
-import cPickle as pickle
+import pickle as pickle
 from numpy import linspace,concatenate, log10, sqrt
 from scuq.quantities import Quantity
 from scuq.si import WATT, VOLT, METER
@@ -20,7 +20,7 @@ def Emag(seq):
 
 outname="e_vs_t_800MHz.p"  # Pickle File (Ausgabe)
 soll=Quantity(WATT, 20)   # Leistung am Fusspunkt Tx
-tpos=range(360)  # Tuner Positionen
+tpos=list(range(360))  # Tuner Positionen
 fcenter=150e6 
 fspan=5e6
 Nf=200    
@@ -56,7 +56,7 @@ try:
         dct=pickle.load(open(outname, 'rb'))  # Weiter nach Abbruch?
         completed_tp=set(tpos) # liste der bereits vollstaendig gemessenen Tuner Pos
         for f in freqs:
-            t=set([a for a in dct[f].keys() if dct[f][a] != None])
+            t=set([a for a in list(dct[f].keys()) if dct[f][a] != None])
             completed_tp=completed_tp.intersection(t)
         #print completed_tp
     except:
@@ -75,7 +75,7 @@ try:
             lev=Leveler(mg, mg.name.sg, mg.name.output, mg.name.output, mg.name.pm_fwd)
             sglv, p_val = lev.adjust_level(soll)  # Leistung einregeln
             err, e_val = fp.GetData() # Sonde auslesen
-            print tp, f 
+            print((tp, f))
             dct[f][tp]=e_val  # Werte (x,y,z) sichern
         mg.RFOff_Devices()
         fout=open(outname, 'wb')  

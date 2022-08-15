@@ -140,7 +140,7 @@ def main():
         amp.SetFreq(freq)
         err, uq = amp.GetData(what='S21')
         val, unc, unit = ctx.value_uncertainty_unit(uq)
-        print(freq, uq, val, unc, unit)
+        print((freq, uq, val, unc, unit))
     amp.Standby()
     amp.Quit()
 

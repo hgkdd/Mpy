@@ -1184,6 +1184,6 @@ if __name__ == '__main__':
     pm1.SetFreq(200e6)
     while True:
         pm1.Trigger()
-        print(pm1.GetData())
+        print((pm1.GetData()))
         time.sleep(1)
     pm1.Quit()

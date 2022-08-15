@@ -294,7 +294,7 @@ if __name__ == '__main__':
         while True:
             pm1.Trigger()
             # pm2.Trigger()
-            print(i, "PM%d" % ch, pm1.GetData())
+            print((i, "PM%d" % ch, pm1.GetData()))
             i += 1
             # print "PM2", pm2.GetData()
     finally:

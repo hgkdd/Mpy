@@ -126,9 +126,9 @@ try:
             et = DataDct[f][Preal]['Emag'] = numpy.sqrt(ex ** 2 + ey ** 2 + ez ** 2)
             pr = DataDct[f][Preal]['Prx'] = sum([p.get_expectation_value_as_float() for p in p_rx_vals]) / N * 1000
             #             
-            print(
+            print((
                 'freq:  %.2f GHZ  power:  %.3f W real Power %.3f W Ex: %.2f  Ey: %.2f  Ez:  %.2f  Emag: %.2f  N: %.2f  Prx: %.2f' % (
-                    f / 1e9, P, Preal, ex, ey, ez, et, N, pr))
+                    f / 1e9, P, Preal, ex, ey, ez, et, N, pr)))
             #
             if DataDct[f][Preal]['Emag'] > Emax:
                 break

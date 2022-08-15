@@ -74,7 +74,7 @@ class SWController(DRIVER):
         return 0
 
 if __name__ == '__main__':
-    import StringIO
+    import io
     import numpy as np
     import time
 
@@ -102,6 +102,6 @@ if __name__ == '__main__':
     sw=SWController()
     sw.Init(ini)
     for f in np.linspace(0,4.2e9,20):
-        print f, sw.SetFreq(f)
+        print((f, sw.SetFreq(f)))
         time.sleep(0.5)
     sw.Quit()

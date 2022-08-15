@@ -7,7 +7,7 @@ dot = 'test.dot'
 mg = MGraph(dot)
 
 instrumentation = mg.CreateDevices()
-for k, v in instrumentation.items():
+for k, v in list(instrumentation.items()):
     globals()[k] = v  # create devices in current namespace
 
 mg.Init_Devices()  # init all devices in graph
@@ -21,14 +21,14 @@ try:
 
     pwrmeters = ('pm_fwd', 'pm_bwd')
     for f in numpy.arange(10e6, 1e9, 10e6):
-        print("Freq:", f, )
+        print(("Freq:", f, ))
         mg.SetFreq_Devices(f)
         mg.EvaluateConditions()
         sg.SetLevel(lv)
         results = mg.Read(pwrmeters)
         # print results
         for p in pwrmeters:
-            print(p, results[p], )
+            print((p, results[p], ))
         print()
 
 finally:

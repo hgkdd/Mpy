@@ -210,10 +210,10 @@ c.Init(ini,1)
 ##fehler,wert=c.GetSweepTime()
 ##print 'get:', fehler, wert
 
-print '\n\n+++++++++++++GetSpectrum - Test+++++++++++++'
+print('\n\n+++++++++++++GetSpectrum - Test+++++++++++++')
 #time.sleep(5)
 fehler,wert=c.GetSpectrum(0)
-print fehler, wert.l, wert.v, wert.u
+print((fehler, wert.l, wert.v, wert.u))
 
 ##print '\n\n+++++++++++++GetSpectrumNB - Test+++++++++++++'
 ###time.sleep(5)

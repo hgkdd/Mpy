@@ -30,7 +30,7 @@ try:
 
     f=200e6
     while True:
-        fin=raw_input("Frequenz in Hz [%f]? "%f)
+        fin=eval(input("Frequenz in Hz [%f]? "%f))
         try:
             f=float(fin)
         except:
@@ -39,19 +39,19 @@ try:
             break
         mg.EvaluateConditions()
         mg.SetFreq_Devices(f)
-        start=raw_input("Start: ")
-        end=raw_input("Ende: ")
+        start=eval(input("Start: "))
+        end=eval(input("Ende: "))
         start=mg.get_gname(start)
         end=mg.get_gname(end)
         if start != None and end != None: 
             pathcorr=mg.get_path_correction(start, end)
             paths=mg.find_all_paths(start, end)
             if len(paths)>1:
-                print "FEHLER: mehrere Pfade", paths
+                print(("FEHLER: mehrere Pfade", paths))
             elif len(paths)==1:
                 p=paths[0]
-                print ' -> '.join([' -> '.join(pi.obj_dict['points']) for pi in p])
+                print((' -> '.join([' -> '.join(pi.obj_dict['points']) for pi in p])))
             expec=abs(pathcorr.get_expectation_value_as_float())
-            print pathcorr.get_expectation_value(), expec, 20*log10(expec)
+            print((pathcorr.get_expectation_value(), expec, 20*log10(expec)))
 finally:
     mg.Quit_Devices()

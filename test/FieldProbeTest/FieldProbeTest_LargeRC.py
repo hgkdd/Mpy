@@ -108,9 +108,9 @@ if __name__ == '__main__':
                     DataDct[f][Preal]['Emag'] = numpy.sqrt(
                         DataDct[f][Preal]['Ex'] ** 2 + DataDct[f][Preal]['Ey'] ** 2 + DataDct[f][Preal]['Ez'] ** 2)
                     #             
-                    print('f:  %dMHZ  P:  %.3fW  Preal: %.3fW Ex: %.2f  Ey: %.2f  Ez:  %.2f  Emag: %.2f' % (
+                    print(('f:  %dMHZ  P:  %.3fW  Preal: %.3fW Ex: %.2f  Ey: %.2f  Ez:  %.2f  Emag: %.2f' % (
                         f / 1e6, P, Preal, DataDct[f][Preal]['Ex'], DataDct[f][Preal]['Ey'], DataDct[f][Preal]['Ez'],
-                        DataDct[f][Preal]['Emag']))
+                        DataDct[f][Preal]['Emag'])))
                     #
                     if DataDct[f][Preal]['Emag'] > Emax:
                         break
@@ -152,11 +152,11 @@ if __name__ == '__main__':
             Plot_P = []
             Plot_Emag = []
             #
-            print(f, len(DataDct[f].keys()), DataDct[f].keys())
+            print((f, len(list(DataDct[f].keys())), list(DataDct[f].keys())))
             power = sorted(DataDct[f].keys())
             Plot_P = numpy.sqrt(numpy.array(power))
             Plot_Emag = numpy.zeros((len(Plot_P)))
-            print(len(Plot_P))
+            print((len(Plot_P)))
             #
             for i in range(len(power)):
                 if DataDct[f][power[i]]['Emag'] is None:

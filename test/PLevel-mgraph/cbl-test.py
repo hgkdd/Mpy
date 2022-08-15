@@ -8,5 +8,5 @@ cbl.Init(ini)
 for freq in [100e6, 1e9]:
     cbl.SetFreq(freq)
     err,dat= cbl.GetData('S21')
-    print freq, abs(dat)
+    print((freq, abs(dat)))
 cbl.Quit()

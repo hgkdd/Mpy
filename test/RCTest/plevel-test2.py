@@ -62,7 +62,7 @@ try:
         fak=pm_ref*1000/pm_fwd_val
         fak=fak.get_expectation_value_as_float()
         fak=10*log10(fak)
-        print f, fak 
+        print((f, fak)) 
         sys.stdout.flush()
         mg.RFOff_Devices()
 finally:

@@ -52,7 +52,7 @@ try:
         lev=Leveler(mg, mg.name.sg, mg.name.output, mg.name.fp, mg.name.fp, datafunc=Emag)
         sglv, e_val = lev.adjust_level(soll)
         err, e_val = instrumentation[mg.name.fp].GetData()
-        print f, W2dBm(sglv.get_expectation_value_as_float()), soll, e_val 
+        print((f, W2dBm(sglv.get_expectation_value_as_float()), soll, e_val))
         sys.stdout.flush()
         mg.RFOff_Devices()
 finally:

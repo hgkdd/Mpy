@@ -25,7 +25,7 @@ fehler,wert=c.SetFreq(9e8)
 ##            print 'Fehler bei der Objekterstellung; Nr.', err, '=>', c.ErrorDict[err]
 w='S21'
 err, obj=c.GetData(w)
-print obj
+print(obj)
 
 
 #print wert, fehler

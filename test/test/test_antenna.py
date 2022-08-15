@@ -20,5 +20,5 @@ for f in (100000000, 80000000,90000000):
 
     w='gain'
     err, obj=c.GetData(w)
-    print obj
+    print(obj)
 c.Quit()

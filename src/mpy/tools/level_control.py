@@ -68,7 +68,7 @@ class control_rapp(object):
             act_points.append(actual)
             guess = self.guess(cntrl_points, act_points, nominal)
             actual = self.set_cntrl_val(guess)
-            print(guess, actual)
+            print((guess, actual))
         return guess, actual
 
     def guess(self, cntrl, act, nominal):
@@ -88,7 +88,7 @@ class control_rapp(object):
 
         p0 = [self.p, self.g, self.sat]  # Initial guess for the parameters
         (self.p, self.g, self.sat), success = scipy.optimize.leastsq(errfunc, p0[:], args=(cntrl, act))
-        print(self.p, self.g, self.sat)
+        print((self.p, self.g, self.sat))
         theguess = scipy.optimize.fsolve(rapp_min, act[-1])
         return theguess
 
@@ -127,6 +127,6 @@ if __name__ == '__main__':
     C = control_rapp(D.getter, D.setter, [0, 1, 3], 0.5)
     # for nom in numpy.arange(1,15,0.5):
     nom = y[-2]
-    print(C.do_cntrl(nom))
+    print((C.do_cntrl(nom)))
     pylab.plot(x, y, 'r--', D.xsteps, D.ysteps, 'bo')
     pylab.show()

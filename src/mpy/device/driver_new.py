@@ -196,16 +196,16 @@ class Virtual_Communication(object):
         self.IDN = IDN
 
     def write(self, cmd):
-        print("IN write", cmd)
-        print("%s out:" % self.IDN, cmd)
+        print(("IN write", cmd))
+        print(("%s out:" % self.IDN, cmd))
 
     def read(self):
         print("In read")
-        ans = input('%s -> ' % (self.IDN))
+        ans = eval(input('%s -> ' % (self.IDN)))
         return ans
 
     def query(self, cmd):
-        print("In query", cmd)
+        print(("In query", cmd))
         self.write(cmd)
         return self.read()
 
@@ -236,7 +236,7 @@ class GPIB_Communication(object):
                                    lock=lock)
 
     def write(self, cmd):
-        print("In write: ", cmd)
+        print(("In write: ", cmd))
         stat = 0
         if self.dev and isinstance(cmd, str):
             ans = self.dev.write(cmd)
@@ -248,7 +248,7 @@ class GPIB_Communication(object):
         return ans
 
     def query(self, cmd):
-        print('In query: ', cmd)
+        print(('In query: ', cmd))
         if self.dev and isinstance(cmd, str):
             ans = self.dev.ask(cmd)
         return ans

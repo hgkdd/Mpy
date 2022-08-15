@@ -48,7 +48,7 @@ class SG(object):
         pass
 
     def SetLevel(self, lv):
-        print("SG:", lv)
+        print(("SG:", lv))
 
 
 class Leveler(object):
@@ -95,7 +95,7 @@ class Leveler(object):
             re = abs(pout - soll) / soll
             self.x.append(pin)
             self.y.append(pout)
-            print(i, pin, pout, soll, re)
+            print((i, pin, pout, soll, re))
             if re <= relerr:
                 break
             if (pin == self.amp.PinMax) and (pout <= soll):

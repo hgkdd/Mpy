@@ -1720,7 +1720,7 @@ class Fieldprobe(Device):
                 method.restype = ct.c_int
                 retval = method(ct.byref(c_state), c_instance, ct.byref(c_error))
                 # retval = method(c_instance, ct.byref(c_error))
-                print(c_state.value)
+                print((c_state.value))
                 self.error = c_error.value
                 return self.error, retval
         else:
@@ -2727,7 +2727,7 @@ def cbl_tst(ini):
         cbl.SetFreq(freq)
         err, uq = cbl.GetData(what='S21')
         val, unc, unit = ctx.value_uncertainty_unit(uq)
-        print(freq, uq, abs(val), abs(unc), unit)
+        print((freq, uq, abs(val), abs(unc), unit))
 
 
 if __name__ == '__main__':
