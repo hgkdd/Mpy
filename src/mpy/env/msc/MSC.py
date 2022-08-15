@@ -172,7 +172,7 @@ class MSC(Measure.Measure):
         nrefant = min(len(names['refant']), len(names['pmref']))
         ntuner = min(len(ntuntab), len(tofftab), len(names['tuner']))
 
-        mg = mgraph.MGraph(dotfile, map=names.copy(), SearchPaths=SearchPaths)
+        mg = mgraph.MGraph(dotfile, themap=names.copy(), SearchPaths=SearchPaths)
 
         if leveler is None:
             self.leveler = mgraph.Leveler
@@ -677,7 +677,7 @@ class MSC(Measure.Measure):
         nprb = len(names['fp'])
         ntuner = min(len(toffsets), len(ntunerpos), len(names['tuner']))
 
-        mg = mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
+        mg = mgraph.MGraph(dotfile, themap=names, SearchPaths=SearchPaths)
         ddict = mg.CreateDevices()
         # for k,v in ddict.items():
         #    globals()[k] = v
@@ -1026,7 +1026,7 @@ class MSC(Measure.Measure):
         nrefant = min(len(names['refant']), len(names['pmref']))
         ntuner = len(names['tuner'])
 
-        mg = mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
+        mg = mgraph.MGraph(dotfile, themap=names, SearchPaths=SearchPaths)
         ddict = mg.CreateDevices()
         # for k,v in ddict.items():
         #    globals()[k] = v
@@ -1386,7 +1386,7 @@ class MSC(Measure.Measure):
         ntuner = len(names['tuner'])
         nprb = len(names['fp'])
 
-        mg = mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
+        mg = mgraph.MGraph(dotfile, themap=names, SearchPaths=SearchPaths)
         ddict = mg.CreateDevices()
         # for k,v in ddict.items():
         #    globals()[k] = v
@@ -1905,7 +1905,7 @@ class MSC(Measure.Measure):
         nrefant = min(len(names['refant']), len(names['receiver']))
         ntuner = len(names['tuner'])
 
-        mg = mgraph.MGraph(dotfile, map=names, SearchPaths=SearchPaths)
+        mg = mgraph.MGraph(dotfile, themap=names, SearchPaths=SearchPaths)
         ddict = mg.CreateDevices()
         # for k,v in ddict.items():
         #    globals()[k] = v
@@ -3179,9 +3179,11 @@ Quit: quit measurement.
                         s_f[p][k] = {}
                         ss = s_f[p][k]
                         ss['n'] = n_ind
-
-                        hist = (histogram, low_range, binsize, extrapoits) = scipy.stats.histogram(
-                            ees)  # tuple: histogram, low_range, binsize, extrapoints
+                        histg = numpy.histogram(ees)
+                        hist = histg[0]
+                        low_range = histg[1][0]
+                        binsize = histg[1][0] - low_range
+                        # hist = (histogram, low_range, binsize, extrapoits) = scipy.stats.histogram(ees)  # tuple: histogram, low_range, binsize, extrapoints
                         ss['hist'] = hist
                         e_cdf = distributions.ECDF(ees)
                         ss['samples'] = ees[:]

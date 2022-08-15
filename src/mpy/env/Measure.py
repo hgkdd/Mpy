@@ -8,7 +8,7 @@
 
 import gzip
 import os
-import pickle as pickle
+import pickle
 import sys
 import tempfile
 import time
@@ -17,10 +17,11 @@ try:
     import mpy.tools.unixcrt as crt
 except ImportError:
     class CRT:
-        def unbuffer_stdin(self): pass
+        def unbuffer_stdin(self):
+            pass
 
-        def restore_stdin(self): pass
-
+        def restore_stdin(self):
+            pass
 
     crt = CRT()
 
