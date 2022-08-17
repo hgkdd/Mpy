@@ -47,6 +47,32 @@ def cmp(a, b):
     return (a > b) - (a < b)
 
 
+def test_for_rayleigh(ees):
+    n_ees = len(ees)
+    hist, bins = numpy.histogram(ees)
+    low_range = bins.min()
+    binsize = (bins.max() - low_range) / (bins.size - 1)
+    # hist_area = sum(hist) * binsize
+    # nhist = [_h / hist_area for _h in hist]
+    e_cdf = distributions.ECDF(ees)
+    loc, scale = scipy.stats.rayleigh.fit(ees, floc=0)
+    ray_fit = scipy.stats.rayleigh(loc=loc, scale=scale)
+    cdf_fit = ray_fit.cdf(ees)
+    # calc estimates for chi2-test
+    estimates = []
+    _l = low_range
+    for _h in bins[1:]:
+        estimates.append(ray_fit.cdf(_h) - ray_fit.cdf(_l))
+        _l = _h
+    factor = sum(hist) / sum(estimates)
+    estimates = [_e * factor for _e in estimates]
+    cs, p_cs = scipy.stats.chisquare(hist, f_exp=estimates)
+    # print(p_cs)
+    ks, p_ks = scipy.stats.ks_2samp(e_cdf(ees), cdf_fit)
+    # print(p_ks)
+    return hist, bins, e_cdf, ray_fit, p_cs, p_ks
+
+
 class MSC(Measure.Measure):
     """
     A class for Mode Stirred Chamber measurements
@@ -3070,7 +3096,7 @@ Quit: quit measurement.
         freqs = list(efields.keys())
         freqs.sort()
 
-        if not 'DistributuionOfr' in skip:
+        if 'DistributuionOfr' not in skip:
             self.messenger(util.tstamp() + " Calculating pdf and cdf of the autocorrelation coefficient ...", [])
             r, psi, cpsi = util.CalcPsi(len(tpos), rho)
             self.messenger(util.tstamp() + " ... done.", [])
@@ -3091,24 +3117,25 @@ Quit: quit measurement.
             self.processedData_AutoCorr[description]['AutoCorrelation'] = {}
         if not 'NIndependentBoundaries' in skip:
             self.processedData_AutoCorr[description]['NIndependentBoundaries'] = {}
-        if not 'Statistic' in skip:
+        if 'Statistic' not in skip:
             # rpy.r.library('ctest')
-            ray = distributions.RayleighDist()
+            ray = distributions.RayleighDist()  # this is scipy.stats.rayleigh()
             self.processedData_AutoCorr[description]['Statistic'] = {}
-        for _i, f in [_i__f for _i__f in enumerate(freqs) if not (_i__f[0] + offset) % every]:
+        # for _i, f in [_i__f for _i__f in enumerate(freqs) if not (_i__f[0] + offset) % every]:
+        for f in freqs[offset::every]:
             try:
-                lagf = lag(f)
-            except:
+                lagf = lag(f)  # lag defaults to None, but might be a function returning lag(f) or a const value
+            except TypeError:  # not callable
                 lagf = lag
-            if not 'AutoCorrelation' in skip:
+            if 'AutoCorrelation' not in skip:
                 self.messenger(util.tstamp() + " Calculating autocorrelation f = %e" % f, [])
                 self.processedData_AutoCorr[description]['AutoCorrelation'][f] = {}
                 ac_f = self.processedData_AutoCorr[description]['AutoCorrelation'][f]
-                pees = list(efields[f][str(tpos[0])].keys())
+                pees = efields[f][str(tpos[0])].keys()
                 for p in pees:
                     self.messenger(util.tstamp() + " p = %d" % p, [])
                     ac_f[p] = {}
-                    for k in range(len(efields[f][str(tpos[0])][p][0]['value'])):
+                    for k, _e in enumerate(efields[f][str(tpos[0])][p][0]['value']):
                         self.messenger(util.tstamp() + " k = %d" % k, [])
                         ees = []
                         for t in tpos:
@@ -3118,16 +3145,16 @@ Quit: quit measurement.
                         self.messenger(util.tstamp() + " ...done", [])
                         ac_f[p][k] = r[:]
                 self.messenger(util.tstamp() + " ...done", [])
-            if not 'NIndependentBoundaries' in skip:
+            if 'NIndependentBoundaries' not in skip:
                 self.messenger(util.tstamp() + " Calculating Number of Independent Boundaries f = %e" % f, [])
                 self.processedData_AutoCorr[description]['NIndependentBoundaries'][f] = {}
                 ac_f = self.processedData_AutoCorr[description]['AutoCorrelation'][f]
                 nib_f = self.processedData_AutoCorr[description]['NIndependentBoundaries'][f]
-                pees = list(efields[f][str(tpos[0])].keys())
+                pees = efields[f][str(tpos[0])].keys()
                 for p in pees:
                     self.messenger(util.tstamp() + " p = %d" % p, [])
                     nib_f[p] = {}
-                    for k in range(len(efields[f][str(tpos[0])][p][0]['value'])):
+                    for k, _e in enumerate(efields[f][str(tpos[0])][p][0]['value']):
                         self.messenger(util.tstamp() + " k = %d" % k, [])
                         nib_f[p][k] = None
                         for i, _v in enumerate(ac_f[p][k]):
@@ -3151,18 +3178,18 @@ Quit: quit measurement.
                 self.messenger(util.tstamp() + " Calculating statistic f = %e" % f, [])
                 self.processedData_AutoCorr[description]['Statistic'][f] = {}
                 s_f = self.processedData_AutoCorr[description]['Statistic'][f]
-                ees24 = {}
-                pees = list(efields[f][str(tpos[0])].keys())
+                ees24 = {}  # 24 = 8 positions x 3 axis
+                pees = efields[f][str(tpos[0])].keys()
                 for p in pees:
                     self.messenger(util.tstamp() + " p = %d" % p, [])
                     s_f[p] = {}
-                    for k in range(len(efields[f][str(tpos[0])][p][0]['value'])):
+                    for k, _e in enumerate(efields[f][str(tpos[0])][p][0]['value']):
                         self.messenger(util.tstamp() + " k = %d" % k, [])
-                        # now, we have to redure the data set accoreding the result of the autocorr evaluation
+                        # now, we have to redure the data set according the result of the autocorr evaluation
                         ntotal = len(tpos)
                         try:
                             n_ind = self.processedData_AutoCorr[description]['NIndependentBoundaries'][f][p][k]
-                        except:
+                        except (KeyError, IndexError):
                             self.messenger(
                                 util.tstamp() + " WARNING: No of independent boundaries not found. Using all boundaries.",
                                 [])
@@ -3179,34 +3206,18 @@ Quit: quit measurement.
                         s_f[p][k] = {}
                         ss = s_f[p][k]
                         ss['n'] = n_ind
-                        histg = numpy.histogram(ees)
-                        hist = histg[0]
-                        low_range = histg[1][0]
-                        binsize = histg[1][0] - low_range
-                        # hist = (histogram, low_range, binsize, extrapoits) = scipy.stats.histogram(ees)  # tuple: histogram, low_range, binsize, extrapoints
-                        ss['hist'] = hist
-                        e_cdf = distributions.ECDF(ees)
+                        hist, bins, e_cdf, ray_fit, p_cs, p_ks = test_for_rayleigh(ees)
+                        ss['hist'] = (hist, bins)
                         ss['samples'] = ees[:]
                         ss['ecdf'] = e_cdf(ees)[:]
-                        # cost function for the fit
-                        cost = distributions.Chi2Cost(ees, ss['ecdf'], ray.cdf)
-                        s_fit = abs(scipy.optimize.brent(cost, brack=(ees[0], ees[-1])))
-                        ss['fitted_shape'] = s_fit
-                        ss['cdf-fit'] = [ray.cdf(e, s_fit) for e in ees]
-                        # calc estimates for cho2-test
-                        estimates = []
-                        low = low_range
-                        for i, counts in enumerate(histogram):
-                            high = low + binsize
-                            estimates.append(ray.cdf(high, s_fit) - ray.cdf(low, s_fit))
-                            low = high
-                        cs, p_cs = scipy.stats.chisquare(histogram, f_exp=estimates)
+                        ss['fitted_shape'] = ray_fit.scale
+                        ss['cdf-fit'] = ray_fit.cdf(ees)
                         ss['p-chisquare'] = p_cs
-                        ks, p_ks = scipy.stats.ks_2samp(ss['ecdf'], ss['cdf-fit'])
                         ss['p-KS'] = p_ks
-
                         #
-                        # try different
+                        # try different:
+                        # not based on autocorelation estimate for n_ind
+                        # -> just try for every number of tuner positions
                         #
                         ss['p-values_disttest'] = {}
                         for n_ind in range(len(tpos), 2, -1):
@@ -3216,35 +3227,24 @@ Quit: quit measurement.
                                 if i in posidx:
                                     ees.append(efields[f][str(t)][p][0]['value'][k])
                             ees.sort()  # values only, no ebars, unit is V/m
-                            hist = (histogram, low_range, binsize, extrapoits) = scipy.stats.histogram(ees)
-                            e_cdf = distributions.ECDF(ees)
-                            # cost function for the fit
-                            cost = distributions.Chi2Cost(ees, e_cdf(ees), ray.cdf)
-                            s_fit = abs(scipy.optimize.brent(cost, brack=(ees[0], ees[-1])))
-                            estimates = []
-                            low = low_range
-                            for i, counts in enumerate(histogram):
-                                high = low + binsize
-                                estimates.append(ray.cdf(high, s_fit) - ray.cdf(low, s_fit))
-                                low = high
-                            cs, p_cs = scipy.stats.chisquare(histogram, f_exp=estimates)
-                            cdffit = [ray.cdf(e, s_fit) for e in ees]
-                            ks, p_ks = scipy.stats.ks_2samp(e_cdf(ees), cdffit)
+                            hist, bins, e_cdf, ray_fit, p_cs, p_ks = test_for_rayleigh(ees)
                             ss['p-values_disttest'][n_ind] = {'chisq': p_cs, 'KS': p_ks}
-                        #                            print n_ind, result_chi2['p.value'], result_ks['p.value']
-                        #                            if result_chi2['p.value'] > 0.05 and result_ks['p.value'] > 0.05:
-                        #                                self.messenger(util.tstamp()+" "%(n_ind+1, result_ks['p.value'], result_chi2['p.value']))
-                        #                                break
-                        ss['hist_disttest'] = hist.copy()
+                            print(n_ind + 1, p_cs, p_ks)
+                            if p_cs > 0.05 and p_ks > 0.05:  # has to be tested; KS seems to be more reliable
+                                self.messenger(util.tstamp() + " " % (n_ind + 1, p_cs, p_ks))
+                                break
+                        ss['hist_disttest'] = (hist, bins)
                         ss['samples_disttest'] = ees[:]
                         ss['ecdf_disttest'] = e_cdf(ees)[:]
-                        ss['fitted_shape_disttest'] = s_fit
-                        ss['cdf-fit_disttest'] = cdffit
+                        ss['fitted_shape_disttest'] = ray_fit.scale
+                        ss['cdf-fit_disttest'] = ray_fit.cdf(ees)
                         ss['p-chisquare_disttest'] = p_cs
                         ss['p-KS_disttest'] = p_ks
 
-                        self.messenger(util.tstamp() + " f=%e, p=%d, k=%d, p_ks_disttest=%e, p_chi2-disttest=%e" % (
-                            f * 1.0, p, k, ss['p-KS_disttest'], ss['p-chisquare_disttest']), [])
+                        self.messenger(
+                            util.tstamp() + " f=%e, p_ks=%d, p_cs=%d, p_ks_disttest=%e, p_chi2-disttest=%e" % (
+                                f * 1.0, ss['p-KS'], ss['p-chisquare'], ss['p-KS_disttest'],
+                                ss['p-chisquare_disttest']), [])
                         # now we try with all 24 e-field vals for one freq
                 ss = s_f[0][0]
                 ss['p-values_disttest24'] = {}
@@ -3255,27 +3255,17 @@ Quit: quit measurement.
                         if i in posidx:
                             ees.extend(ees24[str(t)])
                     ees.sort()  # values only, no ebars, unit is V/m
-                    hist = (histogram, low_range, binsize, extrapoits) = scipy.stats.histogram(ees)
-                    e_cdf = distributions.ECDF(ees)
-                    # cost function for the fit
-                    cost = distributions.Chi2Cost(ees, e_cdf(ees), ray.cdf)
-                    s_fit = abs(scipy.optimize.brent(cost, brack=(ees[0], ees[-1])))
-                    estimates = []
-                    low = low_range
-                    for i, counts in enumerate(histogram):
-                        high = low + binsize
-                        estimates.append(ray.cdf(high, s_fit) - ray.cdf(low, s_fit))
-                        low = high
-                    cs, p_cs = scipy.stats.chisquare(histogram, f_exp=estimates)
-                    cdffit = [ray.cdf(e, s_fit) for e in ees]
-                    ks, p_ks = scipy.stats.ks_2samp(e_cdf(ees), cdffit)
+                    hist, bins, e_cdf, ray_fit, p_cs, p_ks = test_for_rayleigh(ees)
                     ss['p-values_disttest24'][n_ind] = {'chisq': p_cs, 'KS': p_ks}
-
-                ss['hist_disttest24'] = hist.copy()
+                    print(n_ind + 1, p_cs, p_ks)
+                    if p_cs > 0.05 and p_ks > 0.05:  # has to be tested; KS seems to be more reliable
+                        self.messenger(util.tstamp() + " " % (n_ind + 1, p_cs, p_ks))
+                        break
+                ss['hist_disttest24'] = (hist, bins)
                 ss['samples_disttest24'] = ees[:]
                 ss['ecdf_disttest24'] = e_cdf(ees)[:]
-                ss['fitted_shape_disttest24'] = s_fit
-                ss['cdf-fit_disttest24'] = cdffit
+                ss['fitted_shape_disttest24'] = ray_fit.scale
+                ss['cdf-fit_disttest24'] = ray_fit.cdf(ees)
                 ss['p-chisquare_disttest24'] = p_cs
                 ss['p-KS_disttest24'] = p_ks
                 self.messenger(util.tstamp() + " f=%e, p_ks_disttest24=%e, p_chi2-disttest24=%e" % (

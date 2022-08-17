@@ -49,7 +49,11 @@ def ECDF(seq):
 class Chi2Cost:
     def __init__(self, x, y, f):
         self.x = x[:]
-        self.y = y[:]
+        try:
+            self.y = y[:]
+        except TypeError:   # may be an interp1d object
+            xx = np.sort(x)
+            self.y = [y(_x) for _x in xx]
         self.xy = list(zip(self.x, self.y))
         self.f = f
 

@@ -141,12 +141,9 @@ def frange(limit1, limit2=None, increment=1.):
 def idxset(n, m):
     """returns a list of length *n* with equidistant elem of `range(m)`
     """
-    if n == 0:
+    if n <= 0:
         return []
     if n >= m:
         return list(range(m))
     step = 1.0 * m / n
-    lst = []
-    for i in range(n):
-        lst.append(int(round(i * step)))
-    return lst[:]
+    return [int(round(i * step)) for i in range(n)]
