@@ -1,12 +1,18 @@
 import numpy
 from collections.abc import Iterable
 
+
 def isiterable(obj):
-    return isinstance(obj, Iterable)
+    try:
+        _ = iter(obj)
+        return True
+    except TypeError:
+        return False
+    # return isinstance(obj, Iterable)
 
 
 def mean(x):  # , zero=0.0):
-# will work with more data types then statistics.mean ...
+    # will work with more data types then statistics.mean ...
     mu = sum(x)  # , zero)
     return mu / len(x)
 

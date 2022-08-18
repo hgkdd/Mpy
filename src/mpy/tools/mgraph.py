@@ -63,8 +63,11 @@ class Graph(object):
             SearchPaths = [os.getcwd()]
         self.SearchPaths = SearchPaths
 
-        methods = ('graph_from_dot_file', 'graph_from_dot_data', 'graph_from_edges',
-                   'graph_from_adjacency_matrix', 'graph_from_incidence_matrix')
+        methods = ('graph_from_dot_file',
+                   'graph_from_dot_data',
+                   'graph_from_edges',
+                   'graph_from_adjacency_matrix',
+                   'graph_from_incidence_matrix')
         dotgraph = None
         # self.dotcontents=None
         for m in methods:
@@ -99,7 +102,7 @@ class Graph(object):
             self.graph = dotgraph[0]
             self.edges = self.graph.get_edges()
         else:
-            raise "Graph could no be created"
+            raise RuntimeError("Graph could no be created")
 
     def __str__(self):
         return self.graph.to_string()
@@ -341,7 +344,7 @@ class MGraph(Graph):
                             (unit == AMPLITUDERATIO and r._unit == AMPLITUDERATIO):
                         pass
                     else:
-                        raise "Unit Error"
+                        raise RuntimeError("Unit Error")
                     TotalPath *= r
 
                     # for different paths between two points, s parameters have

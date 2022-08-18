@@ -4,7 +4,7 @@ import time
 
 import numpy as np
 from scipy.interpolate import interp1d
-from scipy.optimize import fminbound
+from scipy.optimize import minimize_scalar
 from scuq import quantities, si
 
 from mpy.env.Measure import Measure, AmplifierProtectionError
@@ -16,10 +16,26 @@ extrap1d = util.extrap1d
 
 
 def dBm2W(v):
+    """Convert a dBm input to Watt
+
+    :param v: input value(s) in dBm
+    :type v: float or array-like
+
+    :return: input value(s) converted to Watt
+    :rtype: float or array-like (same as input)
+    """
     return 10 ** (v * 0.1) * 0.001
 
 
 def W2dBm(v):
+    """Convert a Watt input to dBm
+
+    :param v: input value(s) in Watt
+    :type v: float or array-like
+
+    :return: input value(s) converted to dBm
+    :rtype: float or array-like (same as input)
+    """
     return 10 * np.log10(v * 1000)
 
 
@@ -419,7 +435,7 @@ FILE = io.StringIO(format_block('''
         idx = 0
         while True:
             allprocessed = False
-            for f in sorted(freqs):
+            for f in sorted(freqs):   # freqs are all frequencies in RawData
                 pinlst = []
                 poutlst = []
                 pin = rd['amp_pin'][f]
@@ -431,14 +447,14 @@ FILE = io.StringIO(format_block('''
                 pdoc3.setdefault(f, [])
                 sglvs = list(pin.keys())  # e.g. "Quantity(W, 1e-6)"
                 u_l = [r.split(lv)[1:3] for lv in sglvs]
-                for u, lv in sorted(u_l, key=lambda l: float(l[1])):
+                for u, lv in sorted(u_l, key=lambda l: float(l[1])):  # unit, level
                     sgkey = "Quantity(%s, %s)" % (u, lv)
                     try:
                         pinlst.append(pin[sgkey][idx]['value'])
                         poutlst.append(pout[sgkey][idx]['value'])
                     except IndexError:
                         pass
-                if pinlst and len(pinlst) == len(poutlst):
+                if pinlst and len(pinlst) == len(poutlst):  # list complete for this freq
                     # process list
                     gain, offset, pinc1, poutc1, pinc3, poutc3 = self._get_gain_compression(pinlst, poutlst,
                                                                                             small_signal_factor=small_signal_factor)
@@ -450,14 +466,15 @@ FILE = io.StringIO(format_block('''
                     pdic3[f].append(pinc3)
                     pdoc1[f].append(poutc1)
                     pdoc3[f].append(poutc3)
-                    allprocessed = True
+                    allprocessed = True  # all processed for this freq
             if not allprocessed:
+                # reached when idx gets to large (no sg for that idx)
                 del pdg[f]
                 del pdic1[f]
                 del pdic3[f]
                 del pdoc1[f]
                 del pdoc3[f]
-                break
+                break  # no more sg in list -> escape while-True-loop
             idx += 1
         self.processedData[description] = pd.copy()
 
@@ -483,13 +500,27 @@ FILE = io.StringIO(format_block('''
         c3func = lambda pi: abs(ideal(pi) - orig(pi) * 1.995)  # 3 dB
         lower = pin_ss[-1]
         for _ in range(100):
-            pinc1 = fminbound(c1func, lower, 10 * pin_vals[-1], xtol=1e-7, maxfun=1000)[0]
+            # pinc1 = fminbound(c1func, lower, 10 * pin_vals[-1], xtol=1e-7, maxfun=1000)[0]
+            pinc1_result = minimize_scalar(c1func,
+                                    bracket=(lower,10 * pin_vals[-1]),
+                                    bounds=(lower,10 * pin_vals[-1]),
+                                    method='bounded',
+                                    tol=1e-7,
+                                    options={'maxiter': 1000})
+            pinc1 = pinc1_result.get('x')[0]
             if c1func(pinc1) > 0.01:
                 # print pinc1, c1func(pinc1)
                 lower = pinc1
             else:
                 break
-        pinc3 = fminbound(c3func, pinc1, 10 * pin_vals[-1], xtol=1e-7, maxfun=1000)[0]
+        # pinc3 = fminbound(c3func, pinc1, 10 * pin_vals[-1], xtol=1e-7, maxfun=1000)[0]
+        pinc3_result = minimize_scalar(c3func,
+                                       bracket=(pinc1, 10 * pin_vals[-1]),
+                                       bounds=(pinc1, 10 * pin_vals[-1]),
+                                       method='bounded',
+                                       tol=1e-7,
+                                       options={'maxiter': 1000})
+        pinc3 = pinc3_result.get('x')[0]
         poutc1 = float(orig(pinc1))
         poutc3 = float(orig(pinc3))
         # make quantities
@@ -520,7 +551,7 @@ FILE = io.StringIO(format_block('''
 
 
 if __name__ == '__main__':
-    import pickle as pickle
+    import pickle
     from numpy import linspace
     from scuq.quantities import Quantity
     from scuq.si import WATT

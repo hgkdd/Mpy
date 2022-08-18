@@ -47,7 +47,7 @@ class Configuration(object):
         try:
             # try to open file
             fp = open(os.path.normpath(ininame), 'r')
-        except:
+        except (IOError, FileNotFoundError):
             # assume a file like object
             fp = ininame
 
@@ -58,9 +58,9 @@ class Configuration(object):
 
         self.sections_in_ini = config.sections()
         self.channel_list = []
-        # print self.sections_in_ini
+        # print(self.sections_in_ini)
         for sec in self.sections_in_ini:
-            # print sec.strip("'"), sec
+            # print(sec.strip("'"), sec)
             tmplsec = fstrcmp(sec, list(self.cnftmpl.keys()), n=1, cutoff=0, ignorecase=True)[0]
             thesec = tmplsec
             try:

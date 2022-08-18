@@ -22,8 +22,9 @@ import scipy.stats
 import scipy.integrate
 from scipy.interpolate import interp1d
 from scuq.quantities import Quantity
+from collections.abc import Sequence
 
-from mpy.tools.getch import getch
+from mpy.tools.get_char import getch
 from mpy.tools.kbhit import kbhit
 
 c = 2.99792458e8
@@ -245,7 +246,8 @@ def removefrom(obj, pat):
 
 
 def issequence(a):
-    return hasattr(a, '__iter__') and not isinstance(a, str)
+    return issequence(a, Sequence) and not isinstance(a, str)
+    # return hasattr(a, '__iter__') and not isinstance(a, str)
 
 
 def flatten(a):

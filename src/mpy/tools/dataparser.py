@@ -309,4 +309,4 @@ if __name__ == '__main__':
     for f in sorted(result):
         uq=result[f]
         val,err,unit=ctx.value_uncertainty_unit(uq)
-        print((f, uq, val, err, unit))
+        print(f, uq, val, err, unit)
