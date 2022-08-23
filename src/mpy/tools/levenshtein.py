@@ -1,8 +1,9 @@
 from os.path import commonprefix
-
+from Levenshtein import distance as ldistance
 
 def rmcp(seq, ignorecase=True):
-    if ignorecase:
+    """remove common prefix from sequence elements"""
+    if ignorecase is True:
         seq = [s.lower() for s in seq]
     cp = commonprefix(seq)
     n = len(cp)
@@ -11,7 +12,7 @@ def rmcp(seq, ignorecase=True):
 
 def relative(a, b, first_must_match=True):
     """
-    Computes a relative distance between two strings. Its in the range
+    Computes a relative distance between two strings. It's in the range
     (0-1] where 1 means total equality.
     @type a: string
     @param a: arg one
@@ -36,7 +37,7 @@ def distance(a, b):
     return dist
 
 
-def fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
+def old_fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
     a = a.strip("'")
     a = a.strip('"')
     if n is None:
@@ -58,6 +59,19 @@ def fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
     # print pairs
     # return [v for d,v in sorted(pairs,None,None,True) if d >= cutoff] 2.7
     return [v for d, v in sorted(pairs, key=None, reverse=True) if d >= cutoff]
+
+def fstrcmp(a, possibilities, ignorecase=True):
+    a = a.strip("'")
+    a = a.strip('"')
+
+    if ignorecase:
+        dists = [ldistance(a.lower(), p) for p in rmcp(possibilities, ignorecase=ignorecase)]
+        # print rmcp(possibilities,ignorecase=ignorecase)
+    else:
+        dists = [ldistance(a, p) for p in rmcp(possibilities, ignorecase=ignorecase)]
+
+    pairs = list(zip(dists, possibilities))
+    return [v for d, v in sorted(pairs, key=None)]
 
 
 def levenshtein(a, b, ch_cost=1, add_cost=1, del_cost=1):
@@ -85,4 +99,5 @@ if __name__ == "__main__":
     from sys import argv
 
     # print levenshtein(argv[1],argv[2],ch_cost=float(argv[3]), add_cost=float(argv[4]), del_cost=float(argv[5]))
-    print((fstrcmp(argv[1], ('ON', 'OFF'))))
+    print(old_fstrcmp(argv[1], ('ON', 'OFF')))
+    print(fstrcmp(argv[1], ('ON', 'OFF')))
