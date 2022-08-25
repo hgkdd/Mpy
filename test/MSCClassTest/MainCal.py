@@ -84,7 +84,7 @@ def load_from_autosave(fname):
     if os.path.isfile(fname):
         try:
             pfile = myopen(fname, "rb")
-            msc = pickle.load(pfile)
+            msc = pickle.load(pfile, encoding='latin1')
             cmd = msc.ascmd
             if msc:
                 msg = "Auto save file %s found.\ncmd: %s\n\nResume: Resume Measurement\nNew: Start new." % (fname, cmd)

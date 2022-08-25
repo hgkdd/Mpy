@@ -27303,3 +27303,8 @@ Start: start measurement.
 Quit: quit measurement.
 06/23/11 12:47:27 measurement terminated by user.
 06/23/11 12:47:27 RF Off and Quit...
+Auto save file msc-autosave.p found.
+cmd: msc.Measure_MainCal(**mp)
+
+Resume: Resume Measurement
+New: Start new.
