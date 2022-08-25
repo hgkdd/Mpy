@@ -246,8 +246,8 @@ def removefrom(obj, pat):
 
 
 def issequence(a):
-    return issequence(a, Sequence) and not isinstance(a, str)
-    # return hasattr(a, '__iter__') and not isinstance(a, str)
+    # return issequence(a, Sequence) and not isinstance(a, str)
+    return hasattr(a, '__iter__') and not isinstance(a, str)
 
 
 def flatten(a):
