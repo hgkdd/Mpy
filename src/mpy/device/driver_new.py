@@ -58,14 +58,13 @@ class DRIVER(object):
 
     # __metaclass__=Meta_Driver
 
-    _commands = {}
 
     def __init__(self):
         self.error = 0
-        self.conf = {}
-        self.conf['description'] = {}
-        self.conf['init_value'] = {}
-        self.conf['bus'] = {}
+        self._commands = {}
+        self.conf = {'description':  {},
+                     'init_value':  {},
+                     'bus': {}}
         self.IDN = ''
         self.convert = CONVERT()
         self.errors = Device._Errors
@@ -184,7 +183,7 @@ class DRIVER(object):
         return self.dev
 
     def getCommands(self):
-        return _commands
+        return self._commands
 
     def isInit(self):
         return self.isinit
@@ -196,8 +195,8 @@ class Virtual_Communication(object):
         self.IDN = IDN
 
     def write(self, cmd):
-        print(("IN write", cmd))
-        print(("%s out:" % self.IDN, cmd))
+        print("IN write", cmd)
+        print("%s out:" % self.IDN, cmd)
 
     def read(self):
         print("In read")
@@ -205,7 +204,7 @@ class Virtual_Communication(object):
         return ans
 
     def query(self, cmd):
-        print(("In query", cmd))
+        print("In query", cmd)
         self.write(cmd)
         return self.read()
 
@@ -221,34 +220,51 @@ class GPIB_Communication(object):
                  delay=0,
                  lock=None):
 
-        import visa
-        if values_format is None:
-            values_format = visa.ascii
+        import pyvisa
+        import pyvisa.constants
+        self.rm = pyvisa.ResourceManager('@py')
+        # if values_format is None:
+        #    values_format = visa.ascii
         if lock is None:
-            lock = visa.VI_NO_LOCK
-        self.dev = visa.instrument('GPIB::%d' % gpib,
-                                   timeout=timeout,
-                                   chunk_size=chunk_size,
-                                   values_format=values_format,
-                                   term_chars=term_chars,
-                                   send_end=send_end,
-                                   delay=delay,
-                                   lock=lock)
+            lock = pyvisa.constants.AccessModes.no_lock
+        self.dev = self.rm.open_resource(f'GPIB::{gpib}',
+                                         timeout=timeout * 1000,
+                                         chunk_size=chunk_size,
+                                         send_end=send_end,
+                                         query_delay=delay,
+                                         lock=lock)
+        # if values_format in (None, 'ascii', 'ASCII'):
+        #     self.dev.values_format.is_binary = False
+        # else:
+        #     self.dev.values_format.is_binary = True
+        if not (term_chars is None):
+            self.dev.read_termination = self.dev.write_termination = term_chars
 
     def write(self, cmd):
-        print(("In write: ", cmd))
+        print("In write: ", cmd)
         stat = 0
         if self.dev and isinstance(cmd, str):
-            ans = self.dev.write(cmd)
-        return ans
+            stat = self.dev.write(cmd)
+        return stat
 
-    def read(self):
+    def read(self, tmpl):
+        # print("In read", tmpl)
+        dct = None
         if self.dev:
             ans = self.dev.read()
-        return ans
+            m = re.match(tmpl, ans)
+            if m:
+                dct = m.groupdict()
+        return dct
 
-    def query(self, cmd):
-        print(('In query: ', cmd))
+    def query(self, cmd, tmpl):
+        # print("In query", cmd, tmpl)
+        dct = None
         if self.dev and isinstance(cmd, str):
-            ans = self.dev.ask(cmd)
-        return ans
+            ans = self.dev.query(cmd)
+            # print "ans=",ans
+            m = re.match(tmpl, ans)
+            # print "m=",m
+            if m:
+                dct = m.groupdict()
+        return dct

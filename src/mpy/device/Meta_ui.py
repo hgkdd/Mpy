@@ -8,6 +8,7 @@
 
 import traits.api as tapi
 from traits.etsconfig.api import ETSConfig
+from traits.has_traits import MetaHasTraits
 
 ETSConfig.toolkit = "wx"
 import traitsui.api as tuiapi

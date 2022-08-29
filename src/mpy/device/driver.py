@@ -117,7 +117,7 @@ class DRIVER(object):
         return stat
 
     def _gpib_read(self, tmpl):
-        # print "In read", tmpl
+        # print("In read", tmpl)
         dct = None
         if self.dev:
             ans = self.dev.read()
@@ -127,7 +127,7 @@ class DRIVER(object):
         return dct
 
     def _gpib_query(self, cmd, tmpl):
-        # print "In query", cmd, tmpl
+        # print("In query", cmd, tmpl)
         dct = None
         if self.dev and isinstance(cmd, str):
             ans = self.dev.query(cmd)
@@ -139,7 +139,7 @@ class DRIVER(object):
         return dct
 
     def _debug_write(self, cmd):
-        print(("%s out:" % self.IDN, cmd))
+        print("%s out:" % self.IDN, cmd)
         return 0
 
     def _debug_read(self, tmpl):
