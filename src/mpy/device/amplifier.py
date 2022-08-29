@@ -36,7 +36,7 @@ class AMPLIFIER(NPORT):
 
         Returns 0 if succesfull or an error code < 0.
         """
-        state = fstrcmp(state, AMPLIFIER.STATES, n=1, cutoff=0, ignorecase=True)[0]
+        state = fstrcmp(state, AMPLIFIER.STATES,  ignorecase=True)[0]
         # print state
         self.error = 0
         dct = self._do_cmds(state, locals())

@@ -60,7 +60,7 @@ def old_fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
     # return [v for d,v in sorted(pairs,None,None,True) if d >= cutoff] 2.7
     return [v for d, v in sorted(pairs, key=None, reverse=True) if d >= cutoff]
 
-def fstrcmp(a, possibilities, ignorecase=True):
+def fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
     a = a.strip("'")
     a = a.strip('"')
 

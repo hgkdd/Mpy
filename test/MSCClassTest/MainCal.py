@@ -86,14 +86,16 @@ def load_from_autosave(fname):
             pfile = myopen(fname, "rb")
             try:
                 msc = pickle.load(pfile)
-            except UnicodeDecodeError:
+            except:
+                pfile.close()
+                pfile = myopen(fname, "rb")
                 msc = pickle.load(pfile, encoding='latin1')
             cmd = msc.ascmd
             if msc:
                 msg = "Auto save file %s found.\ncmd: %s\n\nResume: Resume Measurement\nNew: Start new." % (fname, cmd)
                 but = ["Resume", "New"]
                 answer = msc.messenger(msg, but)
-                # answer=0
+                # answer = 1
                 if answer == but.index('Resume'):
                     startnew = False
                 else:

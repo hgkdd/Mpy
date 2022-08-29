@@ -116,8 +116,10 @@ class DRIVER(object):
             stat = self.dev.write(cmd)
         return stat
 
-    def _gpib_read(self, tmpl):
+    def _gpib_read(self, tmpl=None):
         # print("In read", tmpl)
+        if tmpl is None:
+            tmpl = '.*'
         dct = None
         if self.dev:
             ans = self.dev.read()
@@ -126,8 +128,10 @@ class DRIVER(object):
                 dct = m.groupdict()
         return dct
 
-    def _gpib_query(self, cmd, tmpl):
+    def _gpib_query(self, cmd, tmpl=None):
         # print("In query", cmd, tmpl)
+        if tmpl is None:
+            tmpl = '.*'
         dct = None
         if self.dev and isinstance(cmd, str):
             ans = self.dev.query(cmd)

@@ -47,7 +47,7 @@ class Configuration(object):
         try:
             # try to open file
             fp = open(os.path.normpath(ininame), 'r')
-        except (IOError, FileNotFoundError):
+        except (IOError, FileNotFoundError, TypeError):
             # assume a file like object
             fp = ininame
 

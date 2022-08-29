@@ -1,7 +1,7 @@
 from scuq.quantities import Quantity
 from scuq.si import WATT
 
-SearchPaths = ['\\MpyConfig\\LargeRC', '.']
+SearchPaths = ['/home/hgkrauth/Develop/repos/MpyConfig/LargeRC', '\\MpyConfig\\LargeRC', '.']
 dotfile = 'mvk-immunity.dot'
 
 # print dotfile

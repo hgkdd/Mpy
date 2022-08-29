@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from importlib import import_module
 import configparser
 import os
 import math
@@ -270,7 +271,16 @@ class Device(object):
         if DLLext in ('.dll', '.so'):
             lib = ct.cdll.LoadLibrary(self.DLLname)
         elif DLLext in ('.pyd', '.py', '.pyc', '.pyo'):
-            mod = __import__(DLLbasename, globals(), locals(), [])
+            # import importlib
+            print(DLLbasename)
+            print(DLLext)
+            print(self.prefix)
+            print(self.pyprefix)
+            print('GLOBALS:')
+            print(globals())
+            print('LOCALS:')
+            print(locals())
+            mod = __import__('mpy.device.'+DLLbasename, globals(), locals(), fromlist=[None])
             for i in DLLbasename.split(".")[1:]:  # emulate from ... import ...
                 mod = getattr(mod, i)
             try:

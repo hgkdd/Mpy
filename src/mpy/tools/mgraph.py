@@ -199,7 +199,10 @@ class MGraph(Graph):
             SearchPaths = [os.getcwd()]
         super(MGraph, self).__init__(fname_or_data, SearchPaths=SearchPaths)
         self.name = GName(self)
-        self.graph = self.graph[0]
+        try:
+            self.graph = self.graph[0]    # new version of pydot
+        except TypeError:
+            self.graph = self.graph       # old version of pydot
         self.gnodes = self.graph.get_nodes()
         self.gedges = self.graph.get_edges()
         self.nodes = dict([[n.get_name(), {}] for n in self.gnodes])
