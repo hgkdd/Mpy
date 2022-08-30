@@ -259,20 +259,19 @@ class DatFile(Parser):
     def p_error(self, p):
         print("Syntax error in input!")
 
-
-    def _makeuq(self, a,b,c, unit):
-        def cplx_cmp(a,b):
+    def _makeuq(self, a, b, c, unit):
+        def cplx_cmp(a):
             try:
                 # length(a) * sgn(a.real)
                 ma=abs(a)*a.real/abs(a.real)
             except AttributeError:
                 ma=a
-            try:
-                mb=abs(b)*b.real/abs(b.real)
-            except AttributeError:
-                mb=b
-            return cmp(ma,mb)
-        l,v,u=sorted((a,b,c), cplx_cmp)
+            # try:
+            #     mb=abs(b)*b.real/abs(b.real)
+            # except AttributeError:
+            #     mb=b
+            return ma   # cmp(ma,mb)
+        l,v,u=sorted((a,b,c), key=cplx_cmp)
         delta=(u-l)*0.5
         ui=ucomponents.UncertainInput(v,delta)
         return quantities.Quantity(unit, ui)

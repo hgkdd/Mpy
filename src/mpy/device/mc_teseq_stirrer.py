@@ -5,64 +5,107 @@ import serial
 from mpy.device.motorcontroller import MOTORCONTROLLER as MC
 
 
+class StirrerLockedError(Exception):
+    def __init__(self):
+        super().__init__(
+            'Try to turn it off and on again and reinit')
+
+
 class MOTORCONTROLLER(MC):
     """
     Class to control TESEQ stirrer.
     """
+    # the read termination is a space with a carriage return!
+    read_termination = ' \r'
+    write_termination = '\r'
+    _timeout = 20
+    # delay between query calls
+    _status_query_delay = 0.3
+    _angle_error = 0.5
+    status_retries = 10
+
+    lock_message = ("STIRRER Controller V1.50 is locked. "
+                    "Please check SYNC position and restart the controller!")
 
     def __init__(self, port=2):
         super().__init__()
 
     def _state(self):
-        # time.sleep(0.5)
-        for _ in range(10):
+        for _ in range(self.status_retries):
             try:
                 ans = self._ask('?')  # ask for status
+                if "is locked" in ans:
+                    print(f"The Stirrer answers: {ans}")
+                    print("Stirrer is locked!\n"
+                          "Try to turn it off and on again ;)")
+                    raise StirrerLockedError()
                 # print ans
-                ans = ans.split(",")
+                ans = ans.split(',')
                 stopped = (ans[0] == '1')
                 # print ans,' --> ', ans[0], ans[1], ' --> ', stopped
                 self.ca = float(ans[1])  # current angle
                 self.drive_init_ok = (ans[2] == '0')
                 fail = (ans[3] == '1')
+                if fail:
+                    # hier funktioniert was nicht,
+                    # der Controller gibt Müll zurück
+                    try:
+                        _error_message = self._query('ERREAD')
+                    except UnicodeDecodeError:
+                        print("WARNING: could not decode error message")
+
                 # print self._ask('INFO')
-                break  # exit for loop
-            except IndexError:  # structure of ans not as expected
-                time.sleep(0.1)
-                continue
-        else:  # no correct answer after 10 tries
-            raise  # re-raise the last expection
-        return stopped, self.ca, self.drive_init_ok, fail
+                return stopped, self.ca, self.drive_init_ok, fail  # exit for loop
+            except IndexError:  # structure of and not as expected
+                time.sleep(self._status_query_delay)
+            except ValueError:
+                print(f"Unparsable device message {ans}")
+                time.sleep(self._status_query_delay)
+            else:
+                # querying the status successful
+                break
+        else:
+            exception = Exception(
+                f"Current Stirrer State could not be queried, "
+                f"Received: \"{ans}\"")
+            raise exception
 
     def _wait(self):
         stopped = False
         while not stopped:  # loop until stirrer is stopped
             stopped, self.ca, self.drive_init_ok, fail = self._state()
-            time.sleep(0.2)  # don't jam the serial bus
+            # time.sleep(0.2)  # don't jam the serial bus
         return self.ca
 
     def _write(self, cmd):
-        self.dev.flushInput()  # flush input buffer before new cmd is send
-        n = self.dev.write('%s\r' % cmd)
-        return n - 1
+        time.sleep(0.1)
+        bytes_written = self.dev.write(
+            f"{cmd}{self.write_termination}".encode())
+        self.dev.flush()
+        return bytes_written
 
-    def _read(self):
-        ans = self.dev.read()
-        return ans
+    def _read(self, size):
+        time.sleep(0.1)
+        answer = self.dev.read_until(
+            expected=self.read_termination.encode(),
+            size=size)
+        # drop the carriage return
+        return answer.decode()[:-len(self.read_termination)]
 
     def _ask(self, cmd):
         self._write(cmd)
-        while self.dev.inWaiting() == 0:  # wait until something is ready to read
-            time.sleep(0.1)
-        ans = []
-        while self.dev.inWaiting() > 0:  # read until there's no more to read
-            time.sleep(0.01)
-            d = self._read()
-            # print d
-            ans.append(d)
-        ans = ''.join(ans)
-        # print cmd, '->', ans
-        return ans
+
+        while self.dev.inWaiting() == 0:
+            time.sleep(self._status_query_delay)
+
+        answer = []
+        while self.dev.inWaiting() > 0:
+            partial = self._read(self.dev.inWaiting())
+            answer.append(partial)
+            time.sleep(.01)
+
+        answer = ''.join(answer)
+        return answer
 
     def _Info(self):
         ans = self._ask('INFO')
@@ -76,7 +119,7 @@ class MOTORCONTROLLER(MC):
         self.conf = {}
         self.conf['init_value'] = {}
         self.conf['init_value']['virtual'] = False
-        port = 2
+        port = '/dev/ttyUSB1'
         maxspeed = 6
         minspeed = 0.18
         acc = 65
@@ -87,7 +130,12 @@ class MOTORCONTROLLER(MC):
                                          bytesize=serial.EIGHTBITS,
                                          parity=serial.PARITY_NONE,
                                          stopbits=serial.STOPBITS_ONE,
-                                         timeout=1)
+                                         xonxoff=True,
+                                         rtscts=False,
+                                         dsrdtr=False,
+                                         inter_byte_timeout=None,
+                                         exclusive=False,
+                                         timeout=None)
                 # self.dev=io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser),
                 #                            newline='\r')
                 break
@@ -209,6 +257,8 @@ class MOTORCONTROLLER(MC):
         return self.error
 
 
+
+
 def main():
     import sys
     import io
@@ -239,18 +289,18 @@ def main():
     mc = MOTORCONTROLLER()
     err = mc.Init(ini)
     while True:
-        pos = eval(input("Pos / DEG: "))
+        pos = input("Pos / DEG: ")
         if pos in 'qQ':
             break
         try:
             pos = float(pos)
             err, ang = mc.Goto(pos)
-            print(('%.2f -> %.2f' % (pos, ang)))
+            print('%.2f -> %.2f' % (pos, ang))
         except ValueError:
             pos = pos.lower()
             if pos in dirmap:
                 err, dir = mc.Move(dirmap[pos])
-                print(('Direction: %d' % dir))
+                print('Direction: %d' % dir)
     mc.Quit()
 
 

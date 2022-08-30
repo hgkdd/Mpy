@@ -26,11 +26,11 @@ class AMPLIFIER(AMP):
         # time.sleep(2)
         return self.error
 
-    def _ask(self, cmd, N=5, sleep=0.2):
+    def _query(self, cmd, N=5, sleep=0.2):
         ans = None
         for _ in range(N):
             try:
-                ans = self.dev.ask(cmd)
+                ans = self.dev.query(cmd)
                 break  # no exception
             except pyvisa.VisaIOError:
                 time.sleep(sleep)
@@ -41,7 +41,7 @@ class AMPLIFIER(AMP):
 
     def _wait(self, state=False):
         while True:
-            ans = self._ask('AMP?')
+            ans = self._query('AMP?')
             rstate = (ans == 'AMP_ON')
             if state == rstate:
                 break
@@ -58,7 +58,7 @@ class AMPLIFIER(AMP):
             self.operating = False
             return self.error, freq
 
-        swstat = self._ask('SW01?')
+        swstat = self._query('SW01?')
         assert swstat.startswith('SW01_')
         swstat = int(swstat[-1])
         if freq <= 2e9:

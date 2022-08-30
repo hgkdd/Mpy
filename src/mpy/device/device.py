@@ -272,14 +272,14 @@ class Device(object):
             lib = ct.cdll.LoadLibrary(self.DLLname)
         elif DLLext in ('.pyd', '.py', '.pyc', '.pyo'):
             # import importlib
-            print(DLLbasename)
-            print(DLLext)
-            print(self.prefix)
-            print(self.pyprefix)
-            print('GLOBALS:')
-            print(globals())
-            print('LOCALS:')
-            print(locals())
+            # print(DLLbasename)
+            # print(DLLext)
+            #             # print(self.prefix)
+            #             # print(self.pyprefix)
+            #             # print('GLOBALS:')
+            #             # print(globals())
+            #             # print('LOCALS:')
+            #             # print(locals())
             mod = __import__('mpy.device.'+DLLbasename, globals(), locals(), fromlist=[None])
             for i in DLLbasename.split(".")[1:]:  # emulate from ... import ...
                 mod = getattr(mod, i)
