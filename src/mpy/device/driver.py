@@ -118,11 +118,11 @@ class DRIVER(object):
 
     def _gpib_read(self, tmpl=None):
         # print("In read", tmpl)
-        if tmpl is None:
-            tmpl = '.*'
         dct = None
         if self.dev:
             ans = self.dev.read()
+            if tmpl is None:
+                return ans
             m = re.match(tmpl, ans)
             if m:
                 dct = m.groupdict()
