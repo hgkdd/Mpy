@@ -27482,3 +27482,8 @@ cmd: msc.Measure_MainCal(**mp)
 
 Resume: Resume Measurement
 New: Start new.
+Auto save file msc-autosave.p found.
+cmd: msc.Measure_MainCal(**mp)
+
+Resume: Resume Measurement
+New: Start new.

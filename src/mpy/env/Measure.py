@@ -30,14 +30,21 @@ from scuq.quantities import Quantity
 from scuq.si import WATT
 
 try:
-    import pyttsx3
-    _tts = pyttsx3.init()
-    _tts.setProperty('volume', 1.0)
-    vs = _tts.getProperty('voices')
-    for v in vs:
-        if 'en_GB' in v.languages:  # take first british speaker
-            _tts.setProperty('voice', v.id)
-            break
+    # import pyttsx3
+    # _tts = pyttsx3.init()
+    # _tts.setProperty('volume', 1.0)
+    # vs = _tts.getProperty('voices')
+    # for v in vs:
+    #     if 'en_GB' in v.languages:  # take first british speaker
+    #         _tts.setProperty('voice', v.id)
+    #         break
+    import festival
+    festival.execCommand("(voice_en1_mbrola)")
+    _tts = festival
+    _tts.say = _tts.sayText
+    def __runAndWait():
+        pass
+    _tts.runAndWait = __runAndWait
 except ImportError:
     _tts = None
 
