@@ -130,11 +130,11 @@ class DRIVER(object):
 
     def _gpib_query(self, cmd, tmpl=None):
         # print("In query", cmd, tmpl)
-        if tmpl is None:
-            tmpl = '.*'
         dct = None
         if self.dev and isinstance(cmd, str):
             ans = self.dev.query(cmd)
+            if tmpl is None:
+                return ans
             # print "ans=",ans
             m = re.match(tmpl, ans)
             # print "m=",m
