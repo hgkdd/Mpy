@@ -1,0 +1,10 @@
+getch
+Levenshtein
+numpy
+pydot
+pyparsing
+pyserial
+PyVISA
+SciPy
+traits
+traitsui
