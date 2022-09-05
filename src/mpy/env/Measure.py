@@ -231,7 +231,7 @@ class Measure(object):
             l(msg, but, level, dct)
         if level in ('email',):
             try:
-                send_email(to=dct['to'], fr=dct['from'], subj=dct['subject'], msg=msg)
+                util.send_email(to=dct['to'], fr=dct['from'], subj=dct['subject'], msg=msg)
             except (NameError, KeyError):
                 util.LogError(self.messenger)
 

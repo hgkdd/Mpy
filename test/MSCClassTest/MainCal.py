@@ -1,3 +1,4 @@
+import ast
 import os
 import sys
 import gzip
@@ -68,13 +69,13 @@ def update_conf(cdict):
                 _mod = __import__(name[:name.rindex('.')])
                 cdict.update(getattr(_mod, 'cdict'))
                 print(("Configuration updated from '%s'." % name))
-            except:
+            except BaseException as e:
                 try:
-                    dct = eval(name)
+                    dct = ast.literal_eval(name)
                     if isinstance(dct, dict):
                         cdict.update(dct)
                         print(("Configuration updated from '%s'." % str(dct)))
-                except:
+                except BaseException as e:
                     pass
 
 
@@ -86,7 +87,7 @@ def load_from_autosave(fname):
             pfile = myopen(fname, "rb")
             try:
                 msc = pickle.load(pfile)
-            except:
+            except BaseException as e:
                 pfile.close()
                 pfile = myopen(fname, "rb")
                 msc = pickle.load(pfile, encoding='latin1')
@@ -108,10 +109,11 @@ def load_from_autosave(fname):
             msc.messenger("IOError during check for autosave-file: %s\nContinue with normal operation..." % m, [])
         except (pickle.UnpicklingError, AttributeError, EOFError, ImportError, IndexError) as m:
             # unpickle was not succesful, but we will continue anyway
-            # user can decide later if he want to finish.
+            # user can decide later if he is wanting to finish.
             msc.messenger("Error during unpickle of autosave-file: %s\nContinue with normal operation..." % m, [])
-        except:
+        except BaseException as e:
             # raise all unhadled exceptions
+            print(f"Unexpected {e=}, {type(e)=}")
             raise
     return msc, cmd
 
@@ -183,7 +185,7 @@ if __name__ == '__main__':
                 Skip: Skip Measurement but do Evaluation.\n
                 Break: Skip Measurement and Evaluation.\n
                 Exit: Exit Application
-                """ % (_des)
+                """ % _des
                 but = ["Continue", "Skip", "Break", "Exit"]
                 answer = msc.messenger(msg, but)
                 # answer=0
@@ -198,7 +200,7 @@ if __name__ == '__main__':
                     domeas = False
                     doeval = True
                 else:
-                    # be save and do nothing
+                    # be safe and do nothing
                     continue
             if domeas:
                 msc.Measure_MainCal(**mp)
@@ -211,7 +213,7 @@ if __name__ == '__main__':
                 descriptions.append("%s+%s" % (_passedcal, _des))
         dest_str = '_'.join(descriptions)
         pickle.dump(msc, open('AfterEval.p', 'wb'), 2)
-        msc.OutputProcessedData_MainCal(fname=(cdict["processeddata_output_filename"]) % (dest_str))
+        msc.OutputProcessedData_MainCal(fname=(cdict["processeddata_output_filename"]) % dest_str)
     else:
         msg = "Select description to use.\n"
         but = []
@@ -243,12 +245,12 @@ if __name__ == '__main__':
         pf = myopen(cdict['pickle_output_filename'], mode)
         pickle.dump(msc, pf, 2)
         msc.messenger(mpy.tools.util.tstamp() + " ...done.", [])
-    except:
+    except BaseException as e:
         msc.messenger(mpy.tools.util.tstamp() + " failed to pickle to %s" % (cdict['pickle_output_filename']), [])
         raise
     else:
         # remove autosave file after measurement is completed and class instance was pickled
         try:
             os.remove(cdict['autosave_filename'])
-        except:
+        except BaseException as e:
             pass

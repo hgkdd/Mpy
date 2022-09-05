@@ -66,7 +66,7 @@ class SIGNALGENERATOR(DRIVER):
         self._cmds = {'SetFreq': [("'FREQ %s HZ'%freq", None)],
                       'GetFreq': [('FREQ?', r'FREQ (?P<freq>%s) HZ' % self._FP)],
                       'SetLevel': [("'LEVEL %s %s'%(level,unit)", None)],
-                      'GetLevel': [('LEVEL?', r'LEVEL (?P<level>%s) (?P<unit>\S+)' % (self._FP))],
+                      'GetLevel': [('LEVEL?', r'LEVEL (?P<level>%s) (?P<unit>\S+)' % self._FP)],
                       'ConfAM': [("'AM:FREQ %s HZ'%freq", None),
                                  ('AM:FREQ?', 'FREQ (?P<freq>%s) HZ' % self._FP),
                                  ("'AM:SOURCE %s'%source", None),
@@ -142,9 +142,9 @@ class SIGNALGENERATOR(DRIVER):
         LFOut = self.map['AM_LFOut'][LFOut]
         dct = self._do_cmds('ConfAM', locals())
         # print dct
-        dct['source'] = self.map['AM_sources'][:dct['source']]  # inverse mapping from bidict
-        dct['waveform'] = self.map['AM_waveforms'][:dct['waveform']]  # inverse mapping from bidict
-        dct['LFOut'] = self.map['AM_LFOut'][:dct['LFOut']]  # inverse mapping from bidict
+        dct['source'] = self.map['AM_sources'].inverse[dct['source']]  # inverse mapping from bidict
+        dct['waveform'] = self.map['AM_waveforms'].inverse[dct['waveform']]  # inverse mapping from bidict
+        dct['LFOut'] = self.map['AM_LFOut'].inverse[dct['LFOut']]  # inverse mapping from bidict
         if dct['depth'] > 1:  # depth was returned in PCT
             dct['depth'] = 0.01 * float(dct['depth'])
         dct['freq'] = float(dct['freq'])

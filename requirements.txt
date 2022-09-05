@@ -1,10 +1,16 @@
+bidict
 getch
+gpib-ctypes
 Levenshtein
 numpy
+ply
 pydot
 pyparsing
 pyserial
+pyusb
 PyVISA
+PyVISA-py
 SciPy
+simpleeval
 traits
 traitsui

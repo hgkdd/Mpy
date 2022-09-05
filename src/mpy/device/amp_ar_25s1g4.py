@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from simpleeval import simple_eval
+
 from mpy.device.amplifier import AMPLIFIER as AMP
 
 
@@ -77,10 +79,10 @@ def main():
 
     amp = AMPLIFIER()
     err = amp.Init(ini)
-    print((amp.GetDescription()))
+    print(amp.GetDescription())
     ctx = scuq.ucomponents.Context()
     while True:
-        freq = float(eval(input("Freq / Hz: ")))
+        freq = float(simple_eval(input("Freq / Hz: ")))
         if freq < 0:
             break
         amp.SetFreq(freq)

@@ -1,6 +1,6 @@
 import pickle
 import sys
-from numpy import linspace,concatenate
+from numpy import linspace, concatenate, log10
 from scuq.quantities import Quantity
 from scuq.si import WATT
 import mpy.env.univers.AmplifierTest
@@ -9,7 +9,7 @@ from mpy.tools.util import locate
 def dBm2W (v):
     return 10**(v*0.1)*0.001
 def W2dBm (v):
-    return 10*np.log10(v*1000)
+    return 10*log10(v*1000)
 
 description="BLMA 1018 100_30_20"
 MpyDIRS=['\\MpyConfig\\LargeRC', '.']

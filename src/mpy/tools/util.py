@@ -14,6 +14,8 @@ import re
 import sys
 import time
 import traceback
+import smtplib
+from email.message import EmailMessage
 
 import numpy as np
 import scipy
@@ -22,6 +24,7 @@ import scipy.stats
 import scipy.integrate
 from scipy.interpolate import interp1d
 from scuq.quantities import Quantity
+from scipy.optimize import root_scalar
 from collections.abc import Sequence
 
 from mpy.tools.get_char import getch
@@ -132,25 +135,27 @@ def LookForUserInterrupt():
 
 
 def secant_solve(f, x1, x2, ftol, xtol):
-    f1 = f(x1)
-    if abs(f1) <= ftol:
-        return x1  # already effectively zero
-    f2 = f(x2)
-    if abs(f2) <= ftol:
-        return x2  # already effectively zero
-    while abs(x2 - x1) > xtol:
-        slope = (f2 - f1) / (x2 - x1)
-        if slope == 0:
-            return None
-        #      sys.stderr.write("Division by 0 due to vanishing slope - exit!\n")
-        #      sys.exit(1)
-        x3 = x2 - f2 / slope  # the new approximate zero
-        f3 = f(x3)  # and its function value
-        if abs(f3) <= ftol:
-            break
-        x1, f1 = x2, f2  # copy x2,f2 to x1,f1
-        x2, f2 = x3, f3  # copy x3,f3 to x2,f2
-    return x3
+    sol = root_scalar(f, method='secant', x0=x1, x1=x2, rtol=ftol, xtol=xtol)
+    return sol.root
+    # f1 = f(x1)
+    # if abs(f1) <= ftol:
+    #     return x1  # already effectively zero
+    # f2 = f(x2)
+    # if abs(f2) <= ftol:
+    #     return x2  # already effectively zero
+    # while abs(x2 - x1) > xtol:
+    #     slope = (f2 - f1) / (x2 - x1)
+    #     if slope == 0:
+    #         return None
+    #     #      sys.stderr.write("Division by 0 due to vanishing slope - exit!\n")
+    #     #      sys.exit(1)
+    #     x3 = x2 - f2 / slope  # the new approximate zero
+    #     f3 = f(x3)  # and its function value
+    #     if abs(f3) <= ftol:
+    #         break
+    #     x1, f1 = x2, f2  # copy x2,f2 to x1,f1
+    #     x2, f2 = x3, f3  # copy x3,f3 to x2,f2
+    # return x3
 
 
 def mean(x, zero=0.0):
@@ -258,8 +263,23 @@ def flatten(a):
     return flatten(a[0]) + flatten(a[1:])
 
 
-def send_email(to=None, fr=None, subj='a message from umdutil', msg=''):
-    pass
+def send_email(to=None, fr=None, subj='a message from mpy.util', msg=''):
+    if not (to and fr):
+        return
+    m = EmailMessage()
+    m.set_content(msg)
+
+    msg['Subject'] = subj
+    msg['From'] = fr
+    msg['To'] = to
+
+    try:
+        # Send the message via our own SMTP server.
+        s = smtplib.SMTP('localhost')
+        s.send_message(msg)
+        s.quit()
+    except:
+        pass
 
 
 def get_var_from_nearest_outerframe(varstr):

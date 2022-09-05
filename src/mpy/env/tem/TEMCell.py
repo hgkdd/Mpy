@@ -1,9 +1,9 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """This is :mod:`mpy.env.tem.TEMCell`.
 
    Provides :class:`mpy.env.tem.TEMCell` for EMC measurements in TEM cells
 
-   :author: Hans Georg Krauthäuser (main author)
+   :author: Hans Georg KrauthÃ¤user (main author)
    :copyright: All rights reserved
    :license: no licence yet
 """
@@ -490,7 +490,7 @@ class TEMCell(Measure):
              septum. A local "primed" coordinate system (x', y', z') is assigned to the EUT. Position `xx'yy'zz'` 
              aligns x' with x, y' with y, and z' with z. Position `xz'yx'zy'` is obtained by 
              simply permuting the primed EUT axes: x' to y, y' to z, and z' to x. This is equivalent to two 
-             90° rotations of the EUT. Position `xy'yz'zx'` is obtained by a further permutation: x' to z, y' to x, z' to y.
+             90Â° rotations of the EUT. Position `xy'yz'zx'` is obtained by a further permutation: x' to z, y' to x, z' to y.
              IEC 61000-4-21 defines two standard setups: with the 3 positions `("xx'yy'zz'", "xz'yx'zy'", "xy'yz'zx'")`, or with 12
              positions (see below).
 

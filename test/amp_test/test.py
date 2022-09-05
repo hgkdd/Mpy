@@ -1,6 +1,7 @@
 import io
 
 from scuq import *
+from simpleeval import simple_eval
 
 from mpy.device import sg_rs_swm, amp_ifi_smx25
 from mpy.tools.util import format_block
@@ -80,7 +81,7 @@ err = amp.Init(amp_ini)
 err, _ = sg.RFOn()
 err, level = sg.SetLevel(lv)
 while True:
-    fr = float(eval(input("Freq / Hz: ")))
+    fr = float(simple_eval(input("Freq / Hz: ")))
     if fr < 0:
         break
     sg.SetFreq(fr)
