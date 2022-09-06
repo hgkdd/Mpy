@@ -1,25 +1,42 @@
-============================================
-Walk Through the Installation Process of mpy 
-============================================
-
 Walk Through the Installation Process of mpy
 --------------------------------------------
 
-The following walk-through shows the installation process for mpy (and scuq) in a virtual environment beginnig with freshly cloned repositories.::
+The following walk-through shows the installation process for mpy (and scuq) in a virtual environment beginnig with freshly cloned repositories.
 
-    user:path > mkdir test-mpy
-    user:path > cd test-mpy 
-    user:path/test-mpy > hg clone /Volumes/tetemv1/Forschung/Labore/repositories_hgk/scuq 
+Make a directory and change to that directory:
+
+.. code-block:: console
+
+    foo@bar:path> mkdir test-mpy
+    foo@bar:path> cd test-mpy
+
+Now clone the two main packages **scuq** and **mpy**:
+
+.. code-block:: console
+
+    foo@bar:path/test-mpy> hg clone /path-to-central-repositories/scuq
     destination directory: scuq
     updating to branch default                                                                                                                                      
     43 files updated, 0 files merged, 0 files removed, 0 files unresolved
-    user:path/test-mpy > hg clone /Volumes/tetemv1/Forschung/Labore/repositories_hgk/mpy 
+    foo@bar:path/test-mpy> hg clone /path-to-central-repositories/mpy
     destination directory: mpy
     updating to branch default                                                                                                                                      
     396 files updated, 0 files merged, 0 files removed, 0 files unresolved
-    user:path/test-mpy > python3 -m venv venv
-    user:path/test-mpy > source venv/bin/activate
-    (venv) user:path/test-mpy > pip install -e scuq    
+
+Next we create a virtual environment and activate the environment:
+
+.. code-block:: console
+
+    foo@bar:path/test-mpy> python3 -m venv venv
+    foo@bar:path/test-mpy> source venv/bin/activate
+
+The active venv is marked with the prefix **(venv)** in front of your prompt.
+
+Now, we are going to install **scuq** from the source tree. The option '-e' installs it in editable mode:
+
+.. code-block:: console
+
+    (venv) foo@bar:path/test-mpy> pip install -e scuq
     Obtaining file:///path-to/test-mpy/scuq
     Installing build dependencies ... done
     Checking if build backend supports build_editable ... done
@@ -32,7 +49,12 @@ The following walk-through shows the installation process for mpy (and scuq) in 
     Successfully built scuq-hgk
     Installing collected packages: scuq-hgk
     Successfully installed scuq-hgk-0.1
-    (venv) user:path/test-mpy > pip install -r mpy/requirements.txt 
+
+Next, install all required packages for **mpy**:
+
+.. code-block:: console
+
+    (venv) foo@bar:path/test-mpy> pip install -r mpy/requirements.txt
     Collecting bidict
     Using cached bidict-0.22.0-py3-none-any.whl (36 kB)
     Collecting getch
@@ -76,7 +98,12 @@ The following walk-through shows the installation process for mpy (and scuq) in 
     Using cached jarowinkler-1.2.1-cp310-cp310-macosx_11_0_arm64.whl (57 kB)
     Installing collected packages: simpleeval, pyserial, ply, gpib-ctypes, getch, typing-extensions, traits, pyusb, pyparsing, numpy, jarowinkler, bidict, SciPy, rapidfuzz, PyVISA, pyface, pydot, traitsui, PyVISA-py, Levenshtein
     Successfully installed Levenshtein-0.20.2 PyVISA-1.12.0 PyVISA-py-0.5.3 SciPy-1.9.1 bidict-0.22.0 getch-1.0 gpib-ctypes-0.3.0 jarowinkler-1.2.1 numpy-1.23.2 ply-3.11 pydot-1.4.2 pyface-7.4.2 pyparsing-3.0.9 pyserial-3.5 pyusb-1.2.1 rapidfuzz-2.6.1 simpleeval-0.9.12 traits-6.4.1 traitsui-7.4.0 typing-extensions-4.3.0
-    (venv) user:path/test-mpy > pip install -e mpy
+
+Finally, install **mpy** from its source tree as an editable module:
+
+.. code-block:: console
+
+    (venv) foo@bar:path/test-mpy> pip install -e mpy
     Obtaining file:///path-to/test-mpy/mpy
     Installing build dependencies ... done
     Checking if build backend supports build_editable ... done
@@ -89,7 +116,8 @@ The following walk-through shows the installation process for mpy (and scuq) in 
     Successfully built mpy-hgkTUD
     Installing collected packages: mpy-hgkTUD
     Successfully installed mpy-hgkTUD-0.1.dev316+hdc6350c
-    (venv) user:path/test-mpy >
+    (venv) foo@bar:path/test-mpy>
 
-Finish
+You are now ready to use the **mpy** framework. Enjoy!
+
 

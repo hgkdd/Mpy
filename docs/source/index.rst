@@ -13,6 +13,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   installation-walktrough.rst
    intro-install-de
    intro-structure-de
    intro-driver-de
