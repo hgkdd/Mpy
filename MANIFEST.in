@@ -1,1 +1,7 @@
-include mpy/LICENSE README.md
+include src/mpy/LICENSE README.md
+include *.txt
+recursive-include src *.g
+recursive-include src *.ini
+graft test
+graft docs
+global-exclude *.py[cod]

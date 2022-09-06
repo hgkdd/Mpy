@@ -17,7 +17,7 @@ setuptools.setup(
         "License :: all rights reserved",
         "Operating System :: OS Independent",
     ],
-    package_dir={"": "src"},
+    package_dir={"mpy": "src/mpy"},
     packages=setuptools.find_packages(where="src"),
     python_requires=">=3.6",
 )
