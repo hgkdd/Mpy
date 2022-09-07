@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import sys
-sys.path.insert(0,'..')
-import sg_rs_smr 
-
+# import sys
+# sys.path.insert(0,'..')
+from mpy.device import sg_rs_smr
 
 ini='smr.ini'
 

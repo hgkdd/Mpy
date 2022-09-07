@@ -1,5 +1,6 @@
 import numpy as np
-from matplotlib.mlab import griddata
+# from matplotlib.mlab import griddata
+from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
 import numpy.ma as ma
 from numpy.random import uniform
@@ -31,7 +32,11 @@ npts=len(x)
 xi = np.linspace(9.9,18000.1,100)
 yi = np.linspace(-50.1,10.1,100)
 # grid the data.
-zi = griddata(x,y,z,xi,yi)
+# zi = griddata(x,y,z,xi,yi)
+# -  zi = griddata(cx, cy, cz, xi, yi, interp='nn')
+# +  # See https://scipy-cookbook.readthedocs.io/items/Matplotlib_Gridding_irregularly_spaced_data.html
+# +  zi = griddata((cx, cy), cz, (xi[None,:], yi[:,None]), method='cubic')
+zi = griddata((x, y), z, (xi[None,:], yi[None,:]), method='cubic')
 # contour the gridded data, plotting dots at the randomly spaced data points.
 CS = plt.contour(xi,yi,zi,15,linewidths=0.5,colors='k')
 CS = plt.contourf(xi,yi,zi,15,cmap=plt.cm.jet)
