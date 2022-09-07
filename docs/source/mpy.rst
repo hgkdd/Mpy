@@ -9,9 +9,9 @@ This is the documentation of the API.
 ----------------------------------
 
 .. toctree::
-	:maxdepth: 2
-	
-	mpy/driver_framework.rst
+   :maxdepth: 2
+
+   mpy/driver_framework.rst
 
 
 :mod:`mpy.device.driver`
@@ -84,9 +84,9 @@ This is the documentation of the API.
 .. automodule:: mpy.device.networkanalyzer
 
 .. toctree::
-	:maxdepth: 2
-	
-	mpy/device_networkanalyzer.rst
+    :maxdepth: 2
+
+    mpy/device_networkanalyzer.rst
 
 
    
