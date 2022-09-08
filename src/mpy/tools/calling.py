@@ -1,5 +1,6 @@
 import inspect
 
+
 def get_calling_sequence(prefixes=None):
     if prefixes is None:
         prefixes = ['return', 'print']
