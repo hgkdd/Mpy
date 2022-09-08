@@ -128,7 +128,7 @@ class TEMCell(Measure):
                 self.messenger(util.tstamp() + " measurment terminated by user.", [])
                 raise UserWarning  # to reach finally statement
             elif answer == but1.index('Interactive'):
-                util.interactive("Press CTRL-Z plus Return to exit")
+                util.interactive(obj=self, banner="Press CTRL-D (Linux,MacOS) or CTRL-Z (Windows) plus Return to exit")
             elif answer == but1.index('Suspend'):
                 self.messenger(util.tstamp() + " measurment suspended by user.", [])
                 stat = mg.Quit_Devices()

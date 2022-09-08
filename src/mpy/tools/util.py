@@ -163,19 +163,15 @@ def mean(x, zero=0.0):
     return mu / len(x)
 
 
-def interactive(banner=None):
+def interactive(obj=None, banner=None):
     import code
-    # use exception trick to pick up the current frame
-    try:
-        raise RuntimeWarning
-    except RuntimeWarning:
-        frame = sys.exc_info()[2].tb_frame.f_back
 
-    # evaluate commands in current namespace
-    namespace = frame.f_globals.copy()
-    namespace.update(frame.f_locals)
+    if obj is None:
+        ns = vars()
+    else:
+        ns = vars(obj)
 
-    code.interact(banner=banner, local=namespace)
+    code.interact(banner=banner, local=ns)
 
 
 def tstamp():
