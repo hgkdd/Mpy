@@ -17,7 +17,7 @@ class FieldLst:
 
     def __call__(self):
         ret = self._next
-        self.next += 1
+        self._next += 1
         try:
             return self.field[ret]
         except IndexError:
@@ -172,7 +172,8 @@ class ImmunityKernel_Thres:
                 self.mg.RFOff_Devices()
                 notok = list(dct.keys())
                 while len(notok):
-                    util.wait(1, self.callerlocals, self.UIHandler)
+                    # util.wait(1, self.callerlocals, self.UIHandler)
+                    self.callerlocals['self'].wait(1, self.callerlocals, self.UIHandler)
                     self.messenger(util.tstamp() + " EUTs not ok: %r" % notok, [])
                     for p in self.ports:
                         if p in notok:

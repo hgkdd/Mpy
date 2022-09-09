@@ -10,7 +10,7 @@ import time
 from mpy.tools.Configuration import fstrcmp
 from mpy.tools.aunits import *
 import mpy.tools.umd_types as umd_types
-from scuq import *
+from scuq import ucomponents, quantities
 
 try:
     import ctypes as ct
@@ -642,8 +642,8 @@ class Signalgenerator(Device):
                 c_depth = ct.c_int(depth)  # in %
                 c_error = ct.c_int(0)
                 method.restype = ct.c_int
-                retval = method(c_source, c_freq, c_depth, c_waveform, c_LFOut, c_instance, ct.byref(c_error))
                 c_instance = ct.c_int(self.instance)
+                retval = method(c_source, c_freq, c_depth, c_waveform, c_LFOut, c_instance, ct.byref(c_error))
                 self.error = c_error.value
                 return self.error, retval
         else:
@@ -1114,7 +1114,7 @@ class Spectrumanalyzer(Powermeter):
         if isinstance(method, ct._CFuncPtr):
             def m(mode):
                 MODES = ['NORMAL', 'LOWNOISE', 'LOWDIST']
-                guess = fstrcmp(state, MODES, n=1, cutoff=0, ignorecase=True)[0]
+                guess = fstrcmp(mode, MODES, n=1, cutoff=0, ignorecase=True)[0]
                 try:
                     c_mode = ct.c_int(MODES.index(guess))
                 except ValueError:
@@ -1366,7 +1366,7 @@ class Spectrumanalyzer(Powermeter):
                 retval = method(ct.byref(c_vec), c_ndata, c_retrigger, c_instance, ct.byref(c_error))
                 self.error = c_error.value
                 if not self.error:
-                    cunit = c_vec[0].u.value
+                    c_unit = c_vec[0].u.value
                     vals, unit = self.convert.c2scuq(c_unit, [c_vec[i].v.value for i in range(retval)])
                     ls, unit = self.convert.c2scuq(c_unit, [c_vec[i].l.value for i in range(retval)])
                     us, unit = self.convert.c2scuq(c_unit, [c_vec[i].u.value for i in range(retval)])
@@ -1374,7 +1374,7 @@ class Spectrumanalyzer(Powermeter):
                     nl = numpy.array(ls)
                     nu = numpy.array(us)
                     sigs = (nu - nl) * 0.5
-                    obj = quantities.Quantity(unit, ucomponent.UncertainInput(nv, sigs))
+                    obj = quantities.Quantity(unit, ucomponents.UncertainInput(nv, sigs))
                 else:
                     obj = None
                 return self.error, obj
@@ -1390,7 +1390,7 @@ class Spectrumanalyzer(Powermeter):
             def m(mode):
                 MODES = ['FREE', 'VIDEO', 'EXTERNAL']
                 modeguess = fstrcmp(mode, MODES, n=1, cutoff=0, ignorecase=True)[0]
-                c_mode = ct.c_int(MODES.index(whatguess))
+                c_mode = ct.c_int(MODES.index(modeguess))
                 c_instance = ct.c_int(self.instance)
                 c_error = ct.c_int(0)
                 method.restype = ct.c_int
@@ -1418,7 +1418,7 @@ class Spectrumanalyzer(Powermeter):
     def _SetWindow_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             def m(window):  # window 1,2,...
-                c_delay = ct.c_int(window)
+                c_window = ct.c_int(window)
                 c_instance = ct.c_int(self.instance)
                 c_error = ct.c_int(0)
                 method.restype = ct.c_int
@@ -1582,9 +1582,9 @@ class Switch(Device):
                 MODES = ["LATCHING", "NON_LATCHING"]
                 guess = fstrcmp(mode, MODES, n=1, cutoff=0, ignorecase=True)[0]
                 try:
-                    c_state = ct.c_int(MODES.index(guess))
+                    c_mode = ct.c_int(MODES.index(guess))
                 except ValueError:
-                    c_state = ct.c_int(0)  # Latching
+                    c_mode = ct.c_int(0)  # Latching
                     self.error = self._Errors['Warning']
 
                 c_instance = ct.c_int(self.instance)
@@ -1676,10 +1676,11 @@ class Fieldprobe(Device):
                 c_transmission = umd_types.UMD_FIELD_DMRESULT()
                 method.restype = ct.c_int
                 c_instance = ct.c_int(self.instance)
+                c_error = ct.c_int(0)
                 retval = method(ct.byref(c_transmission), c_retrigger, c_instance, ct.byref(c_error))
                 self.error = c_error.value
                 if not self.error and retval == 0:
-                    obj = self.cdata_to_obj(c_data)
+                    obj = self.cdata_to_obj(c_transmission)
                 else:
                     obj = None
                 return self.error, obj
@@ -1696,10 +1697,11 @@ class Fieldprobe(Device):
                 c_transmission = umd_types.UMD_FIELD_DMRESULT()
                 method.restype = ct.c_int
                 c_instance = ct.c_int(self.instance)
+                c_error = ct.c_int(0)
                 retval = method(ct.byref(c_transmission), c_instance, ct.byref(c_error))
                 self.error = c_error.value
                 if not self.error and retval == 0:
-                    obj = self.cdata_to_obj(c_data)
+                    obj = self.cdata_to_obj(c_transmission)
                 else:
                     obj = None
                 return self.error, obj

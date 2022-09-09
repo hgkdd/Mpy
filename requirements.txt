@@ -1,4 +1,6 @@
 bidict
+chaco
+enable
 getch
 gpib-ctypes
 Levenshtein
