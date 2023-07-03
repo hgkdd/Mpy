@@ -2,7 +2,7 @@ import scipy
 import scipy.interpolate
 import math
 from mpy.tools.aunits import *
-import mpy.tools.mgraph as mgraph
+from mpy.tools import mgraph
 from scuq import *
 import scr3502
 

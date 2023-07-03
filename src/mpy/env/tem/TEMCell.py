@@ -19,14 +19,14 @@ from scuq.quantities import Quantity
 from scuq.si import *
 from scuq.ucomponents import Context
 
-from mpy.env.Measure import Measure, AmplifierProtectionError
-import mpy.tools.util as util
-import mpy.tools.interpol as interpol
-import mpy.tools.mgraph as mgraph
+from mpy.env import Measure
+from mpy.tools import util, mgraph, interpol
 from mpy.tools.aunits import *
 
+# from mpy.tools.aunits import *
 
-class TEMCell(Measure):
+
+class TEMCell(Measure.Measure):
     """A class for TEM-cell measurements according to IEC 61000-4-20
     """
     eut_positions = (("xx'yy'zz'", "xz'yx'zy'", "xy'yz'zx'"),
@@ -146,7 +146,7 @@ class TEMCell(Measure):
                     if hassg:
                         try:
                             level = self.setLevel(mg, names, SGLevel)
-                        except AmplifierProtectionError as _e:
+                        except Measure.AmplifierProtectionError as _e:
                             self.messenger(
                                 util.tstamp() + " Can not set signal generator level. Amplifier protection raised with message: %s" % _e.message,
                                 [])
@@ -165,10 +165,10 @@ class TEMCell(Measure):
                     level = level2
             try:
                 # wait delay seconds
-                self.messenger(util.tstamp() + " Going to sleep for %d seconds ..." % (delay), [])
+                self.messenger(util.tstamp() + " Going to sleep for %d seconds ..." % delay, [])
                 self.wait(delay, dct, self._HandleUserInterrupt)
                 self.messenger(util.tstamp() + " ... back.", [])
-            except:
+            except Exception:
                 pass
             mg.NBTrigger(nblist)
 
@@ -213,7 +213,7 @@ class TEMCell(Measure):
            The function simply calls :meth:`Calculate_Prad` and :meth:`Calculate_Emax` with the appropriate arguments.
         """
         self.messenger(
-            util.tstamp() + " Starting evaluation of emission measurement for description '%s' ..." % (description), [])
+            util.tstamp() + " Starting evaluation of emission measurement for description '%s' ..." % description, [])
         if is_oats is None:
             is_oats = True
         self.Calculate_Prad(description=description,
@@ -233,7 +233,7 @@ class TEMCell(Measure):
         # import pprint
         # pprint.pprint(self.processedData_Emission)
         self.messenger(
-            util.tstamp() + " End of evaluation of emission measurement for description '%s'." % (description), [])
+            util.tstamp() + " End of evaluation of emission measurement for description '%s'." % description, [])
 
     def Calculate_Prad(self,
                        description='EUT',
@@ -267,7 +267,7 @@ class TEMCell(Measure):
            *self.processedData_Emission[description]['Prad_noise'][f][port]* (radiated noise).
         """
         self.messenger(
-            util.tstamp() + " Starting calulation of radiated power for description '%s' ..." % (description), [])
+            util.tstamp() + " Starting calulation of radiated power for description '%s' ..." % description, [])
         Zc = Quantity(OHM, Zc)
         comp_dct = {'x': 0, 'y': 1, 'z': 2}
         component = component.lower()
@@ -899,7 +899,7 @@ Select EUT position.
 
             try:
                 level = self.setLevel(mg, names, SGLevel)
-            except AmplifierProtectionError as _e:
+            except Measure.AmplifierProtectionError as _e:
                 self.messenger(
                     util.tstamp() + " Can not set signal generator level. Amplifier protection raised with message: %s" % _e.message,
                     [])
