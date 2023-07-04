@@ -46,5 +46,5 @@ if __name__ == '__main__':
         time.sleep(0.2)
         recfrequency = instr.getFreq()
         data = instr.getLevel()
-        print((f, recfrequency, data))
+        print(f, recfrequency, data)
         instr.quit()

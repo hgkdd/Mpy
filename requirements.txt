@@ -1,7 +1,5 @@
 bidict
-chaco
-enable
-getch
+getch;platform_system=="Linux"
 gpib-ctypes
 Levenshtein
 numpy
