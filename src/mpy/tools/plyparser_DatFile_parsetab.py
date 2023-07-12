@@ -6,12 +6,12 @@ _tabversion = '3.10'
 
 _lr_method = 'LALR'
 
-_lr_signature = 'ABSERROR COMMA FPNUMBER FUNIT ID LBRACE LSBRACE NEWLINE RBRACE RELERROR RSBRACE UNITlines : line lines\n                 | lineline : NEWLINEline : FUNIT idanycase NEWLINEline : UNIT idanycase NEWLINE\n                 | UNIT idanycase idanycase NEWLINEidanycase : IDline : RELERROR FPNUMBER NEWLINEline : ABSERROR val NEWLINEline : FPNUMBER val val val NEWLINEline : FPNUMBER val NEWLINEval : numbernumber : FPNUMBERval : LBRACE FPNUMBER COMMA FPNUMBER RBRACEval : LSBRACE FPNUMBER COMMA FPNUMBER RSBRACE'
+_lr_signature = 'ABSERROR COMMA FPNUMBER FUNIT ID LBRACE LSBRACE NEWLINE RBRACE RELERROR RSBRACE UNITlines : line lines\n                | lineline : NEWLINEline : FUNIT idanycase NEWLINEline : UNIT idanycase NEWLINE\n                | UNIT idanycase idanycase NEWLINEidanycase : IDline : RELERROR FPNUMBER NEWLINEline : ABSERROR val NEWLINEline : FPNUMBER val val val NEWLINEline : FPNUMBER val NEWLINEval : numbernumber : FPNUMBERval : LBRACE FPNUMBER COMMA FPNUMBER RBRACEval : LSBRACE FPNUMBER COMMA FPNUMBER RSBRACE'
     
 _lr_action_items = {'NEWLINE':([0,2,3,10,11,12,13,14,15,16,19,20,21,22,23,25,28,29,30,33,36,37,],[3,3,-3,20,-7,22,23,-13,25,-12,28,-4,29,-5,-8,-11,-9,-6,33,-10,-14,-15,]),'FUNIT':([0,2,3,20,22,23,25,28,29,33,],[4,4,-3,-4,-5,-8,-11,-9,-6,-10,]),'UNIT':([0,2,3,20,22,23,25,28,29,33,],[5,5,-3,-4,-5,-8,-11,-9,-6,-10,]),'RELERROR':([0,2,3,20,22,23,25,28,29,33,],[6,6,-3,-4,-5,-8,-11,-9,-6,-10,]),'ABSERROR':([0,2,3,20,22,23,25,28,29,33,],[8,8,-3,-4,-5,-8,-11,-9,-6,-10,]),'FPNUMBER':([0,2,3,6,7,8,14,15,16,17,18,20,22,23,24,25,28,29,31,32,33,36,37,],[7,7,-3,13,14,14,-13,14,-12,26,27,-4,-5,-8,14,-11,-9,-6,34,35,-10,-14,-15,]),'$end':([1,2,3,9,20,22,23,25,28,29,33,],[0,-2,-3,-1,-4,-5,-8,-11,-9,-6,-10,]),'ID':([4,5,11,12,],[11,11,-7,11,]),'LBRACE':([7,8,14,15,16,24,36,37,],[17,17,-13,17,-12,17,-14,-15,]),'LSBRACE':([7,8,14,15,16,24,36,37,],[18,18,-13,18,-12,18,-14,-15,]),'COMMA':([26,27,],[31,32,]),'RBRACE':([34,],[36,]),'RSBRACE':([35,],[37,]),}
 
 _lr_action = {}
-for _k, _v in list(_lr_action_items.items()):
+for _k, _v in _lr_action_items.items():
    for _x,_y in zip(_v[0],_v[1]):
       if not _x in _lr_action:  _lr_action[_x] = {}
       _lr_action[_x][_k] = _y
@@ -20,26 +20,26 @@ del _lr_action_items
 _lr_goto_items = {'lines':([0,2,],[1,9,]),'line':([0,2,],[2,2,]),'idanycase':([4,5,12,],[10,12,21,]),'val':([7,8,15,24,],[15,19,24,30,]),'number':([7,8,15,24,],[16,16,16,16,]),}
 
 _lr_goto = {}
-for _k, _v in list(_lr_goto_items.items()):
+for _k, _v in _lr_goto_items.items():
    for _x, _y in zip(_v[0], _v[1]):
        if not _x in _lr_goto: _lr_goto[_x] = {}
        _lr_goto[_x][_k] = _y
 del _lr_goto_items
 _lr_productions = [
   ("S' -> lines","S'",1,None,None,None),
-  ('lines -> line lines','lines',2,'p_lines_line','dataparser.py',171),
-  ('lines -> line','lines',1,'p_lines_line','dataparser.py',172),
-  ('line -> NEWLINE','line',1,'p_line_empty','dataparser.py',177),
-  ('line -> FUNIT idanycase NEWLINE','line',3,'p_line_funit','dataparser.py',181),
-  ('line -> UNIT idanycase NEWLINE','line',3,'p_line_unit','dataparser.py',186),
-  ('line -> UNIT idanycase idanycase NEWLINE','line',4,'p_line_unit','dataparser.py',187),
-  ('idanycase -> ID','idanycase',1,'p_idanycase_id','dataparser.py',195),
-  ('line -> RELERROR FPNUMBER NEWLINE','line',3,'p_line_relerr','dataparser.py',200),
-  ('line -> ABSERROR val NEWLINE','line',3,'p_line_abserr','dataparser.py',205),
-  ('line -> FPNUMBER val val val NEWLINE','line',5,'p_line_data1','dataparser.py',211),
-  ('line -> FPNUMBER val NEWLINE','line',3,'p_line_data2','dataparser.py',217),
-  ('val -> number','val',1,'p_val_number','dataparser.py',231),
-  ('number -> FPNUMBER','number',1,'p_number_fpnumber','dataparser.py',235),
-  ('val -> LBRACE FPNUMBER COMMA FPNUMBER RBRACE','val',5,'p_val_ri','dataparser.py',240),
-  ('val -> LSBRACE FPNUMBER COMMA FPNUMBER RSBRACE','val',5,'p_val_ma','dataparser.py',246),
+  ('lines -> line lines','lines',2,'p_lines_line','dataparser.py',176),
+  ('lines -> line','lines',1,'p_lines_line','dataparser.py',177),
+  ('line -> NEWLINE','line',1,'p_line_empty','dataparser.py',182),
+  ('line -> FUNIT idanycase NEWLINE','line',3,'p_line_funit','dataparser.py',186),
+  ('line -> UNIT idanycase NEWLINE','line',3,'p_line_unit','dataparser.py',191),
+  ('line -> UNIT idanycase idanycase NEWLINE','line',4,'p_line_unit','dataparser.py',192),
+  ('idanycase -> ID','idanycase',1,'p_idanycase_id','dataparser.py',203),
+  ('line -> RELERROR FPNUMBER NEWLINE','line',3,'p_line_relerr','dataparser.py',208),
+  ('line -> ABSERROR val NEWLINE','line',3,'p_line_abserr','dataparser.py',213),
+  ('line -> FPNUMBER val val val NEWLINE','line',5,'p_line_data1','dataparser.py',219),
+  ('line -> FPNUMBER val NEWLINE','line',3,'p_line_data2','dataparser.py',225),
+  ('val -> number','val',1,'p_val_number','dataparser.py',238),
+  ('number -> FPNUMBER','number',1,'p_number_fpnumber','dataparser.py',242),
+  ('val -> LBRACE FPNUMBER COMMA FPNUMBER RBRACE','val',5,'p_val_ri','dataparser.py',247),
+  ('val -> LSBRACE FPNUMBER COMMA FPNUMBER RSBRACE','val',5,'p_val_ma','dataparser.py',253),
 ]
