@@ -3229,9 +3229,9 @@ Quit: quit measurement.
                             ees.sort()  # values only, no ebars, unit is V/m
                             hist, bins, e_cdf, ray_fit, p_cs, p_ks = test_for_rayleigh(ees)
                             ss['p-values_disttest'][n_ind] = {'chisq': p_cs, 'KS': p_ks}
-                            print(n_ind + 1, p_cs, p_ks)
+                            # print(n_ind + 1, p_cs, p_ks)
                             if p_cs > 0.05 and p_ks > 0.05:  # has to be tested; KS seems to be more reliable
-                                self.messenger(util.tstamp() + " " % (n_ind + 1, p_cs, p_ks))
+                                self.messenger(util.tstamp() + " Nind: %d p_cs: %f p_ks: %f"%(n_ind + 1, p_cs, p_ks))
                                 break
                         ss['hist_disttest'] = (hist, bins)
                         ss['samples_disttest'] = ees[:]
@@ -3257,9 +3257,9 @@ Quit: quit measurement.
                     ees.sort()  # values only, no ebars, unit is V/m
                     hist, bins, e_cdf, ray_fit, p_cs, p_ks = test_for_rayleigh(ees)
                     ss['p-values_disttest24'][n_ind] = {'chisq': p_cs, 'KS': p_ks}
-                    print(n_ind + 1, p_cs, p_ks)
+                    # print(n_ind + 1, p_cs, p_ks)
                     if p_cs > 0.05 and p_ks > 0.05:  # has to be tested; KS seems to be more reliable
-                        self.messenger(util.tstamp() + " " % (n_ind + 1, p_cs, p_ks))
+                        self.messenger(util.tstamp() + " Nind: %d p_cs: %f p_ks: %f"%(n_ind + 1, p_cs, p_ks))
                         break
                 ss['hist_disttest24'] = (hist, bins)
                 ss['samples_disttest24'] = ees[:]
