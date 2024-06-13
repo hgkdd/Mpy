@@ -10,18 +10,19 @@
 
 import math
 import time
+import sys
 
 import scipy
 import scipy.special
 # import pprint
 
 from scuq.quantities import Quantity
-from scuq.si import *
+from scuq.si import METER, OHM, WATT, SECOND, VOLT
 from scuq.ucomponents import Context
 
 from mpy.env import Measure
 from mpy.tools import util, mgraph, interpol
-from mpy.tools.aunits import *
+from mpy.tools.aunits import POWERRATIO
 
 # from mpy.tools.aunits import *
 
@@ -399,11 +400,11 @@ class TEMCell(Measure.Measure):
             gmax_f = util.gmax_oats
             gmax_model = "OATS"
 
-        self.processedData_Emission[description]['Assumed_Distance'] = Quantity(si.METER, s)
+        self.processedData_Emission[description]['Assumed_Distance'] = Quantity(METER, s)
         self.processedData_Emission[description]['Gmax_Model'] = gmax_model
-        self.processedData_Emission[description]['Assumed_hg'] = Quantity(si.METER, hg)
-        self.processedData_Emission[description]['Assumed_RH'] = tuple((Quantity(si.METER, r) for r in RH))
-        self.processedData_Emission[description]['Assumed_Zc'] = Quantity(si.Ohm, Zc)
+        self.processedData_Emission[description]['Assumed_hg'] = Quantity(METER, hg)
+        self.processedData_Emission[description]['Assumed_RH'] = tuple((Quantity(METER, r) for r in RH))
+        self.processedData_Emission[description]['Assumed_Zc'] = Quantity(OHM, Zc)
         self.processedData_Emission[description]['Assumed_Directivity'] = {}
 
         dmax_f = Dmax
@@ -418,12 +419,12 @@ class TEMCell(Measure.Measure):
                     dmax_f = Dmax(f)
                 self.processedData_Emission[description]['Assumed_Directivity'].setdefault(f, dmax_f)
                 gmf = gmax_f(f, rstep=rstep, s=s, hg=hg, RH=RH)
-                gmax = {'h': Quantity(1 / si.METER, gmf['h']),
-                        'v': Quantity(1 / si.METER, gmf['v'])}
+                gmax = {'h': Quantity(1 / METER, gmf['h']),
+                        'v': Quantity(1 / METER, gmf['v'])}
                 ports = sorted(prad[f])
                 for port in ports:
                     Emax[f] = {}
-                    for pr in prad[f][port]:  # pr is a Quantity in si.Watt
+                    for pr in prad[f][port]:  # pr is a Quantity in WATT
                         cc = math.sqrt(dmax_f * TEMCell.eta0 / (4 * math.pi) * pr)
                         Emax[f][port] = []
                         dct = {}
