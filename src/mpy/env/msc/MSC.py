@@ -25,7 +25,7 @@ from scuq.ucomponents import Context
 
 from mpy.env import Measure
 from mpy.tools import util, mgraph, spacing, distributions, correlation
-from mpy.tools.aunits import *
+from mpy.tools.aunits import POWERRATIO, EFIELD, EFIELDPNORM
 
 # from win32com.client import Dispatch
 # import sys
