@@ -1,8 +1,7 @@
 import time
 import random
 import numpy as np
-from visa import *
-import pyvisa.vpp43 as vpp43
+import pyvisa
 
 def linav(dbvals):
     linmean=np.mean(np.power(10, dbvals))
@@ -24,7 +23,8 @@ class GT(object):
         if len(GT.instances)>1:
             self.other=[s for s in GT.instances if s != self][0]
         if self.master:
-            self.pm = instrument("GPIB::13")
+            self.rm = pyvisa.ResourceManager()
+            self.pm = self.rm.open_resource("GPIB::13")
             self.pm.write('FBUF PRE GET BUFFER %d'%self.N)
         else:
             self.pm=self.other.pm

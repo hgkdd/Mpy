@@ -2,7 +2,7 @@ import sys
 import random
 from itertools import combinations
 import pickle as pickle
-import pylab as pl
+import matplotlib.pyplot as pl
 import numpy as np
 import scipy as sp
 from scuq import *
@@ -76,7 +76,7 @@ class SAMPLES(object):
 
 
 if __name__ == '__main__':
-    import pylab as pl
+    import matplotlib.pyplot as pl
 
     infile = sys.argv[1]
     dct = pickle.load(open(infile, 'rb'))

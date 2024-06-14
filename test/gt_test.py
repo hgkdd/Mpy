@@ -1,8 +1,9 @@
 import time
-from visa import *
+import pyvisa
 import pyvisa.vpp43 as vpp43
 
-pm = instrument("GPIB::13")
+rm = pyvisa.ResourceManager()
+pm = rm.open_resource("GPIB::13")
 
 pm.write("*IDN?")
 print(pm.read())

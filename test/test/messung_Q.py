@@ -11,7 +11,7 @@ sys.path.insert(0, '\\herbrig\\new-umddevice')
 sys.path.insert(0, '\\herbrig\\scuq')
 
 from scuq import *
-import device
+import mpy.device.device as device
 
 dir_pfad=r"I:\herbrig\messungen"
 dir_name=r'\Messung_Q_smallMSC_'+time.strftime(r'%Y%m%d_%H%M%S',time.localtime())

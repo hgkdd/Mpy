@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0,'..')
 
-import device as ud
+import mpy.device.device as ud
 
 ini=sys.argv[1]
 
