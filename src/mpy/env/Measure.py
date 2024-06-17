@@ -46,6 +46,7 @@ try:
         pass
     _tts.runAndWait = __runAndWait
 except ImportError:
+     festival = None
     _tts = None
 
 
