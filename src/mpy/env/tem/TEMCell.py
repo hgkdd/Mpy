@@ -23,6 +23,7 @@ from scuq.ucomponents import Context
 from mpy.env import Measure
 from mpy.tools import util, mgraph, interpol
 from mpy.tools.aunits import POWERRATIO
+from mpy.tools.log_freq import LogFreq
 
 # from mpy.tools.aunits import *
 
@@ -30,10 +31,13 @@ from mpy.tools.aunits import POWERRATIO
 class TEMCell(Measure.Measure):
     """A class for TEM-cell measurements according to IEC 61000-4-20
     """
-    eut_positions = (("xx'yy'zz'", "xz'yx'zy'", "xy'yz'zx'"),
-                     ("xz'yy'z(-x')", "x(-x')yz'zy'", "xy'y(-x')zz'"),
-                     ("x(-x')yy'z(-z')", "x(-z')y(-x')zy'", "xy'y(-z')z(-x')"),
-                     ("x(-z')yy'zx'", "xx'y(-z')zy'", "xy'yx'z(-z')"))
+    eut_positions_emission = (("xx'yy'zz'", "xz'yx'zy'", "xy'yz'zx'"),
+                              ("xz'yy'z(-x')", "x(-x')yz'zy'", "xy'y(-x')zz'"),
+                              ("x(-x')yy'z(-z')", "x(-z')y(-x')zy'", "xy'y(-z')z(-x')"),
+                              ("x(-z')yy'zx'", "xx'y(-z')zy'", "xy'yx'z(-z')"))
+
+    eut_positions_immunity = {'v': ("xx'yy'zz'", "xz'yy'z(-x')", "x(-x')yy'z(-z')", "x(-z')yy'zx'"),
+                              'h': ("xy'y(-x')zz'", "xy'y(-z')z(-x')", "xy'yx'z(-z')", "xy'yz'zx'")}
 
     c0 = Quantity(METER / SECOND, 2.99792458e8)
     eta0 = Quantity(OHM, 120 * math.pi)
@@ -58,8 +62,9 @@ class TEMCell(Measure.Measure):
         self.processedData_Immunity = {}
         self.rawData_Emission = {}
         self.processedData_Emission = {}
-        self.std_3_positions = TEMCell.eut_positions[0]
-        self.std_12_positions = util.flatten(TEMCell.eut_positions)
+        self.std_3_positions = TEMCell.eut_positions_emission[0]
+        self.std_12_positions = util.flatten(TEMCell.eut_positions_emission)
+        self.std_positions_immunity = TEMCell.eut_positions_immunity
 
     def __setstate__(self, dct):
         if dct['logfilename'] is None:
@@ -341,7 +346,7 @@ class TEMCell(Measure.Measure):
                         if vp > maxv:
                             maxv = vp
                             maxp = p  # maxp holt the indey of the position where the mx was
-                    for triple in TEMCell.eut_positions:
+                    for triple in TEMCell.eut_positions_emission:
                         if maxp in triple:
                             # orth_v = [data[p][k] for p in triple] # the orthogonal positions to be used
                             break
@@ -469,6 +474,243 @@ class TEMCell(Measure.Measure):
         sum *= 4.0 * math.sqrt(Zc) / a
         return Quantity(VOLT / METER / WATT.sqrt(), sum)
 
+    def Measure_Immunity(self,
+                         description="EUT",
+                         positions=None,
+                         dotfile='gtem-immunity.dot',
+                         delay=0.0,
+                         calibration='cal',
+                         kernel=(None, None),
+                         leveling=None,
+                         freqs=None,
+                         SearchPaths=None,
+                         names=None):
+        """
+        Performs a emission measurement according to IEC 61000-4-20.
+
+        Parameter:
+
+           - *description*: key to identify the measurement in the result dictionary
+           - *positions*: a sequence of EUT positions to be measured. Each position is a string characterizing the orientation
+             of the cell coordinate system (without prime) relative to the EUT coordinate system.
+             A standard choice is to align the z-axis in the
+             direction of wave propagation, the y-axis parallel to the E-field (vertical) and the x-axis parallel to
+             the H-field. The centre of the EUT is placed at (x = 0,y,z) with x = 0 in the middle of the
+             septum. A local "primed" coordinate system (x', y', z') is assigned to the EUT. Position `xx'yy'zz'`
+             aligns x' with x, y' with y, and z' with z. Position `xz'yx'zy'` is obtained by
+             simply permuting the primed EUT axes: x' to y, y' to z, and z' to x. This is equivalent to two
+             90° rotations of the EUT. Position `xy'yz'zx'` is obtained by a further permutation: x' to z, y' to x, z' to y.
+             IEC 61000-4-20 defines two standard setups: vertical and horizontal polarization (see below).
+
+              4 vertical positions (:attr:`std_vertical_positions`)::
+
+                     ("xx'yy'zz'",       "xz'yy'z(-x')",       "x(-x')yy'z(-z')",   "x(-z')yy'zx'")
+
+              .. figure:: pos-vert.png
+
+              Vertical standard orientations.
+
+              4 horizontal positions (:attr:`std_horizontal_positions`)::
+
+                       ("xy'y(-x')zz'", "xy'y(-z')z(-x')", "xy'yx'z(-z')", "xy'yz'zx'")
+
+              .. figure:: pos-vert.png
+
+              Horizontal standard orientations.
+
+           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurement graph.
+           - *delay*: time in seconds to wait after setting the frequency before pulling date from the instruments
+           - *freqs*: sequence of frequencies in Hz to use for the measurements.
+           - *names*: dict with the mapping from internal names to dot-file names.
+        """
+        if names is None:
+            names = {'sg': 'sg',
+                      'a1': 'a1',
+                      'a2': 'a2',
+                      'tem': 'gtem',
+                      'pmfwd': 'pm1',
+                      'pmbwd': 'pm2'
+                      }
+        self.PreUserEvent()
+        if kernel[0] is None:
+            if kernel[1] is None:
+                kernel = (stdImmunityKernel, {'field': Quantity(EFIELD, 10),
+                                              'dwell': 1,
+                                              'keylist': 'sS'})
+            else:
+                kernel = (stdImmunityKernel, kernel[1])
+
+        if freqs is None:
+            freqs = []
+
+        if leveling is None:
+            leveling = [{'condition': 'False',
+                         'actor': None,
+                         'actor_min': None,
+                         'actor_max': None,
+                         'watch': None,
+                         'nominal': None,
+                         'reader': None,
+                         'path': None}]
+
+        if positions is None:
+            positions = self.std_positions_immunity
+
+        if self.autosave:
+            self.messenger(util.tstamp() + " Resume TEMCell immunity measurement from autosave...", [])
+        else:
+            self.messenger(util.tstamp() + " Start new TEMCell immunity measurement...", [])
+
+        self.rawData_Immunity.setdefault(description, {})
+
+
+
+        mg = mgraph.MGraph(dotfile)
+        ddict = mg.CreateDevices()
+        # for k,v in ddict.items():
+        #    globals()[k] = v
+
+        self.messenger(util.tstamp() + " Init devices...", [])
+        err = mg.Init_Devices()
+        if err:
+            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
+            return err
+        try:
+            self.messenger(util.tstamp() + " ...done", [])
+            if freqs is None:
+                _fg = LogFreq(80e6, 1000e6, 1.01, True)
+                freqs = [f for f in LogFreq.logspace]
+
+            # set up voltage, noise, ...
+            voltage = {}
+            # loop eut positions
+            measured_eut_pos = []
+            remain_eut_pos = list(positions)[:]
+            while len(remain_eut_pos):
+                msg = \
+                    """
+EUT measurement.
+Switch EUT ON.
+Select EUT position.
+
+"""
+                but = []
+                for _i, _r in enumerate(remain_eut_pos):
+                    msg += "%s: %s\n" % (util.map2singlechar(_i), str(_r))
+                    but.append(str(_i))
+                msg += "Quit: quit measurement."
+                but.append("Quit")
+                answer = self.messenger(msg, but)
+                if answer == but.index('Quit'):
+                    self.messenger(util.tstamp() + " measurement terminated by user.", [])
+                    raise UserWarning  # to reach finally statement
+                p = remain_eut_pos[answer]
+
+                self.messenger(util.tstamp() + " EUT position %r" % (p), [])
+                # loop freqs
+                for f in freqs:
+                    self.messenger(util.tstamp() + " Frequency %e Hz" % (f), [])
+                    # switch if necessary
+                    mg.EvaluateConditions()
+                    # set frequency for all devices
+                    (minf, maxf) = mg.SetFreq_Devices(f)
+                    # configure receiver(s)
+                    for rf in rcfreqs:
+                        if f >= rf:
+                            break
+                    try:
+                        conf = receiverconf[rf]
+                    except KeyError:
+                        conf = {}
+                    rconf = mg.ConfReceivers(conf)
+                    self.messenger(util.tstamp() + " Receiver configuration: %s" % str(rconf), [])
+
+                    # cable corrections
+                    c_port_receiver = []
+                    for i in range(nports):
+                        c_port_receiver.append(
+                            mg.get_path_correction(names['port'][i], names['receiver'][i], POWERRATIO))
+
+                    # ALL measurement start here
+                    block = {}
+                    nbresult = {}  # dict for NB-Read results
+                    nblist = []  # list of devices for NB Reading
+
+                    for i in range(nports):
+                        nblist.append(names['receiver'][i])
+
+                    # wait delay seconds
+                    # time.sleep(0.5)   # minimum delay according -4-21
+                    self.messenger(util.tstamp() + " Going to sleep for %d seconds ..." % (delay), [])
+                    self.wait(delay, locals(), self._HandleUserInterrupt)
+                    self.messenger(util.tstamp() + " ... back.", [])
+
+                    # Trigger all devices in list
+                    mg.NBTrigger(nblist)
+                    # serial poll all devices in list
+                    olddevs = []
+                    while 1:
+                        self._HandleUserInterrupt(locals())
+                        nbresult = mg.NBRead(nblist, nbresult)
+                        new_devs = [i for i in list(nbresult.keys()) if i not in olddevs]
+                        olddevs = list(nbresult.keys())[:]
+                        if len(new_devs):
+                            self.messenger(util.tstamp() + " Got answer from: " + str(new_devs), [])
+                        if len(nbresult) == len(nblist):
+                            break
+                    # print nbresult
+
+                    # ports
+                    for i in range(nports):
+                        n = names['receiver'][i]
+                        if n in nbresult:
+                            # add path correction here
+                            PPort = nbresult[n]
+                            self.__addLoggerBlock(block, n, 'Reading of the receiver for position %d' % i,
+                                                  nbresult[n],
+                                                  {})
+                            self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                            self.__addLoggerBlock(block[n]['parameter'], 'eutpos', 'EUT position', p, {})
+                            self.__addLoggerBlock(block, 'c_port_receiver' + str(i),
+                                                  'Correction from port to receiver',
+                                                  c_port_receiver[i], {})
+                            self.__addLoggerBlock(block['c_port_receiver' + str(i)]['parameter'], 'freq',
+                                                  'the frequency [Hz]', f, {})
+                            PPort /= c_port_receiver[i]['total']
+                            # print PPort
+                            voltage = self.__insert_it(voltage, PPort, None, None, f, i, p)
+                            self.__addLoggerBlock(block, n + '_corrected', 'PPort/c_port_receiver', PPort, {})
+                            self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                            self.__addLoggerBlock(block[n]['parameter'], 'eutpos', 'EUT position', p, {})
+
+                    for log in self.logger:
+                        log(block)
+
+                    self._HandleUserInterrupt(locals())
+                    # END OF f LOOP
+                lowBatList = mg.getBatteryLow_Devices()
+                if len(lowBatList):
+                    self.messenger(
+                        util.tstamp() + " WARNING: Low battery status detected for: %s" % (str(lowBatList)),
+                        [])
+                self.rawData_Emission[description].update({'voltage': voltage, 'mg': mg})
+                # autosave class instance
+                if self.asname and (time.time() - self.lastautosave > self.autosave_interval):
+                    self.messenger(util.tstamp() + " autosave ...", [])
+                    self.do_autosave()
+                    self.messenger(util.tstamp() + " ... done", [])
+                measured_eut_pos.append(p)
+                remain_eut_pos.remove(p)
+            # END OF p LOOP
+
+        finally:
+            # finally is executed if and if not an exception occur -> save exit
+            self.messenger(util.tstamp() + " Quit...", [])
+            stat = mg.Quit_Devices()
+        self.messenger(util.tstamp() + " End of Emission mesurement. Status: %d" % stat, [])
+        self.PostUserEvent()
+        return stat
+
     def Measure_Emission(self,
                          description="EUT",
                          positions=None,
@@ -481,16 +723,16 @@ class TEMCell(Measure.Measure):
         Performs a emission measurement according to IEC 61000-4-20.
 
         Parameter:
-     
+
            - *description*: key to identify the measurement in the result dictionary
            - *positions*: a sequence of EUT positions to be measured. Each position is a string characterizing the orientation
-             of the cell corrdinate system (without prime) relative to the EUT corrdinate system. 
-             A standard choice is to align the z-axis in the 
-             direction of wave propagation, the y-axis parallel to the E-field (vertical) and the x-axis parallel to 
-             the H-field. The centre of the EUT is placed at (x = 0,y,z) with x = 0 in the middle of the 
-             septum. A local "primed" coordinate system (x', y', z') is assigned to the EUT. Position `xx'yy'zz'` 
-             aligns x' with x, y' with y, and z' with z. Position `xz'yx'zy'` is obtained by 
-             simply permuting the primed EUT axes: x' to y, y' to z, and z' to x. This is equivalent to two 
+             of the cell coordinate system (without prime) relative to the EUT coordinate system.
+             A standard choice is to align the z-axis in the
+             direction of wave propagation, the y-axis parallel to the E-field (vertical) and the x-axis parallel to
+             the H-field. The centre of the EUT is placed at (x = 0,y,z) with x = 0 in the middle of the
+             septum. A local "primed" coordinate system (x', y', z') is assigned to the EUT. Position `xx'yy'zz'`
+             aligns x' with x, y' with y, and z' with z. Position `xz'yx'zy'` is obtained by
+             simply permuting the primed EUT axes: x' to y, y' to z, and z' to x. This is equivalent to two
              90° rotations of the EUT. Position `xy'yz'zx'` is obtained by a further permutation: x' to z, y' to x, z' to y.
              IEC 61000-4-21 defines two standard setups: with the 3 positions `("xx'yy'zz'", "xz'yx'zy'", "xy'yz'zx'")`, or with 12
              positions (see below).
@@ -501,9 +743,9 @@ class TEMCell(Measure.Measure):
 
               .. figure:: pos3.png
 
-              First three standard orientations. 
+              First three standard orientations.
 
-              12 standart positions (:attr:`std_12_positions`)::
+              12 standard positions (:attr:`std_12_positions`)::
 
                        ("xx'yy'zz'",       "xz'yx'zy'",       "xy'yz'zx'",
                         "xz'yy'z(-x')",    "x(-x')yz'zy'",    "xy'y(-x')zz'",
@@ -513,7 +755,7 @@ class TEMCell(Measure.Measure):
 
               .. figure:: pos12.png
 
-              12 standard orientations. 
+              12 standard orientations.
 
            - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurment graph.
            - *delay*: time in seconds to wait after setting the frequencie before pulling date from the instruments
@@ -521,8 +763,8 @@ class TEMCell(Measure.Measure):
            - *receiverconf*: forwarded to :meth:`mpy.tools.mgraph.MGraph.ConfReceivers`
            - *names*: dict with the mapping from internal names to dot-file names.
 
-               The dict has to have keys 'port' and 'receivers'. The corresponding values are sequences of equal length giving the 
-               names of the ports and of the receivers in the dot-file. For a GTEM the length of this lists is one. 
+               The dict has to have keys 'port' and 'receivers'. The corresponding values are sequences of equal length giving the
+               names of the ports and of the receivers in the dot-file. For a GTEM the length of this lists is one.
                For a Crawford cell it would be two.
 
         """
@@ -616,7 +858,8 @@ Quit: quit measurement.
                 # cable corrections
                 c_port_receiver = []
                 for i in range(nports):
-                    c_port_receiver.append(mg.get_path_correction(names['port'][i], names['receiver'][i], POWERRATIO))
+                    c_port_receiver.append(
+                        mg.get_path_correction(names['port'][i], names['receiver'][i], POWERRATIO))
 
                 # ALL measurement start here
                 block = {}
@@ -656,7 +899,8 @@ Quit: quit measurement.
                                               'the frequency [Hz]', f, {})
                         PPort /= c_port_receiver[i]['total']
                         self.__addLoggerBlock(block, nn + '_corrected', 'Noise: PPort/c_refant_receiver', PPort, {})
-                        self.__addLoggerBlock(block[nn + '_corrected']['parameter'], 'freq', 'the frequency [Hz]', f,
+                        self.__addLoggerBlock(block[nn + '_corrected']['parameter'], 'freq', 'the frequency [Hz]',
+                                              f,
                                               {})
                         noise = self.__insert_it(noise, PPort, None, None, f, i, 0)
                 self.messenger(util.tstamp() + " Noise floor measurement done.", [])
@@ -668,7 +912,8 @@ Quit: quit measurement.
                 # END OF f LOOP
             lowBatList = mg.getBatteryLow_Devices()
             if len(lowBatList):
-                self.messenger(util.tstamp() + " WARNING: Low battery status detected for: %s" % (str(lowBatList)), [])
+                self.messenger(util.tstamp() + " WARNING: Low battery status detected for: %s" % (str(lowBatList)),
+                               [])
             self.rawData_Emission[description].update({'noise': noise})
             # autosave class instance
             if self.asname and (time.time() - self.lastautosave > self.autosave_interval):
@@ -755,17 +1000,19 @@ Select EUT position.
                             break
                     # print nbresult
 
-                    # ports                
+                    # ports
                     for i in range(nports):
                         n = names['receiver'][i]
                         if n in nbresult:
                             # add path correction here
                             PPort = nbresult[n]
-                            self.__addLoggerBlock(block, n, 'Reading of the receiver for position %d' % i, nbresult[n],
+                            self.__addLoggerBlock(block, n, 'Reading of the receiver for position %d' % i,
+                                                  nbresult[n],
                                                   {})
                             self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {})
                             self.__addLoggerBlock(block[n]['parameter'], 'eutpos', 'EUT position', p, {})
-                            self.__addLoggerBlock(block, 'c_port_receiver' + str(i), 'Correction from port to receiver',
+                            self.__addLoggerBlock(block, 'c_port_receiver' + str(i),
+                                                  'Correction from port to receiver',
                                                   c_port_receiver[i], {})
                             self.__addLoggerBlock(block['c_port_receiver' + str(i)]['parameter'], 'freq',
                                                   'the frequency [Hz]', f, {})
@@ -783,8 +1030,9 @@ Select EUT position.
                     # END OF f LOOP
                 lowBatList = mg.getBatteryLow_Devices()
                 if len(lowBatList):
-                    self.messenger(util.tstamp() + " WARNING: Low battery status detected for: %s" % (str(lowBatList)),
-                                   [])
+                    self.messenger(
+                        util.tstamp() + " WARNING: Low battery status detected for: %s" % (str(lowBatList)),
+                        [])
                 self.rawData_Emission[description].update({'voltage': voltage, 'mg': mg})
                 # autosave class instance
                 if self.asname and (time.time() - self.lastautosave > self.autosave_interval):
@@ -1225,3 +1473,140 @@ Select EUT position.
                     self.processedData_e0y[description]['e0y'][f][port].append(en)
         self.messenger(util.tstamp() + " End of evaluation of e0y calibration", [])
         return 0
+
+class stdImmunityKernel:
+    def __init__(self, field, freqs, positions, messenger, UIHandler, lcls, dwell, keylist='sS'):
+        self.field = field
+        self.freqs = freqs
+        self.positions = positions
+        self.messenger = messenger
+        self.UIHandler = UIHandler
+        self.callerlocals = lcls
+        try:
+            self.in_as = self.callerlocals['in_as']
+        except KeyError:
+            self.in_as = {}
+        self._testplan = self._makeTestPlan()
+        self.dwell = dwell
+        self.keylist = keylist
+
+    def _makeTestPlan(self):
+        ret = []
+        for pol in 'vh':
+            for pos in self.positions[pol]:
+                has_pos = pos in self.in_as
+                if has_pos:
+                    continue
+                ret.append(('LoopMarker', '', {}))
+                ret.append(('position', '', {'position': pos}))
+                ret.append(('rf', '', {'rfon': 1}))
+                for f in self.freqs:
+                    ret.append(('freq', '', {'freq': f}))
+                    ret.append(('efield', '', {'efield': self.field}))
+                    ret.append(('measure', '', {}))
+                    ret.append(('eut', None, None))
+                ret.append(('rf', '', {'rfon': 0}))
+                ret.append(('autosave', '', {}))
+
+        ret.append(('finished', '', {}))
+        ret.reverse()
+        return ret
+
+    def test(self, stat):
+        if stat == 'AmplifierProtectionError':
+            # last command failed due to Amplifier Protection
+            # look for 'LoopMarker' and continue there
+            while True:
+                cmd = self._testplan.pop()
+                if cmd[0] in ('LoopMarker', 'finished'):
+                    break
+        else:
+            cmd = self._testplan.pop()
+
+        # overread LoopMarker
+        while cmd[0] == 'LoopMarker':
+            cmd = self._testplan.pop()
+
+        if cmd[0] == 'eut':
+            start = time.time()
+            intervall = 0.01
+            while (time.time() - start < self.dwell):
+                key = util.anykeyevent()
+                if (0 <= key <= 255) and chr(key) in self.keylist:
+                    cmd = ('eut', 'User event.', {'eutstatus': 'Marked by user'})
+                    break
+
+                time.sleep(intervall)
+                cmd = ('eut', '', {'eutstatus': 'OK'})
+        return cmd
+
+
+class TestField:
+    def __init__(self, instance, cal='cal'):
+        self.fail = False
+        if cal not in instance.processedData_ImmunityCal:
+            self.fail = True
+        self.E_mean = util.MResult_Interpol(instance.processedData_ImmunityCal[cal]['E_mean'].copy())
+
+    def __call__(self, f=None, power=None):
+        if f is None:
+            return None
+        if power is None:
+            return None
+        e_mean = self.E_mean(f)  # .convert(umddevice.UMD_VovermoversqrtW)
+        etest2 = power * e_mean * e_mean
+        etest_v = numpy.sqrt(etest2)
+        # dp = 0.5*(power.get_u()-power.get_l())
+        # dc = 0.5*(clf.get_u()-clf.get_l())
+        # de = 0.5*(enorm.get_u()-enorm.get_l())
+        # TODO: Check for ZeroDivision Error
+        # try:
+        #    det = math.sqrt((0.5*math.sqrt(clf.get_v()/power.get_v())*enorm.get_v()*dp)**2
+        #                +(0.5*math.sqrt(power.get_v()/clf.get_v())*enorm.get_v()*dc)**2
+        #                +(math.sqrt(power.get_v()*clf.get_v()*de))**2)
+        # except ZeroDivisionError:
+        #    det = 0.0
+        # etest_u=etest_v+det
+        # etest_l=etest_v-det
+        return etest_v
+
+
+class TestPower:
+    def __init__(self, instance, cal='cal'):
+        self.fail = False
+        self.instance = instance
+        if cal not in instance.processedData_ImmunityCal:
+            self.fail = True
+        self.E_mean = util.MResult_Interpol(instance.processedData_MainCal[cal]['E_mean'].copy())
+
+    def __call__(self, f=None, etest=None):
+        if f is None:
+            return None
+        if etest is None:
+            return None
+        try:
+            etest = etest()
+        except TypeError:
+            pass
+        # try:
+        #    etest = etest.convert(umddevice.UMD_Voverm)
+        # except AttributeError:
+        #    etest = umddevice.UMDMResult(etest,umddevice.UMD_Voverm)
+        # etest.unit=umddevice.UMD_dimensionless   # (V/m)**2 is not implemented yet
+        e_mean = self.E_mean(f)  # .convert(umddevice.UMD_VovermoversqrtW)
+        # self.instance.messenger("DEBUG TestPower: f: %e, etest: %r, enorm: %r, clf: %r"%(f,etest,enorm,clf), [])
+        # enorm.unit=umddevice.UMD_dimensionless
+        E = etest  # .get_v()
+        e = e_mean  # .get_v()
+        power_v = (E / e) ** 2
+
+        # dE = 0.5*(etest.get_u()-etest.get_l())
+        # dc = 0.5*(clf.get_u()-clf.get_l())
+        # de = 0.5*(enorm.get_u()-enorm.get_l())
+
+        # dp = E/(e*c) * math.sqrt((2*dE/e)**2
+        #                       + (2*E*de/(e*e))**2
+        #                       + (E*dc/(e*math.sqrt(c)))**2)
+        power = power_v
+        # self.instance.messenger("DEBUG TestPower: f: %e, power: %r"%(f,power), [])
+        return power
