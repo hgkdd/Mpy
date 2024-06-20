@@ -41,6 +41,10 @@ class TEMCell(Measure.Measure):
 
     c0 = Quantity(METER / SECOND, 2.99792458e8)
     eta0 = Quantity(OHM, 120 * math.pi)
+    # k_factor is used in homogeneous area check
+    # IEC 61000-4-20 set this to 1.15 but it is 1.150349...
+    # we use the exact value
+    k_factor = scipy.stats.norm.isf((1-0.75)/2)
 
     def __init__(self):
         super().__init__()
@@ -473,6 +477,8 @@ class TEMCell(Measure.Measure):
             # print "m: %d, ch: %e, c: %e, s: %s, j0: %e, sh: %e, sum: %e"%(m, ch, c, s, j0, sh, sum)
         sum *= 4.0 * math.sqrt(Zc) / a
         return Quantity(VOLT / METER / WATT.sqrt(), sum)
+
+
 
     def Measure_Immunity(self,
                          description="EUT",
@@ -1153,6 +1159,262 @@ Select EUT position.
                     util.tstamp() + " Can not set signal generator level. Amplifier protection raised with message: %s" % _e.message,
                     [])
                 raise  # re raise to reach finaly clause
+
+            # set up efields, ...
+            efields = {}
+
+            if self.autosave:
+                efields = self.rawData_e0y[description]['efield'].copy()
+
+                edat = self.rawData_e0y[description]['efield']
+                fr = list(edat.keys())
+                freqs = [f for f in freqs if f not in fr]
+                msg = "List of remaining frequencies:\n%r\n" % (freqs)
+                but = []
+                self.messenger(msg, but)
+            self.autosave = False
+
+            stat = mg.RFOff_Devices()
+            msg = """Position E field probes.\nAre you ready to start the measurement?\n\nStart: start measurement.\nQuit: quit measurement."""
+            but = ["Start", "Quit"]
+            answer = self.messenger(msg, but)
+            if answer == but.index('Quit'):
+                self.messenger(util.tstamp() + " measurement terminated by user.", [])
+                raise UserWarning  # to reach finally statement
+            self.messenger(util.tstamp() + " RF On...", [])
+            stat = mg.RFOn_Devices()
+            # loop freqs
+            for f in freqs:
+                self.messenger(util.tstamp() + " Frequency %e Hz" % (f), [])
+                # switch if necessary
+                # print f
+                mg.EvaluateConditions()
+                # set frequency for all devices
+                (minf, maxf) = mg.SetFreq_Devices(f)
+                # cable corrections
+                c_sg_amp = mg.get_path_correction(names['sg'], names['a1'], POWERRATIO)
+                c_sg_port = mg.get_path_correction(names['sg'], names['port'], POWERRATIO)
+                c_a2_pm1 = mg.get_path_correction(names['a2'], names['pmfwd'], POWERRATIO)
+                c_a2_port = mg.get_path_correction(names['a2'], names['port'], POWERRATIO)
+                c_port_pm2 = mg.get_path_correction(names['port'], names['pmbwd'], POWERRATIO)
+                c_fp = 1.0
+
+                # ALL measurement start here
+                block = {}
+                nbresult = {}  # dict for NB-Read results
+                nblist = [names['pmfwd'], names['pmbwd']]  # list of devices for NB Reading
+                # check for fwd pm
+                if mg.nodes[names['pmfwd']]['inst']:
+                    NoPmFwd = False  # ok
+                else:  # no fwd pm
+                    msg = util.tstamp() + " WARNING: No fwd power meter. Signal generator output is used instead!"
+                    answer = self.messenger(msg, [])
+                    NoPmFwd = True
+
+                for i in range(nprb):
+                    nblist.append(names['fp'][i])
+                # print "nblist:", nblist
+
+                level2 = self.doLeveling(leveling, mg, names, locals())
+                if level2:
+                    level = level2
+
+                # wait delay seconds
+                self.messenger(util.tstamp() + " Going to sleep for %d seconds ..." % (delay), [])
+                self.wait(delay, locals(), self._HandleUserInterrupt)
+                self.messenger(util.tstamp() + " ... back.", [])
+
+                # Trigger all devices in list
+                mg.NBTrigger(nblist)
+                # serial poll all devices in list
+                if NoPmFwd:
+                    nbresult[names['pmfwd']] = level
+                    nbresult[names['pmbwd']] = Quantity(level._unit, 0)
+                olddevs = []
+                while 1:
+                    self._HandleUserInterrupt(locals())
+                    nbresult = mg.NBRead(nblist, nbresult)
+                    new_devs = [i for i in list(nbresult.keys()) if i not in olddevs]
+                    olddevs = list(nbresult.keys())[:]
+                    if len(new_devs):
+                        self.messenger(util.tstamp() + " Got answer from: " + str(new_devs), [])
+                    if len(nbresult) == len(nblist):
+                        break
+                # print nbresult
+
+                # pfwd
+                n = names['pmfwd']
+                if n in nbresult:
+                    PFwd = nbresult[n]
+                    self.__addLoggerBlock(block, n, 'Reading of the fwd power meter', nbresult[n], {})
+                    self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                    PFwd *= c_a2_port['total']
+                    self.__addLoggerBlock(block, 'c_a2_port', 'Correction from amplifier output to port', c_a2_port, {})
+                    self.__addLoggerBlock(block['c_a2_port']['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                    self.__addLoggerBlock(block, 'c_a2_pm1', 'Correction from amplifier output to fwd power meter',
+                                          c_a2_pm1, {})
+                    self.__addLoggerBlock(block['c_a2_pm1']['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                    PFwd /= c_a2_pm1['total']
+                    self.__addLoggerBlock(block, n + '_corrected', 'Pfwd*c_a2_port/c_a2_pm1', PFwd, {})
+                    self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                    # pbwd
+                n = names['pmbwd']
+                if n in nbresult:
+                    PBwd = nbresult[n]
+                    self.__addLoggerBlock(block, n, 'Reading of the bwd power meter', nbresult[n], {})
+                    self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                    self.__addLoggerBlock(block, 'c_port_pm2', 'Correction from port to bwd power meter', c_port_pm2,
+                                          {})
+                    self.__addLoggerBlock(block['c_port_pm2']['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                    PBwd /= c_port_pm2['total']
+                    self.__addLoggerBlock(block, n + '_corrected', 'Pbwd/c_port_pm2', PBwd, {})
+                    self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {})
+
+                    # e-field probes
+                # read field probes
+                for i in range(nprb):
+                    n = names['fp'][i]
+                    if n in nbresult:
+                        self.__addLoggerBlock(block, n, 'Reading of the e-field probe number %d' % i, nbresult[n], {})
+                        self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                        efields = self.__insert_it(efields, nbresult[n], PFwd, PBwd, f, 0, 0)
+                for log in self.logger:
+                    log(block)
+
+                self._HandleUserInterrupt(locals())
+                # test for low battery
+                lowBatList = mg.getBatteryLow_Devices()
+                if len(lowBatList):
+                    self.messenger(util.tstamp() + " WARNING: Low battery status detected for: %s" % (str(lowBatList)),
+                                   [])
+                # autosave class instance
+                if self.asname and (time.time() - self.lastautosave > self.autosave_interval):
+                    self.messenger(util.tstamp() + " autosave ...", [])
+                    self.do_autosave()
+                    self.messenger(util.tstamp() + " ... done", [])
+                # END OF f LOOP
+            self.messenger(util.tstamp() + " RF Off...", [])
+            stat = mg.RFOff_Devices()  # switch off after measure
+            self.rawData_e0y[description].update({'efield': efields, 'mg': mg})
+
+        finally:
+            # finally is executed if and if not an exception occur -> save exit
+            self.messenger(util.tstamp() + " RF Off and Quit...", [])
+            stat = mg.RFOff_Devices()
+            stat = mg.Quit_Devices()
+        self.messenger(util.tstamp() + " End of e0y calibration. Status: %d" % stat, [])
+        self.PostUserEvent()
+        return stat
+
+    def Measure_Uniformity_TEMModeVerfication_constant_field(self,
+                    description=None,
+                    dotfile='gtem-uniformity.dot',
+                    delay=1.0,
+                    freqs=None,
+                    EFieldStrength=None,
+                    SGLevel=-20,
+                    leveling=None,
+                    names=None):
+        """
+        Performs uniformity and TEM verification according to IEC 61000-4-20.
+        This routine uses the constant field method.
+
+        Parameters:
+
+           - *description*: key to identify the measurement in the result dictionary
+           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurement graph.
+           - *delay*: time in seconds to wait after setting the frequency before pulling date from the instruments
+           - *freqs*: sequence of frequencies in Hz to use for the measurements.
+           - *EFieldStrength*: iterable of desired field strength values. If None it is seit to [1]
+           - *SGLevel*: initial signal generator level
+           - *leveling*: If leveling is `None` it is initialized with::
+
+                leveling = [{'condition': 'False',
+                             'actor': None,
+                             'actor_min': None,
+                             'actor_max': None,
+                             'watch': None,
+                             'nominal': None,
+                             'reader': None,
+                             'path': None}]
+
+           - *names*: dict with the mapping from internal names to dot-file names.
+
+               The dict has to have keys
+
+                 - 'sg': signalgenerator
+                 - 'a1': amplifier input port
+                 - 'a2': amplifier output port
+                 - 'port': TEM cell feeding
+                 - 'pmfwd': forward power meter
+                 - 'pmbwd': backward power meter
+                 - 'fp': list of field probes
+
+               The corresponding values give the
+               names in the dot-file.
+
+        """
+        if names is None:
+            names = {'sg': 'sg',
+                     'a1': 'a1',
+                     'a2': 'a2',
+                     'port': 'port',
+                     'pmfwd': 'pm1',
+                     'pmbwd': 'pm2',
+                     'fp': ['fp1']}
+        self.PreUserEvent()
+
+        if EFieldStrength is None:
+            EFieldStrength = [1.0]
+
+        if self.autosave:
+            self.messenger(util.tstamp() + " Resume e0y calibration measurement from autosave...", [])
+        else:
+            self.messenger(util.tstamp() + " Start new e0y calibration measurement...", [])
+
+        if description is None:
+            description = "None"
+
+        self.rawData_Uniformity_TEMModeVerfication_constant_field.setdefault(description, {})
+
+        if leveling is None:
+            leveling = [{'condition': 'False',
+                         'actor': None,
+                         'actor_min': None,
+                         'actor_max': None,
+                         'watch': None,
+                         'nominal': None,
+                         'reader': None,
+                         'path': None}]
+
+        # number of probes
+        nprb = len(names['fp'])
+
+        mg = mgraph.MGraph(dotfile)
+        ddict = mg.CreateDevices()
+        for k, v in list(ddict.items()):
+            globals()[k] = v
+
+        self.messenger(util.tstamp() + " Init devices...", [])
+        err = mg.Init_Devices()
+        if err:
+            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
+            return err
+        try:
+            self.messenger(util.tstamp() + " ...done", [])
+            stat = mg.RFOff_Devices()
+            self.messenger(util.tstamp() + " Zero devices...", [])
+            stat = mg.Zero_Devices()
+            self.messenger(util.tstamp() + " ...done", [])
+
+            try:
+                level = self.setLevel(mg, names, SGLevel)
+            except Measure.AmplifierProtectionError as _e:
+                self.messenger(
+                    util.tstamp() + " Can not set signal generator level. Amplifier protection raised with message: %s" % _e.message,
+                    [])
+                raise  # re raise to reach finaly clause
+            # HIER
 
             # set up efields, ...
             efields = {}
