@@ -52,7 +52,7 @@ class Configuration(object):
             fp = ininame
 
         # read the whole ini file in to a dict
-        config = configparser.SafeConfigParser()
+        config = configparser.ConfigParser()
         config.read_file(fp)
         # fp.close()
 

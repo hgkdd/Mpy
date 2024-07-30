@@ -74,12 +74,15 @@ class DRIVER(object):
                   delay=0,
                   lock=None):
         gpib = None
+        visa = None
         virtual = False
         if 'gpib' in self.conf['init_value']:
             gpib = self.conf['init_value']['gpib']
+        if 'visa' in self.conf['init_value']:
+            visa = self.conf['init_value']['visa']
         if 'virtual' in self.conf['init_value']:
             virtual = self.conf['init_value']['virtual']
-        if virtual or not gpib:  # Virtual mode
+        if virtual or not (gpib or visa):  # Virtual mode
             self.dev = None
             self.write = self._debug_write
             self.read = self._debug_read
@@ -91,7 +94,11 @@ class DRIVER(object):
             self.rm = pyvisa.ResourceManager()   # configure backend in .pyvisarc in your home dir
             if lock is None:
                 lock = pyvisa.constants.AccessModes.no_lock
-            self.dev = self.rm.open_resource(f'GPIB::{gpib}',
+            if visa:
+                res_name = visa
+            else:
+                res_name = f'GPIB::{gpib}'
+            self.dev = self.rm.open_resource(res_name,
                                              timeout=timeout * 1000,
                                              chunk_size=chunk_size,
                                              send_end=send_end,
