@@ -24,6 +24,7 @@ class FIELDPROBE(FLDPRB):
         self.term_chars = '\r\n'
         self.error = None
         self.mode = None
+        self.LastData_ns = None
         self.LastData = None
 
     def Init(self, ini=None, channel=None):
@@ -36,12 +37,13 @@ class FIELDPROBE(FLDPRB):
 
     def wait_for_laser_ready(self):
         while True:
-            ans = self.query(':syst:las:rdy?', r'(?P<laser>\d)')
+            # ans = self.query(':syst:las:rdy?', r'(?P<laser>\d)')
+            ans = self.query(':meas:rdy?', r'(?P<laser>\d)')  # waits for laser ready AND cal data present
             if ans:
                 if int(ans['laser']) == 1:
                     break
             time.sleep(.1)
-        self.LastData = time.time_ns()
+        self.LastData_ns = time.time_ns()
 
     def setMode(self, mode):
         mode = int(mode)
@@ -62,10 +64,6 @@ class FIELDPROBE(FLDPRB):
     def SetFreq(self, freq):
         self.error = 0
         self.setMode(1)
-        #if freq > 400e6:
-        #    self.setMode(0)
-        #else:
-        #    self.setMode(3)
         self.write(f':syst:freq {freq}')
         tmpl = r'(?P<freq>%s)' % self._FP
         ans = self.query(":syst:freq?", tmpl)
@@ -77,39 +75,40 @@ class FIELDPROBE(FLDPRB):
         self.freq = freq
         return self.error, freq
 
-
     def GetData(self):
-        while True:
-            now = time.time_ns()
-            diff = now - self.LastData
-            if diff > 25000:      # sampling rate (mode 1) 80 kS/s -> 0.0000125 s/Samp = 12.5 mus/Samp
-                break
-            else:
-                time.sleep((1250-diff)*1e-9)
         self.error = 0
+        if self.freq <= 30e6:
+            relerr = 0.072  # 0.6 dB
+        elif 30e6 < self.freq <= 1e9:
+            relerr = 0.12  # 1 dB
+        elif 1e9 < self.freq:
+            relerr = 0.17  # 1.4 dB
         cmd = ":meas:all?"
         tmpl = r"(?P<x>[\d.]+),(?P<y>[\d.]+),(?P<z>[\d.]+),(?P<m>[\d.]+)"
-        for _ in range(5):  # 5 tries
-            ans = self.query(cmd, tmpl)
-            if ans:
-                break
-        if ans is None:
-            self.error = -1
-            date = None
-        else:
-            # print(ans)
-            self.LastData = time.time_ns()
-            if self.freq <= 30e6:
-                relerr = 0.072  # 0.6 dB
-            elif 30e6 < self.freq <= 1e9:
-                relerr = 0.12  # 1 dB
-            elif 1e9 < self.freq:
-                relerr = 0.17  # 1.4 dB
-
-
-            data = [
-                quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(float(ans[i]), float(ans[i]) * relerr))
-                for i in 'xyz']
+        ans = None
+        while True:
+            for _ in range(5):  # 5 tries
+                ans = self.query(cmd, tmpl)
+                if ans:
+                    break
+                else:
+                    # print ("Waiting...")
+                    time.sleep(1e-6)
+            if ans is None:   # still None after 5 tries, giving up
+                self.error = -1
+                data = None
+            else:
+                # print(ans)
+                # check for new data
+                if (self.LastData is None) or any([ans[j] != self.LastData[i] for i, j in enumerate('xyz')]):
+                    self.LastData_ns = time.time_ns()
+                    self.LastData = [ans[i] for i in 'xyz']
+                    data = [
+                        quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(float(ans[i]), float(ans[i]) * relerr))
+                    for i in 'xyz']
+                    break
+                # else:
+                #     print("No new Data")
         return self.error, data
 
     def GetDataNB(self, retrigger):
@@ -148,13 +147,6 @@ def main():
     dev.Init(ini=ini, channel=1)
     err, des = dev.GetDescription()
 
-    #for f in [10e3, 10e6, 100e6, 1e9, 8e9]:
-    #    err, ff = dev.SetFreq(f)
-    #    print(f"Frequency set to: {ff} Hz")
-    #    for i in range(1000):
-    #        err, dat = dev.GetData()
-    #        #time.sleep(0.01)
-    #        print(ff, i, dat[0], dat[1], dat[2])
     while True:
         freq = input("Frequency / Hz: ")
         if freq in 'qQ':
@@ -165,12 +157,18 @@ def main():
                 break
             err, ff = dev.SetFreq(freq)
             print(f"Frequency set to: {ff} Hz")
-            for i in range(1000):
+            # start_ns = time.time_ns()
+            for i in range(10):
+                start_ns = time.time_ns()
                 err, dat = dev.GetData()
-                print(ff, i, time.time_ns(), dat[0], dat[1], dat[2])
+                end_ns = time.time_ns()
+                print(ff, i, (end_ns-start_ns)/1e6, dat[0], dat[1], dat[2])
+            # end_ns = time.time_ns()
+            # print((end_ns-start_ns) * 1e-9 * 1e-3, "s per sample")
         except ValueError:
-            break;
+            break
     dev.Quit()
+
 
 if __name__ == '__main__':
     main()
