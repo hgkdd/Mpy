@@ -22,8 +22,9 @@ from scuq.ucomponents import Context
 
 from mpy.env import Measure
 from mpy.tools import util, mgraph, interpol
-from mpy.tools.aunits import POWERRATIO
+from mpy.tools.aunits import POWERRATIO, EFIELD
 from mpy.tools.log_freq import LogFreq
+
 
 # from mpy.tools.aunits import *
 
@@ -44,7 +45,7 @@ class TEMCell(Measure.Measure):
     # k_factor is used in homogeneous area check
     # IEC 61000-4-20 set this to 1.15 but it is 1.150349...
     # we use the exact value
-    k_factor = scipy.stats.norm.isf((1-0.75)/2)
+    k_factor = scipy.stats.norm.isf((1 - 0.75) / 2)
 
     def __init__(self):
         super().__init__()
@@ -442,7 +443,7 @@ class TEMCell(Measure.Measure):
                         dct['total'] = max(dct['v'], dct['h'])
                         Emax[f][port].append(dct)
                         self.messenger(util.tstamp() + " f=%e, Emax%s=%s (horiz.) %s (vert.) %s (total)" % (
-                        f, ex, dct['h'], dct['v'], dct['total']), [])
+                            f, ex, dct['h'], dct['v'], dct['total']), [])
         self.messenger(util.tstamp() + " Calculation of maximum radiated E field done.", [])
 
     def e0y_GTEM_analytical(self, a, h, g, y, x=0, Zc=50, max_m=10):
@@ -478,7 +479,210 @@ class TEMCell(Measure.Measure):
         sum *= 4.0 * math.sqrt(Zc) / a
         return Quantity(VOLT / METER / WATT.sqrt(), sum)
 
+    def Measure_TEMMode_FieldUniformity_Validation_ConstPower(self,
+                                                              description="GTEM",
+                                                              distance=None,
+                                                              positions=None,
+                                                              dotfile='gtem-immunity.dot',
+                                                              delay=0.0,
+                                                              leveling=None,
+                                                              freqs=None,
+                                                              fwd_dbm=None,
+                                                              SearchPaths=None,
+                                                              names=None):
+        """
+        Performs an TEM Mode and Field Uniformity validation measurement according to IEC 61000-4-20.
+        Here: Constant fwd Power method.
 
+        Parameter:
+
+           - *description*: key to identify the measurement in the result dictionary
+           - *distance*: position of the uniform area in mm. In GTEM: counted from feed point
+           - *positions*: a sequence of probe positions to be measured. Each position is a (x,y)-pair of probe positions (in mm)
+           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurement graph.
+           - *delay*: time in seconds to wait after setting the frequency before pulling date from the instruments
+           - *freqs*: sequence of frequencies in Hz to use for the measurements.
+           - *fwd_dbm*: forward power at feed point in dbm
+           - *names*: dict with the mapping from internal names to dot-file names.
+        """
+        if names is None:
+            names = {'sg': 'sg',
+                     'a1': 'a1',
+                     'a2': 'a2',
+                     'tem': 'gtem',
+                     'pmfwd': 'pm1',
+                     'pmbwd': 'pm2'
+                     }
+        self.PreUserEvent()
+
+        if freqs is None:
+            freqs = []
+
+        if leveling is None:
+            leveling = [{'condition': 'False',
+                         'actor': None,
+                         'actor_min': None,
+                         'actor_max': None,
+                         'watch': None,
+                         'nominal': None,
+                         'reader': None,
+                         'path': None}]
+
+        if positions is None:
+            positions = self.std_positions_immunity
+
+        if self.autosave:
+            self.messenger(util.tstamp() + " Resume TEMCell immunity measurement from autosave...", [])
+        else:
+            self.messenger(util.tstamp() + " Start new TEMCell immunity measurement...", [])
+
+        self.rawData_Immunity.setdefault(description, {})
+
+        mg = mgraph.MGraph(dotfile)
+        ddict = mg.CreateDevices()
+        # for k,v in ddict.items():
+        #    globals()[k] = v
+
+        self.messenger(util.tstamp() + " Init devices...", [])
+        err = mg.Init_Devices()
+        if err:
+            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
+            return err
+        try:
+            self.messenger(util.tstamp() + " ...done", [])
+            if freqs is None:
+                _fg = LogFreq(80e6, 1000e6, 1.01, True)
+                freqs = [f for f in LogFreq.logspace]
+
+            # set up voltage, noise, ...
+            voltage = {}
+            # loop eut positions
+            measured_eut_pos = []
+            remain_eut_pos = list(positions)[:]
+            while len(remain_eut_pos):
+                msg = \
+                    """
+EUT measurement.
+Switch EUT ON.
+Select EUT position.
+
+"""
+                but = []
+                for _i, _r in enumerate(remain_eut_pos):
+                    msg += "%s: %s\n" % (util.map2singlechar(_i), str(_r))
+                    but.append(str(_i))
+                msg += "Quit: quit measurement."
+                but.append("Quit")
+                answer = self.messenger(msg, but)
+                if answer == but.index('Quit'):
+                    self.messenger(util.tstamp() + " measurement terminated by user.", [])
+                    raise UserWarning  # to reach finally statement
+                p = remain_eut_pos[answer]
+
+                self.messenger(util.tstamp() + " EUT position %r" % (p), [])
+                # loop freqs
+                for f in freqs:
+                    self.messenger(util.tstamp() + " Frequency %e Hz" % (f), [])
+                    # switch if necessary
+                    mg.EvaluateConditions()
+                    # set frequency for all devices
+                    (minf, maxf) = mg.SetFreq_Devices(f)
+                    # configure receiver(s)
+                    for rf in rcfreqs:
+                        if f >= rf:
+                            break
+                    try:
+                        conf = receiverconf[rf]
+                    except KeyError:
+                        conf = {}
+                    rconf = mg.ConfReceivers(conf)
+                    self.messenger(util.tstamp() + " Receiver configuration: %s" % str(rconf), [])
+
+                    # cable corrections
+                    c_port_receiver = []
+                    for i in range(nports):
+                        c_port_receiver.append(
+                            mg.get_path_correction(names['port'][i], names['receiver'][i], POWERRATIO))
+
+                    # ALL measurement start here
+                    block = {}
+                    nbresult = {}  # dict for NB-Read results
+                    nblist = []  # list of devices for NB Reading
+
+                    for i in range(nports):
+                        nblist.append(names['receiver'][i])
+
+                    # wait delay seconds
+                    # time.sleep(0.5)   # minimum delay according -4-21
+                    self.messenger(util.tstamp() + " Going to sleep for %d seconds ..." % (delay), [])
+                    self.wait(delay, locals(), self._HandleUserInterrupt)
+                    self.messenger(util.tstamp() + " ... back.", [])
+
+                    # Trigger all devices in list
+                    mg.NBTrigger(nblist)
+                    # serial poll all devices in list
+                    olddevs = []
+                    while 1:
+                        self._HandleUserInterrupt(locals())
+                        nbresult = mg.NBRead(nblist, nbresult)
+                        new_devs = [i for i in list(nbresult.keys()) if i not in olddevs]
+                        olddevs = list(nbresult.keys())[:]
+                        if len(new_devs):
+                            self.messenger(util.tstamp() + " Got answer from: " + str(new_devs), [])
+                        if len(nbresult) == len(nblist):
+                            break
+                    # print nbresult
+
+                    # ports
+                    for i in range(nports):
+                        n = names['receiver'][i]
+                        if n in nbresult:
+                            # add path correction here
+                            PPort = nbresult[n]
+                            self.__addLoggerBlock(block, n, 'Reading of the receiver for position %d' % i,
+                                                  nbresult[n],
+                                                  {})
+                            self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                            self.__addLoggerBlock(block[n]['parameter'], 'eutpos', 'EUT position', p, {})
+                            self.__addLoggerBlock(block, 'c_port_receiver' + str(i),
+                                                  'Correction from port to receiver',
+                                                  c_port_receiver[i], {})
+                            self.__addLoggerBlock(block['c_port_receiver' + str(i)]['parameter'], 'freq',
+                                                  'the frequency [Hz]', f, {})
+                            PPort /= c_port_receiver[i]['total']
+                            # print PPort
+                            voltage = self.__insert_it(voltage, PPort, None, None, f, i, p)
+                            self.__addLoggerBlock(block, n + '_corrected', 'PPort/c_port_receiver', PPort, {})
+                            self.__addLoggerBlock(block[n]['parameter'], 'freq', 'the frequency [Hz]', f, {})
+                            self.__addLoggerBlock(block[n]['parameter'], 'eutpos', 'EUT position', p, {})
+
+                    for log in self.logger:
+                        log(block)
+
+                    self._HandleUserInterrupt(locals())
+                    # END OF f LOOP
+                lowBatList = mg.getBatteryLow_Devices()
+                if len(lowBatList):
+                    self.messenger(
+                        util.tstamp() + " WARNING: Low battery status detected for: %s" % (str(lowBatList)),
+                        [])
+                self.rawData_Emission[description].update({'voltage': voltage, 'mg': mg})
+                # autosave class instance
+                if self.asname and (time.time() - self.lastautosave > self.autosave_interval):
+                    self.messenger(util.tstamp() + " autosave ...", [])
+                    self.do_autosave()
+                    self.messenger(util.tstamp() + " ... done", [])
+                measured_eut_pos.append(p)
+                remain_eut_pos.remove(p)
+            # END OF p LOOP
+
+        finally:
+            # finally is executed if and if not an exception occur -> save exit
+            self.messenger(util.tstamp() + " Quit...", [])
+            stat = mg.Quit_Devices()
+        self.messenger(util.tstamp() + " End of Emission mesurement. Status: %d" % stat, [])
+        self.PostUserEvent()
+        return stat
 
     def Measure_Immunity(self,
                          description="EUT",
@@ -492,7 +696,7 @@ class TEMCell(Measure.Measure):
                          SearchPaths=None,
                          names=None):
         """
-        Performs a emission measurement according to IEC 61000-4-20.
+        Performs an immunity measurement according to IEC 61000-4-20.
 
         Parameter:
 
@@ -531,12 +735,12 @@ class TEMCell(Measure.Measure):
         """
         if names is None:
             names = {'sg': 'sg',
-                      'a1': 'a1',
-                      'a2': 'a2',
-                      'tem': 'gtem',
-                      'pmfwd': 'pm1',
-                      'pmbwd': 'pm2'
-                      }
+                     'a1': 'a1',
+                     'a2': 'a2',
+                     'tem': 'gtem',
+                     'pmfwd': 'pm1',
+                     'pmbwd': 'pm2'
+                     }
         self.PreUserEvent()
         if kernel[0] is None:
             if kernel[1] is None:
@@ -568,8 +772,6 @@ class TEMCell(Measure.Measure):
             self.messenger(util.tstamp() + " Start new TEMCell immunity measurement...", [])
 
         self.rawData_Immunity.setdefault(description, {})
-
-
 
         mg = mgraph.MGraph(dotfile)
         ddict = mg.CreateDevices()
@@ -1307,14 +1509,14 @@ Select EUT position.
         return stat
 
     def Measure_Uniformity_TEMModeVerfication_constant_field(self,
-                    description=None,
-                    dotfile='gtem-uniformity.dot',
-                    delay=1.0,
-                    freqs=None,
-                    EFieldStrength=None,
-                    SGLevel=-20,
-                    leveling=None,
-                    names=None):
+                                                             description=None,
+                                                             dotfile='gtem-uniformity.dot',
+                                                             delay=1.0,
+                                                             freqs=None,
+                                                             EFieldStrength=None,
+                                                             SGLevel=-20,
+                                                             leveling=None,
+                                                             names=None):
         """
         Performs uniformity and TEM verification according to IEC 61000-4-20.
         This routine uses the constant field method.
@@ -1736,6 +1938,7 @@ Select EUT position.
         self.messenger(util.tstamp() + " End of evaluation of e0y calibration", [])
         return 0
 
+
 class stdImmunityKernel:
     def __init__(self, field, freqs, positions, messenger, UIHandler, lcls, dwell, keylist='sS'):
         self.field = field
@@ -1817,7 +2020,7 @@ class TestField:
             return None
         e_mean = self.E_mean(f)  # .convert(umddevice.UMD_VovermoversqrtW)
         etest2 = power * e_mean * e_mean
-        etest_v = numpy.sqrt(etest2)
+        etest_v = math.sqrt(etest2)
         # dp = 0.5*(power.get_u()-power.get_l())
         # dc = 0.5*(clf.get_u()-clf.get_l())
         # de = 0.5*(enorm.get_u()-enorm.get_l())
