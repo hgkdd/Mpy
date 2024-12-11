@@ -4,6 +4,7 @@ import io
 import time
 
 from scuq import si, quantities, ucomponents
+from traits.trait_types import self
 
 from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
 
@@ -11,6 +12,7 @@ from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
 class FIELDPROBE(FLDPRB):
     conftmpl = FLDPRB.conftmpl
     conftmpl['init_value']['visa'] = str
+    conftmpl['init_value']['mode'] = int
 
     def __init__(self):
         FLDPRB.__init__(self)
@@ -32,7 +34,8 @@ class FIELDPROBE(FLDPRB):
         self.mode = None
         # wait for laser ready
         self.write(':syst:las:en 1')
-        self.setMode(1)
+        self.setMode(self.conf['init_value']['mode'])
+        self._conf_trigger()
         return self.error
 
     def wait_for_laser_ready(self):
@@ -59,11 +62,14 @@ class FIELDPROBE(FLDPRB):
                     break
         self.wait_for_laser_ready()
         self.mode = mode
+        # get effective sample rate
+        ans = self.query(':SYST:ESRA?')
+        self.esra = int(ans)
         return mode
 
     def SetFreq(self, freq):
         self.error = 0
-        self.setMode(1)
+        #self.setMode(1)
         self.write(f':syst:freq {freq}')
         tmpl = r'(?P<freq>%s)' % self._FP
         ans = self.query(":syst:freq?", tmpl)
@@ -75,6 +81,76 @@ class FIELDPROBE(FLDPRB):
         self.freq = freq
         return self.error, freq
 
+    def _wait_for_trigger_state(self, state=None, timeout=10):
+        err = 0
+        err_state_unknown = -(1<<0)
+        err_timeout = -(1<<1)
+        state = state.upper()
+        if state in ('IDLE', 'ARM', 'ARMED', 'TRIGGERED', 'DONE'):
+            ts = time.time_ns()
+            while True:
+                ans = self.query(':TRIG:STAT?')
+                if ans == state:
+                    break
+                tnow = time.time_ns()
+                if tnow - ts > timeout*1e9:
+                    err += err_timeout
+                    break
+        else:
+            err += err_state_unknown
+        return err
+
+    def _conf_trigger(self, begin=0, length=1000, tpoints=1, forceTRIG_CL=True, timeout=10):
+        err = 0
+        if forceTRIG_CL:
+            err = self.write(':TRIG:CL')
+        # wait for trigger is IDLE
+        err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
+        if err < 0:
+            return err
+        err = self.write(f':TRIG:BEG {begin}')
+        err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
+        err = self.write(f':TRIG:LEN {length}')
+        err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
+        err = self.write(f':TRIG:POIN {tpoints}')
+        err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
+        self.begin = begin
+        self.length = length
+        self.tpoints = tpoints
+        return err
+
+    def _float_force_trigger_GetData(self, forceTRIG_CL=False, timeout=10):
+        err = 0
+        if forceTRIG_CL:
+            err = self.write(':TRIG:CL')
+        # wait for trigger is IDLE
+        err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
+        if err < 0:
+            return err, None
+        # force trig
+        err = self.write(':TRIG:FOR')
+        # wait for trigger DONE
+        err = self._wait_for_trigger_state(state='DONE', timeout=timeout)
+        if err < 0:
+            return err, None
+        ans = self.query(':TRIG:WAV:E:X?')
+        Ex = [float(s) for s in ans.split(',')]
+        ans = self.query(':TRIG:WAV:E:Y?')
+        Ey = [float(s) for s in ans.split(',')]
+        ans = self.query(':TRIG:WAV:E:Z?')
+        Ez = [float(s) for s in ans.split(',')]
+        Ex = Ex[self.begin:]
+        Ey = Ey[self.begin:]
+        Ez = Ez[self.begin:]
+        err = self.write(':TRIG:CL')
+        return err, Ex, Ey, Ez
+
+    def _float_GetData(self):
+        cmd = ":meas:all?"
+        tmpl = r"(?P<x>[\d.]+),(?P<y>[\d.]+),(?P<z>[\d.]+),(?P<m>[\d.]+)"
+        ans = self.query(cmd, tmpl)
+        return tuple(float(ans[_k]) for _k in ('x', 'y', 'z', 'm') )
+
     def GetData(self):
         self.error = 0
         if self.freq <= 30e6:
@@ -83,32 +159,8 @@ class FIELDPROBE(FLDPRB):
             relerr = 0.12  # 1 dB
         elif 1e9 < self.freq:
             relerr = 0.17  # 1.4 dB
-        cmd = ":meas:all?"
-        tmpl = r"(?P<x>[\d.]+),(?P<y>[\d.]+),(?P<z>[\d.]+),(?P<m>[\d.]+)"
-        ans = None
-        while True:
-            for _ in range(5):  # 5 tries
-                ans = self.query(cmd, tmpl)
-                if ans:
-                    break
-                else:
-                    # print ("Waiting...")
-                    time.sleep(1e-6)
-            if ans is None:   # still None after 5 tries, giving up
-                self.error = -1
-                data = None
-            else:
-                # print(ans)
-                # check for new data
-                if (self.LastData is None) or any([ans[j] != self.LastData[i] for i, j in enumerate('xyz')]):
-                    self.LastData_ns = time.time_ns()
-                    self.LastData = [ans[i] for i in 'xyz']
-                    data = [
-                        quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(float(ans[i]), float(ans[i]) * relerr))
-                    for i in 'xyz']
-                    break
-                # else:
-                #     print("No new Data")
+        ans = self._float_GetData()
+        data = [ quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(val, val * relerr)) for val in ans]
         return self.error, data
 
     def GetDataNB(self, retrigger):
@@ -117,6 +169,9 @@ class FIELDPROBE(FLDPRB):
 
 def main():
     from mpy.tools.util import format_block
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from mpy.tools.sin_fit import fit_sin
 
     try:
         ini = sys.argv[1]
@@ -135,6 +190,7 @@ def main():
                         fstop: 8.2e9
                         fstep: 0
                         visa: TCPIP0::192.168.88.3::10000::SOCKET
+                        mode: 0
                         virtual: 0
 
                         [Channel_1]
@@ -147,26 +203,64 @@ def main():
     dev.Init(ini=ini, channel=1)
     err, des = dev.GetDescription()
 
+    err, Ex, Ey, Ez = dev._float_force_trigger_GetData(forceTRIG_CL=True)
+    dt = 1./dev.esra
+    ts = np.array([i*dt*1e3 for i in range(len(Ex))]) # t in ms
+
+    fitdata = fit_sin(ts, Ex)
+    freqAM = fitdata['freq']
+    meanAM = fitdata['offset']
+    modAM = abs(fitdata['amp']) / meanAM * 100
+
+    plt.ion()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    lineEx, = ax.plot(ts, Ex, marker='.')
+    lineSin, = ax.plot(ts, fitdata['fitfunc'](ts), ls='-')
+    plt.xlabel("Time in ms")
+    plt.ylabel("E-Field in V/m")
+    plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %")
+    plt.grid()
+
+
     while True:
-        freq = input("Frequency / Hz: ")
-        if freq in 'qQ':
-            break
-        try:
-            freq = float(freq)
-            if freq <= 0:
-                break
-            err, ff = dev.SetFreq(freq)
-            print(f"Frequency set to: {ff} Hz")
-            # start_ns = time.time_ns()
-            for i in range(10):
-                start_ns = time.time_ns()
-                err, dat = dev.GetData()
-                end_ns = time.time_ns()
-                print(ff, i, (end_ns-start_ns)/1e6, dat[0], dat[1], dat[2])
-            # end_ns = time.time_ns()
-            # print((end_ns-start_ns) * 1e-9 * 1e-3, "s per sample")
-        except ValueError:
-            break
+        # freq = input("Frequency / Hz: ")
+        # if freq in 'qQ':
+        #     break
+        # try:
+        #     freq = float(freq)
+        #     if freq <= 0:
+        #         break
+        #     err, ff = dev.SetFreq(freq)
+        #     print(f"Frequency set to: {ff} Hz")
+        #     start_ns = time.time_ns()
+        #     ts = []
+        #     Ex = []
+        #     for i in range(1000):
+        #         #start_ns = time.time_ns()
+        #         dat = dev._float_GetData()
+        #         end_ns = time.time_ns()
+        #         t_ms = (end_ns-start_ns)*1e-6
+        #         #print(ff, i, (end_ns-start_ns)/1e6, dat[0], dat[1], dat[2])
+        #         ts.append(t_ms)
+        #         Ex.append(dat[0])
+            err, Ex, Ey, Ez = dev._float_force_trigger_GetData(forceTRIG_CL=True)
+            fitdata = fit_sin(ts, Ex)
+            freqAM = fitdata['freq']
+            meanAM = fitdata['offset']
+            modAM = abs(fitdata['amp']) / meanAM * 100
+            plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %")
+            # lineEx.set_xdata(ts)
+            lineEx.set_ydata(Ex)
+            lineSin.set_ydata(fitdata['fitfunc'](ts))
+            ax.relim()
+            ax.autoscale_view(True, True, True)
+            fig.canvas.draw()
+            fig.canvas.flush_events()
+
+            #plt.show()
+        #except ValueError:
+        #    break
     dev.Quit()
 
 
