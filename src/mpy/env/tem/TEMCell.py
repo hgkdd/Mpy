@@ -1616,15 +1616,17 @@ Select EUT position.
                     util.tstamp() + " Can not set signal generator level. Amplifier protection raised with message: %s" % _e.message,
                     [])
                 raise  # re raise to reach finaly clause
+
+            # set up efields, power
+            efields = {}
+            fwd_power = {}
+            bwd_power = {}
             # HIER
 
-            # set up efields, ...
-            efields = {}
-
             if self.autosave:
-                efields = self.rawData_e0y[description]['efield'].copy()
+                efields = self.rawData_Uniformity_TEMModeVerfication_constant_field[description]['efield'].copy()
 
-                edat = self.rawData_e0y[description]['efield']
+                edat = self.rawData_Uniformity_TEMModeVerfication_constant_field[description]['efield']
                 fr = list(edat.keys())
                 freqs = [f for f in freqs if f not in fr]
                 msg = "List of remaining frequencies:\n%r\n" % (freqs)
@@ -1753,7 +1755,7 @@ Select EUT position.
                 # END OF f LOOP
             self.messenger(util.tstamp() + " RF Off...", [])
             stat = mg.RFOff_Devices()  # switch off after measure
-            self.rawData_e0y[description].update({'efield': efields, 'mg': mg})
+            self.rawData_Uniformity_TEMModeVerfication_constant_field[description].update({'efield': efields, 'mg': mg})
 
         finally:
             # finally is executed if and if not an exception occur -> save exit
