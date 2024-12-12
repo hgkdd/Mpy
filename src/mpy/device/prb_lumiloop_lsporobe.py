@@ -2,6 +2,8 @@
 import sys
 import io
 import time
+import struct
+import itertools
 
 from scuq import si, quantities, ucomponents
 from traits.trait_types import self
@@ -81,6 +83,23 @@ class FIELDPROBE(FLDPRB):
         self.freq = freq
         return self.error, freq
 
+    def _parse_wav_bin_red(self, buffer):
+        offset = 0
+        ci_number, prb_number, prb_version, sample_count = struct.unpack_from('<IIfI', buffer, offset=offset)
+        if sample_count == 0:
+            Ex, Ey, Ez = (None, None, None)
+            return Ex, Ey, Ez
+        offset += 4*4
+        waveform_count, = struct.unpack_from('<I', buffer, offset=offset)
+        chunck_size = (sample_count*waveform_count)*4
+        start = offset + 4
+        end = start + chunck_size
+        unpack_iter = struct.iter_unpack('<f', buffer[start:])
+        Ex = [e[0] for e in itertools.islice(unpack_iter, sample_count)]
+        Ey = [e[0] for e in itertools.islice(unpack_iter, sample_count)]
+        Ez = [e[0] for e in itertools.islice(unpack_iter, sample_count)]
+        return Ex, Ey, Ez
+
     def _wait_for_trigger_state(self, state=None, timeout=10):
         err = 0
         err_state_unknown = -(1<<0)
@@ -133,15 +152,21 @@ class FIELDPROBE(FLDPRB):
         err = self._wait_for_trigger_state(state='DONE', timeout=timeout)
         if err < 0:
             return err, None
-        ans = self.query(':TRIG:WAV:E:X?')
-        Ex = [float(s) for s in ans.split(',')]
-        ans = self.query(':TRIG:WAV:E:Y?')
-        Ey = [float(s) for s in ans.split(',')]
-        ans = self.query(':TRIG:WAV:E:Z?')
-        Ez = [float(s) for s in ans.split(',')]
-        Ex = Ex[self.begin:]
-        Ey = Ey[self.begin:]
-        Ez = Ez[self.begin:]
+        #ans = self.query(':TRIG:WAV:E:X?')
+        #Ex = [float(s) for s in ans.split(',')]
+        #ans = self.query(':TRIG:WAV:E:Y?')
+        #Ey = [float(s) for s in ans.split(',')]
+        #ans = self.query(':TRIG:WAV:E:Z?')
+        #Ez = [float(s) for s in ans.split(',')]
+        #Ex = Ex[self.begin:]
+        #Ey = Ey[self.begin:]
+        #Ez = Ez[self.begin:]
+        err = self.write(':TRIG:WAV:E:BINR?')
+        ans = self.dev.read_bytes(4)
+        bin_block_size, = struct.unpack_from('<I', ans)
+        ans = self.dev.read_bytes(bin_block_size)
+        self.dev.read_bytes(2)  # cr lf
+        Ex, Ey, Ez = self._parse_wav_bin_red(ans)
         err = self.write(':TRIG:CL')
         return err, Ex, Ey, Ez
 
@@ -215,12 +240,15 @@ def main():
     plt.ion()
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    lineEx, = ax.plot(ts, Ex, marker='.')
+    lineEx, = ax.plot(ts, Ex, marker=',')
+    lineEy, = ax.plot(ts, Ey, marker=',')
+    lineEz, = ax.plot(ts, Ez, marker=',')
     lineSin, = ax.plot(ts, fitdata['fitfunc'](ts), ls='-')
     plt.xlabel("Time in ms")
     plt.ylabel("E-Field in V/m")
     plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %")
     plt.grid()
+    plt.show()
 
 
     while True:
@@ -244,14 +272,18 @@ def main():
         #         #print(ff, i, (end_ns-start_ns)/1e6, dat[0], dat[1], dat[2])
         #         ts.append(t_ms)
         #         Ex.append(dat[0])
+            t1 = time.time_ns()
             err, Ex, Ey, Ez = dev._float_force_trigger_GetData(forceTRIG_CL=True)
+            delta_t = (time.time_ns() - t1) * 1e-6 # in ms
             fitdata = fit_sin(ts, Ex)
             freqAM = fitdata['freq']
             meanAM = fitdata['offset']
             modAM = abs(fitdata['amp']) / meanAM * 100
-            plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %")
+            plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %, Dt = {delta_t:.1f} ms")
             # lineEx.set_xdata(ts)
             lineEx.set_ydata(Ex)
+            lineEy.set_ydata(Ey)
+            lineEz.set_ydata(Ez)
             lineSin.set_ydata(fitdata['fitfunc'](ts))
             ax.relim()
             ax.autoscale_view(True, True, True)
