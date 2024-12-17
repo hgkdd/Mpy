@@ -289,7 +289,7 @@ class Device(object):
                 lib = getattr(mod, self.pyprefix)()
             # import DLLbasename as lib
         else:
-            raise "Unknown driver type '%s'." % (DLLext)
+            raise ValueError("Unknown driver type '%s'." % (DLLext))
         # our lib
         self.library = lib
         # make attributes corresponding to the common methods os all instr. types

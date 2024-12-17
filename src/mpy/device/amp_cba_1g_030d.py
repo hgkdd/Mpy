@@ -24,6 +24,10 @@ class AMPLIFIER(AMP):
         self.Operate()
         return self.error
 
+    def Quit(self):
+        self.POff()
+        self.Standby()
+        return 0
 
 def main():
     import sys

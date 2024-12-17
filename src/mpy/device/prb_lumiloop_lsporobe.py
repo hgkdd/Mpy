@@ -6,7 +6,9 @@ import struct
 import itertools
 
 from scuq import si, quantities, ucomponents
-from traits.trait_types import self
+from traits.testing.optional_dependencies import numpy
+
+# from traits.trait_types import self
 
 from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
 
@@ -184,8 +186,11 @@ class FIELDPROBE(FLDPRB):
             relerr = 0.12  # 1 dB
         elif 1e9 < self.freq:
             relerr = 0.17  # 1.4 dB
-        ans = self._float_GetData()
-        data = [ quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(val, val * relerr)) for val in ans]
+        err, ex, ey, ez  = self._float_force_trigger_GetData()
+        ex_av = numpy.average(ex)
+        ey_av = numpy.average(ey)
+        ez_av = numpy.average(ez)
+        data = [ quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(val, val * relerr)) for val in (ex_av,ey_av,ez_av) ]
         return self.error, data
 
     def GetDataNB(self, retrigger):

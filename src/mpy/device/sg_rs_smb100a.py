@@ -16,7 +16,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
     def __init__(self):
         SGNLGNRTR.__init__(self)
         self.map['AM_sources']['INT1'] = 'INT'
-        self.map['AM_sources']['INT2'] = 'INT'
+        self.map['AM_sources']['INT2'] = 'N/A'
         self.map['AM_waveforms']['SQUARE'] = 'SQU'
         self.map['PM_sources']['EXT1'] = 'EXT'
         self.map['PM_pol']['NORMAL'] = 'NORM'
