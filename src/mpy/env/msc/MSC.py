@@ -201,7 +201,7 @@ class MSC(Measure.Measure):
         mg = mgraph.MGraph(dotfile, themap=names.copy(), SearchPaths=SearchPaths)
 
         if leveler is None:
-            self.leveler = mgraph.LeveSetLeveller
+            self.leveler = mgraph.Leveler
         else:
             self.leveler = leveler
         if leveler_par is None:

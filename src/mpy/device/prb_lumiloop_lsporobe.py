@@ -180,6 +180,7 @@ class FIELDPROBE(FLDPRB):
 
     def GetData(self):
         self.error = 0
+        # relative error for single measured point
         if self.freq <= 30e6:
             relerr = 0.072  # 0.6 dB
         elif 30e6 < self.freq <= 1e9:
@@ -187,6 +188,8 @@ class FIELDPROBE(FLDPRB):
         elif 1e9 < self.freq:
             relerr = 0.17  # 1.4 dB
         err, ex, ey, ez  = self._float_force_trigger_GetData()
+        sqrt_n = numpy.sqrt(len(ex))
+        relerr /= sqrt_n
         ex_av = numpy.average(ex)
         ey_av = numpy.average(ey)
         ez_av = numpy.average(ez)
@@ -301,5 +304,60 @@ def main():
     dev.Quit()
 
 
+def main2():
+    from mpy.tools.util import format_block
+    import numpy as np
+
+    try:
+        ini = sys.argv[1]
+    except IndexError:
+        ini = format_block("""
+                        [DESCRIPTION]
+                        description: 'LSProbe 1.2'
+                        type:        'FIELDPROBE'
+                        vendor:      'LUMILOOP'
+                        serialnr:
+                        deviceid:
+                        driver:
+
+                        [Init_Value]
+                        fstart: 10e3
+                        fstop: 8.2e9
+                        fstep: 0
+                        visa: TCPIP0::192.168.88.3::10000::SOCKET
+                        mode: 0
+                        virtual: 0
+
+                        [Channel_1]
+                        name: EField
+                        unit: Voverm
+                        """)
+        ini = io.StringIO(ini)
+    dev = FIELDPROBE()
+
+    dev.Init(ini=ini, channel=1)
+    err, des = dev.GetDescription()
+
+    while True:
+        freq = input("Frequency / Hz: ")
+        if freq in 'qQ':
+            break
+        try:
+            freq = float(freq)
+            if freq <= 0:
+                break
+            err, ff = dev.SetFreq(freq)
+            print(f"Frequency set to: {ff} Hz")
+            for i in range(10):
+                start_ns = time.time_ns()
+                err, dat = dev.GetData()
+                ex,ey,ez =(dat[i] for i in range(3))
+                end_ns = time.time_ns()
+                print(ff, i, (end_ns-start_ns)/1e6, ex, ey, ez)
+        except ValueError:
+            break
+    dev.Quit()
+
+
 if __name__ == '__main__':
-    main()
+    main2()
