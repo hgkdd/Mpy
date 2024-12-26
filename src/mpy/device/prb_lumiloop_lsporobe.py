@@ -194,7 +194,7 @@ class FIELDPROBE(FLDPRB):
         data = [ quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(val, val * relerr)) for val in (ex_av,ey_av,ez_av) ]
         return self.error, data
 
-    def GetDataNB(self, retrigger):
+    def GetDataNB(self, retrigger=False):
         return self.GetData()
 
     def _get_waveform(self, forceTRIG_CL=True):
