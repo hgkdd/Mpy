@@ -6,9 +6,7 @@ import struct
 import itertools
 
 from scuq import si, quantities, ucomponents
-from traits.testing.optional_dependencies import numpy
-
-# from traits.trait_types import self
+import numpy as np
 
 from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
 
@@ -198,6 +196,12 @@ class FIELDPROBE(FLDPRB):
 
     def GetDataNB(self, retrigger):
         return self.GetData()
+
+    def _get_waveform(self, forceTRIG_CL=True):
+        err, Ex, Ey, Ez = self._float_force_trigger_GetData(forceTRIG_CL=forceTRIG_CL)
+        dt = 1. / self.esra
+        ts = np.array((i * dt * 1e3 for i,_ in enumerate(Ex)))  # t in ms
+        return err, ts, Ex, Ey, Ez
 
 
 def main():
