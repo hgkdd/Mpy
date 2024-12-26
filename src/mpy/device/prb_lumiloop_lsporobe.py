@@ -186,11 +186,11 @@ class FIELDPROBE(FLDPRB):
         elif 1e9 < self.freq:
             relerr = 0.17  # 1.4 dB
         err, ex, ey, ez  = self._float_force_trigger_GetData()
-        sqrt_n = numpy.sqrt(len(ex))
+        sqrt_n = np.sqrt(len(ex))
         relerr /= sqrt_n
-        ex_av = numpy.average(ex)
-        ey_av = numpy.average(ey)
-        ez_av = numpy.average(ez)
+        ex_av = np.average(ex)
+        ey_av = np.average(ey)
+        ez_av = np.average(ez)
         data = [ quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(val, val * relerr)) for val in (ex_av,ey_av,ez_av) ]
         return self.error, data
 
