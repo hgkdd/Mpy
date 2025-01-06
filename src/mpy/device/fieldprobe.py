@@ -47,7 +47,8 @@ class FIELDPROBE(DRIVER):
                                     ("'ReTrigger %s'%RETRIGGER", None)],
                       'GetBatteryState': [("Battery?", r'(?P<BATT>\d+)')],
                       'Quit': [('QUIT', None)],
-                      'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+                      'GetDescription': [('*IDN?', r'(?P<IDN>.*)')],
+                      'GetWaveform': [('GetWaveform', None)]}
         self.freq = None
         self.unit = None
         self._internal_unit = 'Voverm'
@@ -98,6 +99,9 @@ class FIELDPROBE(DRIVER):
         dct = self._do_cmds('GetBatteryState', locals())
         self._update(dct)
         return self.error, self.BATT
+
+    def GetWaveform(self):
+        return -1, None, None, None, None
 
 
 if __name__ == '__main__':

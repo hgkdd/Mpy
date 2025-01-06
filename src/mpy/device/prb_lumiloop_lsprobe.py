@@ -183,7 +183,7 @@ class FIELDPROBE(FLDPRB):
             relerr = 0.072  # 0.6 dB
         elif 30e6 < self.freq <= 1e9:
             relerr = 0.12  # 1 dB
-        elif 1e9 < self.freq:
+        else:
             relerr = 0.17  # 1.4 dB
         err, ex, ey, ez  = self._float_force_trigger_GetData()
         sqrt_n = np.sqrt(len(ex))
@@ -197,10 +197,10 @@ class FIELDPROBE(FLDPRB):
     def GetDataNB(self, retrigger=False):
         return self.GetData()
 
-    def _get_waveform(self, forceTRIG_CL=True):
+    def GetWaveform(self, forceTRIG_CL=True):
         err, Ex, Ey, Ez = self._float_force_trigger_GetData(forceTRIG_CL=forceTRIG_CL)
         dt = 1. / self.esra
-        ts = np.array((i * dt * 1e3 for i,_ in enumerate(Ex)))  # t in ms
+        ts = np.fromiter((i * dt * 1e3 for i,_ in enumerate(Ex)), float, count=-1)  # t in ms
         return err, ts, Ex, Ey, Ez
 
 
