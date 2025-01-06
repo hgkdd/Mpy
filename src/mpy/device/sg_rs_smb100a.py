@@ -18,6 +18,8 @@ class SIGNALGENERATOR(SGNLGNRTR):
         self.map['AM_sources']['INT1'] = 'INT'
         self.map['AM_sources']['INT2'] = 'N/A'
         self.map['AM_waveforms']['SQUARE'] = 'SQU'
+        self.map['AM_LFOut']['Off'] = '0'
+        self.map['AM_LFOut']['On'] = '1'
         self.map['PM_sources']['EXT1'] = 'EXT'
         self.map['PM_pol']['NORMAL'] = 'NORM'
         self.map['PM_pol']['INVERTED'] = 'INV'
@@ -47,15 +49,15 @@ class SIGNALGENERATOR(SGNLGNRTR):
                                    None)],
                       'GetLevel': [('SOUR:POW:LEVEL:IMM:AMPL?', r'(?P<level>%s)' % (self._FP))],
                       'ConfAM': [("'SOUR:AM:SOUR %s'%source", None),
-                                 ('SOUR:AM:SOUR?', 'SOURCE (?P<source>\S+)'),
+                                 ('SOUR:AM:SOUR?', r'(?P<source>\S+)'),
                                  ("'SOUR:AM:DEPT %d '%(int(depth*100))", None),  # Vorlage enthielt '%d %%' !!!???
-                                 ('SOUR:AM:DEPT?', 'DEPTH (?P<depth>\d+)'),
+                                 ('SOUR:AM:DEPT?', r'(?P<depth>\d+)'),
                                  ("'SOUR:LFO:FREQ %s HZ'%freq", None),
-                                 ('SOUR:LFO:FREQ?', 'FREQ (?P<freq>%s) HZ' % self._FP),
+                                 ('SOUR:LFO:FREQ?', r'(?P<freq>%s)' % self._FP),
                                  ("'SOUR:LFO:SHAP %s'%(waveform)", None),  # waveform --> SINE | SQUare
-                                 ('SOUR:LFO:SHAP?', 'WFRM (?P<waveform>\S+)')],
-                      # ("'LF:OUT %s'%(LFOut)", None),
-                      # ( 'LF:OUT?', 'LF (?P<LFOut>\S+)')],
+                                 ('SOUR:LFO:SHAP?', r'(?P<waveform>\S+)'),
+                                 ("'LFO:STAT %s'%(LFOut)", None),
+                                 ('LFO:STAT?', r'(?P<LFOut>\d+)')],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         # 
         #

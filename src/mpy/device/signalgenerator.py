@@ -145,8 +145,9 @@ class SIGNALGENERATOR(DRIVER):
         dct['source'] = self.map['AM_sources'].inverse[dct['source']]  # inverse mapping from bidict
         dct['waveform'] = self.map['AM_waveforms'].inverse[dct['waveform']]  # inverse mapping from bidict
         dct['LFOut'] = self.map['AM_LFOut'].inverse[dct['LFOut']]  # inverse mapping from bidict
+        dct['depth'] = float(dct['depth'])
         if dct['depth'] > 1:  # depth was returned in PCT
-            dct['depth'] = 0.01 * float(dct['depth'])
+            dct['depth'] = 0.01 * dct['depth']
         dct['freq'] = float(dct['freq'])
         # print dct
         self._update(dct)

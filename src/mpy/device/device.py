@@ -1606,7 +1606,8 @@ class Fieldprobe(Device):
                 "getData": "GetData",
                 "getDataNB": "GetDataNB",
                 "Trigger": "Trigger",
-                "getBatteryState": "GetBatteryState"}
+                "getBatteryState": "GetBatteryState",
+                "GetWaveform": "GetWaveform"}
 
     def __init__(self, **kw):
         # call parent init
@@ -1739,7 +1740,13 @@ class Fieldprobe(Device):
             m = method
         return m
 
-
+    def _GetWaveform_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            def m():
+                return -1, None, None, None
+        else:
+            m = method
+        return m
 #################################################################
 class Motorcontroller(Device):
     _postfix = {"goto": "Goto",
