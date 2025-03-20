@@ -993,7 +993,7 @@ class MGraph(Graph):
             
             Return configVals
             """
-            configVals = configparser.SafeConfigParser()
+            configVals = configparser.ConfigParser()
             if hasattr(filename, 'readline'):  # file like object
                 configVals.read_file(filename)
             else:
