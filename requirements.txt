@@ -1,15 +1,17 @@
-bidict
+bidict~=0.23.1
 getch;platform_system=="Linux" or platform_system=="darwin"
 gpib-ctypes
-Levenshtein
+Levenshtein~=0.27.1
 msvcrt;platform_system=="windows"
-numpy
-ply
-pydot
+numpy~=2.2.3
+ply~=3.11
+pydot~=3.0.4
 pyparsing
-pyserial
+pyserial~=3.5
 pyusb
-PyVISA
+PyVISA~=1.14.1
 PyVISA-py
-SciPy
-simpleeval
+SciPy~=1.15.2
+simpleeval~=1.0.3
+matplotlib~=3.10.1
+PySide6~=6.8.2.1

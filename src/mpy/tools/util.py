@@ -175,7 +175,7 @@ def interactive(obj=None, banner=None):
 
 
 def tstamp():
-    return time.strftime('%c')
+    return time.strftime('%c (%Z)')
 
 
 class OutputError:

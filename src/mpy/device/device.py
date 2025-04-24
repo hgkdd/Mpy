@@ -219,7 +219,7 @@ class Device(object):
             import configparser
             import io
             from mpy.tools.util import format_block
-            cp = configparser.SafeConfigParser()
+            cp = configparser.ConfigParser()
             cp.read_file(ininame)
             for section in cp.sections():
                 for option, value in cp.items(section):
@@ -289,7 +289,7 @@ class Device(object):
                 lib = getattr(mod, self.pyprefix)()
             # import DLLbasename as lib
         else:
-            raise "Unknown driver type '%s'." % (DLLext)
+            raise ValueError("Unknown driver type '%s'." % (DLLext))
         # our lib
         self.library = lib
         # make attributes corresponding to the common methods os all instr. types
@@ -405,7 +405,7 @@ class Device(object):
         return m
 
     def _getTypeAndDLL(self, ininame):
-        self.config = configparser.SafeConfigParser()
+        self.config = configparser.ConfigParser()
         self.config.read(ininame)
         self.confsections = self.config.sections()
         sec = fstrcmp('description', self.confsections, n=1, cutoff=0, ignorecase=True)[0]
@@ -1606,7 +1606,8 @@ class Fieldprobe(Device):
                 "getData": "GetData",
                 "getDataNB": "GetDataNB",
                 "Trigger": "Trigger",
-                "getBatteryState": "GetBatteryState"}
+                "getBatteryState": "GetBatteryState",
+                "GetWaveform": "GetWaveform"}
 
     def __init__(self, **kw):
         # call parent init
@@ -1739,7 +1740,13 @@ class Fieldprobe(Device):
             m = method
         return m
 
-
+    def _GetWaveform_wrap(self, method):
+        if isinstance(method, ct._CFuncPtr):
+            def m():
+                return -1, None, None, None
+        else:
+            m = method
+        return m
 #################################################################
 class Motorcontroller(Device):
     _postfix = {"goto": "Goto",
