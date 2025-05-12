@@ -14,16 +14,17 @@ from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
 class FIELDPROBE(FLDPRB):
     conftmpl = FLDPRB.conftmpl
     conftmpl['init_value']['visa'] = str
-    conftmpl['init_value']['mode'] = int
+    conftmpl['init_value']['mode'] = str
+    conftmpl['init_value']['mfreq'] = float
 
     def __init__(self):
         FLDPRB.__init__(self)
         self._internal_unit = si.VOLT / si.METER
         self.freq = None
-        self._cmds = {'GetFreq': [(":syst:freq?", r'(?P<freq>%s)' % self._FP)],
+        self._cmds = {'GetFreq': [(":syst:freq?,0", r'(?P<freq>%s)' % self._FP)],
                       'Zero': [],
                       'Trigger': [],
-                      'Quit': [(':SYST:LAS:EN 0', None)],
+                      'Quit': [(':SYST:LAS:EN 0,0', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         self.term_chars = '\r\n'
         self.error = None
@@ -33,17 +34,23 @@ class FIELDPROBE(FLDPRB):
 
     def Init(self, ini=None, channel=None):
         self.error = FLDPRB.Init(self, ini, channel)
+        self.mfreq = self.conf['init_value']['mfreq']
+        self.lmode = self.conf['init_value']['mode'].split(',')[0]
+        self.hmode = self.conf['init_value']['mode'].split(',')[1]
         self.mode = None
+        ans = self.query(':syst:cou?', r'(?P<nprb>\d)')   # Number of probes
+        self.nprb = ans['nprb']
+
         # wait for laser ready
-        self.write(':syst:las:en 1')
-        self.setMode(self.conf['init_value']['mode'])
+        self.write(':syst:las:en 1,0')
+        self.setMode(self.lmode)
         self._conf_trigger()
         return self.error
 
     def wait_for_laser_ready(self):
         while True:
             # ans = self.query(':syst:las:rdy?', r'(?P<laser>\d)')
-            ans = self.query(':meas:rdy?', r'(?P<laser>\d)')  # waits for laser ready AND cal data present
+            ans = self.query(':meas:rdy?,0', r'(?P<laser>\d)')  # waits for laser ready AND cal data present
             if ans:
                 if int(ans['laser']) == 1:
                     break
@@ -57,7 +64,7 @@ class FIELDPROBE(FLDPRB):
             return mode
 
         if 0 <= mode <= 8:
-            self.write(f':syst:mod {mode}')
+            self.write(f':syst:mod {mode},0')
             while True:
                 ans = self.query(f':syst:mod?', None)
                 if int(ans) == mode:
@@ -65,16 +72,21 @@ class FIELDPROBE(FLDPRB):
         self.wait_for_laser_ready()
         self.mode = mode
         # get effective sample rate
-        ans = self.query(':SYST:ESRA?')
+        ans = self.query(':SYST:ESRA?,0')
         self.esra = int(ans)
         return mode
 
     def SetFreq(self, freq):
         self.error = 0
         #self.setMode(1)
-        self.write(f':syst:freq {freq}')
+        if freq < self.mfreq:
+            self.mode = self.setMode(self.lmode)
+        else:
+            self.mode = self.setMode(self.hmode)
+
+        self.write(f':syst:freq {freq},0')
         tmpl = r'(?P<freq>%s)' % self._FP
-        ans = self.query(":syst:freq?", tmpl)
+        ans = self.query(":syst:freq?,0", tmpl)
         if ans:
             freq = float(ans['freq'])
         else:
@@ -328,8 +340,9 @@ def main2():
                         fstart: 10e3
                         fstop: 8.2e9
                         fstep: 0
-                        visa: TCPIP0::192.168.88.3::10000::SOCKET
-                        mode: 0
+                        visa: TCPIP::127.0.0.1::10000::SOCKET
+                        mode: 2,0
+                        mfreq: 700e6
                         virtual: 0
 
                         [Channel_1]

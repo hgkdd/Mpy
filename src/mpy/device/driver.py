@@ -99,11 +99,11 @@ class DRIVER(object):
             else:
                 res_name = f'GPIB::{gpib}'
             self.dev = self.rm.open_resource(res_name,
+                                             access_mode=lock,
                                              timeout=timeout * 1000,
                                              chunk_size=chunk_size,
-                                             send_end=send_end,
-                                             query_delay=delay,
-                                             lock=lock)
+                                             #send_end=send_end,
+                                             query_delay=delay)
             # if values_format in (None, 'ascii', 'ASCII'):
             #     self.dev.values_format.is_binary = False
             # else:
