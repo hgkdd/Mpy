@@ -203,7 +203,7 @@ def main():
                         fstart: 100e3
                         fstop: 22e9
                         fstep: 1
-                        gpib: 28
+                        visa: TCPIP::192.168.88.248::INSTR
                         virtual: 0
 
                         [Channel_1]
@@ -242,7 +242,7 @@ def test():
                         fstart: 100e3
                         fstop: 22e9
                         fstep: 1
-                        gpib: 28
+                        visa: TCPIP::192.168.88.248::INSTR
                         virtual: 0
 
                         [Channel_1]
@@ -266,4 +266,7 @@ def test():
 # Methoden importiert.
 #
 if __name__ == '__main__':
-    main()
+    #main()
+    sg = test()
+    print(sg.GetDescription())
+

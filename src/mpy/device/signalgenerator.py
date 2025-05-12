@@ -43,6 +43,7 @@ class SIGNALGENERATOR(DRIVER):
                      'fstop': float,
                      'fstep': float,
                      'gpib': int,
+                     'visa': str,
                      'virtual': strbool},
                 'channel_%d':
                     {'name': str,
