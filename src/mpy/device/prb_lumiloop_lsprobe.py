@@ -9,6 +9,7 @@ from scuq import si, quantities, ucomponents
 import numpy as np
 
 from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
+# from test.test_interpol import freqs
 
 
 class FIELDPROBE(FLDPRB):
@@ -21,8 +22,7 @@ class FIELDPROBE(FLDPRB):
         FLDPRB.__init__(self)
         self._internal_unit = si.VOLT / si.METER
         self.freq = None
-        self._cmds = {'GetFreq': [(":syst:freq?,0", r'(?P<freq>%s)' % self._FP)],
-                      'Zero': [],
+        self._cmds = {'Zero': [],
                       'Trigger': [],
                       'Quit': [(':SYST:LAS:EN 0,0', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
@@ -39,7 +39,7 @@ class FIELDPROBE(FLDPRB):
         self.hmode = self.conf['init_value']['mode'].split(',')[1]
         self.mode = None
         ans = self.query(':syst:cou?', r'(?P<nprb>\d)')   # Number of probes
-        self.nprb = ans['nprb']
+        self.nprb = int(ans['nprb'])
 
         # wait for laser ready
         self.write(':syst:las:en 1,0')
@@ -50,10 +50,9 @@ class FIELDPROBE(FLDPRB):
     def wait_for_laser_ready(self):
         while True:
             # ans = self.query(':syst:las:rdy?', r'(?P<laser>\d)')
-            ans = self.query(':meas:rdy?,0', r'(?P<laser>\d)')  # waits for laser ready AND cal data present
-            if ans:
-                if int(ans['laser']) == 1:
-                    break
+            ans = self.query(':meas:rdy? 0', None)  # waits for laser ready AND cal data present
+            if all(rdy == 1 for rdy in map(int, ans.split(','))):
+                break
             time.sleep(.1)
         self.LastData_ns = time.time_ns()
 
@@ -66,15 +65,29 @@ class FIELDPROBE(FLDPRB):
         if 0 <= mode <= 8:
             self.write(f':syst:mod {mode},0')
             while True:
-                ans = self.query(f':syst:mod?', None)
-                if int(ans) == mode:
+                ans = self.query(f':syst:mod? 0', None)
+                modes = map(int, ans.split(','))
+                if all(m == mode for m in modes):
                     break
         self.wait_for_laser_ready()
         self.mode = mode
         # get effective sample rate
-        ans = self.query(':SYST:ESRA?,0')
-        self.esra = int(ans)
+        ans = self.query(':SYST:ESRA? 0')
+        self.esra = int(ans.split(',')[0])  # take the first; all shoulb be equal
         return mode
+
+    def GetFreq(self):
+        self.error = 0
+        ans = self.query(":syst:freq? 0", None)
+        if ans:
+            freqs = [float(f) for f in ans.split(',')]
+            if len(set(freqs)) == 1:
+                freq = freqs[0]
+        else:
+            self.error = 1
+            freq = None
+        self.freq = freq
+        return self.error, self.freq
 
     def SetFreq(self, freq):
         self.error = 0
@@ -85,15 +98,7 @@ class FIELDPROBE(FLDPRB):
             self.mode = self.setMode(self.hmode)
 
         self.write(f':syst:freq {freq},0')
-        tmpl = r'(?P<freq>%s)' % self._FP
-        ans = self.query(":syst:freq?,0", tmpl)
-        if ans:
-            freq = float(ans['freq'])
-        else:
-            self.error = 1
-            freq = None
-        self.freq = freq
-        return self.error, freq
+        return self.GetFreq()
 
     def _parse_wav_bin_red(self, buffer):
         offset = 0
@@ -120,8 +125,8 @@ class FIELDPROBE(FLDPRB):
         if state in ('IDLE', 'ARM', 'ARMED', 'TRIGGERED', 'DONE'):
             ts = time.time_ns()
             while True:
-                ans = self.query(':TRIG:STAT?')
-                if ans == state:
+                ans = self.query(':TRIG:STAT? 0,0')
+                if all(s == state for s in ans.split(',')):
                     break
                 tnow = time.time_ns()
                 if tnow - ts > timeout*1e9:
@@ -139,11 +144,11 @@ class FIELDPROBE(FLDPRB):
         err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
         if err < 0:
             return err
-        err = self.write(f':TRIG:BEG {begin}')
+        err = self.write(f':TRIG:BEG {begin},0')
         err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
-        err = self.write(f':TRIG:LEN {length}')
+        err = self.write(f':TRIG:LEN {length},0')
         err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
-        err = self.write(f':TRIG:POIN {tpoints}')
+        err = self.write(f':TRIG:POIN {tpoints},0')
         err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
         self.begin = begin
         self.length = length
@@ -153,13 +158,13 @@ class FIELDPROBE(FLDPRB):
     def _float_force_trigger_GetData(self, forceTRIG_CL=False, timeout=10):
         err = 0
         if forceTRIG_CL:
-            err = self.write(':TRIG:CL')
+            err = self.write(':TRIG:CL 0')
         # wait for trigger is IDLE
         err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
         if err < 0:
             return err, None
         # force trig
-        err = self.write(':TRIG:FOR')
+        err = self.write(':TRIG:FOR 0')
         # wait for trigger DONE
         err = self._wait_for_trigger_state(state='DONE', timeout=timeout)
         if err < 0:
@@ -173,20 +178,28 @@ class FIELDPROBE(FLDPRB):
         #Ex = Ex[self.begin:]
         #Ey = Ey[self.begin:]
         #Ez = Ez[self.begin:]
-        err = self.write(':TRIG:WAV:E:BINR?')
+        # lists for field values of the probes
+        Exs = []
+        Eys = []
+        Ezs = []
+        err = self.write(':TRIG:WAV:E:BINR? 0')
         ans = self.dev.read_bytes(4)
-        bin_block_size, = struct.unpack_from('<I', ans)
-        ans = self.dev.read_bytes(bin_block_size)
+        bin_block_size, = struct.unpack_from('<I', ans)  # number of bytes in the binary block
+        for prb in range(self.nprb): # loop over all probes
+            ans = self.dev.read_bytes(int(bin_block_size / self.nprb)) # read the whole data for this probe
+            Ex, Ey, Ez = self._parse_wav_bin_red(ans)
+            Exs.append(Ex)
+            Eys.append(Ey)
+            Ezs.append(Ez)
         self.dev.read_bytes(2)  # cr lf
-        Ex, Ey, Ez = self._parse_wav_bin_red(ans)
-        err = self.write(':TRIG:CL')
-        return err, Ex, Ey, Ez
+        err = self.write(':TRIG:CL 0')
+        return err, Exs, Eys, Ezs
 
-    def _float_GetData(self):
-        cmd = ":meas:all?"
-        tmpl = r"(?P<x>[\d.]+),(?P<y>[\d.]+),(?P<z>[\d.]+),(?P<m>[\d.]+)"
-        ans = self.query(cmd, tmpl)
-        return tuple(float(ans[_k]) for _k in ('x', 'y', 'z', 'm') )
+    # def _float_GetData(self):
+    #     cmd = ":meas:all?"
+    #     tmpl = r"(?P<x>[\d.]+),(?P<y>[\d.]+),(?P<z>[\d.]+),(?P<m>[\d.]+)"
+    #     ans = self.query(cmd, tmpl)
+    #     return tuple(float(ans[_k]) for _k in ('x', 'y', 'z', 'm') )
 
     def GetData(self):
         self.error = 0
@@ -197,13 +210,27 @@ class FIELDPROBE(FLDPRB):
             relerr = 0.12  # 1 dB
         else:
             relerr = 0.17  # 1.4 dB
-        err, ex, ey, ez  = self._float_force_trigger_GetData()
-        sqrt_n = np.sqrt(len(ex))
+        err, exs, eys, ezs  = self._float_force_trigger_GetData()
+        sqrt_n = np.sqrt(len(exs[0]))
         relerr /= sqrt_n
-        ex_av = np.average(ex)
-        ey_av = np.average(ey)
-        ez_av = np.average(ez)
-        data = [ quantities.Quantity(self._internal_unit, ucomponents.UncertainInput(val, val * relerr)) for val in (ex_av,ey_av,ez_av) ]
+        #exs_av = []
+        #eys_av = []
+        #ezs_av = []
+        data_x = []
+        data_y = []
+        data_z = []
+        for p in range(self.nprb):
+            #exs_av.append(np.average(exs[p]))
+            #eys_av.append(np.average(eys[p]))
+            #ezs_av.append(np.average(ezs[p]))
+            data_x.append(quantities.Quantity(self._internal_unit,
+                                              ucomponents.UncertainInput(np.average(exs[p]), np.average(exs[p])* relerr)))
+            data_y.append(quantities.Quantity(self._internal_unit,
+                                              ucomponents.UncertainInput(np.average(eys[p]), np.average(eys[p]) * relerr)))
+            data_z.append(quantities.Quantity(self._internal_unit,
+                                              ucomponents.UncertainInput(np.average(ezs[p]), np.average(ezs[p]) * relerr)))
+
+            data = [data_x, data_y, data_z]
         return self.error, data
 
     def GetDataNB(self, retrigger=False):
@@ -368,9 +395,11 @@ def main2():
             for i in range(10):
                 start_ns = time.time_ns()
                 err, dat = dev.GetData()
-                ex,ey,ez =(dat[i] for i in range(3))
+                exs,eys,ezs =(dat[i] for i in range(3))
                 end_ns = time.time_ns()
-                print(ff, i, (end_ns-start_ns)/1e6, ex, ey, ez)
+                print(ff, i, (end_ns-start_ns)/1e6)
+                for p in range(dev.nprb):
+                    print(p, exs[p], eys[p], ezs[p])
         except ValueError:
             break
     dev.Quit()
