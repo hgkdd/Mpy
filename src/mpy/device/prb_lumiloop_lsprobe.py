@@ -63,17 +63,20 @@ class FIELDPROBE(FLDPRB):
             return mode
 
         if 0 <= mode <= 8:
+            self.write(f':syst:freq {self.mfreq},0')  # to prevent errors in tcp server -> set a freq valid for both modes
             self.write(f':syst:mod {mode},0')
             while True:
                 ans = self.query(f':syst:mod? 0', None)
                 modes = map(int, ans.split(','))
                 if all(m == mode for m in modes):
                     break
+        time.sleep(0.1)
         self.wait_for_laser_ready()
+        # print('Laser is ready')
         self.mode = mode
         # get effective sample rate
         ans = self.query(':SYST:ESRA? 0')
-        self.esra = int(ans.split(',')[0])  # take the first; all shoulb be equal
+        self.esra = int(ans.split(',')[0])  # take the first; all should be equal
         return mode
 
     def GetFreq(self):
@@ -92,11 +95,11 @@ class FIELDPROBE(FLDPRB):
     def SetFreq(self, freq):
         self.error = 0
         #self.setMode(1)
+
         if freq < self.mfreq:
             self.mode = self.setMode(self.lmode)
         else:
             self.mode = self.setMode(self.hmode)
-
         self.write(f':syst:freq {freq},0')
         return self.GetFreq()
 
@@ -136,7 +139,12 @@ class FIELDPROBE(FLDPRB):
             err += err_state_unknown
         return err
 
-    def _conf_trigger(self, begin=0, length=1000, tpoints=1, forceTRIG_CL=True, timeout=10):
+    def _conf_trigger(self, begin=0,
+                      length=1000,
+                      tpoints=1,
+                      forceTRIG_CL=True,
+                      timeout=10,
+                      source='SOFT' ):
         err = 0
         if forceTRIG_CL:
             err = self.write(':TRIG:CL')
@@ -144,10 +152,40 @@ class FIELDPROBE(FLDPRB):
         err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
         if err < 0:
             return err
+        """
+        Strategy to have synchronized waveforms from all probes:
+        First Probe: 
+        trigger mode SINGLE (GUI)
+        trigger source SOFT
+        BNC output ENABLED
+        BNC polarity RISING
+        RJ45 output ENABLED
+        RJ45 polarity RISING
+        Other Probes:
+        trigger mode NORMAL (GUI)
+        trigger source RJ45 RISING
+        BNC output OFF
+        RJ45 output OFF
+        """
+        err = self.write(f':TRIG:SOUR {source},1')
+        err = self.write(f':TRIG:OUT 1,1')
+        err = self.write(f':TRIG:INV 0,1')
+        err = self.write(f':TRIG:BPOUT 1,1')
+        err = self.write(f':TRIG:BPINV 0,1')
+        for p in range(2, self.nprb+1):
+            err = self.write(f':TRIG:SOUR EXT2,{p}')
+            err = self.write(f':TRIG:OUT 0,{p}')
+            err = self.write(f':TRIG:INV 0,{p}')
+            err = self.write(f':TRIG:BPOUT 0,{p}')
+            err = self.write(f':TRIG:BPINV 0,{p}')
+
+        err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
+
+        # for all probes
         err = self.write(f':TRIG:BEG {begin},0')
-        err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
+        #err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
         err = self.write(f':TRIG:LEN {length},0')
-        err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
+        #err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
         err = self.write(f':TRIG:POIN {tpoints},0')
         err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
         self.begin = begin
@@ -156,19 +194,26 @@ class FIELDPROBE(FLDPRB):
         return err
 
     def _float_force_trigger_GetData(self, forceTRIG_CL=False, timeout=10):
-        err = 0
-        if forceTRIG_CL:
-            err = self.write(':TRIG:CL 0')
-        # wait for trigger is IDLE
-        err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
-        if err < 0:
-            return err, None
-        # force trig
-        err = self.write(':TRIG:FOR 0')
-        # wait for trigger DONE
-        err = self._wait_for_trigger_state(state='DONE', timeout=timeout)
-        if err < 0:
-            return err, None
+        while True:
+            err = 0
+            if forceTRIG_CL:
+                err = self.write(':TRIG:CL 0')
+            # wait for trigger is IDLE
+            err = self._wait_for_trigger_state(state='IDLE', timeout=timeout)
+            if err < 0:
+                continue
+            # arm all probes
+            err = self.write(f':TRIG:ARM 0')
+            err = self._wait_for_trigger_state(state='ARMED', timeout=timeout)
+            if err < 0:
+                continue
+            # force trig (only first probe; other are triggerd by first probe via RJ45)
+            err = self.write(':TRIG:FOR')
+            # wait for trigger DONE
+            err = self._wait_for_trigger_state(state='DONE', timeout=timeout)
+            if err < 0:
+                continue
+            break
         #ans = self.query(':TRIG:WAV:E:X?')
         #Ex = [float(s) for s in ans.split(',')]
         #ans = self.query(':TRIG:WAV:E:Y?')
@@ -237,7 +282,11 @@ class FIELDPROBE(FLDPRB):
         return self.GetData()
 
     def GetWaveform(self, forceTRIG_CL=True):
-        err, Ex, Ey, Ez = self._float_force_trigger_GetData(forceTRIG_CL=forceTRIG_CL)
+        while True:
+            err, data = self._float_force_trigger_GetData(forceTRIG_CL=forceTRIG_CL)
+            if err == 0 and data is not None:
+                break
+        Ex, Ey, Ez = data
         dt = 1. / self.esra
         ts = np.fromiter((i * dt * 1e3 for i,_ in enumerate(Ex)), float, count=-1)  # t in ms
         return err, ts, Ex, Ey, Ez
@@ -254,7 +303,7 @@ def main():
     except IndexError:
         ini = format_block("""
                         [DESCRIPTION]
-                        description: 'LSProbe 1.2'
+                        description: 'LSProbe 2.0'
                         type:        'FIELDPROBE'
                         vendor:      'LUMILOOP'
                         serialnr:
@@ -262,11 +311,12 @@ def main():
                         driver:
 
                         [Init_Value]
-                        fstart: 10e3
-                        fstop: 8.2e9
+                        fstart: 9e3
+                        fstop: 18e9
                         fstep: 0
-                        visa: TCPIP0::192.168.88.3::10000::SOCKET
-                        mode: 0
+                        visa: TCPIP::127.0.0.1::10000::SOCKET
+                        mode: 2,0
+                        mfreq: 700e6
                         virtual: 0
 
                         [Channel_1]
@@ -279,29 +329,36 @@ def main():
     dev.Init(ini=ini, channel=1)
     err, des = dev.GetDescription()
 
-    err, Ex, Ey, Ez = dev._float_force_trigger_GetData(forceTRIG_CL=True)
-    dt = 1./dev.esra
-    ts = np.array([i*dt*1e3 for i in range(len(Ex))]) # t in ms
+    dev.SetFreq(1e9)
 
-    fitdata = fit_sin(ts, Ex)
-    freqAM = fitdata['freq']
-    meanAM = fitdata['offset']
-    modAM = abs(fitdata['amp']) / meanAM * 100
+    err, Exs, Eys, Ezs = dev._float_force_trigger_GetData(forceTRIG_CL=True)
+    dt = 1./dev.esra
+    ts = np.array([i*dt*1e3 for i in range(len(Exs[0]))]) # t in ms
+
+    #fitdata = fit_sin(ts, Exs[0])
+    #freqAM = fitdata['freq']
+    #meanAM = fitdata['offset']
+    #modAM = abs(fitdata['amp']) / meanAM * 100
 
     plt.ion()
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    lineEx, = ax.plot(ts, Ex, marker=',')
-    lineEy, = ax.plot(ts, Ey, marker=',')
-    lineEz, = ax.plot(ts, Ez, marker=',')
-    lineSin, = ax.plot(ts, fitdata['fitfunc'](ts), ls='-')
-    plt.xlabel("Time in ms")
-    plt.ylabel("E-Field in V/m")
-    plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %")
-    plt.grid()
+    fig, axs = plt.subplots(dev.nprb, 1, sharex=True, sharey=True, figsize=(10,10))
+    lineEx=[[] for i in range(dev.nprb)]
+    lineEy=[[] for i in range(dev.nprb)]
+    lineEz=[[] for i in range(dev.nprb)]
+    for i, ax in enumerate(axs.flatten()):
+        lineEx[i], = ax.plot(ts, Exs[i], marker=',', label=f'p: {i+1}, x')
+        lineEy[i], = ax.plot(ts, Eys[i], marker=',', label=f'p: {i+1}, y')
+        lineEz[i], = ax.plot(ts, Ezs[i], marker=',', label=f'p: {i+1}, z')
+        # lineSin, = ax.plot(ts, fitdata['fitfunc'](ts), ls='-')
+        ax.set_xlabel("Time in ms")
+        ax.set_ylabel("E-Field in V/m")
+        ax.grid()
+        ax.legend(loc='upper left')
+    #plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %")
+    #plt.grid()
+    plt.tight_layout()
     plt.show()
-
-
+    # return
     while True:
         # freq = input("Frequency / Hz: ")
         # if freq in 'qQ':
@@ -323,23 +380,24 @@ def main():
         #         #print(ff, i, (end_ns-start_ns)/1e6, dat[0], dat[1], dat[2])
         #         ts.append(t_ms)
         #         Ex.append(dat[0])
-            t1 = time.time_ns()
-            err, Ex, Ey, Ez = dev._float_force_trigger_GetData(forceTRIG_CL=True)
-            delta_t = (time.time_ns() - t1) * 1e-6 # in ms
-            fitdata = fit_sin(ts, Ex)
-            freqAM = fitdata['freq']
-            meanAM = fitdata['offset']
-            modAM = abs(fitdata['amp']) / meanAM * 100
-            plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %, Dt = {delta_t:.1f} ms")
-            # lineEx.set_xdata(ts)
-            lineEx.set_ydata(Ex)
-            lineEy.set_ydata(Ey)
-            lineEz.set_ydata(Ez)
-            lineSin.set_ydata(fitdata['fitfunc'](ts))
+        t1 = time.time_ns()
+        err, Exs, Eys, Ezs = dev._float_force_trigger_GetData(forceTRIG_CL=True)
+        delta_t = (time.time_ns() - t1) * 1e-6 # in ms
+        #fitdata = fit_sin(ts, Ex)
+        #freqAM = fitdata['freq']
+        #meanAM = fitdata['offset']
+        #modAM = abs(fitdata['amp']) / meanAM * 100
+        #plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %, Dt = {delta_t:.1f} ms")
+        # lineEx.set_xdata(ts)
+        for i, ax in enumerate(axs.flatten()):
+            lineEx[i].set_ydata(Exs[i])
+            lineEy[i].set_ydata(Eys[i])
+            lineEz[i].set_ydata(Ezs[i])
+            #lineSin.set_ydata(fitdata['fitfunc'](ts))
             ax.relim()
             ax.autoscale_view(True, True, True)
-            fig.canvas.draw()
-            fig.canvas.flush_events()
+        fig.canvas.draw()
+        fig.canvas.flush_events()
 
             #plt.show()
         #except ValueError:
@@ -356,7 +414,7 @@ def main2():
     except IndexError:
         ini = format_block("""
                         [DESCRIPTION]
-                        description: 'LSProbe 1.2'
+                        description: 'LSProbe 2.0'
                         type:        'FIELDPROBE'
                         vendor:      'LUMILOOP'
                         serialnr:
@@ -364,8 +422,8 @@ def main2():
                         driver:
 
                         [Init_Value]
-                        fstart: 10e3
-                        fstop: 8.2e9
+                        fstart: 9e3
+                        fstop: 18e9
                         fstep: 0
                         visa: TCPIP::127.0.0.1::10000::SOCKET
                         mode: 2,0
@@ -394,16 +452,17 @@ def main2():
             print(f"Frequency set to: {ff} Hz")
             for i in range(10):
                 start_ns = time.time_ns()
+                print("vor GetData")
                 err, dat = dev.GetData()
                 exs,eys,ezs =(dat[i] for i in range(3))
                 end_ns = time.time_ns()
-                print(ff, i, (end_ns-start_ns)/1e6)
+                print(f'freq: {ff} Hz, count: {i}, duration: {(end_ns-start_ns)/1e6} ms')
                 for p in range(dev.nprb):
-                    print(p, exs[p], eys[p], ezs[p])
+                    print(f'prb: {p}, x: {exs[p]}, y: {eys[p]}, z: {ezs[p]}')
         except ValueError:
             break
     dev.Quit()
 
 
 if __name__ == '__main__':
-    main2()
+    main()
