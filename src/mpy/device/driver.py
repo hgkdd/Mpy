@@ -194,7 +194,7 @@ class DRIVER(object):
         """
         self.error = 0
         self.get_config(ininame, channel)
-        if not self.conf['init_value']['virtual']:
+        if not self.conf['init_value'].get('virtual', False):
             buspars = {}
             for k in ('timeout',
                       'chunk_size',
