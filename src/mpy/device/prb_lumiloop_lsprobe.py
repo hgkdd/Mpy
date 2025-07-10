@@ -17,6 +17,12 @@ class FIELDPROBE(FLDPRB):
     conftmpl['init_value']['visa'] = str
     conftmpl['init_value']['mode'] = str
     conftmpl['init_value']['mfreq'] = float
+    conftmpl['init_value']['channels'] = int
+
+    instances = {}  # dict to hold instances (channels) of this driver
+    main_instance = None
+    nprb = 1
+    data = []
 
     def __init__(self):
         FLDPRB.__init__(self)
@@ -33,21 +39,53 @@ class FIELDPROBE(FLDPRB):
         self.LastData = None
 
     def Init(self, ini=None, channel=None):
-        self.error = FLDPRB.Init(self, ini, channel)
-        self.mfreq = self.conf['init_value']['mfreq']
-        self.lmode = self.conf['init_value']['mode'].split(',')[0]
-        self.hmode = self.conf['init_value']['mode'].split(',')[1]
+        self.ch = channel
         self.mode = None
-        ans = self.query(':syst:cou?', r'(?P<nprb>\d)')   # Number of probes
-        self.nprb = int(ans['nprb'])
 
-        # wait for laser ready
-        self.write(':syst:las:en 1,0')
-        self.setMode(self.lmode)
-        self._conf_trigger()
+        if FIELDPROBE.main_instance is None:     # first access
+            self.error = FLDPRB.Init(self, ini, channel)
+            self.visa = self.conf['init_value']['visa']
+            self.mfreq = self.conf['init_value']['mfreq']
+            self.lmode = self.conf['init_value']['mode'].split(',')[0]
+            self.hmode = self.conf['init_value']['mode'].split(',')[1]
+            self.virtual = self.conf['init_value'].get('virtual', False)
+        else:  # copy from main instance
+            self.error = FIELDPROBE.main_instance.error
+            self.visa = FIELDPROBE.main_instance.visa
+            self.mfreq = FIELDPROBE.main_instance.mfreq
+            self.lmode = FIELDPROBE.main_instance.lmode
+            self.hmode = FIELDPROBE.main_instance.hmode
+            self.virtual = FIELDPROBE.main_instance.virtual
+
+        if self.visa and not self.virtual:  # ignore virtual instruments
+            key = self._hash()  # here: visa_ch
+            if key in FIELDPROBE.instances:
+                raise RuntimeWarning("Multi Channel Field Probe: Instance already in use: %s" % key)
+
+            FIELDPROBE.instances.setdefault(key, self)  # register this instance
+        if len(FIELDPROBE.instances.keys()) == 1:
+            # in this case this is the first instance  -> mark it as main instance
+            self.is_main_instance = True
+            FIELDPROBE.main_instance = self
+        else:
+            self.is_main_instance = False
+
+        if self.is_main_instance:
+            ans = self.query(':syst:cou?', r'(?P<nprb>\d)')   # Number of probes
+            FIELDPROBE.nprb = int(ans['nprb'])
+
+            # wait for laser ready
+            self.write(':syst:las:en 1,0')
+            self.setMode(self.lmode)
+            self._conf_trigger()
         return self.error
 
+    def _hash(self):
+        return "%s_%s" % (self.visa, self.ch)
+
     def wait_for_laser_ready(self):
+        if not self.is_main_instance:
+            return
         while True:
             # ans = self.query(':syst:las:rdy?', r'(?P<laser>\d)')
             ans = self.query(':meas:rdy? 0', None)  # waits for laser ready AND cal data present
@@ -57,6 +95,8 @@ class FIELDPROBE(FLDPRB):
         self.LastData_ns = time.time_ns()
 
     def setMode(self, mode):
+        if not self.is_main_instance:
+            return self.main_instance.mode
         mode = int(mode)
 
         if self.mode == mode:
@@ -81,6 +121,8 @@ class FIELDPROBE(FLDPRB):
 
     def GetFreq(self):
         self.error = 0
+        if not self.is_main_instance:
+            return self.error, self.main_instance.freq
         ans = self.query(":syst:freq? 0", None)
         if ans:
             freqs = [float(f) for f in ans.split(',')]
@@ -100,7 +142,8 @@ class FIELDPROBE(FLDPRB):
             self.mode = self.setMode(self.lmode)
         else:
             self.mode = self.setMode(self.hmode)
-        self.write(f':syst:freq {freq},0')
+        if self.is_main_instance:
+            self.write(f':syst:freq {freq},0')
         return self.GetFreq()
 
     def _parse_wav_bin_red(self, buffer):
@@ -121,6 +164,8 @@ class FIELDPROBE(FLDPRB):
         return Ex, Ey, Ez
 
     def _wait_for_trigger_state(self, state=None, timeout=10):
+        if not self.is_main_instance:
+            return
         err = 0
         err_state_unknown = -(1<<0)
         err_timeout = -(1<<1)
@@ -146,6 +191,8 @@ class FIELDPROBE(FLDPRB):
                       timeout=10,
                       source='SOFT' ):
         err = 0
+        if not self.is_main_instance:
+            return err
         if forceTRIG_CL:
             err = self.write(':TRIG:CL')
         # wait for trigger is IDLE
@@ -194,6 +241,9 @@ class FIELDPROBE(FLDPRB):
         return err
 
     def _float_force_trigger_GetData(self, forceTRIG_CL=False, timeout=10):
+        if not self.is_main_instance:
+            return None
+
         while True:
             err = 0
             if forceTRIG_CL:
@@ -208,7 +258,7 @@ class FIELDPROBE(FLDPRB):
             if err < 0:
                 continue
             # force trig (only first probe; other are triggerd by first probe via RJ45)
-            err = self.write(':TRIG:FOR')
+            err = self.write(':TRIG:FOR 0')
             # wait for trigger DONE
             err = self._wait_for_trigger_state(state='DONE', timeout=timeout)
             if err < 0:
@@ -248,34 +298,36 @@ class FIELDPROBE(FLDPRB):
 
     def GetData(self):
         self.error = 0
-        # relative error for single measured point
-        if self.freq <= 30e6:
-            relerr = 0.072  # 0.6 dB
-        elif 30e6 < self.freq <= 1e9:
-            relerr = 0.12  # 1 dB
-        else:
-            relerr = 0.17  # 1.4 dB
-        err, exs, eys, ezs  = self._float_force_trigger_GetData()
-        sqrt_n = np.sqrt(len(exs[0]))
-        relerr /= sqrt_n
-        #exs_av = []
-        #eys_av = []
-        #ezs_av = []
-        data_x = []
-        data_y = []
-        data_z = []
-        for p in range(self.nprb):
-            #exs_av.append(np.average(exs[p]))
-            #eys_av.append(np.average(eys[p]))
-            #ezs_av.append(np.average(ezs[p]))
-            data_x.append(quantities.Quantity(self._internal_unit,
-                                              ucomponents.UncertainInput(np.average(exs[p]), np.average(exs[p])* relerr)))
-            data_y.append(quantities.Quantity(self._internal_unit,
-                                              ucomponents.UncertainInput(np.average(eys[p]), np.average(eys[p]) * relerr)))
-            data_z.append(quantities.Quantity(self._internal_unit,
-                                              ucomponents.UncertainInput(np.average(ezs[p]), np.average(ezs[p]) * relerr)))
+        if self.is_main_instance:
+            # relative error for single measured point
+            if self.freq <= 30e6:
+                relerr = 0.072  # 0.6 dB
+            elif 30e6 < self.freq <= 1e9:
+                relerr = 0.12  # 1 dB
+            else:
+                relerr = 0.17  # 1.4 dB
+            err, exs, eys, ezs  = self._float_force_trigger_GetData(forceTRIG_CL=True)
+            sqrt_n = np.sqrt(len(exs[0]))
+            relerr /= sqrt_n
+            #exs_av = []
+            #eys_av = []
+            #ezs_av = []
+            data_x = []
+            data_y = []
+            data_z = []
+            for p in range(self.nprb):
+                #exs_av.append(np.average(exs[p]))
+                #eys_av.append(np.average(eys[p]))
+                #ezs_av.append(np.average(ezs[p]))
+                data_x.append(quantities.Quantity(self._internal_unit,
+                                                  ucomponents.UncertainInput(np.average(exs[p]), np.average(exs[p])* relerr)))
+                data_y.append(quantities.Quantity(self._internal_unit,
+                                                  ucomponents.UncertainInput(np.average(eys[p]), np.average(eys[p]) * relerr)))
+                data_z.append(quantities.Quantity(self._internal_unit,
+                                                  ucomponents.UncertainInput(np.average(ezs[p]), np.average(ezs[p]) * relerr)))
 
-            data = [data_x, data_y, data_z]
+            FIELDPROBE.data = [data_x, data_y, data_z]
+        data = [FIELDPROBE.data[0][self.ch-1], FIELDPROBE.data[1][self.ch-1], FIELDPROBE.data[2][self.ch-1]]
         return self.error, data
 
     def GetDataNB(self, retrigger=False):
@@ -291,119 +343,13 @@ class FIELDPROBE(FLDPRB):
         ts = np.fromiter((i * dt * 1e3 for i,_ in enumerate(Ex)), float, count=-1)  # t in ms
         return err, ts, Ex, Ey, Ez
 
+    def GetBatteryState(self):
+        self.error = 0
+        return self.error, 1.0
 
-def main():
-    from mpy.tools.util import format_block
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from mpy.tools.sin_fit import fit_sin
-
-    try:
-        ini = sys.argv[1]
-    except IndexError:
-        ini = format_block("""
-                        [DESCRIPTION]
-                        description: 'LSProbe 2.0'
-                        type:        'FIELDPROBE'
-                        vendor:      'LUMILOOP'
-                        serialnr:
-                        deviceid:
-                        driver:
-
-                        [Init_Value]
-                        fstart: 9e3
-                        fstop: 18e9
-                        fstep: 0
-                        visa: TCPIP::127.0.0.1::10000::SOCKET
-                        mode: 2,0
-                        mfreq: 700e6
-                        virtual: 0
-
-                        [Channel_1]
-                        name: EField
-                        unit: Voverm
-                        """)
-        ini = io.StringIO(ini)
-    dev = FIELDPROBE()
-
-    dev.Init(ini=ini, channel=1)
-    err, des = dev.GetDescription()
-
-    dev.SetFreq(1e9)
-
-    err, Exs, Eys, Ezs = dev._float_force_trigger_GetData(forceTRIG_CL=True)
-    dt = 1./dev.esra
-    ts = np.array([i*dt*1e3 for i in range(len(Exs[0]))]) # t in ms
-
-    #fitdata = fit_sin(ts, Exs[0])
-    #freqAM = fitdata['freq']
-    #meanAM = fitdata['offset']
-    #modAM = abs(fitdata['amp']) / meanAM * 100
-
-    plt.ion()
-    fig, axs = plt.subplots(dev.nprb, 1, sharex=True, sharey=True, figsize=(10,10))
-    lineEx=[[] for i in range(dev.nprb)]
-    lineEy=[[] for i in range(dev.nprb)]
-    lineEz=[[] for i in range(dev.nprb)]
-    for i, ax in enumerate(axs.flatten()):
-        lineEx[i], = ax.plot(ts, Exs[i], marker=',', label=f'p: {i+1}, x')
-        lineEy[i], = ax.plot(ts, Eys[i], marker=',', label=f'p: {i+1}, y')
-        lineEz[i], = ax.plot(ts, Ezs[i], marker=',', label=f'p: {i+1}, z')
-        # lineSin, = ax.plot(ts, fitdata['fitfunc'](ts), ls='-')
-        ax.set_xlabel("Time in ms")
-        ax.set_ylabel("E-Field in V/m")
-        ax.grid()
-        ax.legend(loc='upper left')
-    #plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %")
-    #plt.grid()
-    plt.tight_layout()
-    plt.show()
-    # return
-    while True:
-        # freq = input("Frequency / Hz: ")
-        # if freq in 'qQ':
-        #     break
-        # try:
-        #     freq = float(freq)
-        #     if freq <= 0:
-        #         break
-        #     err, ff = dev.SetFreq(freq)
-        #     print(f"Frequency set to: {ff} Hz")
-        #     start_ns = time.time_ns()
-        #     ts = []
-        #     Ex = []
-        #     for i in range(1000):
-        #         #start_ns = time.time_ns()
-        #         dat = dev._float_GetData()
-        #         end_ns = time.time_ns()
-        #         t_ms = (end_ns-start_ns)*1e-6
-        #         #print(ff, i, (end_ns-start_ns)/1e6, dat[0], dat[1], dat[2])
-        #         ts.append(t_ms)
-        #         Ex.append(dat[0])
-        t1 = time.time_ns()
-        err, Exs, Eys, Ezs = dev._float_force_trigger_GetData(forceTRIG_CL=True)
-        delta_t = (time.time_ns() - t1) * 1e-6 # in ms
-        #fitdata = fit_sin(ts, Ex)
-        #freqAM = fitdata['freq']
-        #meanAM = fitdata['offset']
-        #modAM = abs(fitdata['amp']) / meanAM * 100
-        #plt.title(f"E-Field: {meanAM:.2f} V/m, AM-Freq: {freqAM:.2f} kHz, AM-Depth: {modAM:.2f} %, Dt = {delta_t:.1f} ms")
-        # lineEx.set_xdata(ts)
-        for i, ax in enumerate(axs.flatten()):
-            lineEx[i].set_ydata(Exs[i])
-            lineEy[i].set_ydata(Eys[i])
-            lineEz[i].set_ydata(Ezs[i])
-            #lineSin.set_ydata(fitdata['fitfunc'](ts))
-            ax.relim()
-            ax.autoscale_view(True, True, True)
-        fig.canvas.draw()
-        fig.canvas.flush_events()
-
-            #plt.show()
-        #except ValueError:
-        #    break
-    dev.Quit()
-
+    def Quit(self):
+        self.error = 0
+        return self.error
 
 def main2():
     from mpy.tools.util import format_block
@@ -429,40 +375,55 @@ def main2():
                         mode: 2,0
                         mfreq: 700e6
                         virtual: 0
+                        channels = 4
 
                         [Channel_1]
                         name: EField
                         unit: Voverm
+
+                        [Channel_2]
+                        name: EField
+                        unit: Voverm
+
+                        [Channel_3]
+                        name: EField
+                        unit: Voverm
+
+                        [Channel_4]
+                        name: EField
+                        unit: Voverm
                         """)
-        ini = io.StringIO(ini)
-    dev = FIELDPROBE()
+    devs = {}
+    devs[0] = FIELDPROBE()
+    devs[0].Init(ini=io.StringIO(ini), channel=1)
+    err, des = devs[0].GetDescription()
+    nprb = devs[0].nprb
+    for ch in range(1, nprb):
+        devs[ch] = FIELDPROBE()
+        devs[ch].Init(ini=io.StringIO(ini), channel=ch+1)
 
-    dev.Init(ini=ini, channel=1)
-    err, des = dev.GetDescription()
-
+    oldfreq = None
     while True:
         freq = input("Frequency / Hz: ")
-        if freq in 'qQ':
-            break
-        try:
+        if oldfreq and freq == '':
+            freq = oldfreq
+        elif freq in 'qQ':
+                break
+        else:
             freq = float(freq)
             if freq <= 0:
                 break
-            err, ff = dev.SetFreq(freq)
-            print(f"Frequency set to: {ff} Hz")
-            for i in range(10):
-                start_ns = time.time_ns()
-                print("vor GetData")
-                err, dat = dev.GetData()
-                exs,eys,ezs =(dat[i] for i in range(3))
-                end_ns = time.time_ns()
-                print(f'freq: {ff} Hz, count: {i}, duration: {(end_ns-start_ns)/1e6} ms')
-                for p in range(dev.nprb):
-                    print(f'prb: {p}, x: {exs[p]}, y: {eys[p]}, z: {ezs[p]}')
-        except ValueError:
-            break
-    dev.Quit()
+
+        for dv in [devs[k] for k in range(nprb)]:
+            err, ff = dv.SetFreq(freq)
+            oldfreq = ff
+            # print(f"Frequency set to: {ff} Hz")
+            err, dat = dv.GetData()
+            print(dat)
+
+    for dv in [devs[k] for k in range(nprb)]:
+        dv.Quit()
 
 
 if __name__ == '__main__':
-    main()
+    main2()
