@@ -288,7 +288,7 @@ class FIELDPROBE(FLDPRB):
             Ezs.append(Ez)
         self.dev.read_bytes(2)  # cr lf
         err = self.write(':TRIG:CL 0')
-        return err, Exs, Eys, Ezs
+        return 0, Exs, Eys, Ezs
 
     # def _float_GetData(self):
     #     cmd = ":meas:all?"
@@ -335,19 +335,23 @@ class FIELDPROBE(FLDPRB):
 
     def GetWaveform(self, forceTRIG_CL=True):
         while True:
-            err, data = self._float_force_trigger_GetData(forceTRIG_CL=forceTRIG_CL)
-            if err == 0 and data is not None:
+            err, Ex, Ey, Ez = self._float_force_trigger_GetData(forceTRIG_CL=forceTRIG_CL)
+            if err == 0:
                 break
-        Ex, Ey, Ez = data
         dt = 1. / self.esra
-        ts = np.fromiter((i * dt * 1e3 for i,_ in enumerate(Ex)), float, count=-1)  # t in ms
-        return err, ts, Ex, Ey, Ez
+        ts = np.fromiter((i * dt * 1e3 for i,_ in enumerate(Ex[0])), float, count=-1)  # t in ms
+        return err, ts, Ex[0], Ey[0], Ez[0]
 
     def GetBatteryState(self):
         self.error = 0
         return self.error, 1.0
 
     def Quit(self):
+        if self.is_main_instance:
+            FIELDPROBE.instances = {}  # dict to hold instances (channels) of this driver
+            FIELDPROBE.main_instance = None
+            FIELDPROBE.nprb = 1
+            FIELDPROBE.data = None
         self.error = 0
         return self.error
 
