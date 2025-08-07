@@ -362,7 +362,7 @@ def main2():
     try:
         ini = sys.argv[1]
     except IndexError:
-        ini = format_block("""
+        ini_rc = format_block("""
                         [DESCRIPTION]
                         description: 'LSProbe 2.0'
                         type:        'FIELDPROBE'
@@ -397,6 +397,30 @@ def main2():
                         name: EField
                         unit: Voverm
                         """)
+    ini_gtem = format_block("""
+                    [DESCRIPTION]
+                    description: 'LSProbe 1.2'
+                    type: FIELDPROBE
+                    vendor: LUMILOOP
+                    serialnr:
+                    deviceid:
+                    driver: 
+                    
+                    [Init_Value]
+                    fstart: 10e3
+                    fstop: 8.2e9
+                    fstep: 0
+                    visa: TCPIP0::192.168.88.3::10000::SOCKET
+                    mode: 0,0
+                    mfreq: 8.2e9
+                    virtual: 0
+                    channels = 1
+                    
+                    [Channel_1]
+                    name: EField
+                    unit: Voverm    
+                    """)
+    ini = ini_gtem
     devs = {}
     devs[0] = FIELDPROBE()
     devs[0].Init(ini=io.StringIO(ini), channel=1)
