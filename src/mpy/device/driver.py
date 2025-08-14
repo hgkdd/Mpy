@@ -288,7 +288,12 @@ class DRIVER(object):
         Returns ``(0, self.conf['init_value']['virtual'])``
         """
         self.error = 0
-        return self.error, self.conf['init_value']['virtual']
+        print(self.conf)
+        try:
+            virt = self.conf['init_value']['virtual']
+        except KeyError:
+            virt = False
+        return self.error, virt
 
     def GetDescription(self):
         """

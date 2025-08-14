@@ -95,13 +95,13 @@ def test():
             count = 0
             key = getch()
             os.write(sys.stdout.fileno(), key)
-            if key == 'q':
+            if key == b'q':
                 print()
                 break
         else:
             count = count + 1
             if count == 1000:
-                os.write(sys.stdout.fileno(), '*')
+                os.write(sys.stdout.fileno(), b'*')
                 count = 0
 
     restore_stdin()

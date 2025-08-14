@@ -630,7 +630,7 @@ class MGraph(Graph):
         devices = [name for name in self.nodes if IgnoreInactive or name in self.activenodes]  # intersept
         serr = 0
         for n in devices:
-            # print "Init %s ..."%str(n)
+            print("Init %s ..."%str(n))
             attribs = self.nodes[n]
             if attribs['inst'] is None:
                 continue

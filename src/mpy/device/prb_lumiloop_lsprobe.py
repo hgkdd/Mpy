@@ -49,6 +49,7 @@ class FIELDPROBE(FLDPRB):
             self.lmode = self.conf['init_value']['mode'].split(',')[0]
             self.hmode = self.conf['init_value']['mode'].split(',')[1]
             self.virtual = self.conf['init_value'].get('virtual', False)
+            FIELDPROBE.conf = self.conf.copy()   # make a copy of conf dict for the whole class
         else:  # copy from main instance
             self.error = FIELDPROBE.main_instance.error
             self.visa = FIELDPROBE.main_instance.visa
@@ -56,6 +57,8 @@ class FIELDPROBE(FLDPRB):
             self.lmode = FIELDPROBE.main_instance.lmode
             self.hmode = FIELDPROBE.main_instance.hmode
             self.virtual = FIELDPROBE.main_instance.virtual
+            self.conf = FIELDPROBE.conf.copy()  # copy class conf to instance
+
 
         if self.visa and not self.virtual:  # ignore virtual instruments
             key = self._hash()  # here: visa_ch

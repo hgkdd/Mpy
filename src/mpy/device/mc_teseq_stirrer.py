@@ -1,8 +1,326 @@
 # -*- coding: utf-8 -*-
 import time
 import serial
+import atexit
 
 from mpy.device.motorcontroller import MOTORCONTROLLER as MC
+
+
+class Stirrer(object):
+    """
+    """
+    # the read termination is a space with a carriage return!
+    read_termination = ' \r'
+    write_termination = '\r'
+
+    _timeout = 20
+    # delay between query calls
+    _status_query_delay = 0.3
+    _angle_error = 0.5
+    _inter_cmd_wait_time = 0.05  # in seconds
+
+    lock_message = ("STIRRER Controller V1.50 is locked. "
+                    "Please check SYNC position and restart the controller!")
+
+    default_port_parameters = {
+        'port': '/dev/stirrer',
+        'baudrate': 9600,
+        'bytesize': serial.EIGHTBITS,
+        'parity': serial.PARITY_NONE,
+        'stopbits': serial.STOPBITS_ONE,
+        'xonxoff': True,
+        'rtscts': False,
+        'dsrdtr': False,
+        'inter_byte_timeout': None,
+        'exclusive': False}
+
+    # currently these values are ignored
+    stirrer_parameters = {
+        'maxspeed': 6,    # turns per minute
+        'minspeed': 0.18,
+        'acc': 65
+    }
+    degpersec = stirrer_parameters['maxspeed'] * 6
+
+    def __init__(
+            self,
+            port_parameters={},
+            status_retries=10,
+            do_not_open=False):
+        self.status_retries = status_retries
+        self.port_parameters = port_parameters
+        self._create_serial_port()
+        if not do_not_open:
+            self._status()
+        self.next_angle = None
+
+    def _create_serial_port(self):
+        self.port = serial.Serial(
+            **{**Stirrer.default_port_parameters,
+               **self.port_parameters})
+
+    def _write(self, command):
+        self.port.reset_input_buffer()
+        self.port.reset_output_buffer()
+        bytes_written = self.port.write(
+            f"{command}{self.write_termination}".encode())
+        self.port.flush()
+        return bytes_written
+
+    def _read(self, size):
+        answer = self.port.read_until(
+            expected=self.read_termination.encode(),
+            size=size)
+        # drop the carriage return
+        return answer.decode()[:-len(self.read_termination)]
+
+    def _query(self, command):
+        self._write(command)
+        while self.port.in_waiting == 0:
+            time.sleep(self._status_query_delay)
+        answer = []
+        while self.port.in_waiting > 0:
+            partial = self._read(self.port.in_waiting)
+            answer.append(partial)
+            time.sleep(.01)
+        answer = ''.join(answer)
+        return answer
+
+    @property
+    def current_angle(self):
+        self._status()
+        return self._current_angle
+
+    def _clip_angle(self, angle):
+        # angle only values 0 <= angle < 360 are allowed
+        # check if the angle needs unwraping
+        while angle >= 360:
+            angle -= 360
+        while angle < 0:
+            angle += 360
+        return angle
+
+    @current_angle.setter
+    def current_angle(self, angle):
+        angle = self._clip_angle(angle)
+        # Move Absolute
+        self._write(f'RMA:{angle}')
+        self._wait()
+
+        if self._angle_error < abs(self.current_angle - angle):
+            raise AngleError(
+                angle,
+                self.current_angle,
+                self._angle_error)
+        if self._error:
+            raise Exception(self._error_message)
+
+    @property
+    def motor_running(self):
+        self._status()
+        return self._motor_running
+
+    @property
+    def drive_initialized(self):
+        self._status()
+        if self.motor_running:
+            return False
+        # print(self._drive_initialized)
+        return self._drive_initialized
+
+    @property
+    def error(self):
+        self._status()
+        return self._error
+
+    @property
+    def error_message(self):
+        self._status()
+        return self._error_message
+
+    def initialize_drive(self):
+        self._status()
+        if not self.drive_initialized:
+            self._write('INIT')
+            self._wait()
+        return self.drive_initialized
+
+    def stop_motor(self):
+        self._write('STOP')
+        self._wait()
+        return self.motor_running
+
+    def run_clockwise(self):
+        self._write('DIR:1')
+        time.sleep(self._inter_cmd_wait_time)
+        self._write('RMS')
+        self._wait2()
+        return self.motor_running
+
+    def step_clockwise_by(self, step):
+        self._write('DIR:1')
+        time.sleep(self._inter_cmd_wait_time)
+        pos = self.current_angle + step
+        pos = self._clip_angle(pos)
+        self._write(f'RMA:{abs(int(pos))}')
+        self._wait2()
+        return self.motor_running
+
+    def run_anti_clockwise(self):
+        self._write('DIR:0')
+        time.sleep(self._inter_cmd_wait_time)
+        self._write('RMS')
+        self._wait2()
+        return self.motor_running
+
+    def step_anti_clockwise_by(self, step):
+        self._write('DIR:0')
+        time.sleep(self._inter_cmd_wait_time)
+        pos = self.current_angle - step
+        pos = self._clip_angle(pos)
+        self._write(f'RMA:{abs(int(pos))}')
+        self._wait2()
+        return self.motor_running
+
+    def goto_angle(self, angle, direction=1):
+        """
+        direction = 1 -> clockwise
+        """
+        if direction == 1:
+            self._write('DIR:1')
+        else:
+            self._write('DIR:0')
+        time.sleep(self._inter_cmd_wait_time)
+        angle = self._clip_angle(angle)
+        self._write(f'RMA:{abs(int(angle))}')
+        self._wait2()
+        return self.motor_running
+
+    # wait while motor is running
+    def _wait(self):
+        wait_interval = 0.3
+        wait_duration = 0
+
+        time.sleep(wait_interval)
+        wait_duration += wait_interval
+
+        while self.motor_running:
+            time.sleep(wait_interval)
+            wait_duration += wait_interval
+            if wait_duration >= self._timeout:
+                print(f"Waiting for motor to finish movement "
+                      f"timed out. Waited {wait_duration} s.")
+                break
+        return self._current_angle
+
+    # wait until motor is running
+    def _wait2(self):
+        wait_interval = 0.3
+        wait_duration = 0
+
+        time.sleep(wait_interval)
+        wait_duration += wait_interval
+
+        while not self.motor_running:
+            time.sleep(wait_interval)
+            wait_duration += wait_interval
+            if wait_duration >= self._timeout:
+                print(f"Waiting for motor to start movement "
+                      f"timed out. Waited {wait_duration} s.")
+                break
+        return self._current_angle
+
+    def _status(self):
+        for attempt in range(self.status_retries):
+            try:
+                answer = self._query('?')
+
+                if "is locked" in answer:
+                    print(f"The Stirrer answers: {answer}")
+                    print("Stirrer is locked!\n"
+                          "Try to turn it off and on again ;)")
+                    raise StirrerLockedError()
+
+                answer = answer.split(',')
+
+                self._motor_running = (answer[0] == '0')
+                self._current_angle = float(answer[1])
+                self._drive_initialized = (answer[2] == '0')
+                self._error = (answer[3] == '1')
+                self._error_message = ""
+                if self._error:
+                    # hier funktionert was nicht,
+                    # der Controller gibt Müll zurück
+                    try:
+                        self._error_message = self._query('ERREAD')
+                    except UnicodeDecodeError:
+                        print("WARNING: could not decode error message")
+
+                return (
+                    self._motor_running,
+                    self._current_angle,
+                    self._drive_initialized,
+                    self._error,
+                    self._error_message
+                )
+
+            except IndexError:
+                time.sleep(self._status_query_delay)
+            except ValueError:
+                print(f"Unparsable device message {answer}")
+                time.sleep(self._status_query_delay)
+            else:
+                # querying the status successful
+                break
+        else:
+            exception = Exception(
+                f"Current Stirrer State could not be queried, "
+                f"Received: \"{answer}\"")
+            raise exception
+
+    def set_next_angle(self, angle):
+        self.next_angle = self._clip_angle(angle)
+        self._write(f'DEG:{self.next_angle}')
+
+    def goto_next_angle(self):
+        if not self.next_angle:
+            return
+        # Move Absolute to stored position
+        self._write('RMT')
+        self._wait()
+
+        if self._angle_error < abs(self.current_angle - self.next_angle):
+            raise AngleError(
+                self.next_angle,
+                self.current_angle,
+                self._angle_error)
+        if self._error:
+            raise Exception(self._error_message)
+
+    def close(self):
+        self.port.close()
+        self._drive_initialized = False
+        # self._
+
+    def __del__(self):
+        self.port.close()
+
+
+class AngleError(Exception):
+
+    def __init__(self, new_angle, current_angle, angle_error_threshold):
+        """
+
+        """
+        self.new_angle = new_angle
+        self.current_angle = current_angle
+        self.angle_error_threshold = angle_error_threshold
+        super().__init__(
+            (
+                f"Could not reach new angle {new_angle}, "
+                f"from {current_angle} with a allowed "
+                f"deviation of {angle_error_threshold} ")
+        )
 
 
 class StirrerLockedError(Exception):
@@ -15,101 +333,8 @@ class MOTORCONTROLLER(MC):
     """
     Class to control TESEQ stirrer.
     """
-    # the read termination is a space with a carriage return!
-    read_termination = ' \r'
-    write_termination = '\r'
-    _timeout = 20
-    # delay between query calls
-    _status_query_delay = 0.3
-    _angle_error = 0.5
-    status_retries = 10
-
-    lock_message = ("STIRRER Controller V1.50 is locked. "
-                    "Please check SYNC position and restart the controller!")
-
-    def __init__(self, port=2):
+    def __init__(self):
         super().__init__()
-
-    def _state(self):
-        for _ in range(self.status_retries):
-            try:
-                ans = self._ask('?')  # ask for status
-                if "is locked" in ans:
-                    print(f"The Stirrer answers: {ans}")
-                    print("Stirrer is locked!\n"
-                          "Try to turn it off and on again ;)")
-                    raise StirrerLockedError()
-                # print ans
-                ans = ans.split(',')
-                stopped = (ans[0] == '1')
-                # print ans,' --> ', ans[0], ans[1], ' --> ', stopped
-                self.ca = float(ans[1])  # current angle
-                self.drive_init_ok = (ans[2] == '0')
-                fail = (ans[3] == '1')
-                if fail:
-                    # hier funktioniert was nicht,
-                    # der Controller gibt Müll zurück
-                    try:
-                        _error_message = self._query('ERREAD')
-                    except UnicodeDecodeError:
-                        print("WARNING: could not decode error message")
-
-                # print self._ask('INFO')
-                return stopped, self.ca, self.drive_init_ok, fail  # exit for loop
-            except IndexError:  # structure of and not as expected
-                time.sleep(self._status_query_delay)
-            except ValueError:
-                print(f"Unparsable device message {ans}")
-                time.sleep(self._status_query_delay)
-            else:
-                # querying the status successful
-                break
-        else:
-            exception = Exception(
-                f"Current Stirrer State could not be queried, "
-                f"Received: \"{ans}\"")
-            raise exception
-
-    def _wait(self):
-        stopped = False
-        while not stopped:  # loop until stirrer is stopped
-            stopped, self.ca, self.drive_init_ok, fail = self._state()
-            # time.sleep(0.2)  # don't jam the serial bus
-        return self.ca
-
-    def _write(self, cmd):
-        time.sleep(0.1)
-        bytes_written = self.dev.write(
-            f"{cmd}{self.write_termination}".encode())
-        self.dev.flush()
-        return bytes_written
-
-    def _read(self, size):
-        time.sleep(0.1)
-        answer = self.dev.read_until(
-            expected=self.read_termination.encode(),
-            size=size)
-        # drop the carriage return
-        return answer.decode()[:-len(self.read_termination)]
-
-    def _ask(self, cmd):
-        self._write(cmd)
-
-        while self.dev.inWaiting() == 0:
-            time.sleep(self._status_query_delay)
-
-        answer = []
-        while self.dev.inWaiting() > 0:
-            partial = self._read(self.dev.inWaiting())
-            answer.append(partial)
-            time.sleep(.01)
-
-        answer = ''.join(answer)
-        return answer
-
-    def _Info(self):
-        ans = self._ask('INFO')
-        return ans
 
     def Init(self, ini=None, channel=None):
         if channel is None:
@@ -119,76 +344,19 @@ class MOTORCONTROLLER(MC):
         self.conf = {}
         self.conf['init_value'] = {}
         self.conf['init_value']['virtual'] = False
-        port = '/dev/ttyUSB1'
-        maxspeed = 6
-        minspeed = 0.18
-        acc = 65
-        for i in range(5):
-            try:
-                self.dev = serial.Serial(port=port,  # 2 -> COM3
-                                         baudrate=9600,
-                                         bytesize=serial.EIGHTBITS,
-                                         parity=serial.PARITY_NONE,
-                                         stopbits=serial.STOPBITS_ONE,
-                                         xonxoff=True,
-                                         rtscts=False,
-                                         dsrdtr=False,
-                                         inter_byte_timeout=None,
-                                         exclusive=False,
-                                         timeout=None)
-                # self.dev=io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser),
-                #                            newline='\r')
-                break
-            except:
-                time.sleep(0.5)
-        else:
-            raise
 
-        ans = self._ask('INIT')
-        self._wait()
-        if not self.drive_init_ok:
-            raise RuntimeError('Unable to init tuner.')
-        # set maxspeed, minspeed and acc to save and valid values
-        if maxspeed is None:
-            maxspeed = 6
-        else:
-            maxspeed = min(6, maxspeed)
-            maxspeed = max(0.18, maxspeed)
-        if minspeed is None:
-            minspeed = 0.18
-        else:
-            minspeed = min(6, minspeed)
-            minspeed = max(0.18, minspeed)
-        if acc is None:
-            acc = 65
-        else:
-            acc = min(65, acc)
-            acc = max(40, acc)
-        self.maxspeed = maxspeed  # turns per minute
-        self.degpersec = self.maxspeed * 6
-        cmds = ('MAXSPEED:%f' % maxspeed,
-                'MINSPEED:%f' % minspeed,
-                'ACC:%f' % acc)
-        for cmd in cmds:
-            # print cmd
-            ans = self._ask(cmd)
-            # print ans
-        # print self._ask('INFO')
-        return self.ca
+        self.stirrer = Stirrer()
+        atexit.register(self.stirrer.stop_motor)
+        if not self.stirrer.drive_initialized:
+            self.stirrer.initialize_drive()
+        return 0
 
     def Goto(self, pos):
-        self.error = 0
-        stopped, self.ca, self.drive_init_ok, fail = self._state()
-        if not stopped:
-            # stop first
-            self._write('STOP')
-            self.ca = self._wait()
+        if self.stirrer.drive_initialized:
+            status = self.stirrer.goto_angle(pos)
+            self.ca = self.stirrer._wait()
 
-        # wrap angle
-        pos = pos % 360
-        self._ask('RMA:%f' % pos)
-        # _wait until stirrer stopped
-        self._wait()
+        self.error = 0
         return self.error, self.ca
 
     def Move(self, dir):
@@ -197,24 +365,18 @@ class MOTORCONTROLLER(MC):
         if d == dir:  # nothing to do
             return self.error, dir
         # stop first
-        self._write('STOP')
-        self.ca = self._wait()
+        self.stirrer.stop_motor()
 
         if dir == 1:
-            self._write('DIR:1')
-            time.sleep(0.1)
-            self._write('RMS')
-            time.sleep(0.5)
+            self.stirrer.run_clockwise()
         elif dir == -1:
-            self._write('DIR:0')
-            time.sleep(0.1)
-            self._write('RMS')
-            time.sleep(0.5)
+            self.stirrer.run_anti_clockwise()
         return self.error, dir
 
     def GetState(self):
         self.error = 0
-        stopped, self.ca, self.drive_init_ok, fail = self._state()
+        running, self.ca, self.drive_init_ok, fail, msg = self.stirrer._status()
+        stopped = not running
         first = time.time()
         if stopped:
             return self.error, self.ca, 0
@@ -223,11 +385,12 @@ class MOTORCONTROLLER(MC):
             d = 0
             while self.ca == ca:
                 time.sleep(0.1)
-                stopped, self.ca, self.drive_init_ok, fail = self._state()
+                running, self.ca, self.drive_init_ok, fail, msg = self.stirrer._status()
+                stopped = not running
                 now = time.time()
                 dt = now - first
-                upguess = (ca + self.degpersec * dt) % 360
-                downguess = (ca - self.degpersec * dt) % 360
+                upguess = (ca + self.stirrer.degpersec * dt) % 360
+                downguess = (ca - self.stirrer.degpersec * dt) % 360
                 # print self.ca, upguess, downguess
                 # print stopped, ca, self.ca
                 if stopped:
@@ -248,12 +411,8 @@ class MOTORCONTROLLER(MC):
 
     def Quit(self):
         self.error = 0
-        stopped, self.ca, self.drive_init_ok, fail = self._state()
-        if not stopped:
-            # stop first
-            self._write('STOP')
-            self.ca = self._wait()
-        self.dev.close()
+        self.stirrer.stop_motor()
+        # self.dev.close()
         return self.error
 
 

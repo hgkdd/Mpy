@@ -73,6 +73,7 @@ class POWERMETER(PMMTR):
             self.lmode = self.conf['init_value']['mode'].split(',')[0]
             self.hmode = self.conf['init_value']['mode'].split(',')[1]
             self.virtual = self.conf['init_value'].get('virtual', False)
+            POWERMETER.conf = self.conf.copy()   # make a copy of conf dict for the whole class
         else:  # copy from main instance
             self.error = POWERMETER.main_instance.error
             self.visa = POWERMETER.main_instance.visa
@@ -80,6 +81,7 @@ class POWERMETER(PMMTR):
             self.lmode = POWERMETER.main_instance.lmode
             self.hmode = POWERMETER.main_instance.hmode
             self.virtual = POWERMETER.main_instance.virtual
+            self.conf = POWERMETER.conf.copy()  # copy class conf to instance
 
         if self.visa and not self.virtual:  # ignore virtual instruments
             key = self._hash()  # here: visa_ch
@@ -95,8 +97,10 @@ class POWERMETER(PMMTR):
             self.is_main_instance = False
 
         if self.is_main_instance:
-            ans = self.query(':syst:cou?', r'(?P<npm>\d)')   # Number of probes
+            ans = self.query(':syst:cou?', r'(?P<npm>\d)')   # Number of powermeters (typical:1)
             POWERMETER.npm = int(ans['npm'])
+            ans = self.query(':syst:chan?', r'(?P<nch>\d)')   # Number of channels (typical:1)
+            POWERMETER.nch = int(ans['nch'])
 
             # wait for laser ready
             self.write(':syst:las:en 1,0')
@@ -390,7 +394,7 @@ def main2():
     devs[0].Init(ini=io.StringIO(ini), channel=1)
     err, des = devs[0].GetDescription()
     npm = devs[0].npm
-    nch = npm * 3
+    nch = devs[0].nch
     for ch in range(1, nch):
         devs[ch] = POWERMETER()
         devs[ch].Init(ini=io.StringIO(ini), channel=ch+1)
