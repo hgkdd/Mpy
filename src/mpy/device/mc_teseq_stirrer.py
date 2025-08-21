@@ -186,12 +186,15 @@ class Stirrer(object):
         """
         direction = 1 -> clockwise
         """
+        self.stop_motor()
         if direction == 1:
             self._write('DIR:1')
         else:
             self._write('DIR:0')
         time.sleep(self._inter_cmd_wait_time)
         angle = self._clip_angle(angle)
+        if abs(self.current_angle - angle) < 0.5:
+            return self.motor_running
         self._write(f'RMA:{abs(int(angle))}')
         self._wait2()
         return self.motor_running
@@ -345,11 +348,15 @@ class MOTORCONTROLLER(MC):
         self.conf['init_value'] = {}
         self.conf['init_value']['virtual'] = False
 
+        self.ca = None
+
         self.stirrer = Stirrer()
         atexit.register(self.stirrer.stop_motor)
         if not self.stirrer.drive_initialized:
             self.stirrer.initialize_drive()
-        return 0
+            self.ca = self.stirrer._wait()  # wait for stirrer is stopped and return ca
+        self.error = 0
+        return self.error
 
     def Goto(self, pos):
         if self.stirrer.drive_initialized:
