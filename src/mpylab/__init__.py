@@ -1,7 +1,3 @@
-__version__ = 'unknown'
-try:
-    from ._version import version
+import importlib.metadata
 
-    __version__ = version
-except ImportError:
-    pass
+__version__ = importlib.metadata.version("mpylab")
