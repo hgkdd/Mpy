@@ -5,183 +5,183 @@ API Documentation
 
 This is the documentation of the API.
 
-:mod:`mpy.device.driver_framework`
+:mod:`mpylab.device.driver_framework`
 ----------------------------------
 
 .. toctree::
    :maxdepth: 2
 
-   mpy/driver_framework.rst
+   mpylab/driver_framework.rst
 
 
-:mod:`mpy.device.driver`
+:mod:`mpylab.device.driver`
 ------------------------
 
-.. automodule:: mpy.device.driver
+.. automodule:: mpylab.device.driver
    :members:
    :undoc-members:
    :inherited-members:
 
 
-:mod:`mpy.device.driver_new`
+:mod:`mpylab.device.driver_new`
 -----------------------------
-.. automodule:: mpy.device.driver_new
+.. automodule:: mpylab.device.driver_new
    :members:
    :undoc-members:
    :inherited-members:
 
 
-:mod:`mpy.device.device`
+:mod:`mpylab.device.device`
 ------------------------
 
-.. automodule:: mpy.device.device
+.. automodule:: mpylab.device.device
    :members:
    :undoc-members:
    :inherited-members:
 
-:mod:`mpy.device.amplifier`
+:mod:`mpylab.device.amplifier`
 ---------------------------
 
-.. automodule:: mpy.device.amplifier
+.. automodule:: mpylab.device.amplifier
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.device.nport`
+:mod:`mpylab.device.nport`
 -----------------------
 
-.. automodule:: mpy.device.nport
+.. automodule:: mpylab.device.nport
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.device.powermeter`
+:mod:`mpylab.device.powermeter`
 ---------------------------------
 
-.. automodule:: mpy.device.powermeter
+.. automodule:: mpylab.device.powermeter
    :members:
    :undoc-members:
    :inherited-members:
 
-:mod:`mpy.device.signalgenerator`
+:mod:`mpylab.device.signalgenerator`
 ---------------------------------
 
-.. automodule:: mpy.device.signalgenerator
+.. automodule:: mpylab.device.signalgenerator
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.device.spectrumanalyzer`
+:mod:`mpylab.device.spectrumanalyzer`
 -----------------------------------
 
-.. automodule:: mpy.device.spectrumanalyzer
+.. automodule:: mpylab.device.spectrumanalyzer
    :members:
    :undoc-members:
    :inherited-members:
 
-:mod:`mpy.device.networkanalyzer`
+:mod:`mpylab.device.networkanalyzer`
 ----------------------------------
-.. automodule:: mpy.device.networkanalyzer
+.. automodule:: mpylab.device.networkanalyzer
 
 .. toctree::
     :maxdepth: 2
 
-    mpy/device_networkanalyzer.rst
+    mpylab/device_networkanalyzer.rst
 
 
    
-:mod:`mpy.env.Measure`
+:mod:`mpylab.env.Measure`
 -----------------------
 
-.. automodule:: mpy.env.Measure
+.. automodule:: mpylab.env.Measure
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.env.tem.TEMCell`
+:mod:`mpylab.env.tem.TEMCell`
 -----------------------------------
 
-.. automodule:: mpy.env.tem.TEMCell
+.. automodule:: mpylab.env.tem.TEMCell
    :members:
    :undoc-members:
    :inherited-members:
 
-:mod:`mpy.tools.aunits`
+:mod:`mpylab.tools.aunits`
 -----------------------
 
-.. automodule:: mpy.tools.aunits
+.. automodule:: mpylab.tools.aunits
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.tools.calling`
+:mod:`mpylab.tools.calling`
 ------------------------
 
-.. automodule:: mpy.tools.calling
+.. automodule:: mpylab.tools.calling
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.tools.Configuration`
+:mod:`mpylab.tools.Configuration`
 -------------------------------
 
-.. automodule:: mpy.tools.Configuration
+.. automodule:: mpylab.tools.Configuration
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.tools.dataparser`
+:mod:`mpylab.tools.dataparser`
 ----------------------------
 
-.. automodule:: mpy.tools.dataparser
+.. automodule:: mpylab.tools.dataparser
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.tools.directivity`
+:mod:`mpylab.tools.directivity`
 ----------------------------
 
-.. automodule:: mpy.tools.directivity
+.. automodule:: mpylab.tools.directivity
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.tools.dot`
+:mod:`mpylab.tools.dot`
 ------------------------
 
-.. automodule:: mpy.tools.dot
+.. automodule:: mpylab.tools.dot
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.tools.interpol`
+:mod:`mpylab.tools.interpol`
 -------------------------
 
-.. automodule:: mpy.tools.interpol
+.. automodule:: mpylab.tools.interpol
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.tools.mgraph`
+:mod:`mpylab.tools.mgraph`
 ------------------------
 
-.. automodule:: mpy.tools.mgraph
+.. automodule:: mpylab.tools.mgraph
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.tools.util`
+:mod:`mpylab.tools.util`
 ------------------------
 
-.. automodule:: mpy.tools.util
+.. automodule:: mpylab.tools.util
    :members:
    :undoc-members:
    :inherited-members:
    
-:mod:`mpy.tools.spacing`
+:mod:`mpylab.tools.spacing`
 ------------------------
 
-.. automodule:: mpy.tools.spacing
+.. automodule:: mpylab.tools.spacing
    :members:
    :undoc-members:
    :inherited-members:

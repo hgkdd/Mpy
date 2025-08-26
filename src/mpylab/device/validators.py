@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This is :mod:`mpy.device.validators`:
+"""This is :mod:`mpylab.device.validators`:
     
     Dieses Modul ist eine Sammlung von Validatoren wie sie von der Parameter Klasse in tools.py benötigt werden.
     

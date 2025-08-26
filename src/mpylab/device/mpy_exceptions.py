@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This is :mod:`mpy.device.mpy_exceptions`: 
+"""This is :mod:`mpylab.device.mpy_exceptions`: 
     In diesem Modul werden verschiedene Exceptions definiert welche in dem myp.device Modul verwendet werden.
 """
 

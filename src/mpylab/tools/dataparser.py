@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from mpy.tools.plyparser import Parser
+from mpylab.tools.plyparser import Parser
 import math
 from scuq import *
-from mpy.tools.aunits import *
+from mpylab.tools.aunits import *
 
 
 def cmp(a, b):
@@ -68,8 +68,8 @@ class DatFile(Parser):
         import sys
         import io
         import scuq
-        from mpy.tools.util import format_block
-        from mpy.tools.dataparser import DatFile
+        from mpylab.tools.util import format_block
+        from mpylab.tools.dataparser import DatFile
 
         name=None
         if len(sys.argv)>1:
@@ -275,7 +275,7 @@ class DatFile(Parser):
 if __name__ == '__main__':
     import sys
     import io
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
 
     name = None
     if len(sys.argv) > 1:

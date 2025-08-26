@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "mpylab"
-dynamic = ["version"]
+version = "0.9"
 depandencies = [
 	"bidict",
 	"getch; sys_platform == 'linux' or sys_platform == 'darwin'",
@@ -12,8 +12,8 @@ depandencies = [
 	"Levenshtein",
 	"msvcrt; sys_platform == 'windows'",
 	"numpy",
-        "ply",
-        "pydot",
+    "ply",
+    "pydot",
 	"pyparsing",
 	"pyserial",
 	"pyusb",
@@ -25,7 +25,16 @@ depandencies = [
 ]
 requires-python = ">= 3.8"
 authors = [
-  {name = "Hans Georg Krauthäuser", email = "hgk@ieee.org"}
+    {name = "Hans Georg Krauthäuser", email = "hgk@ieee.org"},
+    {name = "Christian Albrecht"},
+    {name = "Stephan"},
+    {name = "Oscar Rivera"},
+    {name = "Mathias Magdowski"},
+    {name = "Sophie Rautschek"},
+    {name = "Frank Schröder"},
+    {name = "Luzia Tesar"},
+    {name = "Konstantin Pasche"},
+    {name = "Thomas Reidemeister"}
 ]
 maintainers = [
   {name = "Hans Georg Krauthäuser", email = "hgk@ieee.org"}
@@ -36,33 +45,24 @@ license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 keywords = ["pyvisa", "gpib", "measurements", "laboratory"]
 classifiers = [
-  # How mature is this project? Common values are
-  #   3 - Alpha
-  #   4 - Beta
-  #   5 - Production/Stable
-  "Development Status :: 4 - Beta",
-
-  # Indicate who your project is intended for
-  "Intended Audience :: engineers, physicist",
-  "Topic :: Laboratory Measurements",
-
-  # Specify the Python versions you support here.
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13"
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Topic :: Scientific/Engineering",
+    # Specify the Python versions you support here.
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
 ]
 
 [project.urls]
 Repository = "https://github.com/hgkdd/Mpy"
 
 [project.optional-dependencies]
-	gui = ["PySide6"]
-
-
-
-
-
+gui = ["PySide6"]

@@ -3,8 +3,8 @@ import pickle as pickle
 from numpy import linspace,concatenate, log10, sqrt
 from scuq.quantities import Quantity
 from scuq.si import WATT, VOLT, METER
-from mpy.tools.util import locate
-from mpy.tools.mgraph import MGraph, Leveler
+from mpylab.tools.util import locate
+from mpylab.tools.mgraph import MGraph, Leveler
 
 def dBm2W (v):
     return 10**(v*0.1)*0.001

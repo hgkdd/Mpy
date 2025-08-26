@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import time
-from mpy.device.powermeter import POWERMETER as PM
+from mpylab.device.powermeter import POWERMETER as PM
 
 
 class POWERMETER(PM):

@@ -3,7 +3,7 @@
 import io
 import sys
 
-from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
+from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 
 
 # import pprint
@@ -82,8 +82,8 @@ class SIGNALGENERATOR(SGNLGNRTR):
 
 
 def main():
-    from mpy.tools.util import format_block
-    from mpy.device.signalgenerator_ui import UI as UI
+    from mpylab.tools.util import format_block
+    from mpylab.device.signalgenerator_ui import UI as UI
 
     try:
         ini = sys.argv[1]

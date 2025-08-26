@@ -8,11 +8,11 @@ import configparser
 from numpy import bool_, sqrt
 from scipy.interpolate import interp1d
 
-import mpy.device.device as device
+import mpylab.device.device as device
 from scuq import *
-from mpy.tools.aunits import *
-from mpy.tools.Configuration import fstrcmp
-from mpy.tools.util import extrap1d, locate, format_block
+from mpylab.tools.aunits import *
+from mpylab.tools.Configuration import fstrcmp
+from mpylab.tools.util import extrap1d, locate, format_block
 
 
 def _stripstr(s):
@@ -289,8 +289,8 @@ class MGraph(Graph):
 
     def get_path_corrections(self, start, end, unit=None):
         """Returns a dict with the corrections for all edges from *start* to *end*. *unit* can be 
-           :data:`mpy.tools.aunits.AMPLITUDERATIO` or :data:`mpy.tools.aunits.POWERRATIO`. If *unit* is `None`, 
-           :data:`mpy.tools.aunits.AMPLITUDERATIO` is used. 
+           :data:`mpylab.tools.aunits.AMPLITUDERATIO` or :data:`mpylab.tools.aunits.POWERRATIO`. If *unit* is `None`,
+           :data:`mpylab.tools.aunits.AMPLITUDERATIO` is used.
 
            The key 'total' gives the total correction.
         

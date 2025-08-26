@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This is :mod:`mpy.device.tools`:
+"""This is :mod:`mpylab.device.tools`:
 
    :author: Christian Albrecht, Hans Georg Krauthaeuser
    :copyright: All rights reserved
@@ -8,17 +8,17 @@
 
 import inspect
 import copy
-from mpy.device.r_types import *
-from mpy.tools.Configuration import fstrcmp
-from mpy.device.driver_new import DRIVER
+from mpylab.device.r_types import *
+from mpylab.tools.Configuration import fstrcmp
+from mpylab.device.driver_new import DRIVER
 
 
 class Meta_Driver(type):
     """ Meta-Klasse für Driver.
         
         In der Beschreibung wird von Driver-Klassen und Super-Klassen gesprochen.
-        Mit Dirver-Klasse ist eine konkrete Implemntiereung eines Drivers gemeint, wie z.B. die Klasse :mod:`mpy.device.nw_rs_zlv`.
-        Mit Super-Klasse ist somit die dazugehörende Super-Kasse bezeichnet, im falle des :mod:`mpy.device.nw_rs_zlv` wäre das die Klasse networkanalyzer.py. 
+        Mit Dirver-Klasse ist eine konkrete Implemntiereung eines Drivers gemeint, wie z.B. die Klasse :mod:`mpylab.device.nw_rs_zlv`.
+        Mit Super-Klasse ist somit die dazugehörende Super-Kasse bezeichnet, im falle des :mod:`mpylab.device.nw_rs_zlv` wäre das die Klasse networkanalyzer.py. 
     
         .. rubric:: Die Meta-Klasse hat mehrere Aufgaben:
 
@@ -353,7 +353,7 @@ class Function(dict):
                 ->  <type 'float'>
 
         Es kann entweder ein Python Standard Typ angehen werden, oder ein Objekt welches von R_TYPES() 
-        abgeleitet wurde. Was für R_TYPES() Objekte existieren, siehe dazu :mod:`mpy.device.r_types`. Die Klassen dieses Moduls 
+        abgeleitet wurde. Was für R_TYPES() Objekte existieren, siehe dazu :mod:`mpylab.device.r_types`. Die Klassen dieses Moduls 
         müssen natürlich auch importiert sein.
         Es kann auch der Platzhalter '<default>' verwendet werden. Dann wird in dem _commands dict 
         der Super Klasse des Driver nach dem returntype, unter dem Namen der Function, gesucht und dieser Verwendet. 
@@ -577,7 +577,7 @@ class Command(object):
             print type(c(self,888))
                 -> <type 'float'>
 
-        Es kann entweder ein Python Standard Typ angehen werden, oder ein Objekt welches von R_TYPES() (:mod:`mpy.device.r_types`)
+        Es kann entweder ein Python Standard Typ angehen werden, oder ein Objekt welches von R_TYPES() (:mod:`mpylab.device.r_types`)
         abgeleitet wurde. Was für R_TYPES() Objekte existieren, siehe r_types.py. Die Klassen dieses Moduls 
         müssen natürlich auch importiert sein. Intern wird float auf R_FLOAT() gemappt.
         Es kann auch der Platzhalter '<default>' verwendet werden. Dann wird in dem _commands dict 

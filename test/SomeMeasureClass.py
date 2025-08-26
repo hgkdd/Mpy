@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0,'..')
 
-from mpy.env import Measure
+from mpylab.env import Measure
 
 class SomeMeasureClass(Measure.Measure):
     def __init__(self):

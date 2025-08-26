@@ -1,4 +1,4 @@
-from mpy.device import device
+from mpylab.device import device
 from scuq import *
 
 amp_ini='smx25.ini'

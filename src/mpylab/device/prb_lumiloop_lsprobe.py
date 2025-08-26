@@ -8,7 +8,7 @@ import itertools
 from scuq import si, quantities, ucomponents
 import numpy as np
 
-from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
+from mpylab.device.fieldprobe import FIELDPROBE as FLDPRB
 # from test.test_interpol import freqs
 
 
@@ -359,7 +359,7 @@ class FIELDPROBE(FLDPRB):
         return self.error
 
 def main2():
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
     import numpy as np
 
     try:

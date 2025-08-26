@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import io
-# from mpy.device.signalgenerator import SIGNALGENERATOR
+# from mpylab.device.signalgenerator import SIGNALGENERATOR
 import traits.api as tapi
 from traits.etsconfig.api import ETSConfig
 ETSConfig.toolkit = "wx"
 import traitsui.api as tuiapi
 import traitsui.menu as tuim
 from scuq.quantities import Quantity
-from mpy.tools.util import format_block
-from mpy.device.device import CONVERT
+from mpylab.tools.util import format_block
+from mpylab.device.device import CONVERT
 
 conv = CONVERT()
 

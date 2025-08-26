@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This is :mod:`mpy.env.Measure` with :class:`mpy.env.Measure.Measure` being the base class for e.g. :class:`mpy.env.msc.MSC.MSC`
+"""This is :mod:`mpylab.env.Measure` with :class:`mpylab.env.Measure.Measure` being the base class for e.g. :class:`mpylab.env.msc.MSC.MSC`
 
    :author: Hans Georg Krauthäuser (main author)
    :copyright: All rights reserved
@@ -14,7 +14,7 @@ import tempfile
 import time
 
 try:
-    import mpy.tools.unixcrt as crt
+    import mpylab.tools.unixcrt as crt
 except ImportError:
     class CRT:
         def unbuffer_stdin(self):
@@ -25,7 +25,7 @@ except ImportError:
 
     crt = CRT()
 
-from mpy.tools import util, calling
+from mpylab.tools import util, calling
 from scuq.quantities import Quantity
 from scuq.si import WATT
 
@@ -124,7 +124,7 @@ class Measure(object):
 
               - a :class:`dict` of items (`hasattr(item, 'keys')==True`)
               - a :class:`list` of items (`hasattr(item, 'index')==True`)
-              - a sequence of items (using :meth:`mpy.tools.util.issequence`)
+              - a sequence of items (using :meth:`mpylab.tools.util.issequence`)
               - or anything else (will be printed via `print item,`)
 
            The return value is `None`.
@@ -257,7 +257,7 @@ class Measure(object):
     def stdUserInterruptTester():
         """The standard (default) user interrupt tester.
 
-           Returns return value of :meth:`mpy.util.anykeyevent()`
+           Returns return value of :meth:`mpylab.util.anykeyevent()`
         """
         return util.anykeyevent()
 
@@ -432,14 +432,14 @@ class Measure(object):
 
     @staticmethod
     def stdPreUserEvent():
-        """Just calls :meth:`mpy.tools.unixcrt.unbuffer_stdin()`.
+        """Just calls :meth:`mpylab.tools.unixcrt.unbuffer_stdin()`.
            See there...
         """
         crt.unbuffer_stdin()
 
     @staticmethod
     def stdPostUserEvent():
-        """Just calls :meth:`mpy.tools.unixcrt.restore_stdin()`
+        """Just calls :meth:`mpylab.tools.unixcrt.restore_stdin()`
            See there...
         """
         crt.restore_stdin()

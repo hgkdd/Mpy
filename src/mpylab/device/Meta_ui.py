@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This is :mod:`mpy.device.Metaui`: Metaclass to Build a standard GUI from the _setgetlist.
+"""This is :mod:`mpylab.device.Metaui`: Metaclass to Build a standard GUI from the _setgetlist.
 
    :author: Christian Albrecht, Hans Georg Krauthaeuser
    :copyright: All rights reserved
@@ -89,7 +89,7 @@ class Metaui(MetaHasTraits):
     
         GROUPS={'Name des Taps' : tuiapi.Group(...)}
     
-    Als Beispiele siehe: :mod:`mpy.device.networkanalyer_ui`
+    Als Beispiele siehe: :mod:`mpylab.device.networkanalyer_ui`
     
     
     
@@ -105,7 +105,7 @@ class Metaui(MetaHasTraits):
                             
     Aus diesen Varialben holt sich die Metaklase das _commands-Dict und _cmds-Dict.
     
-    Als Beispiel siehe: :class:`mpy.device.nw_rs_zlv.UI`
+    Als Beispiel siehe: :class:`mpylab.device.nw_rs_zlv.UI`
     
     .. rubric:: Methods:
     """

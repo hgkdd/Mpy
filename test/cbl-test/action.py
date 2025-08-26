@@ -1,4 +1,4 @@
-from mpy.tools.util import get_var_from_nearest_outerframe
+from mpylab.tools.util import get_var_from_nearest_outerframe
 
 def do (fstr, flim):
     '''Switch the relais'''

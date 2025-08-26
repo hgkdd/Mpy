@@ -1,5 +1,5 @@
 # -*- coding: iso-8859-1 -*-
-"""This is :mod:`mpy.tools.interpol`.
+"""This is :mod:`mpylab.tools.interpol`.
 
    Provides interpolation routines
 
@@ -116,7 +116,7 @@ class UQ_interpol(object):
 
        Example::
        
-          from mpy.tools.interpol import *
+          from mpylab.tools.interpol import *
           import numpy
           import scuq
 

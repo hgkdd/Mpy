@@ -3,15 +3,15 @@
 import functools
 import re
 
-from mpy.device.driver import DRIVER
-from mpy.tools.Configuration import strbool, fstrcmp
+from mpylab.device.driver import DRIVER
+from mpylab.tools.Configuration import strbool, fstrcmp
 
 
 class SPECTRUMANALYZER(DRIVER):
     """
     Parent class of all py-drivers for spectrum analyzers.
     
-    The parent class is :class:`mpy.device.driver.DRIVER`.
+    The parent class is :class:`mpylab.device.driver.DRIVER`.
     """
 
     # Diese Listen enthalten mögliche Bezeichnungen "possibilities" für Tracemodes usw.

@@ -1,5 +1,5 @@
 # -*- coding: iso-8859-1 -*-
-from mpy.tools.util import get_var_from_nearest_outerframe, isiterable
+from mpylab.tools.util import get_var_from_nearest_outerframe, isiterable
 
 
 def switch(swstr=None, fstr=None, fs=None):

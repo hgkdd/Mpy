@@ -1,66 +1,66 @@
 .. -*-coding: utf-8 -*-
 
-:mod:`mpy.device.tools`
+:mod:`mpylab.device.tools`
 ===================================
 -------------------------------------------
-`mpy.device.tools.Meta_Driver`
+`mpylab.device.tools.Meta_Driver`
 -------------------------------------------
-.. autoclass:: mpy.device.tools.Meta_Driver
+.. autoclass:: mpylab.device.tools.Meta_Driver
                :members:
                :undoc-members:
 
 -------------------------------------------
-`mpy.device.tools.CommandsStorage`
+`mpylab.device.tools.CommandsStorage`
 -------------------------------------------
-.. autoclass:: mpy.device.tools.CommandsStorage
+.. autoclass:: mpylab.device.tools.CommandsStorage
                :members:
                :undoc-members:
 
 -------------------------------------------
-`mpy.device.tools.Function`
+`mpylab.device.tools.Function`
 -------------------------------------------
-.. autoclass:: mpy.device.tools.Function
+.. autoclass:: mpylab.device.tools.Function
                :members:
                :undoc-members:
 
 -------------------------------------------
-`mpy.device.tools.Command`
+`mpylab.device.tools.Command`
 -------------------------------------------
-.. autoclass:: mpy.device.tools.Command
+.. autoclass:: mpylab.device.tools.Command
                :members:
                :undoc-members:
 
 -------------------------------------------
-`mpy.device.tools.Parameter`
+`mpylab.device.tools.Parameter`
 -------------------------------------------
-.. autoclass:: mpy.device.tools.Parameter
+.. autoclass:: mpylab.device.tools.Parameter
                :members:
                :undoc-members:
 
 
 
-:mod:`mpy.device.validators`
+:mod:`mpylab.device.validators`
 ===================================
-.. automodule:: mpy.device.validators
+.. automodule:: mpylab.device.validators
                :members:
                :undoc-members: 
 
 
-:mod:`mpy.device.r_types`
+:mod:`mpylab.device.r_types`
 ===================================
-.. automodule:: mpy.device.r_types
+.. automodule:: mpylab.device.r_types
                :members:
                :undoc-members:
 
 
-:mod:`mpy.device.mpy_exceptions`
+:mod:`mpylab.device.mpy_exceptions`
 ===================================
-.. automodule:: mpy.device.mpy_exceptions
+.. automodule:: mpylab.device.mpy_exceptions
                :members:
                :undoc-members:
                
-:mod:`mpy.device.Meta_ui`
+:mod:`mpylab.device.Meta_ui`
 ===================================
-.. automodule:: mpy.device.Meta_ui
+.. automodule:: mpylab.device.Meta_ui
                :members:
                :undoc-members:

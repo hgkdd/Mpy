@@ -1,4 +1,4 @@
-from mpy.tools.calling import get_calling_sequence
+from mpylab.tools.calling import get_calling_sequence
 
 
 def test2():

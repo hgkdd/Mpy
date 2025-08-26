@@ -2,8 +2,8 @@ import pickle as pickle
 from numpy import linspace, concatenate, log10
 from scuq.quantities import Quantity
 from scuq.si import WATT
-import mpy.env.univers.AmplifierTest
-from mpy.tools.util import locate
+import mpylab.env.univers.AmplifierTest
+from mpylab.tools.util import locate
 
 def dBm2W (v):
     return 10**(v*0.1)*0.001
@@ -25,7 +25,7 @@ if True:
            'pm_bwd': 'Pm2',
            'output': 'TxAnt'}
 
-    AT = mpy.env.univers.AmplifierTest.AmplifierTest(SearchPaths=MpyDIRS)
+    AT = mpylab.env.univers.AmplifierTest.AmplifierTest(SearchPaths=MpyDIRS)
     AT.set_logfile('%s.log'%description)
 
     freqs=concatenate((linspace(1.0001e9, 2e9, 20), linspace(2.0001e9, 6e9, 20), linspace(6.0001e9, 18e9, 20))) 

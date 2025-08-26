@@ -93,7 +93,7 @@ class SMR(SIGNALGENERATOR):
 
 
 def main():
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
 
     try:
         ini = sys.argv[1]

@@ -5,15 +5,15 @@ import math
 
 from scuq import *
 
-from mpy.device.driver import DRIVER
-from mpy.tools.Configuration import strbool
+from mpylab.device.driver import DRIVER
+from mpylab.tools.Configuration import strbool
 
 
 class POWERMETER(DRIVER):
     """
     Child class for all py-drivers for power meters.
     
-    The parent class is :class:`mpy.device.driver.DRIVER`.
+    The parent class is :class:`mpylab.device.driver.DRIVER`.
     
     The configuration template for this device class is::
     

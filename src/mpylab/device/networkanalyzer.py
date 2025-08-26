@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This is :mod:`mpy.device.networkanalyzer`
+"""This is :mod:`mpylab.device.networkanalyzer`
 
    :author: Christian Albrecht
    :copyright: All rights reserved
@@ -11,9 +11,9 @@
 ###Refers to the currently active Trace. See also SetTrace()
 
 
-from mpy.tools.Configuration import strbool
+from mpylab.tools.Configuration import strbool
 
-# from mpy.device.driver import DRIVER
+# from mpylab.device.driver import DRIVER
 from .driver_new import DRIVER
 
 
@@ -24,7 +24,7 @@ class NETWORKANALYZER(DRIVER):
     
     This Driver use the new dirver framework!
     
-    The parent class is :class:`mpy.device.driver.DRIVER`.
+    The parent class is :class:`mpylab.device.driver.DRIVER`.
 
     
     The configuration template for this device class is::
@@ -93,9 +93,9 @@ class NETWORKANALYZER(DRIVER):
                                      'returntype': Standard_Pthon-Typ oder r_type},
                     ......
                    
-    Für r_type siehe auch: :mod:`mpy.device.r_types`
+    Für r_type siehe auch: :mod:`mpylab.device.r_types`
     
-    Siehe auch :class:`mpy.device.tools.Meta_Driver`
+    Siehe auch :class:`mpylab.device.tools.Meta_Driver`
     
     Die Driver Metaklasse prüft anhand von _commands ob Funktionen, deren Name im Dict vorhanden ist, die gleich 
     Parameter-Liste besitzen, das heißt: gleiche Anzahl und gleiche Reihenfolge der Parameter. Fehlt in einer 
@@ -115,7 +115,7 @@ class NETWORKANALYZER(DRIVER):
     Superklasse definiert werden. Es wird geraten die Definition immer in der Super-Klasse vorzunehmen, damit die 
     Possibilities für alle Driver gleich sind.
         
-    Für eine genau beschreibung siehe: :class:`mpy.device.tools.Meta_Driver`
+    Für eine genau beschreibung siehe: :class:`mpylab.device.tools.Meta_Driver`
 
     .. rubric:: Methods:
     .. method:: SetCenterFreq(cfreq):

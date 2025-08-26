@@ -1,8 +1,8 @@
 import scipy
 import scipy.interpolate
 import math
-from mpy.tools.aunits import POWERRATIO
-from mpy.tools import mgraph
+from mpylab.tools.aunits import POWERRATIO
+from mpylab.tools import mgraph
 from scuq import *
 import scr3502
 

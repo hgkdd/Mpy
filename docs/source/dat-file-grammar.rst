@@ -1,7 +1,7 @@
 Data-Files
 -----------
 
-This is the grammar of data files which can be parsed with the :class:`mpy.tools.dataparser.DatFile` class::
+This is the grammar of data files which can be parsed with the :class:`mpylab.tools.dataparser.DatFile` class::
 
    line : FUNIT unit              # frequency unit used from here
         | UNIT unit               # unit used from here
@@ -15,7 +15,7 @@ This is the grammar of data files which can be parsed with the :class:`mpy.tools
          | ( fp_value , fp_value )   # complex: (real part, imaginary part)
          | [ fp_value , fp_value ]   # complex: [magnitude, angle in deg]
 
-Allowed units and unit conversions are taken from a dictionary `uconv` in :class:`mpy.tools.dataparser.UConv`::
+Allowed units and unit conversions are taken from a dictionary `uconv` in :class:`mpylab.tools.dataparser.UConv`::
 
     uconv={ "1":    (units.ONE, _ident),
             "dimensionless":    (units.ONE, _ident),

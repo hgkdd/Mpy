@@ -9,8 +9,8 @@ ETSConfig.toolkit = "wx"
 import traitsui.api as tuiapi
 import traitsui.menu as tuim
 
-from mpy.tools.util import format_block
-from mpy.device.device import CONVERT
+from mpylab.tools.util import format_block
+from mpylab.device.device import CONVERT
 
 conv = CONVERT()
 

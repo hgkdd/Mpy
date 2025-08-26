@@ -3,8 +3,8 @@ import sys
 from numpy import linspace, log10, concatenate
 from scuq.quantities import Quantity
 from scuq.si import WATT
-import mpy.env.univers.AmplifierTest
-from mpy.tools.util import locate
+import mpylab.env.univers.AmplifierTest
+from mpylab.tools.util import locate
 
 
 def dBm2W(v):
@@ -35,7 +35,7 @@ if arg.startswith('m'):
              'pm_bwd': 'Pm2',
              'output': 'TxAnt'}
 
-    AT = mpy.env.univers.AmplifierTest.AmplifierTest(SearchPaths=MpyDIRS)
+    AT = mpylab.env.univers.AmplifierTest.AmplifierTest(SearchPaths=MpyDIRS)
     AT.set_logfile('%s.log' % description)
 
     freqs = linspace(80e6, 1e9, 20)

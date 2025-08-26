@@ -3,8 +3,8 @@ from scuq.quantities import Quantity
 from scuq.si import WATT
 from simpleeval import simple_eval
 
-from mpy.tools.util import locate
-from mpy.tools.mgraph import MGraph
+from mpylab.tools.util import locate
+from mpylab.tools.mgraph import MGraph
 
 
 def dBm2W(v):

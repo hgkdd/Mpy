@@ -6,8 +6,8 @@ import pprint
 
 import pickle
 
-from mpy.env.msc.MSC import MSC
-import mpy.tools.util
+from mpylab.env.msc.MSC import MSC
+import mpylab.tools.util
 
 cdict = {"autosave_filename": 'msc-autosave.p',
          "pickle_output_filename": 'msc-maincal.p',
@@ -241,12 +241,12 @@ if __name__ == '__main__':
     else:
         mode = 'wb'
     try:
-        msc.messenger(mpy.tools.util.tstamp() + " pickle results to '%s' ..." % (cdict['pickle_output_filename']), [])
+        msc.messenger(mpylab.tools.util.tstamp() + " pickle results to '%s' ..." % (cdict['pickle_output_filename']), [])
         pf = myopen(cdict['pickle_output_filename'], mode)
         pickle.dump(msc, pf, 2)
-        msc.messenger(mpy.tools.util.tstamp() + " ...done.", [])
+        msc.messenger(mpylab.tools.util.tstamp() + " ...done.", [])
     except BaseException as e:
-        msc.messenger(mpy.tools.util.tstamp() + " failed to pickle to %s" % (cdict['pickle_output_filename']), [])
+        msc.messenger(mpylab.tools.util.tstamp() + " failed to pickle to %s" % (cdict['pickle_output_filename']), [])
         raise
     else:
         # remove autosave file after measurement is completed and class instance was pickled

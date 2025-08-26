@@ -3,9 +3,9 @@
 import io
 import sys
 
-from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
+from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 # from scuq import *
-from mpy.tools.Configuration import fstrcmp
+from mpylab.tools.Configuration import fstrcmp
 
 
 #
@@ -180,8 +180,8 @@ class SIGNALGENERATOR(SGNLGNRTR):
 # Die Funktion main() wird nur zum Test des Treibers verwendet!
 #
 def main():
-    from mpy.tools.util import format_block
-    from mpy.device.signalgenerator_ui import UI as UI
+    from mpylab.tools.util import format_block
+    from mpylab.device.signalgenerator_ui import UI as UI
     #
     # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
@@ -219,8 +219,8 @@ def main():
 
 
 def test():
-    from mpy.tools.util import format_block
-    # from mpy.device.signalgenerator_ui import UI as UI
+    from mpylab.tools.util import format_block
+    # from mpylab.device.signalgenerator_ui import UI as UI
     #
     # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules

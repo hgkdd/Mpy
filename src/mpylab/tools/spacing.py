@@ -1,5 +1,5 @@
 # -*- coding: iso-8859-1 -*-
-"""This is :mod:`mpy.tools.spacing`: routines returning sequences aka `range`
+"""This is :mod:`mpylab.tools.spacing`: routines returning sequences aka `range`
 
    :author: Hans Georg Krauthäuser (main author)
    :copyright: All rights reserved

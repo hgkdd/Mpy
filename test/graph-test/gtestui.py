@@ -3,7 +3,7 @@ from traits.api import *
 import wx
 import scipy
 from scuq import *
-from mpy.tools.mgraph import MGraph
+from mpylab.tools.mgraph import MGraph
 
 
 class Measurement(HasTraits):

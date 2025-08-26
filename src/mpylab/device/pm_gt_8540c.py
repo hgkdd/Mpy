@@ -4,7 +4,7 @@ import numpy as np
 # import pyvisa.vpp43 as vpp43
 from scuq import *
 
-from mpy.device.powermeter import POWERMETER as PWRMTR
+from mpylab.device.powermeter import POWERMETER as PWRMTR
 
 
 # import pprint
@@ -190,7 +190,7 @@ class POWERMETER(PWRMTR):
 
 def test_init(cha):
     import io
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
     inst = POWERMETER()
     ini = format_block("""
                     [DESCRIPTION]
@@ -233,8 +233,8 @@ def test_init(cha):
 
 def main():
     import io
-    from mpy.tools.util import format_block
-    from mpy.device.powermeter_ui import UI as UI
+    from mpylab.tools.util import format_block
+    from mpylab.device.powermeter_ui import UI as UI
 
     try:
         ini = sys.argv[1]

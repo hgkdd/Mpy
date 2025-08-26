@@ -1,5 +1,5 @@
 import sys
-import mpy.device.nport as nport
+import mpylab.device.nport as nport
 
 ini = sys.argv[1]
 

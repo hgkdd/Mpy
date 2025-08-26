@@ -1,6 +1,6 @@
 from numpy import linspace, concatenate
 from scuq import *
-from mpy.tools.mgraph import MGraph, Leveler
+from mpylab.tools.mgraph import MGraph, Leveler
 
 
 dot='gtem-immunity.dot'

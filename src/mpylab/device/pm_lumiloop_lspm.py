@@ -8,7 +8,7 @@ import itertools
 from scuq import si, quantities, ucomponents
 import numpy as np
 
-from mpy.device.powermeter import POWERMETER as PMMTR
+from mpylab.device.powermeter import POWERMETER as PMMTR
 
 def dBm2W(vals):
     watts = np.power(10, 0.1*np.asarray(vals))*0.001
@@ -352,7 +352,7 @@ class POWERMETER(PMMTR):
         return self.error
 
 def main2():
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
     import numpy as np
 
     try:

@@ -3,9 +3,9 @@ import sys
 from numpy import linspace,concatenate, log10, logspace
 from scuq.quantities import Quantity
 from scuq.si import WATT, VOLT
-from mpy.tools.util import locate
-from mpy.tools.mgraph import MGraph, Leveler
-from mpy.tools.aunits import * 
+from mpylab.tools.util import locate
+from mpylab.tools.mgraph import MGraph, Leveler
+from mpylab.tools.aunits import *
 
 def dBm2W (v):
     return 10**(v*0.1)*0.001

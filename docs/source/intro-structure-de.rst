@@ -4,10 +4,10 @@ Verzeichnisstruktur
 ====================
 
 Hauptverzeichnis von `Mpy`:
-	- `mpy`	-> allgemeine Quelldateien des Frameworks
+	- `mpylab`	-> allgemeine Quelldateien des Frameworks
 	- `test` -> spezielle Messprogramme, die auf das Framework zugreifen
 
-Unterverzeichnis `mpy`:
+Unterverzeichnis `mpylab`:
 	- `device`	-> Treiber für aktive und passive Geräte
 	- `doc`		-> Dokumentation
 	- `env`		-> Messumgebungen (MVK, GTEM-Zelle)

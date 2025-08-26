@@ -1,7 +1,7 @@
 import numpy
 from scuq import *
 
-from mpy.tools.mgraph import MGraph
+from mpylab.tools.mgraph import MGraph
 
 dot = 'test.dot'
 mg = MGraph(dot)

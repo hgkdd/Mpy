@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from mpy.tools.util import get_var_from_nearest_outerframe
+from mpylab.tools.util import get_var_from_nearest_outerframe
 
 
 def my_switch(swstr, fstr, fs=1e9):

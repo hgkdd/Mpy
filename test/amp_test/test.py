@@ -3,8 +3,8 @@ import io
 from scuq import *
 from simpleeval import simple_eval
 
-from mpy.device import sg_rs_swm, amp_ifi_smx25
-from mpy.tools.util import format_block
+from mpylab.device import sg_rs_swm, amp_ifi_smx25
+from mpylab.tools.util import format_block
 
 amp_ini = format_block("""
                          [description]

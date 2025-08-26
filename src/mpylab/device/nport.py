@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from mpy.device.driver import DRIVER
-from mpy.tools.Configuration import strbool, fstrcmp
-from mpy.tools.dataparser import DatFile
-from mpy.tools.interpol import UQ_interpol
+from mpylab.device.driver import DRIVER
+from mpylab.tools.Configuration import strbool, fstrcmp
+from mpylab.tools.dataparser import DatFile
+from mpylab.tools.interpol import UQ_interpol
 
 
 class NPORT(DRIVER):
@@ -112,7 +112,7 @@ ANTENNA = CABLE = NPORT
 def main():
     import sys
     import io
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
     import scuq
 
     try:

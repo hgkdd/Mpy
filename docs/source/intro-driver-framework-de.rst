@@ -11,7 +11,7 @@ mit der Typenbezeichung ZLV dienen.
 
 Der Treiber basiert auf der Klasse :class:`Networkanalyer`, 
 die wiederum auf der Klasse :class:`DRIVER` aus der Datei driver_new.py 
-aufsetzt. Alle Treiber sind im Verzeichnis `/mpy/device/` gespeichert.
+aufsetzt. Alle Treiber sind im Verzeichnis `/mpylab/device/` gespeichert.
 
 Einen neuen Treiber anlegen
 ---------------------------
@@ -244,7 +244,7 @@ Den neuen Treiber testen
 
 Den neuen Treiber kann man am einfachsten Testen, 
 indem man ihn einfach aufruft. Dazu geht man mit der 
-Kommandozeile ins /mpy/device/ Verzeichnis und ruft::
+Kommandozeile ins /mpylab/device/ Verzeichnis und ruft::
 	
    python nw_rs_zlv.py 
 	

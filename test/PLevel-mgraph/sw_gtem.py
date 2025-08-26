@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from mpy.device.driver import DRIVER
-from mpy.tools.Configuration import strbool
-from mpy.tools.util import format_block
+from mpylab.device.driver import DRIVER
+from mpylab.tools.Configuration import strbool
+from mpylab.tools.util import format_block
 
 LF='R1P1'
 HF='R1P2'

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import time
-from mpy.tools import util
-from mpy.device import driver
+from mpylab.tools import util
+from mpylab.device import driver
 from scuq.si import VOLT, METER
 from scuq.quantities import Quantity
 import pprint

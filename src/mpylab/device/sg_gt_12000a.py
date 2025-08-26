@@ -11,7 +11,7 @@ import sys
 from scuq import *
 
 # parent class for all signal generators
-from mpy.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
+from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 
 
 # enables you to control all kinds of measurement equipment through various busses (GPIB, RS232, USB)
@@ -116,7 +116,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
 
 
 def main():
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
 
     try:
         ini = sys.argv[1]

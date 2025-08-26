@@ -1,5 +1,5 @@
 import pickle as pickle
-from mpy.tools.mgraph import MGraph
+from mpylab.tools.mgraph import MGraph
 
 MpyDIRS=['\\MpyConfig\\LargeGTEM', '.']
 

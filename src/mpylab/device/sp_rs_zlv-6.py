@@ -7,7 +7,7 @@ import sys
 
 from numpy import linspace
 
-from mpy.device.spectrumanalyzer import SPECTRUMANALYZER as SPECTRUMAN
+from mpylab.device.spectrumanalyzer import SPECTRUMANALYZER as SPECTRUMAN
 
 
 #
@@ -451,8 +451,8 @@ class SPECTRUMANALYZER(SPECTRUMAN):
 # Die Funktion main() wird nur zum Test des Treibers verwendet!
 ###########################################################################
 def main():
-    from mpy.tools.util import format_block
-    # from mpy.device.signalgenerator_ui import UI as UI
+    from mpylab.tools.util import format_block
+    # from mpylab.device.signalgenerator_ui import UI as UI
     #
     # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
@@ -501,10 +501,10 @@ def main():
     # # falls die Bedingung 'false' ist. Zuvor wird eine Testfrequenz und ein Level festgelegt, ein Objekt der Klasse SMB100A erzeugt und der
     # # Signalgenerator initialisiert.
     # #
-    # from mpy.device.spectrumanalyzer_ui import UI as UI
+    # from mpylab.device.spectrumanalyzer_ui import UI as UI
     sp = SPECTRUMANALYZER()
     try:
-        from mpy.device.spectrumanalyzer_ui import UI as UI
+        from mpylab.device.spectrumanalyzer_ui import UI as UI
     except ImportError:
         pass
     else:

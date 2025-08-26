@@ -1,7 +1,7 @@
 #import time
 import sys
 sys.path.insert(0, '..')
-import mpy.device.device as device
+import mpylab.device.device as device
 #import pdb
 
 #ini='m://umd-config//smallMSC//ini//cbl_sg_ant-py.ini'

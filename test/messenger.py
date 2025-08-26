@@ -1,6 +1,6 @@
-import mpy.env.Measure
+import mpylab.env.Measure
 
-m=mpy.env.Measure.Measure()
+m=mpylab.env.Measure.Measure()
 
 ret=m.messenger()
 

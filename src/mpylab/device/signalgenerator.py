@@ -3,15 +3,15 @@
 import bidict
 from scuq import quantities
 from scuq import si
-from mpy.device.driver import DRIVER
-from mpy.tools.Configuration import strbool, fstrcmp
+from mpylab.device.driver import DRIVER
+from mpylab.tools.Configuration import strbool, fstrcmp
 
 
 class SIGNALGENERATOR(DRIVER):
     """
     Parent class for all py-drivers for signal generators.
 
-    The parent class is :class:`mpy.device.driver.DRIVER`.
+    The parent class is :class:`mpylab.device.driver.DRIVER`.
     """
     AM_sources = ('INT1', 'INT2', 'EXT1', 'EXT2', 'EXT_AC', 'EXT_DC', 'TWOTONE_AC', 'TWOTONE_DC', 'OFF')
     AM_waveforms = ('SINE', 'SQUARE', 'TRIANGLE', 'NOISE', 'SAWTOOTH')

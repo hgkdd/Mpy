@@ -1,6 +1,6 @@
 import os
 import configparser
-from mpy.tools.levenshtein import fstrcmp as levfstrcmp
+from mpylab.tools.levenshtein import fstrcmp as levfstrcmp
 
 fstrcmp = levfstrcmp
 

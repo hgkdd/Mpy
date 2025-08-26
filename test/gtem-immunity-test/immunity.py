@@ -6,8 +6,8 @@ import pprint
 
 import pickle
 
-from mpy.env.tem.TEMCell import TEMCell
-import mpy.tools.util
+from mpylab.env.tem.TEMCell import TEMCell
+import mpylab.tools.util
 
 cdict = {"autosave_filename": 'gtem-autosave.p',
          "pickle_output_filename": 'gtem-immunity.p',
@@ -234,12 +234,12 @@ if __name__ == '__main__':
     else:
         mode = 'wb'
     try:
-        gtem.messenger(mpy.tools.util.tstamp() + " pickle results to '%s' ..." % (cdict['pickle_output_filename']), [])
+        gtem.messenger(mpylab.tools.util.tstamp() + " pickle results to '%s' ..." % (cdict['pickle_output_filename']), [])
         pf = myopen(cdict['pickle_output_filename'], mode)
         pickle.dump(gtem, pf, 2)
-        gtem.messenger(mpy.tools.util.tstamp() + " ...done.", [])
+        gtem.messenger(mpylab.tools.util.tstamp() + " ...done.", [])
     except BaseException as e:
-        gtem.messenger(mpy.tools.util.tstamp() + " failed to pickle to %s" % (cdict['pickle_output_filename']), [])
+        gtem.messenger(mpylab.tools.util.tstamp() + " failed to pickle to %s" % (cdict['pickle_output_filename']), [])
         raise
     else:
         # remove autosave file after measurement is completed and class instance was pickled

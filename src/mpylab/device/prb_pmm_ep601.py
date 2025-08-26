@@ -9,7 +9,7 @@ import time
 import serial
 from scuq import si, quantities, ucomponents
 
-from mpy.device.fieldprobe import FIELDPROBE as FLDPRB
+from mpylab.device.fieldprobe import FIELDPROBE as FLDPRB
 
 debug = True
 
@@ -153,7 +153,7 @@ class FIELDPROBE(FLDPRB):
 
 
 def test():
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
     ini = format_block("""
                     [DESCRIPTION]
                     description: PMM EP601
@@ -181,8 +181,8 @@ def test():
 
 
 def main():
-    from mpy.tools.util import format_block
-    from mpy.device.fieldprobe_ui import UI as UI
+    from mpylab.tools.util import format_block
+    from mpylab.device.fieldprobe_ui import UI as UI
     #
     # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules

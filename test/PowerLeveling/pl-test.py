@@ -1,8 +1,8 @@
 import io
-from mpy.tools.util import format_block
-from mpy.device.pm_gt_8540c import POWERMETER as PM
-from mpy.device.sg_rs_smb100a import SIGNALGENERATOR as SG
-from mpy.tools.PControler import Leveler
+from mpylab.tools.util import format_block
+from mpylab.device.pm_gt_8540c import POWERMETER as PM
+from mpylab.device.sg_rs_smb100a import SIGNALGENERATOR as SG
+from mpylab.tools.PControler import Leveler
 from scuq import *
 
 pm1ini=format_block("""

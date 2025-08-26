@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from simpleeval import simple_eval
 
-from mpy.device.amplifier import AMPLIFIER as AMP
+from mpylab.device.amplifier import AMPLIFIER as AMP
 
 
 class AMPLIFIER(AMP):
@@ -33,7 +33,7 @@ def main():
     import sys
     import io
 
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
     import scuq
 
     try:

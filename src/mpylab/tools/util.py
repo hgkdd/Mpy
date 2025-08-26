@@ -1,5 +1,5 @@
 # -*- coding: iso-8859-1 -*-
-"""This is :mod:`mpy.tools.util`: all sort of utilities. 
+"""This is :mod:`mpylab.tools.util`: all sort of utilities. 
 
    :author: Hans Georg Krauthäuser (main author)
    :copyright: All rights reserved
@@ -27,8 +27,8 @@ from scuq.quantities import Quantity
 from scipy.optimize import root_scalar
 from collections.abc import Sequence
 
-from mpy.tools.get_char import getch
-from mpy.tools.kbhit import kbhit
+from mpylab.tools.get_char import getch
+from mpylab.tools.kbhit import kbhit
 
 c = 2.99792458e8
 mu0 = 4 * math.pi * 1e-7
@@ -259,7 +259,7 @@ def flatten(a):
     return flatten(a[0]) + flatten(a[1:])
 
 
-def send_email(to=None, fr=None, subj='a message from mpy.util', msg=''):
+def send_email(to=None, fr=None, subj='a message from mpylab.util', msg=''):
     if not (to and fr):
         return
     m = EmailMessage()

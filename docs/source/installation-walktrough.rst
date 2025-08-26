@@ -1,25 +1,25 @@
-Walk Through the Installation Process of mpy
+Walk Through the Installation Process of mpylab
 --------------------------------------------
 
-The following walk-through shows the installation process for mpy (and scuq) in a virtual environment beginnig with freshly cloned repositories.
+The following walk-through shows the installation process for mpylab (and scuq) in a virtual environment beginnig with freshly cloned repositories.
 
 Make a directory and change to that directory:
 
 .. code-block:: console
 
-    foo@bar:path> mkdir test-mpy
-    foo@bar:path> cd test-mpy
+    foo@bar:path> mkdir test-mpylab
+    foo@bar:path> cd test-mpylab
 
-Now clone the two main packages **scuq** and **mpy**:
+Now clone the two main packages **scuq** and **mpylab**:
 
 .. code-block:: console
 
-    foo@bar:path/test-mpy> hg clone /path-to-central-repositories/scuq
+    foo@bar:path/test-mpylab> hg clone /path-to-central-repositories/scuq
     destination directory: scuq
     updating to branch default                                                                                                                                      
     43 files updated, 0 files merged, 0 files removed, 0 files unresolved
-    foo@bar:path/test-mpy> hg clone /path-to-central-repositories/mpy
-    destination directory: mpy
+    foo@bar:path/test-mpylab> hg clone /path-to-central-repositories/mpylab
+    destination directory: mpylab
     updating to branch default                                                                                                                                      
     396 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -27,8 +27,8 @@ Next we create a virtual environment and activate the environment:
 
 .. code-block:: console
 
-    foo@bar:path/test-mpy> python3 -m venv venv
-    foo@bar:path/test-mpy> source venv/bin/activate
+    foo@bar:path/test-mpylab> python3 -m venv venv
+    foo@bar:path/test-mpylab> source venv/bin/activate
 
 The active venv is marked with the prefix **(venv)** in front of your prompt.
 
@@ -36,8 +36,8 @@ Now, we are going to install **scuq** from the source tree. The option '-e' inst
 
 .. code-block:: console
 
-    (venv) foo@bar:path/test-mpy> pip install -e scuq
-    Obtaining file:///path-to/test-mpy/scuq
+    (venv) foo@bar:path/test-mpylab> pip install -e scuq
+    Obtaining file:///path-to/test-mpylab/scuq
     Installing build dependencies ... done
     Checking if build backend supports build_editable ... done
     Getting requirements to build editable ... done
@@ -50,11 +50,11 @@ Now, we are going to install **scuq** from the source tree. The option '-e' inst
     Installing collected packages: scuq-hgk
     Successfully installed scuq-hgk-0.1
 
-Next, install all required packages for **mpy**:
+Next, install all required packages for **mpylab**:
 
 .. code-block:: console
 
-    (venv) foo@bar:path/test-mpy> pip install -r mpy/requirements.txt
+    (venv) foo@bar:path/test-mpylab> pip install -r mpylab/requirements.txt
     Collecting bidict
     Using cached bidict-0.22.0-py3-none-any.whl (36 kB)
     Collecting getch
@@ -99,25 +99,25 @@ Next, install all required packages for **mpy**:
     Installing collected packages: simpleeval, pyserial, ply, gpib-ctypes, getch, typing-extensions, traits, pyusb, pyparsing, numpy, jarowinkler, bidict, SciPy, rapidfuzz, PyVISA, pyface, pydot, traitsui, PyVISA-py, Levenshtein
     Successfully installed Levenshtein-0.20.2 PyVISA-1.12.0 PyVISA-py-0.5.3 SciPy-1.9.1 bidict-0.22.0 getch-1.0 gpib-ctypes-0.3.0 jarowinkler-1.2.1 numpy-1.23.2 ply-3.11 pydot-1.4.2 pyface-7.4.2 pyparsing-3.0.9 pyserial-3.5 pyusb-1.2.1 rapidfuzz-2.6.1 simpleeval-0.9.12 traits-6.4.1 traitsui-7.4.0 typing-extensions-4.3.0
 
-Finally, install **mpy** from its source tree as an editable module:
+Finally, install **mpylab** from its source tree as an editable module:
 
 .. code-block:: console
 
-    (venv) foo@bar:path/test-mpy> pip install -e mpy
-    Obtaining file:///path-to/test-mpy/mpy
+    (venv) foo@bar:path/test-mpylab> pip install -e mpylab
+    Obtaining file:///path-to/test-mpylab/mpylab
     Installing build dependencies ... done
     Checking if build backend supports build_editable ... done
     Getting requirements to build editable ... done
     Preparing editable metadata (pyproject.toml) ... done
-    Building wheels for collected packages: mpy-hgkTUD
-    Building editable for mpy-hgkTUD (pyproject.toml) ... done
-    Created wheel for mpy-hgkTUD: filename=mpy_hgkTUD-0.1.dev316+hdc6350c-0.editable-py3-none-any.whl size=3209 sha256=ab259c8dfb232ad4069ed7300d3e817fd04a40dc493475a93a9d960c3c83b24c
+    Building wheels for collected packages: mpylab-hgkTUD
+    Building editable for mpylab-hgkTUD (pyproject.toml) ... done
+    Created wheel for mpylab-hgkTUD: filename=mpy_hgkTUD-0.1.dev316+hdc6350c-0.editable-py3-none-any.whl size=3209 sha256=ab259c8dfb232ad4069ed7300d3e817fd04a40dc493475a93a9d960c3c83b24c
     Stored in directory: /private/var/folders/88/b_718t6d4tgfg4f1g67wkg8r0000gn/T/pip-ephem-wheel-cache-h5fhgia2/wheels/8f/1e/f3/229415052fed5d1f0f674ac00a6c99e4bae22223ce2e07eac7
-    Successfully built mpy-hgkTUD
-    Installing collected packages: mpy-hgkTUD
-    Successfully installed mpy-hgkTUD-0.1.dev316+hdc6350c
-    (venv) foo@bar:path/test-mpy>
+    Successfully built mpylab-hgkTUD
+    Installing collected packages: mpylab-hgkTUD
+    Successfully installed mpylab-hgkTUD-0.1.dev316+hdc6350c
+    (venv) foo@bar:path/test-mpylab>
 
-You are now ready to use the **mpy** framework. Enjoy!
+You are now ready to use the **mpylab** framework. Enjoy!
 
 

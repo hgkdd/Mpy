@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-"""This is :mod:`mpy.device.nw_rs_zlv`:
+"""This is :mod:`mpylab.device.nw_rs_zlv`:
 
    :author: Christian Albrecht
    :copyright: All rights reserved
@@ -11,14 +11,14 @@ import sys
 import io
 import traits.api as tapi
 import traitsui.api as tuiapi
-from mpy.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
-from mpy.device.networkanalyzer_ui import UI as super_ui
-from mpy.tools.spacing import logspaceN, linspaceN
-from mpy.device.tools import *
-from mpy.device.r_types import *
-from mpy.device.validators import *
-from mpy.device.mpy_exceptions import *
-from mpy.device.Meta_ui import Metaui
+from mpylab.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
+from mpylab.device.networkanalyzer_ui import UI as super_ui
+from mpylab.tools.spacing import logspaceN, linspaceN
+from mpylab.device.tools import *
+from mpylab.device.r_types import *
+from mpylab.device.validators import *
+from mpylab.device.mpy_exceptions import *
+from mpylab.device.Meta_ui import Metaui
 
 
 class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
@@ -79,7 +79,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
     
     .. rubric:: Methods:
     
-    siehe auch :class:`mpy.device.networkanalyzer.NETWORKANALYZER`
+    siehe auch :class:`mpylab.device.networkanalyzer.NETWORKANALYZER`
     
     .. method:: CreateWindow(windowName):
     
@@ -780,7 +780,7 @@ class UI(super_ui, metaclass=Metaui):
 # Die Funktion main() wird nur zum Test des Treibers verwendet!
 ###########################################################################
 def main():
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
     #
     # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
@@ -855,7 +855,7 @@ def main():
     # # falls die Bedingung 'false' ist. Zuvor wird eine Testfrequenz und ein Level festgelegt, ein Objekt der Klasse SMB100A erzeugt und der
     # # Signalgenerator initialisiert.
     # #
-    # from mpy.device.networkanalyzer_ui import UI as UI
+    # from mpylab.device.networkanalyzer_ui import UI as UI
     nw = NETWORKANALYZER()
     #    nw2=NETWORKANALYZER()
 

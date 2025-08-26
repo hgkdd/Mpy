@@ -6,8 +6,8 @@ import io
 import ply.lex as lex
 import ply.yacc as yacc
 
-from mpy.tools.util import locate
-from mpy.tools.util import format_block
+from mpylab.tools.util import locate
+from mpylab.tools.util import format_block
 
 class Parser(object):
     """

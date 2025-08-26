@@ -2,7 +2,7 @@
 
 import time
 from scuq import *
-from mpy.device.powermeter import POWERMETER as PWRMTR
+from mpylab.device.powermeter import POWERMETER as PWRMTR
 
 
 class POWERMETER(PWRMTR):
@@ -234,7 +234,7 @@ class POWERMETER(PWRMTR):
 
 def test_init(ch):
     import io
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
 
     ini = format_block("""
                     [DESCRIPTION]
@@ -277,8 +277,8 @@ def test_init(ch):
 def main():
     import io
     import sys
-    from mpy.tools.util import format_block
-    from mpy.device.powermeter_ui import UI as UI
+    from mpylab.tools.util import format_block
+    from mpylab.device.powermeter_ui import UI as UI
 
     try:
         ini = sys.argv[1]

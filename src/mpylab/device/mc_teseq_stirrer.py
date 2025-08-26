@@ -3,7 +3,7 @@ import time
 import serial
 import atexit
 
-from mpy.device.motorcontroller import MOTORCONTROLLER as MC
+from mpylab.device.motorcontroller import MOTORCONTROLLER as MC
 
 
 class Stirrer(object):
@@ -429,7 +429,7 @@ def main():
     import sys
     import io
 
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
 
     try:
         ini = sys.argv[1]

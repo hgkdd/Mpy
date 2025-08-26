@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This is :mod:`mpy.device.r_types`:
+"""This is :mod:`mpylab.device.r_types`:
 
     Von einem Visa Befehl wird immer ein String zurückgegeben, die r_types Klassen
     sind dazu gedacht diese Strings zu verarbeiten und sie z.B. in ein Float Zahl oder eine Liste von Floats
@@ -13,7 +13,7 @@
 """
 import re
 
-from mpy.device.mpy_exceptions import *
+from mpylab.device.mpy_exceptions import *
 
 
 class R_TYPES(object):

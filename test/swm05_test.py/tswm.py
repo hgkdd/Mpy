@@ -2,9 +2,9 @@ import random
 import sys
 import io
 from math import log10
-from mpy.tools.util import format_block
-from mpy.device.sg_rs_swm import SIGNALGENERATOR
-from mpy.device.pm_gt_8540c import POWERMETER
+from mpylab.tools.util import format_block
+from mpylab.device.sg_rs_swm import SIGNALGENERATOR
+from mpylab.device.pm_gt_8540c import POWERMETER
 from scuq import *
 import time
 

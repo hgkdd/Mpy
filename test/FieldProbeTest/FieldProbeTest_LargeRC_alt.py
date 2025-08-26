@@ -5,8 +5,8 @@ import numpy
 import pylab
 from scuq.quantities import Quantity
 from scuq.si import WATT, VOLT, METER
-from mpy.tools.util import locate
-from mpy.tools.mgraph import MGraph, Leveler
+from mpylab.tools.util import locate
+from mpylab.tools.mgraph import MGraph, Leveler
 
 
 def dBm2W(v):

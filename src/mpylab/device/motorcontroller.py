@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from mpy.device.driver import DRIVER
-from mpy.tools.Configuration import strbool
+from mpylab.device.driver import DRIVER
+from mpylab.tools.Configuration import strbool
 
 
 class MOTORCONTROLLER(DRIVER):
     """
     Parent class for all py-drivers for motor controllers.
 
-    The parent class is :class:`mpy.device.driver.DRIVER`.
+    The parent class is :class:`mpylab.device.driver.DRIVER`.
     """
 
     conftmpl = {'description':

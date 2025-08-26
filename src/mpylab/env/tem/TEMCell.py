@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""This is :mod:`mpy.env.tem.TEMCell`.
+"""This is :mod:`mpylab.env.tem.TEMCell`.
 
-   Provides :class:`mpy.env.tem.TEMCell` for EMC measurements in TEM cells
+   Provides :class:`mpylab.env.tem.TEMCell` for EMC measurements in TEM cells
 
    :author: Hans Georg Krauthäuser (main author)
    :copyright: All rights reserved
@@ -20,13 +20,13 @@ from scuq.quantities import Quantity
 from scuq.si import METER, OHM, WATT, SECOND, VOLT
 from scuq.ucomponents import Context
 
-from mpy.env import Measure
-from mpy.tools import util, mgraph, interpol
-from mpy.tools.aunits import POWERRATIO, EFIELD
-from mpy.tools.log_freq import LogFreq
+from mpylab.env import Measure
+from mpylab.tools import util, mgraph, interpol
+from mpylab.tools.aunits import POWERRATIO, EFIELD
+from mpylab.tools.log_freq import LogFreq
 
 
-# from mpy.tools.aunits import *
+# from mpylab.tools.aunits import *
 
 
 class TEMCell(Measure.Measure):
@@ -389,7 +389,7 @@ class TEMCell(Measure.Measure):
               - *s*: Distance from the EUT in meters
               - *hg*: height over ground plane in meters
               - *RH*: range of the hight scan in meters
-              - *rstep*: the step width of the hight scan used to calculate the max. Used in :meth:`mpy.tools.util.gmax_oats`
+              - *rstep*: the step width of the hight scan used to calculate the max. Used in :meth:`mpylab.tools.util.gmax_oats`
               - *Zc*: characteristic impedance of the TEM cell in Ohms (forwarded to :meth:`Calculate_Prad`)
               - *is_oats*: if `True`, a ground plane is assumed, else free space
 
@@ -499,7 +499,7 @@ class TEMCell(Measure.Measure):
            - *description*: key to identify the measurement in the result dictionary
            - *distance*: position of the uniform area in mm. In GTEM: counted from feed point
            - *positions*: a sequence of probe positions to be measured. Each position is a (x,y)-pair of probe positions (in mm)
-           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurement graph.
+           - *dotfile*: forwarded to :class:`mpylab.tools.mgraph.MGraph` to create the mearsurement graph.
            - *delay*: time in seconds to wait after setting the frequency before pulling date from the instruments
            - *freqs*: sequence of frequencies in Hz to use for the measurements.
            - *fwd_dbm*: forward power at feed point in dbm
@@ -728,7 +728,7 @@ Select EUT position.
 
               Horizontal standard orientations.
 
-           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurement graph.
+           - *dotfile*: forwarded to :class:`mpylab.tools.mgraph.MGraph` to create the mearsurement graph.
            - *delay*: time in seconds to wait after setting the frequency before pulling date from the instruments
            - *freqs*: sequence of frequencies in Hz to use for the measurements.
            - *names*: dict with the mapping from internal names to dot-file names.
@@ -965,10 +965,10 @@ Select EUT position.
 
               12 standard orientations.
 
-           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurment graph.
+           - *dotfile*: forwarded to :class:`mpylab.tools.mgraph.MGraph` to create the mearsurment graph.
            - *delay*: time in seconds to wait after setting the frequencie before pulling date from the instruments
            - *freqs*: sequence of frequencies in Hz to use for the measurements.
-           - *receiverconf*: forwarded to :meth:`mpy.tools.mgraph.MGraph.ConfReceivers`
+           - *receiverconf*: forwarded to :meth:`mpylab.tools.mgraph.MGraph.ConfReceivers`
            - *names*: dict with the mapping from internal names to dot-file names.
 
                The dict has to have keys 'port' and 'receivers'. The corresponding values are sequences of equal length giving the
@@ -1273,7 +1273,7 @@ Select EUT position.
         Parameters:
 
            - *description*: key to identify the measurement in the result dictionary
-           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurment graph.
+           - *dotfile*: forwarded to :class:`mpylab.tools.mgraph.MGraph` to create the mearsurment graph.
            - *delay*: time in seconds to wait after setting the frequency before pulling date from the instruments
            - *freqs*: sequence of frequencies in Hz to use for the measurements.
            - *SGLevel*: signal generator power level in dBm.
@@ -1524,7 +1524,7 @@ Select EUT position.
         Parameters:
 
            - *description*: key to identify the measurement in the result dictionary
-           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurement graph.
+           - *dotfile*: forwarded to :class:`mpylab.tools.mgraph.MGraph` to create the mearsurement graph.
            - *delay*: time in seconds to wait after setting the frequency before pulling date from the instruments
            - *freqs*: sequence of frequencies in Hz to use for the measurements.
            - *EFieldStrength*: iterable of desired field strength values. If None it is seit to [1]

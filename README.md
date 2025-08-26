@@ -1,7 +1,4 @@
-This is Mpy. Mpy is a framework for automatic measurement application and 
-hardware device drivers (GPIB, serial, USB).
+This is MpyLab. MpyLab is a framework for automatic measurement application and 
+hardware device drivers (TCP/IP, GPIB, serial, USB).
 
-This software is property of Hans Georg Krauthäuser (hgk@ieee.org).
-
-All rights reserved.
-
+This software is distributed unter GPL-3 or higher. See LICENCE for details.

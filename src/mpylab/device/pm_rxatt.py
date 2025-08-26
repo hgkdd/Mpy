@@ -6,12 +6,12 @@ import time
 
 from scuq import *
 
-from mpy.device import device
-from mpy.device.nport import NPORT
-from mpy.device.powermeter import POWERMETER as PWRMTR
-from mpy.tools.Configuration import Configuration
-from mpy.tools.util import format_block
-from mpy.tools.util import locate
+from mpylab.device import device
+from mpylab.device.nport import NPORT
+from mpylab.device.powermeter import POWERMETER as PWRMTR
+from mpylab.tools.Configuration import Configuration
+from mpylab.tools.util import format_block
+from mpylab.tools.util import locate
 
 ini20dBLF = format_block("""
                     [description]
@@ -1070,7 +1070,7 @@ class POWERMETER(PWRMTR):
 
 def test_init(ch):
     import io
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
     inst = POWERMETER()
     ini = format_block("""
                     [DESCRIPTION]
@@ -1133,8 +1133,8 @@ def test_init(ch):
 def main():
     import io
     import sys
-    from mpy.tools.util import format_block
-    from mpy.device.powermeter_ui import UI as UI
+    from mpylab.tools.util import format_block
+    from mpylab.device.powermeter_ui import UI as UI
 
     try:
         ini = sys.argv[1]

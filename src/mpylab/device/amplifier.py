@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from mpy.device.nport import NPORT  # parent class
-from mpy.tools.Configuration import fstrcmp  # fuzzy string compare
+from mpylab.device.nport import NPORT  # parent class
+from mpylab.tools.Configuration import fstrcmp  # fuzzy string compare
 
 
 class AMPLIFIER(NPORT):
@@ -84,7 +84,7 @@ class AMPLIFIER(NPORT):
 def main():
     import sys
     import io
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
     import scuq
 
     try:

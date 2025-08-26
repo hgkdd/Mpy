@@ -1,4 +1,4 @@
-from mpy.device.amp_ifi_smx25 import AMPLIFIER
+from mpylab.device.amp_ifi_smx25 import AMPLIFIER
 
 ini="ini/amp_ifi_smx25.ini"
 

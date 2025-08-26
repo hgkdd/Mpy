@@ -7,9 +7,9 @@ from functools import cmp_to_key
 
 import numpy
 import time
-from mpy.tools.Configuration import fstrcmp
-from mpy.tools.aunits import *
-import mpy.tools.umd_types as umd_types
+from mpylab.tools.Configuration import fstrcmp
+from mpylab.tools.aunits import *
+import mpylab.tools.umd_types as umd_types
 from scuq import ucomponents, quantities
 
 try:
@@ -218,7 +218,7 @@ class Device(object):
             import tempfile
             import configparser
             import io
-            from mpy.tools.util import format_block
+            from mpylab.tools.util import format_block
             cp = configparser.ConfigParser()
             cp.read_file(ininame)
             for section in cp.sections():
@@ -280,7 +280,7 @@ class Device(object):
             #             # print(globals())
             #             # print('LOCALS:')
             #             # print(locals())
-            mod = __import__('mpy.device.'+DLLbasename, globals(), locals(), fromlist=[None])
+            mod = __import__('mpylab.device.'+DLLbasename, globals(), locals(), fromlist=[None])
             for i in DLLbasename.split(".")[1:]:  # emulate from ... import ...
                 mod = getattr(mod, i)
             try:
@@ -2708,7 +2708,7 @@ def cbl_tst(ini):
                          VENDOR =UMD
                          SERIALNR = 
                          DEVICEID = 
-                         DRIVER = mpy.device.nport.py
+                         DRIVER = mpylab.device.nport.py
 
                          [INIT_VALUE]
                          FSTART = 0
@@ -2752,7 +2752,7 @@ def cbl_tst(ini):
 if __name__ == '__main__':
     import sys
     import io
-    from mpy.tools.util import format_block
+    from mpylab.tools.util import format_block
     import scuq
 
     try:

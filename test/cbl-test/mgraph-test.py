@@ -1,6 +1,6 @@
 import sys
-from mpy.tools.aunits import *
-import mpy.tools.mgraph as mgraph
+from mpylab.tools.aunits import *
+import mpylab.tools.mgraph as mgraph
 
 dot = sys.argv[1]
 fr = sys.argv[2]

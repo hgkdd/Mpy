@@ -7,9 +7,9 @@ from scuq.quantities import Quantity
 from scuq.si import WATT, METER
 from scuq.ucomponents import Context
 
-from mpy.env import Measure
-from mpy.tools import util, mgraph, spacing, distributions, correlation
-from mpy.tools.aunits import *
+from mpylab.env import Measure
+from mpylab.tools import util, mgraph, spacing, distributions, correlation
+from mpylab.tools.aunits import *
 
 from numpy.random import default_rng
 

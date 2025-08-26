@@ -5,10 +5,10 @@ from scipy.interpolate import interp1d
 from scipy.optimize import fmin
 
 from scuq import quantities, si, units
-from mpy.env.Measure import Measure, AmplifierProtectionError
-from mpy.tools.mgraph import MGraph
-from mpy.tools.aunits import POWERRATIO
-from mpy.tools import util
+from mpylab.env.Measure import Measure, AmplifierProtectionError
+from mpylab.tools.mgraph import MGraph
+from mpylab.tools.aunits import POWERRATIO
+from mpylab.tools import util
 
 
 def dBm2W(v):
@@ -157,7 +157,7 @@ class AmplifierTest(Measure):
         Parameter:
      
            - *description*: key to identify the measurement in the result dictionary
-           - *dotfile*: forwarded to :class:`mpy.tools.mgraph.MGraph` to create the mearsurment graph.
+           - *dotfile*: forwarded to :class:`mpylab.tools.mgraph.MGraph` to create the mearsurment graph.
            - *delay*: time in seconds to wait after setting the frequencie before pulling date from the instruments
            - *freqs*: sequence of frequencies in Hz to use for the measurements.
            - *names*: dict with the mapping from internal names to dot-file names.

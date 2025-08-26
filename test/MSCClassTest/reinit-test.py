@@ -1,4 +1,4 @@
-from mpy.device.pm_rxatt import POWERMETER
+from mpylab.device.pm_rxatt import POWERMETER
 
 SearchPaths = ['c:\\MpyConfig\\LargeRC\\']
 ini = "c:\\MpyConfig\\LargeRC\\ini\\pm_rxatt.ini"

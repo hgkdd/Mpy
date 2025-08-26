@@ -1,7 +1,7 @@
 import sys
 # sys.path.insert(0,'..')
 
-from mpy.device import amplifier
+from mpylab.device import amplifier
 
 ini = sys.argv[1]
 

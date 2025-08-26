@@ -1,4 +1,4 @@
-from mpy.device.device import Cable
+from mpylab.device.device import Cable
 
 ini="ini/amp1out-gtem.ini"
 

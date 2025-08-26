@@ -6,8 +6,8 @@ import pylab
 from scuq.quantities import Quantity
 from scuq.si import WATT
 
-from mpy.tools.aunits import *
-from mpy.tools.mgraph import MGraph, Leveler
+from mpylab.tools.aunits import *
+from mpylab.tools.mgraph import MGraph, Leveler
 
 
 def dBm2W(v):

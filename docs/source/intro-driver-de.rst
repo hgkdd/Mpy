@@ -10,7 +10,7 @@ Als Beispiel soll ein Signalgenerator von Giga-tronics mit der Typenbezeichung 1
 der 12000A Microwave Synthesizers Series dienen.
 
 Der Treiber basiert auf der Klasse :class:`SIGNALGENERATOR`, die wiederum auf der 
-Klasse :class:`DRIVER` aufsetzt. Alle Treiber sind im Verzeichnis `/mpy/device/` gespeichert.
+Klasse :class:`DRIVER` aufsetzt. Alle Treiber sind im Verzeichnis `/mpylab/device/` gespeichert.
 
 Einen neuen Treiber anlegen
 ---------------------------
@@ -186,7 +186,7 @@ Seriennummer, Firmwareversion und weiteren Angaben sinnvoll::
 Den neuen Treiber testen
 -------------------------
 
-Den neuen Treiber kann man am einfachsten Testen, indem man ihn einfach aufruft. Dazu geht man mit der Kommandozeile ins /mpy/device/ Verzeichnis und ruft::
+Den neuen Treiber kann man am einfachsten Testen, indem man ihn einfach aufruft. Dazu geht man mit der Kommandozeile ins /mpylab/device/ Verzeichnis und ruft::
 	
    python sg_gt_12000a.py 
 	

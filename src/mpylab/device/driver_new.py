@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This is the :mod:`mpy.device.driver` module.
+"""This is the :mod:`mpylab.device.driver` module.
 
    :copyright: Hans Georg Krauthäuser
    :license: All rights reserved
@@ -7,8 +7,8 @@
 """
 
 import re
-from mpy.tools.Configuration import Configuration, fstrcmp
-from mpy.device.device import CONVERT, Device
+from mpylab.tools.Configuration import Configuration, fstrcmp
+from mpylab.device.device import CONVERT, Device
 
 
 # from tools import *
@@ -94,7 +94,7 @@ class DRIVER(object):
         
         :param ininame: filename or file-like object with the initialization parameters for the device. 
                         This parameter is handled by 
-                        :meth:`mpy.tools.Configuration.Configuration` which takes also 
+                        :meth:`mpylab.tools.Configuration.Configuration` which takes also 
                         a configuration template stored in ``self.conftmpl``.
         :param channel: an integer specifiing the channel number of multi channel devices.
                          Numbering is starting with 1.
