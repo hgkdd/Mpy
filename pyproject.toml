@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "mpylab"
-version = "0.9"
+version = "0.9.1"
 depandencies = [
 	"bidict",
 	"getch; sys_platform == 'linux' or sys_platform == 'darwin'",
@@ -21,7 +21,8 @@ depandencies = [
 	"pyvisa-py",
 	"scipy",
 	"simpleeval",
-	"matplotlib"
+	"matplotlib",
+    "scuq"
 ]
 requires-python = ">= 3.8"
 authors = [
