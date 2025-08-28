@@ -5,6 +5,7 @@ import os
 import math
 from functools import cmp_to_key
 
+
 import numpy
 import time
 from mpylab.tools.Configuration import fstrcmp
@@ -280,7 +281,8 @@ class Device(object):
             #             # print(globals())
             #             # print('LOCALS:')
             #             # print(locals())
-            mod = __import__('mpylab.device.'+DLLbasename, globals(), locals(), fromlist=[None])
+            # mod = __import__('mpylab.device.'+DLLbasename, globals(), locals(), fromlist=[None])
+            mod = import_module(f'.{self.DLLname}', 'mpylab.device')
             for i in DLLbasename.split(".")[1:]:  # emulate from ... import ...
                 mod = getattr(mod, i)
             try:
