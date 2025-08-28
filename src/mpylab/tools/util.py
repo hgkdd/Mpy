@@ -450,6 +450,10 @@ def locate(pattern, paths=None):
     # print pattern, paths
     if paths is None:
         paths = [os.getcwd()]
+    # ensure paths is an iterable (a list)
+    # if paths was only a single string, the next for loop didn't made sense
+    if not isiterable(paths):
+        paths = [paths]
     for root in paths:
         for path, dirs, files in os.walk(os.path.abspath(root)):
             for filename in fnmatch.filter(files, pattern):
