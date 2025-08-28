@@ -27,8 +27,15 @@ from scuq.quantities import Quantity
 from scipy.optimize import root_scalar
 from collections.abc import Sequence
 
-from mpylab.tools.get_char import getch
-from mpylab.tools.kbhit import kbhit
+try:
+    from msvcrt import getch, kbhit
+except ImportError:
+    import keyboard
+    _posix_term = keyboard.PosixTerm()
+    getch = _posix_term.getch
+    kbhit = _posix_term.kbhit
+#from mpylab.tools.get_char import getch
+#from mpylab.tools.kbhit import kbhit
 
 c = 2.99792458e8
 mu0 = 4 * math.pi * 1e-7
