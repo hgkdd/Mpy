@@ -13,17 +13,17 @@ import sys
 import tempfile
 import time
 
-try:
-    import mpylab.tools.unixcrt as crt
-except ImportError:
-    class CRT:
-        def unbuffer_stdin(self):
-            pass
-
-        def restore_stdin(self):
-            pass
-
-    crt = CRT()
+#try:
+#    import mpylab.tools.unixcrt as crt
+#except ImportError:
+#    class CRT:
+#        def unbuffer_stdin(self):
+#            pass
+#
+#        def restore_stdin(self):
+#            pass
+#
+#    crt = CRT()
 
 from mpylab.tools import util, calling
 from scuq.quantities import Quantity
@@ -269,37 +269,39 @@ class Measure(object):
 
            Return: `None`
         """
-        import unicodedata
-        import string
-        import re
-        validFilenameChars = "-_.() %s%s" % (string.ascii_letters, string.digits)
-
-        def slugify(value, allow_unicode=False):
-            """
-            Taken from https://github.com/django/django/blob/master/django/utils/text.py
-            Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
-            dashes to single dashes. Remove characters that aren't alphanumerics,
-            underscores, or hyphens. Convert to lowercase. Also strip leading and
-            trailing whitespace, dashes, and underscores.
-            """
-            value = str(value)
-            if allow_unicode:
-                value = unicodedata.normalize('NFKC', value)
-            else:
-                value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-            value = re.sub(r'[^\w\s-]', '', value.lower())
-            return re.sub(r'[-\s]+', '-', value).strip('-_')
-
-        def removeDisallowedFilenameChars(filename):
-            try:
-                cleanedFilename = unicodedata.normalize('NFKD', filename).encode('ASCII', 'ignore')
-            except TypeError:
-                cleanedFilename = unicodedata.normalize('NFKD', str(filename)).encode('ASCII', 'ignore')
-            return ''.join(c for c in cleanedFilename if c in validFilenameChars)
+        import pathvalidate
+        # import unicodedata
+        # import string
+        # import re
+        # validFilenameChars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+        #
+        # def slugify(value, allow_unicode=False):
+        #     """
+        #     Taken from https://github.com/django/django/blob/master/django/utils/text.py
+        #     Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+        #     dashes to single dashes. Remove characters that aren't alphanumerics,
+        #     underscores, or hyphens. Convert to lowercase. Also strip leading and
+        #     trailing whitespace, dashes, and underscores.
+        #     """
+        #     value = str(value)
+        #     if allow_unicode:
+        #         value = unicodedata.normalize('NFKC', value)
+        #     else:
+        #         value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+        #     value = re.sub(r'[^\w\s-]', '', value.lower())
+        #     return re.sub(r'[-\s]+', '-', value).strip('-_')
+        #
+        # def removeDisallowedFilenameChars(filename):
+        #     try:
+        #         cleanedFilename = unicodedata.normalize('NFKD', filename).encode('ASCII', 'ignore')
+        #     except TypeError:
+        #         cleanedFilename = unicodedata.normalize('NFKD', str(filename)).encode('ASCII', 'ignore')
+        #     return ''.join(c for c in cleanedFilename if c in validFilenameChars)
 
         log = None
         # name = removeDisallowedFilenameChars(name)
-        name = slugify(name)
+        # name = slugify(name)
+        name = pathvalidate.sanitize_filename(name)
         try:
             log = open(name, "a+")
         except IOError:
@@ -432,17 +434,19 @@ class Measure(object):
 
     @staticmethod
     def stdPreUserEvent():
-        """Just calls :meth:`mpylab.tools.unixcrt.unbuffer_stdin()`.
-           See there...
-        """
-        crt.unbuffer_stdin()
+        #"""Just calls :meth:`mpylab.tools.unixcrt.unbuffer_stdin()`.
+        #   See there...
+        #"""
+        #crt.unbuffer_stdin()
+        pass
 
     @staticmethod
     def stdPostUserEvent():
-        """Just calls :meth:`mpylab.tools.unixcrt.restore_stdin()`
-           See there...
-        """
-        crt.restore_stdin()
+        #"""Just calls :meth:`mpylab.tools.unixcrt.restore_stdin()`
+        #   See there...
+        #"""
+        #crt.restore_stdin()
+        pass
 
     # def do_leveling(self, leveling, mg, names, dct):
     # """Perform leveling on the measurement graph.
