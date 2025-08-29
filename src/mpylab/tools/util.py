@@ -1,7 +1,7 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """This is :mod:`mpylab.tools.util`: all sort of utilities. 
 
-   :author: Hans Georg Krauth‰user (main author)
+   :author: Hans Georg Krauth√§user (main author)
    :copyright: All rights reserved
    :license: no licence yet
 """

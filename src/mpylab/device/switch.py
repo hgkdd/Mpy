@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 from mpylab.tools.util import get_var_from_nearest_outerframe, isiterable
 
 

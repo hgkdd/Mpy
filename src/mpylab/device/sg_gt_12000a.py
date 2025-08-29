@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 # Driver for Signal Generator Giga-tronics Series 12000A Microwave Synthesizer 
 
