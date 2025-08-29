@@ -45,11 +45,11 @@ classifiers = [
 dependencies = [
     "bidict>=0.23.1",
     "gpib-ctypes>=0.3.0",
-    "levenshtein",
+    "levenshtein>=0.27.1",
     "matplotlib>=3.7.5",
     "msvcrt ; sys_platform == 'win32'",
     "numpy>=1.24.4",
-    "pathvalidate",
+    "pathvalidate>=3.3.1",
     "ply>=3.11",
     "pydot>=4.0.1",
     "pyparsing>=3.1.4",
