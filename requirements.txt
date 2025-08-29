@@ -1,8 +1,7 @@
 bidict
-getch;platform_system=="Linux" or platform_system=="darwin"
 gpib-ctypes
 Levenshtein
-msvcrt;platform_system=="windows"
+msvcrt ; sys_platform=="win32"
 numpy
 ply
 pydot
