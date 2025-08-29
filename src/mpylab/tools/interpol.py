@@ -4,8 +4,8 @@
    Provides interpolation routines
 
    :author: Hans Georg Krauthäuser (main author)
-   :copyright: All rights reserved
-   :license: no licence yet
+
+   :license: GPL-3 or higher
 """
 import cmath
 import math

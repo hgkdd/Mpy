@@ -4,8 +4,8 @@
    Provides :class:`mpylab.env.tem.TEMCell` for EMC measurements in TEM cells
 
    :author: Hans Georg Krauthäuser (main author)
-   :copyright: All rights reserved
-   :license: no licence yet
+
+   :license: GPL-3 or higher
 """
 
 import math

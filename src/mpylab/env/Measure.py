@@ -2,8 +2,8 @@
 """This is :mod:`mpylab.env.Measure` with :class:`mpylab.env.Measure.Measure` being the base class for e.g. :class:`mpylab.env.msc.MSC.MSC`
 
    :author: Hans Georg Krauthäuser (main author)
-   :copyright: All rights reserved
-   :license: no licence yet
+
+   :license: GPL-3 or higher
 """
 
 import gzip

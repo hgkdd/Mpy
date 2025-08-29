@@ -2,8 +2,8 @@
 """This is :mod:`mpylab.device.Metaui`: Metaclass to Build a standard GUI from the _setgetlist.
 
    :author: Christian Albrecht, Hans Georg Krauthaeuser
-   :copyright: All rights reserved
-   :license: no licence yet
+
+   :license: GPL-3 or higher
 """
 
 import traits.api as tapi

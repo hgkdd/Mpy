@@ -6,8 +6,8 @@
     Ein Validator prüft, ob ein Wert (z.B. ein Int) bestimmten Regeln entspricht.
 
    :author: Christian Albrecht
-   :copyright: All rights reserved
-   :license: no licence yet
+
+   :license: GPL-3 or higher
 
 
 """

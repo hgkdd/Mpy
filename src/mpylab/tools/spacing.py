@@ -2,8 +2,8 @@
 """This is :mod:`mpylab.tools.spacing`: routines returning sequences aka `range`
 
    :author: Hans Georg Krauthäuser (main author)
-   :copyright: All rights reserved
-   :license: no licence yet
+
+   :license: GPL-3 or higher
 """
 
 from math import log, ceil, floor, pow

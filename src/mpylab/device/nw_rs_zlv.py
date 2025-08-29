@@ -3,8 +3,8 @@
 """This is :mod:`mpylab.device.nw_rs_zlv`:
 
    :author: Christian Albrecht
-   :copyright: All rights reserved
-   :license: no licence yet
+
+   :license: GPL-3 or higher
 """
 
 import sys
