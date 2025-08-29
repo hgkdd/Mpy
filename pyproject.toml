@@ -44,7 +44,6 @@ classifiers = [
 ]
 dependencies = [
     "bidict>=0.23.1",
-    "getch>=1.0 ; sys_platform == 'darwin' or sys_platform == 'linux'",
     "gpib-ctypes>=0.3.0",
     "levenshtein",
     "matplotlib>=3.7.5",
