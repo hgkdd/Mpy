@@ -175,7 +175,7 @@ htmlhelp_basename = 'MpyLabdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Mpy.tex', 'Mpy Documentation',
+  ('index', 'MpyLab.tex', 'MpyLab Documentation',
    'Hans Georg Krauthäuser', 'manual'),
 ]
 

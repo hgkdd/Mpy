@@ -1,7 +1,7 @@
 Walk Through the Installation Process of mpylab
---------------------------------------------
+-----------------------------------------------
 
-The following walk-through shows the installation process for mpylab (and scuq) in a virtual environment beginnig with freshly cloned repositories.
+The following walk-through shows the installation process for ``MpyLab`` (and ``scuq``) (for developpers) in a virtual environment beginnig with freshly cloned repositories.
 
 Make a directory and change to that directory:
 
@@ -14,110 +14,83 @@ Now clone the two main packages **scuq** and **mpylab**:
 
 .. code-block:: console
 
-    foo@bar:path/test-mpylab> hg clone /path-to-central-repositories/scuq
-    destination directory: scuq
-    updating to branch default                                                                                                                                      
-    43 files updated, 0 files merged, 0 files removed, 0 files unresolved
-    foo@bar:path/test-mpylab> hg clone /path-to-central-repositories/mpylab
-    destination directory: mpylab
-    updating to branch default                                                                                                                                      
-    396 files updated, 0 files merged, 0 files removed, 0 files unresolved
+    foo@bar:path/test-mpylab> gh repo clone hgkdd/scuq
+    Cloning into 'scuq'...
+    remote: Enumerating objects: 294, done.
+    remote: Counting objects: 100% (294/294), done.
+    remote: Compressing objects: 100% (111/111), done.
+    remote: Total 294 (delta 174), reused 291 (delta 171), pack-reused 0 (from 0)
+    Receiving objects: 100% (294/294), 787.84 KiB | 12.50 MiB/s, done.
+    Resolving deltas: 100% (174/174), done.
+    foo@bar:path/test-mpylab> gh repo clone hgkdd/Mpy MpyLab
+    Cloning into 'MpyLab'...
+    remote: Enumerating objects: 3515, done.
+    remote: Counting objects: 100% (40/40), done.
+    remote: Compressing objects: 100% (36/36), done.
+    remote: Total 3515 (delta 10), reused 16 (delta 3), pack-reused 3475 (from 2)
+    Receiving objects: 100% (3515/3515), 29.05 MiB | 39.20 MiB/s, done.
+    Resolving deltas: 100% (2266/2266), done.
 
 Next we create a virtual environment and activate the environment:
 
 .. code-block:: console
 
-    foo@bar:path/test-mpylab> python3 -m venv venv
-    foo@bar:path/test-mpylab> source venv/bin/activate
+    foo@bar:path/test-mpylab> mkdir venv-mpylab && cd venv-mpylab
+    foo@bar:path/test-mpylab/venv-mpylab> uv venv
+    Using CPython 3.11.2 interpreter at: /opt/local/bin/python3.11
+    Creating virtual environment at: .venv
+    Activate with: source .venv/bin/activate
+    foo@bar:path/test-mpylab/venv-mpylab> source .venv/bin/activate
+    (venv-mpylab) foo@bar:path/test-mpylab/venv-mpylab>
 
-The active venv is marked with the prefix **(venv)** in front of your prompt.
+The active venv is marked with the prefix **(venv-mpylab)** in front of your prompt.
 
 Now, we are going to install **scuq** from the source tree. The option '-e' installs it in editable mode:
 
 .. code-block:: console
 
-    (venv) foo@bar:path/test-mpylab> pip install -e scuq
-    Obtaining file:///path-to/test-mpylab/scuq
-    Installing build dependencies ... done
-    Checking if build backend supports build_editable ... done
-    Getting requirements to build editable ... done
-    Preparing editable metadata (pyproject.toml) ... done
-    Building wheels for collected packages: scuq-hgk
-    Building editable for scuq-hgk (pyproject.toml) ... done
-    Created wheel for scuq-hgk: filename=scuq_hgk-0.1-0.editable-py3-none-any.whl size=1581 sha256=a7dc3fa5489c1d31715add869cdb51e5a131c4dc0044ba3e72b4f41ffbb374e4
-    Stored in directory: /private/var/folders/88/b_718t6d4tgfg4f1g67wkg8r0000gn/T/pip-ephem-wheel-cache-rv6be28b/wheels/9b/cc/ef/ebfea4cdf61378658b6e3d9bb50cdf88742d1d0866f293222f
-    Successfully built scuq-hgk
-    Installing collected packages: scuq-hgk
-    Successfully installed scuq-hgk-0.1
-
-Next, install all required packages for **mpylab**:
-
-.. code-block:: console
-
-    (venv) foo@bar:path/test-mpylab> pip install -r mpylab/requirements.txt
-    Collecting bidict
-    Using cached bidict-0.22.0-py3-none-any.whl (36 kB)
-    Collecting getch
-    Using cached getch-1.0-cp310-cp310-macosx_12_0_arm64.whl
-    Collecting gpib-ctypes
-    Using cached gpib_ctypes-0.3.0-py2.py3-none-any.whl (16 kB)
-    Collecting Levenshtein
-    Using cached Levenshtein-0.20.2-cp310-cp310-macosx_11_0_arm64.whl (106 kB)
-    Collecting numpy
-    Using cached numpy-1.23.2-cp310-cp310-macosx_11_0_arm64.whl (13.3 MB)
-    Collecting ply
-    Using cached ply-3.11-py2.py3-none-any.whl (49 kB)
-    Collecting pydot
-    Using cached pydot-1.4.2-py2.py3-none-any.whl (21 kB)
-    Collecting pyparsing
-    Using cached pyparsing-3.0.9-py3-none-any.whl (98 kB)
-    Collecting pyserial
-    Using cached pyserial-3.5-py2.py3-none-any.whl (90 kB)
-    Collecting pyusb
-    Using cached pyusb-1.2.1-py3-none-any.whl (58 kB)
-    Collecting PyVISA
-    Using cached PyVISA-1.12.0-py3-none-any.whl (175 kB)
-    Collecting PyVISA-py
-    Using cached PyVISA_py-0.5.3-py3-none-any.whl (59 kB)
-    Collecting SciPy
-    Using cached scipy-1.9.1-cp310-cp310-macosx_12_0_arm64.whl (29.9 MB)
-    Collecting simpleeval
-    Using cached simpleeval-0.9.12-py2.py3-none-any.whl (14 kB)
-    Collecting traits
-    Using cached traits-6.4.1-cp310-cp310-macosx_10_9_universal2.whl (5.0 MB)
-    Collecting traitsui
-    Using cached traitsui-7.4.0-py3-none-any.whl (1.5 MB)
-    Collecting rapidfuzz<3.0.0,>=2.3.0
-    Downloading rapidfuzz-2.6.1-cp310-cp310-macosx_11_0_arm64.whl (1.5 MB)
-    ---------------------------- 1.5/1.5 MB 5.3 MB/s eta 0:00:00
-    Collecting typing-extensions
-    Using cached typing_extensions-4.3.0-py3-none-any.whl (25 kB)
-    Collecting pyface>=7.4.1
-    Using cached pyface-7.4.2-py3-none-any.whl (1.3 MB)
-    Collecting jarowinkler<2.0.0,>=1.2.0
-    Using cached jarowinkler-1.2.1-cp310-cp310-macosx_11_0_arm64.whl (57 kB)
-    Installing collected packages: simpleeval, pyserial, ply, gpib-ctypes, getch, typing-extensions, traits, pyusb, pyparsing, numpy, jarowinkler, bidict, SciPy, rapidfuzz, PyVISA, pyface, pydot, traitsui, PyVISA-py, Levenshtein
-    Successfully installed Levenshtein-0.20.2 PyVISA-1.12.0 PyVISA-py-0.5.3 SciPy-1.9.1 bidict-0.22.0 getch-1.0 gpib-ctypes-0.3.0 jarowinkler-1.2.1 numpy-1.23.2 ply-3.11 pydot-1.4.2 pyface-7.4.2 pyparsing-3.0.9 pyserial-3.5 pyusb-1.2.1 rapidfuzz-2.6.1 simpleeval-0.9.12 traits-6.4.1 traitsui-7.4.0 typing-extensions-4.3.0
+    (venv-mpylab) foo@bar:path/test-mpylab/venv-mpylab> uv pip install -e ../scuq
+    Prepared 1 package in 402ms
+    Installed 2 packages in 23ms
+    + numpy==2.3.3
+    + scuq==0.9.1 (from file:///../scuq)
 
 Finally, install **mpylab** from its source tree as an editable module:
 
 .. code-block:: console
 
-    (venv) foo@bar:path/test-mpylab> pip install -e mpylab
-    Obtaining file:///path-to/test-mpylab/mpylab
-    Installing build dependencies ... done
-    Checking if build backend supports build_editable ... done
-    Getting requirements to build editable ... done
-    Preparing editable metadata (pyproject.toml) ... done
-    Building wheels for collected packages: mpylab-hgkTUD
-    Building editable for mpylab-hgkTUD (pyproject.toml) ... done
-    Created wheel for mpylab-hgkTUD: filename=mpy_hgkTUD-0.1.dev316+hdc6350c-0.editable-py3-none-any.whl size=3209 sha256=ab259c8dfb232ad4069ed7300d3e817fd04a40dc493475a93a9d960c3c83b24c
-    Stored in directory: /private/var/folders/88/b_718t6d4tgfg4f1g67wkg8r0000gn/T/pip-ephem-wheel-cache-h5fhgia2/wheels/8f/1e/f3/229415052fed5d1f0f674ac00a6c99e4bae22223ce2e07eac7
-    Successfully built mpylab-hgkTUD
-    Installing collected packages: mpylab-hgkTUD
-    Successfully installed mpylab-hgkTUD-0.1.dev316+hdc6350c
-    (venv) foo@bar:path/test-mpylab>
+    (venv-mpylab) foo@bar:path/test-mpylab/venv-mpylab> uv pip install -e ../Mpylab
+    Resolved 27 packages in 151ms
+       Built mpylab @ file:///Users/hgkrauth/Documents/Development/uv-git-test/Mpylab
+    Prepared 1 package in 299ms
+    Installed 25 packages in 61ms
+     + bidict==0.23.1
+     + contourpy==1.3.3
+     + cycler==0.12.1
+     + fonttools==4.60.0
+     + gpib-ctypes==0.3.0
+     + kiwisolver==1.4.9
+     + levenshtein==0.27.1
+     + matplotlib==3.10.6
+     + mpylab==0.9.4 (from file:///../Mpylab)
+     + packaging==25.0
+     + pathvalidate==3.3.1
+     + pillow==11.3.0
+     + ply==3.11
+     + pydot==4.0.1
+     + pyparsing==3.2.5
+     + pyserial==3.5
+     + python-dateutil==2.9.0.post0
+     + pyusb==1.3.1
+     + pyvisa==1.15.0
+     + pyvisa-py==0.8.1
+     + rapidfuzz==3.14.1
+     + scipy==1.16.2
+     + simpleeval==1.0.3
+     + six==1.17.0
+     + typing-extensions==4.15.0
+    (venv-mpylab) foo@bar:path/test-mpylab/venv-mpylab>
 
-You are now ready to use the **mpylab** framework. Enjoy!
+You are now ready to use the ``MpyLab`` framework. Enjoy!
 
 

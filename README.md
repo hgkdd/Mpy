@@ -7,7 +7,9 @@ This software is distributed unter GPL-3 or higher. See LICENCE for details.
 
 ## Installation
 
-> pip3 install mpylab
+```
+pip3 install mpylab
+```
 
 ## License
 
