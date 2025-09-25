@@ -97,7 +97,26 @@ This is the documentation of the API.
    :members:
    :undoc-members:
    :inherited-members:
-   
+
+
+:mod:`mpylab.env.msc.MSC`
+-----------------------------------
+
+.. automodule:: mpylab.env.msc.MSC
+   :members:
+   :undoc-members:
+   :inherited-members:
+
+
+:mod:`mpylab.env.msc.ImmunityThreshold`
+-----------------------------------
+
+.. automodule:: mpylab.env.msc.ImmunityThreshold
+   :members:
+   :undoc-members:
+   :inherited-members:
+
+
 :mod:`mpylab.env.tem.TEMCell`
 -----------------------------------
 
