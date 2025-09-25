@@ -1,16 +1,17 @@
 .. -*-coding: utf-8 -*-
 
-Installation
-============
+Installation als Nutzer
+=======================
 
-Zur Installation wechselt man in der Kommandozeile in das Hauptverzeichnis von `Mpy` und 
-ruft dann::
+Nutzer von ``MPyLab`` (im Gegensatz zu Entwicklern von ``MpyLab``) installieren einfach von **PyPi** (https://pypi.org/)::
 
-   python setup.py install 
+   pip3 install mpylab
 
-auf. 
+Abhängigkeiten werden mitinstalliert. Es wird dringend empfohlen, eine virtuelle Umgebung zu nutzen, z.B.::
 
-Damit werden alle Dateien in die lokale Python-Installation eingegliedert. Ebenso verfährt man mit dem `scuq`-Paket.
+    > mkdir venv && cd venv
+    > uv venv
+    > source ./.venv/bin/activate
+    (venv) > uv pip install mpylab
 
-Allerdings muss man beachten, dass nach einer Quelltext-Änderung an `Mpy` eine 
-Neuinstalltion notwendig ist.
+Die Verwendung von ``uv`` (https://docs.astral.sh/uv/) ist hierbei natürlich obtional.

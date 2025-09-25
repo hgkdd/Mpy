@@ -14,7 +14,7 @@ Contents:
    :maxdepth: 2
 
    installation-walktrough.rst
-   intro-install-de
+   intro-install-en
    intro-structure-de
    intro-driver-de
    intro-driver-framework-de
