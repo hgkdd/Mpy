@@ -30,7 +30,7 @@ from collections.abc import Sequence
 try:
     from msvcrt import getch, kbhit
 except ImportError:
-    import keyboard
+    from mpylab.tools import keyboard
     _posix_term = keyboard.PosixTerm()
     getch = _posix_term.getch
     kbhit = _posix_term.kbhit
