@@ -15,4 +15,3 @@ simpleeval
 matplotlib
 scuq
 PySide6
-keyboard
