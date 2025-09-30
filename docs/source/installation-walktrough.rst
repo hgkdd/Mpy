@@ -14,7 +14,7 @@ Now clone the two main packages **scuq** and **mpylab**:
 
 .. code-block:: console
 
-    foo@bar:path/test-mpylab> gh repo clone hgkdd/scuq
+    foo@bar:path/test-mpylab> gh repo clone hgkdd/scuq   # or git clone https://github.com/hgkdd/scuq.git
     Cloning into 'scuq'...
     remote: Enumerating objects: 294, done.
     remote: Counting objects: 100% (294/294), done.
@@ -22,7 +22,7 @@ Now clone the two main packages **scuq** and **mpylab**:
     remote: Total 294 (delta 174), reused 291 (delta 171), pack-reused 0 (from 0)
     Receiving objects: 100% (294/294), 787.84 KiB | 12.50 MiB/s, done.
     Resolving deltas: 100% (174/174), done.
-    foo@bar:path/test-mpylab> gh repo clone hgkdd/Mpy MpyLab
+    foo@bar:path/test-mpylab> gh repo clone hgkdd/Mpy MpyLab  # or git clone https://github.com/hgkdd/Mpy.git MpyLab
     Cloning into 'MpyLab'...
     remote: Enumerating objects: 3515, done.
     remote: Counting objects: 100% (40/40), done.
