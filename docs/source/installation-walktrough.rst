@@ -1,5 +1,5 @@
-Walk Through the Installation Process of mpylab
------------------------------------------------
+Installation of ``MpyLab`` for Developpers
+==========================================
 
 The following walk-through shows the installation process for ``MpyLab`` (and ``scuq``) (for developpers) in a virtual environment beginnig with freshly cloned repositories.
 

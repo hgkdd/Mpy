@@ -15,8 +15,8 @@ Contents:
 
    installation-walktrough.rst
    intro-install-en
-   intro-structure-de
-   intro-driver-de
+   intro-structure-en
+   intro-driver-en
    intro-driver-framework-de
    dat-file-grammar
    FAQ-en
