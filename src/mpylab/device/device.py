@@ -282,7 +282,7 @@ class Device(object):
             #             # print('LOCALS:')
             #             # print(locals())
             # mod = __import__('mpylab.device.'+DLLbasename, globals(), locals(), fromlist=[None])
-            mod = import_module(f'.{self.DLLname}', 'mpylab.device')
+            mod = import_module(f'.{DLLbasename}', 'mpylab.device')
             for i in DLLbasename.split(".")[1:]:  # emulate from ... import ...
                 mod = getattr(mod, i)
             try:
@@ -1735,7 +1735,7 @@ class Fieldprobe(Device):
                 method.restype = ct.c_int
                 retval = method(ct.byref(c_state), c_instance, ct.byref(c_error))
                 # retval = method(c_instance, ct.byref(c_error))
-                print((c_state.value))
+                # print((c_state.value))
                 self.error = c_error.value
                 return self.error, retval
         else:
