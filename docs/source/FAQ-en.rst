@@ -25,8 +25,8 @@ A:
 
         > mkdir mpylab-develop
         > cd mpylab-develop
-        > gh repo clone hgkdd/Mpy
-        > gh repo clone hgkdd/scuq
+        > gh repo clone hgkdd/Mpy  # or git clone https://github.com/hgkdd/Mpy.git
+        > gh repo clone hgkdd/scuq # or git clone https://github.com/hgkdd/scuq.git
         > mkdir venv-mpylab
         > cd venv-mpylab
         > uv venv
@@ -40,6 +40,12 @@ Q:
 
 A:
     The documentation is available online: (https://mpylab.readthedocs.io/en/latest/)
+
+Q:
+    How do I contribute to ``MpyLab``?
+
+A:
+    If you are a registered contributor, you simply push to the repository. Otherwise, you have to create a pull-request. See the github documentation for more details (https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).
 
 
 Q:
