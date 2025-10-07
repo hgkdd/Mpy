@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+"""
+This is :mod:`mpylab.tools.aunits`.
+
+   Provides alternative units based on scuq.si units
+
+   :author: Hans Georg Krauthäuser (main author)
+
+   :license: GPLv3 or higher
+"""
 
 from scuq import units, si
 

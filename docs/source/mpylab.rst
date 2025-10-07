@@ -5,17 +5,17 @@ API Documentation
 
 This is the documentation of the API.
 
-:mod:`mpylab.device.driver_framework`
-----------------------------------
+#:mod:`mpylab.driver_framework`
+#----------------------------------
 
-.. toctree::
-   :maxdepth: 2
+#.. toctree::
+#   :maxdepth: 2
 
-   mpylab/driver_framework.rst
+#   mpylab/driver_framework.rst
 
 
 :mod:`mpylab.device.driver`
-------------------------
+----------------------------
 
 .. automodule:: mpylab.device.driver
    :members:
@@ -24,7 +24,7 @@ This is the documentation of the API.
 
 
 :mod:`mpylab.device.driver_new`
------------------------------
+--------------------------------
 .. automodule:: mpylab.device.driver_new
    :members:
    :undoc-members:
@@ -32,29 +32,32 @@ This is the documentation of the API.
 
 
 :mod:`mpylab.device.device`
-------------------------
+-----------------------------
 
 .. automodule:: mpylab.device.device
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.device.amplifier`
----------------------------
+-------------------------------
 
 .. automodule:: mpylab.device.amplifier
    :members:
    :undoc-members:
    :inherited-members:
-   
+
+
 :mod:`mpylab.device.nport`
------------------------
+---------------------------
 
 .. automodule:: mpylab.device.nport
    :members:
    :undoc-members:
    :inherited-members:
-   
+
+
 :mod:`mpylab.device.powermeter`
 ---------------------------------
 
@@ -63,35 +66,41 @@ This is the documentation of the API.
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.device.signalgenerator`
----------------------------------
+-------------------------------------
 
 .. automodule:: mpylab.device.signalgenerator
    :members:
    :undoc-members:
    :inherited-members:
-   
+
+
 :mod:`mpylab.device.spectrumanalyzer`
------------------------------------
+--------------------------------------
 
 .. automodule:: mpylab.device.spectrumanalyzer
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.device.networkanalyzer`
-----------------------------------
+-------------------------------------
+
 .. automodule:: mpylab.device.networkanalyzer
+   :members:
+   :undoc-members:
+   :inherited-members:
 
-.. toctree::
-    :maxdepth: 2
-
-    mpylab/device_networkanalyzer.rst
+#.. toctree::
+#   :maxdepth: 2
+#    mpylab/device_networkanalyzer.rst
 
 
    
 :mod:`mpylab.env.Measure`
------------------------
+--------------------------
 
 .. automodule:: mpylab.env.Measure
    :members:
@@ -100,7 +109,7 @@ This is the documentation of the API.
 
 
 :mod:`mpylab.env.msc.MSC`
------------------------------------
+--------------------------
 
 .. automodule:: mpylab.env.msc.MSC
    :members:
@@ -109,16 +118,17 @@ This is the documentation of the API.
 
 
 :mod:`mpylab.env.msc.ImmunityThreshold`
------------------------------------
+---------------------------------------
 
 .. automodule:: mpylab.env.msc.ImmunityThreshold
    :members:
+   :special-members: __init__
    :undoc-members:
    :inherited-members:
 
 
 :mod:`mpylab.env.tem.TEMCell`
------------------------------------
+------------------------------
 
 .. automodule:: mpylab.env.tem.TEMCell
    :members:
@@ -127,7 +137,7 @@ This is the documentation of the API.
 
 
 :mod:`mpylab.env.univers.AmplifierTest`
------------------------------------
+---------------------------------------
 
 .. automodule:: mpylab.env.univers.AmplifierTest
    :members:
@@ -136,7 +146,7 @@ This is the documentation of the API.
 
 
 :mod:`mpylab.tools.aunits`
------------------------
+---------------------------
 
 .. automodule:: mpylab.tools.aunits
    :members:
@@ -144,7 +154,7 @@ This is the documentation of the API.
    :inherited-members:
    
 :mod:`mpylab.tools.calling`
-------------------------
+----------------------------
 
 .. automodule:: mpylab.tools.calling
    :members:
@@ -152,7 +162,7 @@ This is the documentation of the API.
    :inherited-members:
    
 :mod:`mpylab.tools.Configuration`
--------------------------------
+----------------------------------
 
 .. automodule:: mpylab.tools.Configuration
    :members:
@@ -169,7 +179,7 @@ This is the documentation of the API.
 
 
 :mod:`mpylab.tools.dataparser`
-----------------------------
+-------------------------------
 
 .. automodule:: mpylab.tools.dataparser
    :members:
@@ -177,7 +187,7 @@ This is the documentation of the API.
    :inherited-members:
    
 :mod:`mpylab.tools.directivity`
-----------------------------
+-------------------------------
 
 .. automodule:: mpylab.tools.directivity
    :members:
@@ -185,7 +195,7 @@ This is the documentation of the API.
    :inherited-members:
 
 :mod:`mpylab.tools.distributions`
-----------------------------
+----------------------------------
 
 .. automodule:: mpylab.tools.distributions
    :members:
@@ -201,39 +211,43 @@ This is the documentation of the API.
    :inherited-members:
    
 :mod:`mpylab.tools.interpol`
--------------------------
+-----------------------------
 
 .. automodule:: mpylab.tools.interpol
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.tools.keyboard`
--------------------------
+------------------------------
 
 .. automodule:: mpylab.tools.keyboard
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.tools.level_control`
--------------------------
+-----------------------------------
 
 .. automodule:: mpylab.tools.level_control
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.tools.levenshtein`
--------------------------
+--------------------------------
 
 .. automodule:: mpylab.tools.levenshtein
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.tools.log_freq`
--------------------------
+-----------------------------
 
 .. automodule:: mpylab.tools.log_freq
    :members:
@@ -242,39 +256,43 @@ This is the documentation of the API.
 
 
 :mod:`mpylab.tools.mgraph`
-------------------------
+---------------------------
 
 .. automodule:: mpylab.tools.mgraph
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.tools.PControler`
--------------------------
+-------------------------------
 
 .. automodule:: mpylab.tools.PControler
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.tools.plyparser`
--------------------------
+------------------------------
 
 .. automodule:: mpylab.tools.plyparser
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.tools.plyparser_DatFile_parsetab`
--------------------------
+-----------------------------------------------
 
 .. automodule:: mpylab.tools.plyparser_DatFile_parsetab
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.tools.sin_fit`
--------------------------
+----------------------------
 
 .. automodule:: mpylab.tools.sin_fit
    :members:
@@ -282,7 +300,7 @@ This is the documentation of the API.
    :inherited-members:
 
 :mod:`mpylab.tools.spacing`
--------------------------
+---------------------------
 
 .. automodule:: mpylab.tools.spacing
    :members:
@@ -291,15 +309,16 @@ This is the documentation of the API.
 
 
 :mod:`mpylab.tools.umd_types`
--------------------------
+-----------------------------
 
 .. automodule:: mpylab.tools.umd_types
    :members:
    :undoc-members:
    :inherited-members:
 
+
 :mod:`mpylab.tools.uncertain`
--------------------------
+------------------------------
 
 .. automodule:: mpylab.tools.uncertain
    :members:
@@ -308,7 +327,7 @@ This is the documentation of the API.
 
 
 :mod:`mpylab.tools.unixcrt`
--------------------------
+---------------------------
 
 .. automodule:: mpylab.tools.unixcrt
    :members:
@@ -326,7 +345,7 @@ This is the documentation of the API.
    
 
 :mod:`mpylab.tools.yappsrt`
--------------------------
+----------------------------
 
 .. automodule:: mpylab.tools.yappsrt
    :members:

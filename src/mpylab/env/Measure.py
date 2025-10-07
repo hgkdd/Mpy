@@ -6,6 +6,7 @@
    :license: GPL-3 or higher
 """
 
+from typing import Any
 import gzip
 import os
 import pickle
@@ -206,7 +207,11 @@ class Measure(object):
         finally:
             sys.stdout = stdout  # restore stdout
 
-    def stdUserMessenger(self, msg="Are you ready?", but=None, level='', dct=None):
+    def stdUserMessenger(self,
+                         msg: str = "Are you ready?",
+                         but: list[str] | None = None,
+                         level: str = '',
+                         dct: dict[Any, Any] | None = None) -> int:
         """The standard (default) method to present messages to the user.
 
            The behaviour depends on the value of the parameter *but*.
@@ -254,7 +259,7 @@ class Measure(object):
             return -1
 
     @staticmethod
-    def stdUserInterruptTester():
+    def stdUserInterruptTester() -> int | None:
         """The standard (default) user interrupt tester.
 
            Returns return value of :meth:`mpylab.util.anykeyevent()`
