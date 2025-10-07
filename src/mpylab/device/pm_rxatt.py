@@ -9,7 +9,7 @@ from scuq import *
 from mpylab.device import device
 from mpylab.device.nport import NPORT
 from mpylab.device.powermeter import POWERMETER as PWRMTR
-from mpylab.tools.Configuration import Configuration
+from mpylab.tools.configuration import Configuration
 from mpylab.tools.util import format_block
 from mpylab.tools.util import locate
 

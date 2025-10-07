@@ -4,7 +4,7 @@ import bidict
 from scuq import quantities
 from scuq import si
 from mpylab.device.driver import DRIVER
-from mpylab.tools.Configuration import strbool, fstrcmp
+from mpylab.tools.configuration import strbool, fstrcmp
 
 
 class SIGNALGENERATOR(DRIVER):

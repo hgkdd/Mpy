@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from mpylab.device.nport import NPORT  # parent class
-from mpylab.tools.Configuration import fstrcmp  # fuzzy string compare
+from mpylab.tools.configuration import fstrcmp  # fuzzy string compare
 
 
 class AMPLIFIER(NPORT):

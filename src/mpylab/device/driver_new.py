@@ -7,7 +7,7 @@
 """
 
 import re
-from mpylab.tools.Configuration import Configuration, fstrcmp
+from mpylab.tools.configuration import Configuration, fstrcmp
 from mpylab.device.device import CONVERT, Device
 
 

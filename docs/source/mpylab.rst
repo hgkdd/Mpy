@@ -5,13 +5,15 @@ API Documentation
 
 This is the documentation of the API.
 
-#:mod:`mpylab.driver_framework`
-#----------------------------------
+..
+    :mod:`mpylab.driver_framework`
+    ----------------------------------
 
-#.. toctree::
-#   :maxdepth: 2
+..
+    .. toctree::
+       :maxdepth: 2
 
-#   mpylab/driver_framework.rst
+       mpylab/driver_framework.rst
 
 
 :mod:`mpylab.device.driver`
@@ -93,9 +95,10 @@ This is the documentation of the API.
    :undoc-members:
    :inherited-members:
 
-#.. toctree::
-#   :maxdepth: 2
-#    mpylab/device_networkanalyzer.rst
+..
+    .. toctree::
+       :maxdepth: 2
+        mpylab/device_networkanalyzer.rst
 
 
    

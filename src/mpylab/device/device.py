@@ -8,7 +8,7 @@ from functools import cmp_to_key
 
 import numpy
 import time
-from mpylab.tools.Configuration import fstrcmp
+from mpylab.tools.configuration import fstrcmp
 from mpylab.tools.aunits import *
 import mpylab.tools.umd_types as umd_types
 from scuq import ucomponents, quantities

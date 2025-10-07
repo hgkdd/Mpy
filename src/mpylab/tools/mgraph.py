@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 import mpylab.device.device as device
 from scuq import *
 from mpylab.tools.aunits import *
-from mpylab.tools.Configuration import fstrcmp
+from mpylab.tools.configuration import fstrcmp
 from mpylab.tools.util import extrap1d, locate, format_block
 
 

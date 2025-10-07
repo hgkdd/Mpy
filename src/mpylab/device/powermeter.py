@@ -6,7 +6,7 @@ import math
 from scuq import *
 
 from mpylab.device.driver import DRIVER
-from mpylab.tools.Configuration import strbool
+from mpylab.tools.configuration import strbool
 
 
 class POWERMETER(DRIVER):

@@ -11,7 +11,7 @@
 ###Refers to the currently active Trace. See also SetTrace()
 
 
-from mpylab.tools.Configuration import strbool
+from mpylab.tools.configuration import strbool
 
 # from mpylab.device.driver import DRIVER
 from .driver_new import DRIVER

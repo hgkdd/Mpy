@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
-"""This is the :mod:`mpylab.device.driver` module.
-
-   :copyright: Hans Georg Krauthäuser
-   :license: All rights reserved
-
 """
+This is the :mod:`mpylab.device.driver` module.
+
+   :author: Hans Georg Krauthäuser (main author)
+
+   :license: GPLv3 or higher
+"""
+
 
 import re
 import os
-from mpylab.tools.Configuration import Configuration, fstrcmp
+from mpylab.tools.configuration import Configuration, fstrcmp
 from mpylab.device.device import CONVERT, Device
 
 
-class DRIVER(object):
+class DRIVER:
     """
     Parent class for all py-drivers.
     

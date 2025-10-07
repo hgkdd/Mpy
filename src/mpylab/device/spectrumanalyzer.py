@@ -4,7 +4,7 @@ import functools
 import re
 
 from mpylab.device.driver import DRIVER
-from mpylab.tools.Configuration import strbool, fstrcmp
+from mpylab.tools.configuration import strbool, fstrcmp
 
 
 class SPECTRUMANALYZER(DRIVER):
