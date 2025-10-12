@@ -14,7 +14,7 @@ Now clone the two main packages **scuq** and **mpylab**:
 
 .. code-block:: console
 
-    foo@bar:path/test-mpylab> gh repo clone hgkdd/scuq   # or git clone https://github.com/hgkdd/scuq.git
+    foo@bar:path/test-mpylab> git clone https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab/scuq.git
     Cloning into 'scuq'...
     remote: Enumerating objects: 294, done.
     remote: Counting objects: 100% (294/294), done.
@@ -22,7 +22,7 @@ Now clone the two main packages **scuq** and **mpylab**:
     remote: Total 294 (delta 174), reused 291 (delta 171), pack-reused 0 (from 0)
     Receiving objects: 100% (294/294), 787.84 KiB | 12.50 MiB/s, done.
     Resolving deltas: 100% (174/174), done.
-    foo@bar:path/test-mpylab> gh repo clone hgkdd/Mpy MpyLab  # or git clone https://github.com/hgkdd/Mpy.git MpyLab
+    foo@bar:path/test-mpylab> git clone https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab/mpylab.git MpyLab
     Cloning into 'MpyLab'...
     remote: Enumerating objects: 3515, done.
     remote: Counting objects: 100% (40/40), done.
@@ -61,7 +61,7 @@ Finally, install **mpylab** from its source tree as an editable module:
 
     (venv-mpylab) foo@bar:path/test-mpylab/venv-mpylab> uv pip install -e ../Mpylab
     Resolved 27 packages in 151ms
-       Built mpylab @ file:///Users/hgkrauth/Documents/Development/uv-git-test/Mpylab
+       Built mpylab @ file:///.../Mpylab
     Prepared 1 package in 299ms
     Installed 25 packages in 61ms
      + bidict==0.23.1

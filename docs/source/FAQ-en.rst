@@ -25,14 +25,14 @@ A:
 
         > mkdir mpylab-develop
         > cd mpylab-develop
-        > gh repo clone hgkdd/Mpy  # or git clone https://github.com/hgkdd/Mpy.git
-        > gh repo clone hgkdd/scuq # or git clone https://github.com/hgkdd/scuq.git
+        > git clone https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab/mpylab.git
+        > git clone https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab/scuq.git
         > mkdir venv-mpylab
         > cd venv-mpylab
         > uv venv
         > source .venv/bin/activate
         > uv pip install -e ../scuq
-        > uv pip inatall -e ../Mpy
+        > uv pip inatall -e ../mpylab
 
 
 Q:
@@ -109,15 +109,15 @@ A:
     MpyLab should always be installed in a virtual environment.
     This can be done (for example) as follows::
 
-        /home/USER/dev/test % gh repo clone hgkdd/Mpy
-        Cloning into 'Mpy'...
+        /home/USER/dev/test % git clone https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab/mpylab.git
+        Cloning into 'mpylab'...
         remote: Enumerating objects: 3515, done.
         remote: Counting objects: 100% (40/40), done.
         remote: Compressing objects: 100% (36/36), done.
         remote: Total 3515 (delta 10), reused 16 (delta 3), pack-reused 3475 (from 2)
         Receiving objects: 100% (3515/3515), 29.05 MiB | 6.44 MiB/s, done.
         Resolving deltas: 100% (2266/2266), done.
-        /home/USER/dev/test % gh repo clone hgkdd/scuq
+        /home/USER/dev/test % git clone https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab/scuq.git
         Cloning into 'scuq'...
         remote: Enumerating objects: 294, done.
         remote: Counting objects: 100% (294/294), done.
@@ -139,9 +139,9 @@ A:
         Installed 2 packages in 13ms
          + numpy==2.3.3
          + scuq==0.9.1 (from file:///home/USER/dev/test/scuq)
-        (venv-mpy-develop) /home/USER/dev/test/venv-mpy-develop % uv pip install -e ../Mpy
+        (venv-mpy-develop) /home/USER/dev/test/venv-mpy-develop % uv pip install -e ../mpylab
         Resolved 27 packages in 659ms
-              Built mpylab @ file:///home/USER/dev/test/Mpy
+              Built mpylab @ file:///home/USER/dev/test/mpylab
         Prepared 8 packages in 8.13s
         Installed 25 packages in 53ms
          + bidict==0.23.1
@@ -152,7 +152,7 @@ A:
          + kiwisolver==1.4.9
          + levenshtein==0.27.1
          + matplotlib==3.10.6
-         + mpylab==0.9.4 (from file:///home/USER/dev/test/Mpy)
+         + mpylab==0.9.4 (from file:///home/USER/dev/test/mpylab)
          + packaging==25.0
          + pathvalidate==3.3.1
          + pillow==11.3.0
@@ -171,13 +171,13 @@ A:
          + typing-extensions==4.15.0
         (venv-mpy-develop) /home/USER/dev/test/venv-mpy-develop %
 
-    Changes to the source files in ``/home/USER/dev/test/Mpy`` and ``/home/USER/dev/test/scuq`` are then automatically available in ``venv``. Tested changes should then be imported into the central Git repository.
+    Changes to the source files in ``/home/USER/dev/test/mpylab`` and ``/home/USER/dev/test/scuq`` are then automatically available in ``venv``. Tested changes should then be imported into the central Git repository.
 
 
 Q:
    How do I get the source code?
 
 A:
-   ``MpyLab`` and ``scuq`` are available on GitHub (https://github.com/hgkdd).
+   ``MpyLab`` and ``scuq`` (and more) are available on GitLab TU Chemnitz (https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab).
 
 
