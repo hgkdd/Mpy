@@ -172,10 +172,10 @@ This is the documentation of the API.
    :undoc-members:
    :inherited-members:
 
-:mod:`mpylab.tools.correlation`
+:mod:`mpylab.tools.statistic`
 -------------------------------
 
-.. automodule:: mpylab.tools.correlation
+.. automodule:: mpylab.tools.statistic
    :members:
    :undoc-members:
    :inherited-members:
