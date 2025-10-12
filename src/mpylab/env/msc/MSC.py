@@ -26,7 +26,7 @@ from scuq.si import WATT, METER
 from scuq.ucomponents import Context
 
 from mpylab.env import Measure
-from mpylab.tools import util, mgraph, spacing, distributions, correlation
+from mpylab.tools import util, mgraph, spacing, distributions, statistic
 from mpylab.tools.aunits import POWERRATIO, EFIELD, EFIELDPNORM
 from mpylab.tools.util import cmp
 
@@ -3114,7 +3114,7 @@ Quit: quit measurement.
                         for t in tpos:
                             ees.append(efields[f][str(t)][p][0]['value'][k])
                         self.messenger(util.tstamp() + " Calculating autocorrelation ...", [])
-                        r = correlation.autocorr(ees, lagf, cyclic=True)
+                        r = statistic.autocorrelation(ees, maxlag=lagf, cyclic=True)
                         self.messenger(util.tstamp() + " ...done", [])
                         ac_f[p][k] = r[:]
                 self.messenger(util.tstamp() + " ...done", [])
