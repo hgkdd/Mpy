@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+"""
+This is :mod:`mpylab.tools.dataparser`.
+
+   Provides the class DataFile(Parser); used for dat files
+
+   :author: Hans Georg Krauthäuser (main author)
+
+   :license: GPLv3 or higher
+"""
 
 from mpylab.tools.plyparser import Parser
 import math

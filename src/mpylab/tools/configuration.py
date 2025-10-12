@@ -2,7 +2,7 @@
 """
 This is :mod:`mpylab.tools.configuration`.
 
-   Provides alternative units based on scuq.si units
+   Provides the Configuration class; used for ini files
 
    :author: Hans Georg Krauthäuser (main author)
 
