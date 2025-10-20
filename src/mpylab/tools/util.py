@@ -31,8 +31,9 @@ from collections.abc import Sequence
 try:
     from msvcrt import getch, kbhit
 except ImportError:
-    from mpylab.tools import keyboard
-    _posix_term = keyboard.PosixTerm()
+    from .keyboard import PosixTerm
+    # from mpylab.tools import keyboard
+    _posix_term = PosixTerm()
     getch = _posix_term.getch
     kbhit = _posix_term.kbhit
 #from mpylab.tools.get_char import getch

@@ -1,10 +1,19 @@
 # -*- coding: utf-8 -*-
+"""This is :mod:`mpylab.tools.uncertain`:
 
-import math
+    provides k-factor for expanded uncertainty calculations
+
+   :author: Hans Georg Krauthäuser (main author)
+
+   :license: GPL-3 or higher
+"""
+from importlib.metadata import distribution
+from math import log10
 import scipy.stats as stats
+from fontTools.misc.cython import returns
 
-sqrt3 = math.sqrt(3)
-sqrt2 = math.sqrt(2)
+sqrt3 = 1.7320508075688772
+sqrt2 = 1.4142135623730951
 
 
 def _quantile(coverage=0.95, both_tails=True):
@@ -19,6 +28,21 @@ def _quantile(coverage=0.95, both_tails=True):
     else:
         quantile = coverage
     return quantile
+
+def get_k_factor(*args, coverage=0.95, both_tails=True, dist=None, **kwargs):
+    if dist is None:
+        dist = 'norm'
+    try:
+        distribution = getattr(stats, dist)
+    except AttributeError:
+        raise AttributeError("Distribution '{}' not found in scipy.stats.".format(dist))
+    quantile = _quantile(coverage, both_tails)
+    try:
+        k_fac = distribution.ppf(quantile, *args, **kwargs)
+        return k_fac
+    except AttributeError:
+        raise AttributeError("Distribution '{}' hat no attribute ppf.".format(dist))
+    return None
 
 
 def get_k_factor_norm(coverage=0.95, both_tails=True):
@@ -74,4 +98,4 @@ def get_dB_factors(dB, k, A=10):
     #        math.log10(1-k*lin)
     #    except (ZeroDivisionError, ValueError):
     #        return k, k
-    return -A * math.log10(1 - k * lin) / dB, A * math.log10(1 + k * lin) / dB
+    return -A * log10(1 - k * lin) / dB, A * log10(1 + k * lin) / dB

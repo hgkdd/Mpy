@@ -7,12 +7,10 @@
 
    :license: GPL-3 or higher
 """
-import cmath
-import math
-import scipy
-import scipy.interpolate
+from scipy.interpolate import interp1d
 from numpy import nan_to_num
-from scuq import *
+from scuq.ucomponents import Context, UncertainInput
+from scuq.quantities import Quantity
 
 
 def _arg(obj):
@@ -39,27 +37,27 @@ def unwrap(dct, arg=None):
     """
     if arg is None:
         arg = _arg
-    freqs = sorted(dct.keys())
+    freqs = sorted(dct.keys())  # freq have to be sorted
     # print dct
 
-    unwrapped = ([], [], [])
+    unwrapped = ([], [], [])   # holds freq, abs, arg
     dang = 0
-    q = dct[freqs[0]]
-    phik = arg(q)
-    for k, f in enumerate(freqs[:-1]):
+    q = dct[freqs[0]]   # initialize with quantity at lowest freq
+    phik = arg(q)       # arg of this quantity
+    for k, f in enumerate(freqs[:-1]):   # loop all freqs; last freq later...
         # print f, ang, dang, phik
         unwrapped[0].append(f)
         unwrapped[1].append(abs(dct[f]))
         unwrapped[2].append(phik)
         try:
-            q = dct[freqs[k + 1]] / dct[f]
-            q = nan_to_num(q)
-            dang = arg(q)
+            q = dct[freqs[k + 1]] / dct[f]   # quantity(next freq) / quantity(actual freq) -> get delta of arg
+            q = nan_to_num(q)  # replace NaN with appropriate numbers
+            dang = arg(q)   # delta of argument
         except ZeroDivisionError:
-            dang = 0
+            dang = 0        # no correction needed
 
-        phik = phik + dang
-    f = freqs[-1]
+        phik = phik + dang   # new phi = old phi + delta
+    f = freqs[-1]  # end of loop -> append last values (allready corrected at end of loop)
     unwrapped[0].append(f)
     unwrapped[1].append(abs(dct[f]))
     unwrapped[2].append(phik)
@@ -67,7 +65,7 @@ def unwrap(dct, arg=None):
     return unwrapped
 
 
-class cplx_interpol(object):
+class cplx_interpol():
     """Interpolation routine for a *dct* with complex values. *type* is not yet used. Phase is unwrapped using :meth:`unwrap`
 
        Example::
@@ -97,8 +95,8 @@ class cplx_interpol(object):
         self.dct = dct
         self.unwrapped = unwrap(dct)
         _x, _y, _z = self.unwrapped
-        self.magipol = scipy.interpolate.interp1d(_x, _y)
-        self.phaseipol = scipy.interpolate.interp1d(_x, _z)
+        self.magipol = interp1d(_x, _y)
+        self.phaseipol = interp1d(_x, _z)
 
     def __call__(self, f):
         m = float(self.magipol(f))
@@ -110,7 +108,7 @@ class cplx_interpol(object):
             return c
 
 
-class UQ_interpol(object):
+class UQ_interpol():
     """Interpolation routine for a *dct* with uncertain quantities as values. 
        *type* is not yet used. :meth:`cplx_interpol` is used to interpolate complex values.
 
@@ -141,7 +139,7 @@ class UQ_interpol(object):
         self.dct = dct
         self.vdct = {}
         self.edct = {}
-        ctx = ucomponents.Context()
+        ctx = Context()
         for f, d in list(self.dct.items()):
             self.vdct[f], self.edct[f], self.unit = ctx.value_uncertainty_unit(d)
         self.vi = cplx_interpol(self.vdct)
@@ -150,11 +148,14 @@ class UQ_interpol(object):
     def __call__(self, f):
         val = self.vi(f)
         err = self.ei(f)
-        ret = quantities.Quantity(self.unit, ucomponents.UncertainInput(val, err))
+        ret = Quantity(self.unit, UncertainInput(val, err))
         return ret
 
 
 if __name__ == '__main__':
+    import math
+    import cmath
+
     N = 50
     dm = 0.05
     da = 70
