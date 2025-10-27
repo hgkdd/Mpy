@@ -26,7 +26,6 @@ from scuq.units import ONE
 from mpylab.tools.aunits import AMPLITUDERATIO, POWERRATIO
 from mpylab.tools.configuration import fstrcmp
 from mpylab.tools.util import extrap1d, locate, format_block
-from test.test.messung_Q import alle_f
 
 
 def _stripquotes(s: str) -> str:
