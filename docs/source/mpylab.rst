@@ -164,10 +164,10 @@ This is the documentation of the API.
    :undoc-members:
    :inherited-members:
    
-:mod:`mpylab.tools.Configuration`
+:mod:`mpylab.tools.configuration`
 ----------------------------------
 
-.. automodule:: mpylab.tools.Configuration
+.. automodule:: mpylab.tools.configuration
    :members:
    :undoc-members:
    :inherited-members:
