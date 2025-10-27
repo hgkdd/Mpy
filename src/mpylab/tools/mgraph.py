@@ -39,7 +39,7 @@ class DictObj(dict):
     """
     A dict with object-like attributes.
 
-    Instead of dct['name'] you can do dct.name
+    Instead of `dct['name']` you can do `dct.name`
     """
     def __getattr__(self, name):
         try:
