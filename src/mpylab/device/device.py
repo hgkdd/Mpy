@@ -12,6 +12,8 @@ from mpylab.tools.configuration import fstrcmp
 from mpylab.tools.aunits import *
 import mpylab.tools.umd_types as umd_types
 from scuq import ucomponents, quantities
+from scuq import units
+from scuq import si
 
 try:
     import ctypes as ct
