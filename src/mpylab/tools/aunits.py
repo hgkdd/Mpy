@@ -10,7 +10,7 @@ This is :mod:`mpylab.tools.aunits`.
 """
 
 from scuq.units import AlternateUnit
-from scuq.si import VOLT, WATT, METER
+from scuq.si import VOLT, WATT, METER, AMPERE
 
 AMPLITUDERATIO = AlternateUnit('(V/V)', VOLT / VOLT)
 POWERRATIO = AlternateUnit('(W/W)', WATT / WATT)   # AMPLITUDERATIO ** 2
