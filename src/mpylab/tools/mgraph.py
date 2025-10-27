@@ -1,28 +1,47 @@
+# -*- coding: utf-8 -*-
+"""This is :mod:`mpylab.tools.mgraph`.
+
+   Provides the MGraph class (mainly)
+
+   :author: Hans Georg Krauthäuser (main author)
+
+   :license: GPL-3 or higher
+"""
+from __future__ import annotations
 import os
-import io
-# import re
 import importlib.machinery
 import inspect
+from typing import Any
+
 import pydot
 import configparser
 from numpy import bool_, sqrt
 from scipy.interpolate import interp1d
 
 import mpylab.device.device as device
-from scuq import *
-from mpylab.tools.aunits import *
+from scuq.ucomponents import Context
+from scuq.quantities import Quantity
+from scuq.si import WATT
+from scuq.units import ONE
+from mpylab.tools.aunits import AMPLITUDERATIO, POWERRATIO
 from mpylab.tools.configuration import fstrcmp
 from mpylab.tools.util import extrap1d, locate, format_block
+from test.test.messung_Q import alle_f
 
 
-def _stripstr(s):
-    r = s
-    r = r.strip('"')
-    r = r.strip("'")
-    return r
+def _stripquotes(s: str) -> str:
+    """
+    Strip quotes from a string.
+    """
+    return s.strip("'\"")
 
 
 class DictObj(dict):
+    """
+    A dict with object-like attributes.
+
+    Instead of dct['name'] you can do dct.name
+    """
     def __getattr__(self, name):
         try:
             return self.__getitem__(name)
@@ -30,21 +49,27 @@ class DictObj(dict):
             return super(DictObj, self).__getattr__(name)
 
 
-class GName(object):
-    def __init__(self, mginst):
-        self.mg = mginst
+class GName:
+    """
+    Helper class for :class:`MGraph`
 
-    def __getattribute__(self, name):
+    if *mg* is instance of :class:`MGraph` yo can access the 'physical' instrument name (that in the dot-file) with the
+    'logical' device mame (that in your code) by mg.name.logical_name
+    """
+    def __init__(self, mginst: MGraph) -> None:
+        self.mg = mginst     # the instance of the mgraph
+
+    def __getattribute__(self, name: str) -> Any:
         try:
-            attr = object.__getattribute__(self, name)
+            attr = super(GName, self).__getattribute__(name)   # ensure other attributes still work
         except AttributeError:
-            attr = self.mg.get_gname(name)
+            attr = self.mg.get_gname(name)   # the 'real' name
             if attr is None:
                 raise AttributeError
         return attr
 
 
-class Graph(object):
+class Graph():
     """Graph class based on :mod:`pydot`.
 
        The graph is created using the methods (called in this order)
@@ -57,7 +82,6 @@ class Graph(object):
 
        with the argument of the :meth:`__init__` method.
     """
-
     def __init__(self, fname_or_data=None, SearchPaths=None):
         if SearchPaths is None:
             SearchPaths = [os.getcwd()]
@@ -114,8 +138,8 @@ class Graph(object):
         if path is None:
             path = []
         try:
-            return self.find_all_paths(start, end, path)[0]
-        except IndexError:
+            return self.find_all_paths(start, end, path)[0]   # first in the list
+        except IndexError:   # no path
             return None
 
     def _active(self, edge_or_gnode):
@@ -127,44 +151,52 @@ class Graph(object):
             return True
 
     def find_all_paths(self, start, end, path=None, edge=None):
-        """Find all paths in graph from *start* to *end* (without circles).
-           Ignores edges with attribute `active==False`.
+        """
+        Find all all_paths in graph from *start* to *end* (without circles).
+        Ignores edges with attribute `active==False`.
+        As user: allways call with `path=None` and `edges=None`; these are only used within recursion
         """
         # print 'enter:', start, end, path
         # path = path + [start]
         if path is None:
-            path = []
+            path = []   # initialize list
         if edge:
-            path = path + [edge]
+            path.append(edge)  # edge given -> append to path
+            # path = path + [edge]
             # print "added edge to path:", edge.get_source(), edge.get_destination(), path
         if start == end:  # end node reached
-            # print "start==end: returing", [path]
+            # print "start==end: returning", [path]
             return [path]  # this is the end of the recursion
-        paths = []
+        all_paths = []   # initialize list of all paths
         # list of all edges with source==start
         start_edges = [e for e in self.edges if e.get_source() == start]
         for edge in start_edges:
-            next_node = edge.get_destination()
-            gnode = self.graph.get_node(next_node)
-            eact = self._active(edge)
-            gact = self._active(gnode)
-            is_active = eact and gact
-            if is_active and edge not in path:
-                newpaths = self.find_all_paths(next_node, end, path, edge)
+            next_node = edge.get_destination()    # end of this edge
+            gnode = self.graph.get_node(next_node)  # next node in underlying graph
+            eact = self._active(edge)   # active flag of edge
+            gact = self._active(gnode)  # active flag of next node
+            is_active = eact and gact   # both active?
+            if is_active and edge not in path:   # new active edge
+                newpaths = self.find_all_paths(next_node, end, path, edge)   # start recursion
                 # print "newpaths returned:", newpaths
                 for newpath in newpaths:
-                    paths.append(newpath)
-        # print 'exit:', paths
-        return paths
+                    all_paths.append(newpath)   # append to list of all paths
+        # print 'exit:', all_paths
+        return all_paths
 
     def get_common_parent(self, n1, n2):
+        """
+        Tries to find a node that is parent of *n1* and *n2*.
+        Only active paths are valid.
+        Returns that node or *None*.
+        """
         # trivial cases
-        if self.find_path(n1, n2):
+        if self.find_path(n1, n2):   # direct path n1->n2 => n1 is parent of both
             return n1
-        if self.find_path(n2, n1):
+        if self.find_path(n2, n1):   # other direction but same case
             return n2
         # find for 'real' parent
-        edges = [e for e in self.edges if e.get_destination() == n1]
+        edges = [e for e in self.edges if e.get_destination() == n1]   # all edges ending in n1
         for edge in edges:
             parent_node = edge.get_source()
             gnode = self.graph.get_node(parent_node)
@@ -172,12 +204,15 @@ class Graph(object):
             gact = self._active(gnode)
             is_active = eact and gact
             if is_active:
-                return self.get_common_parent(parent_node, n2)
+                return self.get_common_parent(parent_node, n2)  # recursion; stops when direct path exists
         return None
 
     def find_shortest_path(self, start, end, path=None):
-        """Returns the shortest path from *start* to *end*.
-           Ignores edges with attribute `active==False`.
+        """
+        Returns the shortest (in terms number of elements in path) path from *start* to *end*.
+        Ignores edges with attribute `active==False`.
+        Returns shortest path from *start* to *end* or `None` if no path is found.
+        As user: don't use the `path=` argument; used in recursion only
         """
         if path is None:
             path = []
@@ -189,7 +224,8 @@ class Graph(object):
 
 
 class MGraph(Graph):
-    """Measurement grapg class based of :class:`Graph`. See there for the argument of the :meth:`__init__` method.
+    """
+    Measurement graph class based of :class:`Graph`. See there for the argument of the :meth:`__init__` method.
     """
 
     def __init__(self, fname_or_data=None, themap=None, SearchPaths=None):
@@ -248,7 +284,13 @@ class MGraph(Graph):
     # raise AttributeError
     # return attr
 
-    def get_gname(self, name):
+    def get_gname(self, name: str) -> str | None:
+        """
+        Tries to get the name of the device *name* in the dot file.
+        Returns self.map[name] if *name* is key.
+        Returns *name* if *name* is in self.bimap.
+        Else returns None.
+        """
         if name in self.map:
             return self.map[name]
         elif name in self.bimap:
@@ -259,7 +301,7 @@ class MGraph(Graph):
     @staticmethod
     def _pr2ar(pr):
         assert pr._unit == POWERRATIO
-        pr._unit = units.ONE  # yes, we know what we are doing
+        pr._unit = ONE  # yes, we know what we are doing
         ar = sqrt(pr)
         ar._unit = AMPLITUDERATIO
         return ar
@@ -274,7 +316,7 @@ class MGraph(Graph):
             unit = AMPLITUDERATIO
         assert unit in (AMPLITUDERATIO, POWERRATIO)
         if start == end:
-            corr = quantities.Quantity(unit, 1)
+            corr = Quantity(unit, 1)
             return corr
 
         parent = self.get_common_parent(start, end)
@@ -303,11 +345,11 @@ class MGraph(Graph):
 
         all_paths = self.find_all_paths(start, end)  # returs a list of (list of edges)
         # print all_paths
-        ctx = ucomponents.Context()
-        Total = quantities.Quantity(unit, 0.0)  # init total path correction with 0
+        ctx = Context()
+        Total = Quantity(unit, 0.0)  # init total path correction with 0
         for p in all_paths:  # p is a list of edges
             # totals in that path
-            TotalPath = quantities.Quantity(unit, 1.0)  # init total corection fpr this path
+            TotalPath = Quantity(unit, 1.0)  # init total corection fpr this path
             for n in p:  # for all edges in this path
                 # print n
                 n_attr = n.get_attributes()  # dict with edge atributs
@@ -317,7 +359,7 @@ class MGraph(Graph):
                     # edge device instance
                     inst = self.nodes[dev]['inst']
                     try:
-                        what = _stripstr(str(n_attr['what']))
+                        what = _stripquotes(str(n_attr['what']))
                     except KeyError:
                         continue
                     try:
@@ -382,7 +424,7 @@ class MGraph(Graph):
             node = act_dct['gnode']
             cond_dct = node.get_attributes()  # dict with node or edge atributs
             if 'condition' in cond_dct:
-                stmt = "(%s)" % _stripstr(str(cond_dct['condition']))
+                stmt = "(%s)" % _stripquotes(str(cond_dct['condition']))
                 # print " Cond:", stmt, " = ",
                 cond = eval(stmt, __caller.f_globals, __caller.f_locals)
                 # print cond
@@ -403,7 +445,7 @@ class MGraph(Graph):
         for edge in self.edges:
             act_dct = cond_dct = edge.get_attributes()
             if 'condition' in cond_dct:
-                stmt = "(%s)" % _stripstr(str(cond_dct['condition']))
+                stmt = "(%s)" % _stripquotes(str(cond_dct['condition']))
                 # print " Cond:", stmt, " = ",
                 cond = eval(stmt, __caller.f_globals, __caller.f_locals)
                 # print cond
@@ -460,7 +502,7 @@ class MGraph(Graph):
             obj = dct['gnode']
             attribs = obj.get_attributes()
             for n, v in list(attribs.items()):
-                attribs[n] = _stripstr(v)  # strip ' and "
+                attribs[n] = _stripquotes(v)  # strip ' and "
 
             dct['active'] = True
             try:
@@ -866,11 +908,11 @@ class MGraph(Graph):
                     pass
         return eta
 
-    def AmplifierProtect(self, start, end, startlevel, sg_unit=si.WATT, typ='save'):
+    def AmplifierProtect(self, start, end, startlevel, sg_unit=WATT, typ='save'):
         isSafe = True
         msg = ''
-        if not isinstance(startlevel, quantities.Quantity):
-            startlevel = quantities.Quantity(sg_unit, startlevel)
+        if not isinstance(startlevel, Quantity):
+            startlevel = Quantity(sg_unit, startlevel)
         allpaths = self.find_all_paths(start, end)
         for path in allpaths:  # path is a list of edges
             edges = []
@@ -1033,7 +1075,7 @@ class Leveler(object):
         observer: name of device where lpoint is observed
         """
         if min_actor is None:
-            self.min_actor = quantities.Quantity(si.WATT, 1e-13)  # -100 dBm
+            self.min_actor = Quantity(WATT, 1e-13)  # -100 dBm
         self.mg = mg
         self.actor = actor
         self.sg = getattr(mg, actor)
@@ -1049,7 +1091,7 @@ class Leveler(object):
         self.samples = {}
         if pin is None:
             pin = [fac * self.MaxSafe for fac in
-                   (0.001, 0.01, 0.1)]  # [quantities.Quantity(si.WATT, 1e-6),quantities.Quantity(si.WATT, 1e-4)]#
+                   (0.001, 0.01, 0.1)]  # [Quantity(WATT, 1e-6),Quantity(WATT, 1e-4)]#
         if datafunc is None:
             self.datafunc = lambda x: x
         else:
@@ -1101,11 +1143,11 @@ class Leveler(object):
         # self.y=[]
         for i in range(maxiter):
             inval = self.i_extrap(sf)[0]
-            pin = quantities.Quantity(self.actorunit, min(inval, safemax))
+            pin = Quantity(self.actorunit, min(inval, safemax))
             pin = self.add_samples(pin)[0]
-            pout = quantities.Quantity(self.lpointunit, self.samples[pin.get_expectation_value_as_float()])
+            pout = Quantity(self.lpointunit, self.samples[pin.get_expectation_value_as_float()])
             re = abs(pout - soll) / soll
-            re = re.reduce_to(units.ONE)
+            re = re.reduce_to(ONE)
             # self.x.append(pin)
             # self.y.append(pout)
             # print i, pin, pout, soll, re

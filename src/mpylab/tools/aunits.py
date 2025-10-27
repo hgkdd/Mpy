@@ -9,11 +9,12 @@ This is :mod:`mpylab.tools.aunits`.
    :license: GPLv3 or higher
 """
 
-from scuq import units, si
+from scuq.units import AlternateUnit
+from scuq.si import VOLT, WATT, METER
 
-AMPLITUDERATIO = units.AlternateUnit('(V/V)', si.VOLT / si.VOLT)
-POWERRATIO = units.AlternateUnit('(W/W)', si.WATT / si.WATT)   # AMPLITUDERATIO ** 2
-EFIELD = si.VOLT / si.METER
-EFIELDPNORM = EFIELD / si.WATT.sqrt()
-HFIELD = si.AMPERE / si.METER
-POYNTING = si.WATT / (si.METER ** 2)
+AMPLITUDERATIO = AlternateUnit('(V/V)', VOLT / VOLT)
+POWERRATIO = AlternateUnit('(W/W)', WATT / WATT)   # AMPLITUDERATIO ** 2
+EFIELD = VOLT / METER
+EFIELDPNORM = EFIELD / WATT.sqrt()
+HFIELD = AMPERE / METER
+POYNTING = WATT / (METER ** 2)

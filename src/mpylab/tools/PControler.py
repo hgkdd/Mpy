@@ -1,6 +1,15 @@
+# -*- coding: utf-8 -*-
+"""This is :mod:`mpylab.tools.PController`.
+
+   Provides different class Leveler
+
+   :author: Hans Georg Krauthäuser (main author)
+
+   :license: GPL-3 or higher
+"""
 import numpy
-import scipy.interpolate
-import scipy.stats
+from scipy.interpolate import interp1d
+from scipy.stats import norm
 
 
 def extrap1d(interpolator):
@@ -23,14 +32,14 @@ def extrap1d(interpolator):
     return ufunclike
 
 
-class Rapp(object):
+class Rapp():
     def __init__(self, g, Ps, S, PinMax=1e-3, noise_loc=1.0, noise_sc=0.5):
         self.g = g
         self.Ps = Ps
         self.S = S
         self.S2 = 2 * S
         self.PinMax = PinMax
-        self.noise = scipy.stats.norm(loc=noise_loc, scale=noise_sc)
+        self.noise = norm(loc=noise_loc, scale=noise_sc)
 
     def Pout(self, Pin):
         u = self.g * Pin
@@ -43,7 +52,7 @@ class Rapp(object):
         return numpy.maximum(0, Po + N)
 
 
-class SG(object):
+class SG():
     def __init__(self):
         pass
 
@@ -51,7 +60,7 @@ class SG(object):
         print(("SG:", lv))
 
 
-class Leveler(object):
+class Leveler():
     def __init__(self, sg, amp, pin=None):
         """
         sg: object providing sg.SetLevel(lv) lv: float
@@ -79,9 +88,9 @@ class Leveler(object):
     def update_interpol(self):
         x = sorted(self.samples)
         y = [self.samples[xi] for xi in x]
-        self.interp = scipy.interpolate.interp1d(x, y)
+        self.interp = interp1d(x, y)
         self.extrap = extrap1d(self.interp)
-        self.i_interp = scipy.interpolate.interp1d(y, x)
+        self.i_interp = interp1d(y, x)
         self.i_extrap = extrap1d(self.i_interp)
 
     def adjust_level(self, soll, maxiter=10, relerr=0.01):
