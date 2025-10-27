@@ -51,7 +51,7 @@ In our example, the command is::
 
    CW <value> <unit>
 
-where the unit can be ``HZ``, ``KZ``, ``MZ``, or ``GZ`. The device does not respond to this command.
+where the unit can be ``HZ``, ``KZ``, ``MZ``, or ``GZ``. The device does not respond to this command.
 
 The :meth:`SetFreq` entry in the ``_cmds`` dictionary must now be adjusted accordingly::
 
@@ -106,7 +106,7 @@ Part B also consists of two main parts:
 
 In part a, a standard ``ini`` file is defined, which is used if no other
 ``ini`` file is entered via the command line. The ``ini`` file is defined within the file,
- customized using the :meth:`format_block` function, and made available as a
+customized using the :meth:`format_block` function, and made available as a
 virtual file via ``StringIO``.
 
 This ``ini`` file contains several blocks.

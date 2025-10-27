@@ -725,7 +725,7 @@ Select EUT position.
 
                        ("xy'y(-x')zz'", "xy'y(-z')z(-x')", "xy'yx'z(-z')", "xy'yz'zx'")
 
-              .. figure:: pos-vert.png
+              .. figure:: pos-horizon.png
 
               Horizontal standard orientations.
 
