@@ -259,7 +259,9 @@ class MGraph(Graph):
         self.instrumentation = None
 
     def __setstate__(self, dct):
-        """used instead of __init__ when instance is created from pickle file"""
+        """
+        used instead of __init__ when instance is created from pickle file
+        """
         self.instance_from_pickle = True
         if 'dotcontents' not in dct:
             dct['dotcontents'] = "digraph {sg->ant}"
@@ -267,7 +269,9 @@ class MGraph(Graph):
         self.__init__(fname_or_data=dct['fname_or_data'], themap=dct['map'], SearchPaths=dct['SearchPaths'])
 
     def __getstate__(self):
-        """prepare a dict for pickling"""
+        """
+        prepare a dict for pickling
+        """
         odict = {'fname_or_data': self.fname_or_data,
                  'map': self.map,
                  'SearchPaths': self.SearchPaths,
@@ -299,6 +303,9 @@ class MGraph(Graph):
 
     @staticmethod
     def _pr2ar(pr):
+        """
+        Convert a Quantity with unit POWERRATIO (Dimensionless) to a Quantity with Unit AMPLITUDERATIO
+        """
         assert pr._unit == POWERRATIO
         pr._unit = ONE  # yes, we know what we are doing
         ar = sqrt(pr)
@@ -307,70 +314,79 @@ class MGraph(Graph):
 
     @staticmethod
     def _ar2pr(ar):
+        """
+        Convert a Quantity with unit AMPLITUDERATIO (Dimensionless) to a Quantity with Unit POWERRATIO
+        """
         assert ar._unit == AMPLITUDERATIO
         return ar * ar
 
     def get_path_correction(self, start, end, unit=None):
+        """
+        Get the correction (S12) from *start* to *end*.
+        If *unit* is None, an AMPLITUDERATIO is returned.
+        *unit* has to be AMPLITUDERATIO or POWERRATIO (from mpylab.tools.aunits)
+        """
         if unit is None:
             unit = AMPLITUDERATIO
         assert unit in (AMPLITUDERATIO, POWERRATIO)
         if start == end:
-            corr = Quantity(unit, 1)
+            corr = Quantity(unit, 1)  # trivial case
             return corr
-
-        parent = self.get_common_parent(start, end)
-        if parent == start:
+        # start ne end...
+        parent = self.get_common_parent(start, end)   # find the parent node of start AND end. CAN be start... CAN be end ..
+        if parent == start:   # simple case
             corr = self.get_path_corrections(start, end, unit=unit)['total']
-        elif parent == end:
+        elif parent == end:   # second-simplest case, but wrong direction -> inverted
             corr = 1.0 / self.get_path_corrections(end, start, unit=unit)['total']
-        else:
+        else:  # more complicated because no direct path between start and end OR end and start
             corr = self.get_path_corrections(parent, end, unit=unit)['total'] / \
                    self.get_path_corrections(parent, start, unit=unit)['total']
         return corr
 
     def get_path_corrections(self, start, end, unit=None):
-        """Returns a dict with the corrections for all edges from *start* to *end*. *unit* can be 
-           :data:`mpylab.tools.aunits.AMPLITUDERATIO` or :data:`mpylab.tools.aunits.POWERRATIO`. If *unit* is `None`,
-           :data:`mpylab.tools.aunits.AMPLITUDERATIO` is used.
+        """
+        Returns a dict with the corrections for all edges from *start* to *end*. *unit* can be
+        :data:`mpylab.tools.aunits.AMPLITUDERATIO` or :data:`mpylab.tools.aunits.POWERRATIO`.
+        If *unit* is `None`, :data:`mpylab.tools.aunits.AMPLITUDERATIO` is used.
 
-           The key 'total' gives the total correction.
+        The key 'total' gives the total correction.
         
-           All corrections are :class:`scuq.quantities.Quantity` objects.
+        All corrections are :class:`scuq.quantities.Quantity` objects.
         """
         if unit is None:
             unit = AMPLITUDERATIO
         assert unit in (AMPLITUDERATIO, POWERRATIO)
         result = {}
 
-        all_paths = self.find_all_paths(start, end)  # returs a list of (list of edges)
+        all_paths = self.find_all_paths(start, end)  # returns a list of (list of edges)
         # print all_paths
         ctx = Context()
         Total = Quantity(unit, 0.0)  # init total path correction with 0
         for p in all_paths:  # p is a list of edges
             # totals in that path
-            TotalPath = Quantity(unit, 1.0)  # init total corection fpr this path
+            TotalPath = Quantity(unit, 1.0)  # init total correction for this path
             for n in p:  # for all edges in this path
                 # print n
-                n_attr = n.get_attributes()  # dict with edge atributs
-                if 'dev' in n_attr:
+                n_attr = n.get_attributes()  # dict with edge attributes
+                if 'dev' in n_attr:   # it's a real device
                     # the edge device
                     dev = str(n_attr['dev'])
                     # edge device instance
-                    inst = self.nodes[dev]['inst']
+                    inst = self.nodes[dev]['inst']  # this is the device instance
                     try:
-                        what = _stripquotes(str(n_attr['what']))
+                        what = _stripquotes(str(n_attr['what']))  # has it a what attribute
                     except KeyError:
-                        continue
+                        continue    # no what -> nothing to do with this device
                     try:
                         stat = -1
                         for cmd in ['getData', 'GetData']:
                             # print cmd
                             if hasattr(inst, cmd):
                                 # print "Vor getattr", getattr(inst,cmd)
-                                stat, result[dev] = getattr(inst, cmd)(what)
+                                stat, result[dev] = getattr(inst, cmd)(what)   # try to read value of 'what'
                                 # print "Nach getattr", stat
                                 break
-                        if stat < 0:
+                        if stat < 0:   # has the attribute but getData failed
                             raise UserWarning('Failed to getData: %s, %s' % (dev, what))
                     except AttributeError:
                         # function not callable
@@ -378,18 +394,18 @@ class MGraph(Graph):
                         raise UserWarning('Failed to getData %s, %s' % (dev, what))
                         # store the values unconverted
                     # print dev, result[dev]
-                    r = result[dev]  # .get_value(unit)
+                    r = result[dev]  # .get_value(unit)    # we have a result from the devive
 
                     if unit == AMPLITUDERATIO and r._unit == POWERRATIO:
-                        r = self._pr2ar(r)
+                        r = self._pr2ar(r)   # convert in this direction
                     elif unit == POWERRATIO and r._unit == AMPLITUDERATIO:
-                        r = self._ar2pr(r)
+                        r = self._ar2pr(r)   # or convert in the other direction
                     elif (unit == POWERRATIO and r._unit == POWERRATIO) or \
-                            (unit == AMPLITUDERATIO and r._unit == AMPLITUDERATIO):
+                            (unit == AMPLITUDERATIO and r._unit == AMPLITUDERATIO):   # nothing to convert
                         pass
                     else:
-                        raise RuntimeError("Unit Error")
-                    TotalPath *= r
+                        raise RuntimeError("Unit Error")   # should not happen
+                    TotalPath *= r     # multiply the S21 ....
 
                     # for different paths between two points, s parameters have
             # to be summed.
@@ -398,7 +414,7 @@ class MGraph(Graph):
             #    print k,v
             TotalPath = TotalPath.eval()
             TotalPath = TotalPath.reduce_to(unit)
-            Total += TotalPath
+            Total += TotalPath   # in case of multiple paths: add it together ; 2 paths with S21=0.25 -> total = 0.5
         # print start, end, Total
         try:
             result['total'] = Total.eval()
@@ -552,7 +568,7 @@ class MGraph(Graph):
 
     def NBTrigger(self, lst):
         """
-        Trigers all devices in list if possible 
+        Triggers all devices in list if possible
         (node exists, has dev instance, is active, and has Trigger method).
 
         Returns dict: keys->list items, vals->None or return val from Trigger method
@@ -572,7 +588,7 @@ class MGraph(Graph):
 
     def _Read(self, lst, result=None):
         """
-        Read the measurement results from devices in list.
+        Read the measurement results from devices in lst (list or string).
 
         Mode is blocking if result is None and NonBlocking else. Non blocking is finished when `len(result) = len(list)`.
 
@@ -586,6 +602,8 @@ class MGraph(Graph):
             cmds = ('GetData', 'getDataNB', 'ReadDataNB')
             NB = True
 
+        if isinstance(lst, str):
+            lst = [lst]
         devices = [l for l in lst if l in self.activenodes]  # intersept of list and activenodes
         for n in devices:
             if NB and n in result:
