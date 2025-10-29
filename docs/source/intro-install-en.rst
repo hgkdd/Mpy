@@ -1,7 +1,7 @@
 .. -*-coding: utf-8 -*-
 
-Installation as a user
-=======================
+Installation of ``MpyLab`` for Users
+====================================
 
 Users of ``MPyLab`` (as opposed to developers of ``MpyLab``) simply install from **PyPi** (https://pypi.org/)::
 

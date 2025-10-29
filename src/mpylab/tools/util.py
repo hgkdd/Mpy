@@ -16,6 +16,7 @@ import time
 import traceback
 import smtplib
 from email.message import EmailMessage
+from typing import Any
 
 import numpy as np
 import scipy
@@ -30,8 +31,9 @@ from collections.abc import Sequence
 try:
     from msvcrt import getch, kbhit
 except ImportError:
-    from mpylab.tools import keyboard
-    _posix_term = keyboard.PosixTerm()
+    from .keyboard import PosixTerm
+    # from mpylab.tools import keyboard
+    _posix_term = PosixTerm()
     getch = _posix_term.getch
     kbhit = _posix_term.kbhit
 #from mpylab.tools.get_char import getch
@@ -42,8 +44,17 @@ mu0 = 4 * math.pi * 1e-7
 eps0 = 1.0 / (mu0 * c * c)
 pi = math.pi
 
+def cmp(a: Any, b: Any) -> int:
+    """*cmp* was deprecated with python 3.0.
 
-def anykeyevent():
+    We rebuild it here according to https://docs.python.org/3.0/whatsnew/3.0.html#ordering-comparisons
+
+    Returns +1 is a>b, -1 is a<b, 0 if a=b
+    """
+    return (a > b) - (a < b)
+
+
+def anykeyevent() -> int | None:
     """
     Detects a key or function key pressed and returns its ascii or scancode.
     """

@@ -9,7 +9,7 @@
 import inspect
 import copy
 from mpylab.device.r_types import *
-from mpylab.tools.Configuration import fstrcmp
+from mpylab.tools.configuration import fstrcmp
 from mpylab.device.driver_new import DRIVER
 
 

@@ -1,7 +1,17 @@
+# -*- coding: utf-8 -*-
+"""This is :mod:`mpylab.tools.keyboard`.
+
+   Provides getch, kbhit and getwch for POSIX
+
+   :author: Hans Georg Krauthäuser (main author)
+
+   :license: GPL-3 or higher
+"""
+
 import sys, os, tty, termios, fcntl
 
 
-class PosixTerm(object):
+class PosixTerm():
     def __init__(self):
         self.peek_buffer = {}
 

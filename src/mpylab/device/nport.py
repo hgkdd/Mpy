@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from mpylab.device.driver import DRIVER
-from mpylab.tools.Configuration import strbool, fstrcmp
+from mpylab.tools.configuration import strbool, fstrcmp
 from mpylab.tools.dataparser import DatFile
 from mpylab.tools.interpol import UQ_interpol
 

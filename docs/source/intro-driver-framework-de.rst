@@ -1,4 +1,5 @@
 .. -*-coding: utf-8 -*-
+
 Implementierung eines Treibers mit dem Driver-Framework
 ========================================================
 
@@ -28,9 +29,9 @@ Den neuen Treiber anpassen
 
 Nun öffnet man die neue Treiberdatei. Sie besteht hauptsächlich aus drei Teilen:
 
-1. der Definition einer neuen Unterklasse für den speziell Networkanalyer
+1. der Definition einer neuen Unterklasse für den speziellen Networkanalyer
 2. der Definition einer neuen Unterklasse für die Test-GUI
-2. der Definition einer Funktion :meth:`main`, mit der der Treiber getestet werden kann.
+3. der Definition einer Funktion :meth:`main`, mit der der Treiber getestet werden kann.
 
 Im Falle des nw_rs_zlv sind noch zwei Hilfsklassen `Trace` und `WINDOW` vorhanden 
 auf die hier nichtnäher eingegangen werden soll.
@@ -186,13 +187,13 @@ kann aber eine definieren.
 				
 Im Block `[Channel_1]` werden Angaben zum Kanal gemacht::
 
- 	SetRefLevel: 10
-	SetRBW: 10e3
-	SetSpan: 5999991000
+    SetRefLevel: 10
+    SetRBW: 10e3
+    SetSpan: 5999991000
 
 Hierbei ist der Aufbau wie folgt::
 
-Name einer Methode des Drivers: Parameter für Methode 		
+    Name einer Methode des Drivers: Parameter für Methode
 
 
 In Teil 3.2 wird der Netzwerkanalysator und der Treiber mit einem kurzen Testprogramm 

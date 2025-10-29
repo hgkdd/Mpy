@@ -14,14 +14,14 @@ Contents:
    :maxdepth: 2
 
    installation-walktrough.rst
-   intro-install-en
-   intro-structure-de
-   intro-driver-de
-   intro-driver-framework-de
-   dat-file-grammar
-   FAQ-en
-   messanleitung
-   mpylab
+   intro-install-en.rst
+   intro-structure-en.rst
+   intro-driver-en.rst
+   intro-driver-framework-de.rst
+   dat-file-grammar.rst
+   FAQ-en.rst
+   messanleitung.rst
+   mpylab.rst
 
 Indices and tables
 ==================

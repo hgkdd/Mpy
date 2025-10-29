@@ -30,7 +30,8 @@ from mpylab.tools.log_freq import LogFreq
 
 
 class TEMCell(Measure.Measure):
-    """A class for TEM-cell measurements according to IEC 61000-4-20
+    """
+    A class for TEM-cell measurements according to IEC 61000-4-20
     """
     eut_positions_emission = (("xx'yy'zz'", "xz'yx'zy'", "xy'yz'zx'"),
                               ("xz'yy'z(-x')", "x(-x')yz'zy'", "xy'y(-x')zz'"),
@@ -724,7 +725,7 @@ Select EUT position.
 
                        ("xy'y(-x')zz'", "xy'y(-z')z(-x')", "xy'yx'z(-z')", "xy'yz'zx'")
 
-              .. figure:: pos-vert.png
+              .. figure:: pos-horizon.png
 
               Horizontal standard orientations.
 

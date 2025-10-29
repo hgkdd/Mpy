@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from mpylab.device.driver import DRIVER
-from mpylab.tools.Configuration import strbool
+from mpylab.tools.configuration import strbool
 
 
 class FIELDPROBE(DRIVER):

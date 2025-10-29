@@ -11,7 +11,7 @@
 ###Refers to the currently active Trace. See also SetTrace()
 
 
-from mpylab.tools.Configuration import strbool
+from mpylab.tools.configuration import strbool
 
 # from mpylab.device.driver import DRIVER
 from .driver_new import DRIVER
@@ -79,9 +79,9 @@ class NETWORKANALYZER(DRIVER):
         - *SetSweepCount*: Sets the number of sweeps to be measured in single sweep mode. (for further information see function description)
         - *SetSweepPoints*: Sweep Points (for further information see function description)
         - *SetSweepType*: Sweep Type (for further information see function description)
-        
+
     .. rubric:: Das _commands-Dict:
-        
+
     Im _commands-Dict werden alle Funktionen Definiert welche möglichst in allen Driver Klassen
     Implementiert werden sollten. Durch _commands kann so sichergestellt werden, dass alle Driver die von
     dieser Klasse abgeleitet werden eine Reihe standard Funktionen haben, die in allen Implementierungen

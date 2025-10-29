@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-MSC: class for MSC measurements
+This is :mod:`mpylab.env.msc.MSC`.
 
-Author: Dr. Hans Georg Krauthaeuser, hgk@ieee.org
+   Provides :class:`mpylab.env.msc.MSC` for EMC measurements in MSC
 
-Copyright (c) 2001-2022 All rights reserved
+   :author: Hans Georg Krauthäuser (main author)
+
+   :license: GPLv3 or higher
 """
 
 import os
@@ -18,14 +20,15 @@ import numpy
 import scipy
 import scipy.interpolate
 import scipy.optimize
-import scipy.stats
+
 from scuq.quantities import Quantity
 from scuq.si import WATT, METER
 from scuq.ucomponents import Context
 
 from mpylab.env import Measure
-from mpylab.tools import util, mgraph, spacing, distributions, correlation
+from mpylab.tools import util, mgraph, spacing, distributions, statistic
 from mpylab.tools.aunits import POWERRATIO, EFIELD, EFIELDPNORM
+from mpylab.tools.util import cmp
 
 # from win32com.client import Dispatch
 # import sys
@@ -41,36 +44,6 @@ from mpylab.tools.aunits import POWERRATIO, EFIELD, EFIELDPNORM
 #    f.close()
 
 AmplifierProtectionError = Measure.AmplifierProtectionError
-
-
-def cmp(a, b):
-    return (a > b) - (a < b)
-
-
-def test_for_rayleigh(ees):
-    n_ees = len(ees)
-    hist, bins = numpy.histogram(ees)
-    low_range = bins.min()
-    binsize = (bins.max() - low_range) / (bins.size - 1)
-    # hist_area = sum(hist) * binsize
-    # nhist = [_h / hist_area for _h in hist]
-    e_cdf = distributions.ECDF(ees)
-    loc, scale = scipy.stats.rayleigh.fit(ees, floc=0)
-    ray_fit = scipy.stats.rayleigh(loc=loc, scale=scale)
-    cdf_fit = ray_fit.cdf(ees)
-    # calc estimates for chi2-test
-    estimates = []
-    _l = low_range
-    for _h in bins[1:]:
-        estimates.append(ray_fit.cdf(_h) - ray_fit.cdf(_l))
-        _l = _h
-    factor = sum(hist) / sum(estimates)
-    estimates = [_e * factor for _e in estimates]
-    cs, p_cs = scipy.stats.chisquare(hist, f_exp=estimates)
-    # print(p_cs)
-    ks, p_ks = scipy.stats.ks_2samp(e_cdf(ees), cdf_fit)
-    # print(p_ks)
-    return hist, bins, e_cdf, ray_fit, p_cs, p_ks
 
 
 class MSC(Measure.Measure):
@@ -3141,7 +3114,7 @@ Quit: quit measurement.
                         for t in tpos:
                             ees.append(efields[f][str(t)][p][0]['value'][k])
                         self.messenger(util.tstamp() + " Calculating autocorrelation ...", [])
-                        r = correlation.autocorr(ees, lagf, cyclic=True)
+                        r = statistic.autocorrelation(ees, maxlag=lagf, cyclic=True)
                         self.messenger(util.tstamp() + " ...done", [])
                         ac_f[p][k] = r[:]
                 self.messenger(util.tstamp() + " ...done", [])

@@ -5,7 +5,7 @@ import sys
 
 from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 # from scuq import *
-from mpylab.tools.Configuration import fstrcmp
+from mpylab.tools.configuration import fstrcmp
 
 
 #
