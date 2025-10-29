@@ -356,7 +356,7 @@ def main2():
     import numpy as np
 
     try:
-        ini = sys.argv[1]
+        ini = open(sys.argv[1], 'r')
     except IndexError:
         ini = format_block("""
                         [DESCRIPTION]
@@ -389,15 +389,16 @@ def main2():
                         name: PRef
                         unit: dBm
                         """)
+        ini = io.StringIO(ini)
     devs = {}
     devs[0] = POWERMETER()
-    devs[0].Init(ini=io.StringIO(ini), channel=1)
+    devs[0].Init(ini=ini, channel=1)
     err, des = devs[0].GetDescription()
     npm = devs[0].npm
     nch = devs[0].nch
     for ch in range(1, nch):
         devs[ch] = POWERMETER()
-        devs[ch].Init(ini=io.StringIO(ini), channel=ch+1)
+        devs[ch].Init(ini=ini, channel=ch+1)
 
     oldfreq = None
     while True:
@@ -411,7 +412,7 @@ def main2():
             if freq <= 0:
                 break
 
-        for dv in [devs[k] for k in range(npm*3)]:
+        for dv in [devs[k] for k in range(npm*nch)]:
             err, ff = dv.SetFreq(freq)
             oldfreq = ff
             # print(f"Frequency set to: {ff} Hz")

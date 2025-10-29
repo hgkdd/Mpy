@@ -630,7 +630,7 @@ class MGraph(Graph):
         devices = [name for name in self.nodes if IgnoreInactive or name in self.activenodes]  # intersept
         serr = 0
         for n in devices:
-            print("Init %s ..."%str(n))
+            # print("Init %s ..."%str(n))
             attribs = self.nodes[n]
             if attribs['inst'] is None:
                 continue
@@ -647,7 +647,9 @@ class MGraph(Graph):
             dev = attribs['inst']
             if (hasattr(dev, 'Init')):
                 # print n
+                #print("vor Init")
                 stat = dev.Init(ini, ch)
+                #print("nach Init")
                 if (stat < 0):
                     # print ini, ch
                     err = dev.GetLastError()

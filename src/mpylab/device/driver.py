@@ -39,7 +39,7 @@ class DRIVER(object):
           
              If a device (signal generator in this case) returns
              ``:MODULATION:AM:INTERNAL 80 PCT`` to indicate a AM modulation depth 
-             of 80%, a template string of ``:MODULATION:AM:INTERNAL (?P<depth>\d+) PCT`` will 
+             of 80%, a template string of ``:MODULATION:AM:INTERNAL (?P<depth>\\d+) PCT`` will 
              results in a return dict of ``{"depth": 80}``.
     
        .. method:: query(cmd, tmpl)
@@ -288,7 +288,7 @@ class DRIVER(object):
         Returns ``(0, self.conf['init_value']['virtual'])``
         """
         self.error = 0
-        print(self.conf)
+        # print(self.conf)
         try:
             virt = self.conf['init_value']['virtual']
         except KeyError:
