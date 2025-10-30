@@ -217,7 +217,7 @@ class RECEIVER(REC):
     def Init(self, ini=None, channel=None):
         if channel is None:
             channel = 1
-        self.error = super(RECEIVER).Init(self, ini, channel)
+        self.error = REC.Init(self, ini, channel)
         sec = 'channel_%d' % channel
         try:
             self.levelunit = self.conf[sec]['unit']
@@ -244,7 +244,7 @@ def main():
                         fstart: 9e6
                         fstop: 30e6
                         fstep: 1
-                        gpib: 20
+                        gpib: 
                         virtual: 0
 
                         [Channel_1]
