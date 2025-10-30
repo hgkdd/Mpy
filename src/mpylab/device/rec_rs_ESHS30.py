@@ -18,6 +18,7 @@ class RECEIVER(REC):
         super(RECEIVER, self).__init__()
         self.error = 0
         self._internal_unit = 'dBuV'
+        self.term_chars = '\n'
 
     def SetCenterFreq(self, freq):
         pass
@@ -82,11 +83,15 @@ class RECEIVER(REC):
         return self.error, lvl
 
     def SetAtt(self, att):
-        pass
+        att = round(att)
+        att = min(att, 60)
+        att = max(att, 0)
+        ans = self.write(f'ATTENUATION {att} dB')
 
     def GetAtt(self):
         self.error = 0
-        att = None
+        dct = self.query('ATTENUATION?', r'(?P<att>.*)')
+        att = dct['att']
         return self.error, att
 
     def SetAttAuto(self):
@@ -193,10 +198,11 @@ class RECEIVER(REC):
 
     def SetSANMode(self):
         pass
+
     def GetDescription(self):
         self.error = 0
-        description = None
-        return self.error, description
+        dct = self.query('*IDN?', r'(?P<desc>.*)')
+        return self.error, dct['desc']
 
     def GetSpectrum(self):
         self.error = 0
@@ -217,7 +223,6 @@ class RECEIVER(REC):
             self.levelunit = self.conf[sec]['unit']
         except KeyError:
             self.levelunit = self._internal_unit
-
         return self.error
 
 
@@ -265,7 +270,8 @@ def main():
 
     err = rec.Init(ini)
     assert err == 0, 'Init() fails with error %d' % (err)
-
+    err, des = rec.GetDescription()
+    print(des)
 
 if __name__ == '__main__':
     main()
