@@ -350,6 +350,7 @@ class SPECTRUMANALYZER(DRIVER):
 #             #print self.freq
 #         return self.error, self.cfreq
 
+RECEIVER = SPECTRUMANALYZER
 
 if __name__ == '__main__':
     import sys
