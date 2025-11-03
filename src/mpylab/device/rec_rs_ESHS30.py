@@ -10,55 +10,62 @@
 import io
 import sys
 
+import numpy as np
+
 from mpylab.device.spectrumanalyzer import RECEIVER as REC
+from mpylab.device.driver import DRIVER
 
 
 class RECEIVER(REC):
     def __init__(self):
-        super(RECEIVER, self).__init__()
+        #super(RECEIVER, self).__init__()
+        DRIVER.__init__(self)
         self.error = 0
         self._internal_unit = 'dBuV'
         self.term_chars = '\n'
+        #self._cmds = {}
+        #self._cmds['Complex'] = []
 
     def SetCenterFreq(self, freq):
-        pass
+        self.error = 0
+        self.write(f'FREQUENCY {freq} HZ')
+        self.error, freq = self.GetCenterFreq()
+        return self.error, freq
 
     def GetCenterFreq(self):
         self.error = 0
         freq = None
-        return self.error, freq
+        dct = self.query('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)
+        return self.error, float(dct['freq'])
 
     def SetSpan(self, span):
-        pass
+        raise NotImplementedError
 
     def GetSpan(self):
-        self.error = 0
-        span = None
-        return self.error, span
+        raise NotImplementedError
 
     def SetStartFreq(self, freq):
-        pass
+        return self.SetCenterFreq(freq)
 
     def GetStartFreq(self):
-        self.error = 0
-        freq = None
-        return self.error, freq
+        return self.GetCenterFreq()
 
     def SetStopFreq(self, freq):
-        pass
+        return self.SetCenterFreq(freq)
 
     def GetStopFreq(self):
-        self.error = 0
-        freq = None
-        return self.error, freq
+        return self.GetCenterFreq()
 
     def SetRBW(self, freq):
-        pass
+        self.error = 0
+        ans = self.write(f'BANDWIDTH:IF {freq} HZ')
+        self.error, rbw = self.GetRBW()
+        return self.error, rbw
 
     def GetRBW(self):
         self.error = 0
-        freq = None
-        return self.error, freq
+        dct = self.query('BANDWIDTH:IF?', r'BANDWIDTH:IF (?P<rbw>%s)' % self._FP)
+        return self.error, float(dct['rbw'])
 
     def SetRBWAuto(self):
         pass
@@ -244,7 +251,7 @@ def main():
                         fstart: 9e6
                         fstop: 30e6
                         fstep: 1
-                        gpib: 
+                        gpib: 17
                         virtual: 0
 
                         [Channel_1]
@@ -272,6 +279,15 @@ def main():
     assert err == 0, 'Init() fails with error %d' % (err)
     err, des = rec.GetDescription()
     print(des)
+
+    err, freq = rec.SetCenterFreq(20.125e3)
+    print(f"Frequency (Hz) = {freq}")
+
+    for _rbw in np.linspace(200, 10e3, 100, endpoint=True):
+        err, rbw = rec.SetRBW(205)
+        print(f"RBW (Hz) {_rbw} = {rbw}")
+
+
 
 if __name__ == '__main__':
     main()

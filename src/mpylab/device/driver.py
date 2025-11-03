@@ -99,7 +99,7 @@ class DRIVER:
             if visa:
                 res_name = visa
             else:
-                res_name = f'GPIB::{gpib}'
+                res_name = f'GPIB::{gpib}::INSTR'
             self.dev = self.rm.open_resource(res_name,
                                              access_mode=lock,
                                              timeout=timeout * 1000,
