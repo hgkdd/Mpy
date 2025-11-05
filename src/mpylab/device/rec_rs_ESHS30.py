@@ -12,7 +12,7 @@ import sys
 
 import numpy as np
 
-from mpylab.device.spectrumanalyzer import RECEIVER as REC
+from mpylab.device.receiver import RECEIVER as REC
 from mpylab.device.driver import DRIVER
 
 
