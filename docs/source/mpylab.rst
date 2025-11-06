@@ -87,6 +87,15 @@ This is the documentation of the API.
    :inherited-members:
 
 
+:mod:`mpylab.device.receiver`
+--------------------------------------
+
+.. automodule:: mpylab.device.receiver
+   :members:
+   :undoc-members:
+   :inherited-members:
+
+
 :mod:`mpylab.device.networkanalyzer`
 -------------------------------------
 
