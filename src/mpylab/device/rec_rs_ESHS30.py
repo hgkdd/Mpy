@@ -18,213 +18,32 @@ from mpylab.device.driver import DRIVER
 
 class RECEIVER(REC):
     def __init__(self):
-        #super(RECEIVER, self).__init__()
-        DRIVER.__init__(self)
+        super().__init__()
+        self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
+                      'GetFreq': [('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)],
+                      'GetData': [('LEVEL?', r'LEVEL (?P<lev>%s)' % self._FP)],
+                      'GetDataNB': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<lev>%s)' % self._FP)],
+                      'Trigger': [('*TRG', None)],
+                      'SetAttenuation': [("f'ATTENUATION {attenuation} DB'", None)],
+                      'GetAttenuation': [('ATTENUATION?', r'ATTENUATION (?P<attenuation>%s)' % self._FP)],
+                      'SetMinAttenuation': [("f'MIN:ATTENUATION {min_attenuation} DB'", None)],
+                      'GetMinAttenuation': [('MIN:ATTENUATION?', r'MIN:ATTENUATION (?P<min_attenuation>%s)' % self._FP)],
+                      'SetMeasTime': [("f'MEASUREMENT:TIME {meas_time} s'", None)],
+                      'GetMeasTime': [('MEASUREMENT:TIME?', r'MEASUREMENT:TIME (?P<meas_time>%s)' % self._FP)],
+                      'SetDetector': [("f'DETECTOR {detector}'", None)],
+                      'GetDetector': [('DETECTOR?', r'DETECTOR (?P<detector>.*)')],
+                      'SetPreamplifier': [("f'PREAMPLIFIER {preamplifier}'", None)],
+                      'GetPreamplifier': [('PREAMPLIFIER?', r'PREAMPLIFIER (?P<preamplifier>.*)')],
+                      'SetResolutionBandwidth': [("f'BANDWIDTH:IF {rbw} HZ'", None)],
+                      'GetResolutionBandwidth': [('BANDWIDTH:IF?', r'BANDWIDTH:IF (?P<rbw>%s)' % self._FP)],
+                      'Quit': [('*CLS', None)],
+                      'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         self.error = 0
-        self._internal_unit = 'dBuV'
-        self.term_chars = '\n'
-        #self._cmds = {}
-        #self._cmds['Complex'] = []
 
-    def SetCenterFreq(self, freq):
-        self.error = 0
-        self.write(f'FREQUENCY {freq} HZ')
-        self.error, freq = self.GetCenterFreq()
-        return self.error, freq
-
-    def GetCenterFreq(self):
-        self.error = 0
-        freq = None
-        dct = self.query('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)
-        return self.error, float(dct['freq'])
-
-    def SetSpan(self, span):
-        raise NotImplementedError
-
-    def GetSpan(self):
-        raise NotImplementedError
-
-    def SetStartFreq(self, freq):
-        return self.SetCenterFreq(freq)
-
-    def GetStartFreq(self):
-        return self.GetCenterFreq()
-
-    def SetStopFreq(self, freq):
-        return self.SetCenterFreq(freq)
-
-    def GetStopFreq(self):
-        return self.GetCenterFreq()
-
-    def SetRBW(self, freq):
-        self.error = 0
-        ans = self.write(f'BANDWIDTH:IF {freq} HZ')
-        self.error, rbw = self.GetRBW()
-        return self.error, rbw
-
-    def GetRBW(self):
-        self.error = 0
-        dct = self.query('BANDWIDTH:IF?', r'BANDWIDTH:IF (?P<rbw>%s)' % self._FP)
-        return self.error, float(dct['rbw'])
-
-    def SetRBWAuto(self):
-        pass
-
-    def SetVBW(self, freq):
-        pass
-
-    def GetVBW(self):
-        self.error = 0
-        freq = None
-        return self.error, freq
-
-    def SetVBWAuto(self):
-        pass
-
-    def SetRefLevel(self, lvl):
-        pass
-
-    def GetRefLevel(self):
-        self.error = 0
-        lvl = None
-        return self.error, lvl
-
-    def SetAtt(self, att):
-        att = round(att)
-        att = min(att, 60)
-        att = max(att, 0)
-        ans = self.write(f'ATTENUATION {att} dB')
-
-    def GetAtt(self):
-        self.error = 0
-        dct = self.query('ATTENUATION?', r'(?P<att>.*)')
-        att = dct['att']
-        return self.error, att
-
-    def SetAttAuto(self):
-        pass
-
-    def SetAttMode(self, mode):
-        pass
-
-    def GetAttMode(self):
-        self.error = 0
-        mode = None
-        return self.error, mode
-
-    def SetPreAmp(self, status):
-        pass
-
-    def GetPreAmp(self):
-        self.error = 0
-        status = None
-        return self.error, status
-
-    def SetDetector(self, det):
-        pass
-
-    def GetDetector(self):
-        self.error = 0
-        det = None
-        return self.error, det
-
-    def SetDetectorAuto(self):
-        pass
-
-    def SetTraceMode(self, mode):
-        pass
-
-    def GetTraceMode(self):
-        self.error = 0
-        mode = None
-        return self.error, mode
-
-    def SetTraceModeBlank(self):
-        pass
-
-    def GetTraceModeBlank(self):
-        self.error = 0
-        mode = None
-        return self.error, mode
-
-    def SetTrace(self, number):
-        pass
-
-    def GetTrace(self):
-        self.error = 0
-        number = None
-        return self.error, number
-
-    def SetSweepCount(self, number):
-        pass
-
-    def GetSweepCount(self):
-        self.error = 0
-        number = None
-        return self.error, number
-
-    def SetSweepTime(self, sweeptime):
-        pass
-
-    def GetSweepTime(self):
-        self.error = 0
-        sweeptime = None
-        return self.error, sweeptime
-
-    def SetSweepTimeAuto(self):
-        pass
-
-    def SetSweepPoints(self, points):
-        pass
-
-    def GetSweepPoints(self):
-        self.error = 0
-        points = None
-        return self.error, points
-
-    def SetTriggerMode(self, mode):
-        pass
-
-    def GetTriggerMode(self):
-        self.error = 0
-        mode = None
-        return self.error, mode
-
-    def SetTriggerDelay(self, delay):
-        pass
-
-    def GetTriggerDelay(self):
-        self.error = 0
-        delay = None
-        return self.error, delay
-
-    def SetWindow(self, window):
-        pass
-    def Quit(self):
-        pass
-
-    def SetSANMode(self):
-        pass
-
-    def GetDescription(self):
-        self.error = 0
-        dct = self.query('*IDN?', r'(?P<desc>.*)')
-        return self.error, dct['desc']
-
-    def GetSpectrum(self):
-        self.error = 0
-        values = []
-        return self.error, values
-
-    def GetSpectrumNB(self):
-        self.error = 0
-        values = []
-        return self.error, values
-
-    def Init(self, ini=None, channel=None):
+    def Init(self, ininame=None, channel=None):
         if channel is None:
             channel = 1
-        self.error = REC.Init(self, ini, channel)
+        self.error = super().Init(ininame=ininame, channel=channel)
         sec = 'channel_%d' % channel
         try:
             self.levelunit = self.conf[sec]['unit']
@@ -234,6 +53,7 @@ class RECEIVER(REC):
 
 
 def main():
+    import sys, io
     from mpylab.tools.util import format_block
     try:
         ini = sys.argv[1]
@@ -251,42 +71,45 @@ def main():
                         fstart: 9e6
                         fstop: 30e6
                         fstep: 1
-                        gpib: 17
+                        visa: GPIB0::17::INSTR
                         virtual: 0
 
                         [Channel_1]
-                        unit: 'dBuV'
+                        name: RFin
+                        min_attenuation: 10
+                        meas_time: 0.05
+                        preamplifier: on
+                        unit: dBuV
                         attenuation: auto
-                        reflevel: -20
                         rbw: auto
-                        vbw: 10e6
-                        span: 6e9
-                        trace: 1
-                        tracemode: 'WRITe'
-                        detector: 'APEak'
-                        sweepcount: 0
-                        triggermode: 'IMMediate'
-                        attmode: auto
-                        sweeptime: 10e-3
-                        sweeppoints: 500
+                        detector: PEAK
                         """)
         # rbw: 3e6
         ini = io.StringIO(ini)
 
-    rec = RECEIVER()
 
-    err = rec.Init(ini)
-    assert err == 0, 'Init() fails with error %d' % (err)
-    err, des = rec.GetDescription()
-    print(des)
+    d = RECEIVER()
+    d.Init(ininame=ini, channel=1)
+    if not ini:
+        d.SetVirtual(False)
 
-    err, freq = rec.SetCenterFreq(20.125e3)
-    print(f"Frequency (Hz) = {freq}")
+    err, des = d.GetDescription()
+    print(("Description: %s" % des))
+
+    for freq in [9e3, 100e3, 500e3, 1e6, 10e6, 30e6]:
+        print(("Set freq to %e Hz" % freq))
+        err, rfreq = d.SetFreq(freq)
+        if err == 0:
+            print(("Freq set to %e Hz" % rfreq))
+        else:
+            print("Error setting freq")
+
 
     for _rbw in np.linspace(200, 10e3, 100, endpoint=True):
-        err, rbw = rec.SetRBW(205)
+        err, rbw = d.SetResolutionBandwidth(205)
         print(f"RBW (Hz) {_rbw} = {rbw}")
 
+    d.Quit()
 
 
 if __name__ == '__main__':

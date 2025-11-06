@@ -70,7 +70,7 @@ class RECEIVER(DRIVER):
         - *meas_time*: the measuring time for that channel
         - *attenuation*: value of the attenuation, may be *auto*
         - *min_attenuation*: value of the minimum attenuation
-        - *detector*: 'PEAK', 'AVERAGE', 'QPEAK' or a comma separated list
+        - *detector*: 'PEAK', 'AVERAGE', 'QPEAK'
         - *preamplifier*: 'on' or 'off'
     """
 
@@ -118,11 +118,17 @@ class RECEIVER(DRIVER):
                       'SetPreamplifier': [("f'PREAMPLIFIER {preamplifier}'", None)],
                       'GetPreamplifier': [('PREAMPLIFIER?', r'PREAMPLIFIER (?P<preamplifier>.*)')],
                       'SetResolutionBandwidth': [("f'BANDWIDTH:IF {rbw} HZ'", None)],
-                      'GetResolutionBandwidth': [('BANDWIDTH:IF?', r'BANDWIDTH:IF (?P<bbw>%s)' % self._FP)],
+                      'GetResolutionBandwidth': [('BANDWIDTH:IF?', r'BANDWIDTH:IF (?P<rbw>%s)' % self._FP)],
                       'Quit': [('*CLS', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         self.freq = None
-        self.power = None
+        self.attenuation = None
+        self.min_attenuation = 10
+        self.meas_time = None
+        self.rbw = None
+        self.detector = 'PEAK'
+        self.preamplifier = 'OFF'
+        self.level = None
         self.unit = None
         self.channel = None
         self._internal_unit = 'dBuV'
@@ -130,9 +136,9 @@ class RECEIVER(DRIVER):
     def SetFreq(self, freq):
         """
         Set the frequency to *freq* (in Hz).
-        
+
         After setting, the freq is read back from the device.
-        
+
         ``(self.error, self.freq)`` is returned.
         """
         self.error = 0
@@ -147,6 +153,17 @@ class RECEIVER(DRIVER):
             else:
                 self.freq = float(self.freq)
             # print self.freq
+        return self.error, self.freq
+
+    def GetFreq(self):
+        """
+        Get the frequency to *freq* (in Hz).
+
+        ``(self.error, self.freq)`` is returned.
+        """
+        self.error = 0
+        dct = self._do_cmds('GetFreq', locals())
+        self._update(dct)
         return self.error, self.freq
 
     def Trigger(self):
@@ -204,6 +221,216 @@ class RECEIVER(DRIVER):
         if retrigger in (True, 'ON', 'On', 'on'):
             self.Trigger()
         return self.error, obj
+
+    def SetAttenuation(self, attenuation):
+        """
+        Set the attenuation to *attenuation* (in dB).
+
+        After setting, the attenuation is read back from the device.
+
+        ``(self.error, self.attenuation)`` is returned.
+        """
+        self.error = 0
+        attenuation = max(attenuation, self.min_attenuation)   # ensure att is larger than min_att
+        dct = self._do_cmds('SetAttenuation', locals())
+        self._update(dct)
+        dct = self._do_cmds('GetAttenuation', locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                self.attenuation = attenuation
+            else:
+                self.attenuation = float(self.attenuation)
+        return self.error, self.attenuation
+
+    def GetAttenuation(self):
+        """
+        Get the attenuation in dB.
+
+        ``(self.error, self.attenuation)`` is returned.
+        """
+        self.error = 0
+        dct = self._do_cmds('GetAttenuation', locals())
+        self._update(dct)
+        return self.error, self.attenuation
+
+
+    def SetMinAttenuation(self, min_attenuation):
+        """
+        Set the minimum attenuation to *min_attenuation* (in dB).
+
+        After setting, the min_attenuation is read back from the device.
+
+        ``(self.error, self.min_attenuation)`` is returned.
+        """
+        self.error = 0
+        min_attenuation = max(min_attenuation, 0)   # has to be > 0
+        dct = self._do_cmds('SetMinAttenuation', locals())
+        self._update(dct)
+        dct = self._do_cmds('GetMinAttenuation', locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                self.min_attenuation = min_attenuation
+            else:
+                self.min_attenuation = float(self.min_attenuation)
+        return self.error, self.min_attenuation
+
+    def GetMinAttenuation(self):
+        """
+        Get the minimum attenuation in dB.
+
+        ``(self.error, self.min_attenuation)`` is returned.
+        """
+        self.error = 0
+        dct = self._do_cmds('GetMinAttenuation', locals())
+        self._update(dct)
+        return self.error, self.min_attenuation
+
+    def SetMeasTime(self, meas_time):
+        """
+        Set the measurement time to *meas_time* (in s).
+
+        After setting, the measurement time is read back from the device.
+
+        ``(self.error, self.meas_time)`` is returned.
+        """
+        self.error = 0
+        meas_time = max(meas_time, 0)   # has to be > 0
+        dct = self._do_cmds('SetMeasTime', locals())
+        self._update(dct)
+        dct = self._do_cmds('GetMeasTime', locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                self.meas_time = meas_time
+            else:
+                self.meas_time = float(self.meas_time)
+        return self.error, self.meas_time
+
+    def GetMeasTime(self):
+        """
+        Get the measurement time in seconds.
+
+        ``(self.error, self.meas_time)`` is returned.
+        """
+        self.error = 0
+        dct = self._do_cmds('GetMeasTime', locals())
+        self._update(dct)
+        return self.error, self.meas_time
+
+    def SetDetector(self, detector):
+        """
+        Set the measurement detector.
+
+        detector has to de PEAK, QPEAK or AVERAGE
+
+        After setting, the detector is read back from the device.
+
+        ``(self.error, self.detector)`` is returned.
+        """
+        self.error = 0
+        detector = detector.upper()
+        if not detector in ('PEAK', 'QPEAK', 'AVERAGE'):
+            self.error = -1
+            raise UserWarning(f'Invalid detector {detector}.')
+        dct = self._do_cmds('SetDetector', locals())
+        self._update(dct)
+        dct = self._do_cmds('GetDetector', locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                self.detector = detector
+        return self.error, self.detector
+
+    def GetDetector(self):
+        """
+        Get the detector.
+
+        Values are PEAK, QPEAK, AVERAGE
+
+        ``(self.error, self.detector)`` is returned.
+        """
+        self.error = 0
+        dct = self._do_cmds('GetDetector', locals())
+        self._update(dct)
+        if not self.detector in ('PEAK', 'QPEAK', 'AVERAGE'):
+            self.error = -1
+            raise UserWarning(f'Unknown Detector {self.detector}.')
+        return self.error, self.detector
+
+    def SetPreamplifier(self, preamplifier):
+        """
+        Set the preamplifier.
+
+        Values are ON or OFF
+
+        After setting, the status is read back from the device.
+
+        ``(self.error, self.preamplifier)`` is returned.
+        """
+        self.error = 0
+        preamplifier = preamplifier.upper()
+        if not preamplifier in ('ON', 'OFF'):
+            self.error = -1
+            raise UserWarning(f'Invalid Preamplifier Status {preamplifier}.')
+        dct = self._do_cmds('SetPreamplifier', locals())
+        self._update(dct)
+        dct = self._do_cmds('GetPreamplifier', locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                self.preamplifier = preamplifier
+        return self.error, self.preamplifier
+
+    def GetPreamplifier(self):
+        """
+        Get the preamplifier status.
+
+        Values are ON or OFF
+
+        ``(self.error, self.preamplifier)`` is returned.
+        """
+        self.error = 0
+        dct = self._do_cmds('GetPreamplifier', locals())
+        self._update(dct)
+        if not self.preamplifier in ('ON', 'OFF'):
+            self.error = -1
+            raise UserWarning(f'Unknown Preamplifier status {self.preamplifier}.')
+        return self.error, self.preamplifier
+
+    def SetResolutionBandwidth(self, rbw):
+        """
+        Set the resolution bandwidth  to *rbw* (in Hz).
+
+        After setting, the bandwidth is read back from the device.
+
+        ``(self.error, self.rbw)`` is returned.
+        """
+        self.error = 0
+        dct = self._do_cmds('SetResolutionBandwidth', locals())
+        self._update(dct)
+        dct = self._do_cmds('GetResolutionBandwidth', locals())
+        self._update(dct)
+        if self.error == 0:
+            if not dct:
+                self.rbw = rbw
+            else:
+                self.rbw = float(self.rbw)
+        return self.error, self.rbw
+
+    def GetResolutionBandwidth(self):
+        """
+        Get the resolution bandwidth to *rbw* (in Hz).
+
+        ``(self.error, self.rbw)`` is returned.
+        """
+        self.error = 0
+        dct = self._do_cmds('GetResolutionBandwidth', locals())
+        self._update(dct)
+        return self.error, self.rbw
+
+
 
     def update_internal_unit(self, ch=None, unit='DBUV'):
         """
