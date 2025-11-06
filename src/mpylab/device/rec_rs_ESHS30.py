@@ -6,17 +6,12 @@
 
    :license: GPL-3 or higher
 """
-
-import io
-import sys
-
 import numpy as np
 
 from mpylab.device.receiver import RECEIVER as REC
 from scuq.quantities import Quantity
 from scuq.ucomponents import UncertainInput
 from scuq.si import VOLT, WATT
-
 
 
 class RECEIVER(REC):
@@ -50,8 +45,14 @@ class RECEIVER(REC):
         sec = 'channel_%d' % channel
         try:
             self.unit = self.conf[sec]['unit']
+            if self.unit.upper() == 'WATT':
+                self.unit = WATT
+            elif self.unit.upper() == 'VOLT':
+                self.unit = VOLT
+            else:
+                raise RuntimeError('Unrecognized unit: %s' % self.unit)
         except KeyError:
-            self.unit = self._internal_unit
+            self.unit = VOLT
         self._get_internal_unit()
         return self.error
 
@@ -65,19 +66,19 @@ class RECEIVER(REC):
         return self._internal_unit
 
     def _convert_level_to_unit(self, lev, Z=50):
-        if self._internal_unit.upper() == 'DBM':   # level is in dBm
-            if self.unit.upper() == 'WATT':
-                lev = 10**(0.1*lev) * 1e-3   # Watt
-            elif self.unit.upper() == 'VOLT':
+        if self._internal_unit == 'dBm':   # level is in dBm
+            if self.unit is WATT:
+                lev = np.pow(10, (0.1*lev)) * 1e-3   # Watt
+            elif self.unit is VOLT:
                 lev = lev + 90 + 10*np.log10(Z)   # dBuV
-                lev = 10**(0.05*lev) * 1e-6   # Volt
+                lev = np.pow(10, (0.05*lev)) * 1e-6   # Volt
             else:
                 raise RuntimeError('Unrecognized unit: %s' % self.unit)
-        elif self._internal_unit.upper() == 'DBUV':
-            if self.unit.upper() == 'WATT':
+        elif self._internal_unit == 'dBuV':
+            if self.unit is WATT:
                 lev = lev - 90 - 10*np.log10(Z)   # dBm
                 lev = np.pow(10, (0.1*lev)) * 1e-3   # Watt
-            elif self.unit.upper() == 'VOLT':
+            elif self.unit is VOLT:
                 lev = np.power(10, (0.05*lev)) * 1e-6   # Volt
             else:
                 raise RuntimeError('Unrecognized unit: %s' % self.unit)
@@ -90,11 +91,11 @@ class RECEIVER(REC):
         self.level = float(self.level)
         self.level = self._convert_level_to_unit(self.level)
         # uncertainty is 0.5 dB
-        if self.unit.upper() == 'WATT':
+        if self.unit == WATT:
             relerr = 0.122
         else:
             relerr = 0.059
-        obj = Quantity(eval(self.unit.upper()), UncertainInput(self.level, self.level*relerr))
+        obj = Quantity(self.unit, UncertainInput(self.level, self.level*relerr))
         return obj
 
     def GetData(self):
@@ -124,7 +125,7 @@ class RECEIVER(REC):
             if self.level == '0.00':
                 return None    # Not ready yet
             obj = self._create_lev_object(self.level)
-            if retrigger in (True, 'ON', 'On', 'on'):
+            if retrigger is True or retrigger.upper() == 'ON':
                 self.Trigger()
         return self.error, obj
 
