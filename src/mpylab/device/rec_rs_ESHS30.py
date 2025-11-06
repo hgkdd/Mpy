@@ -87,15 +87,15 @@ class RECEIVER(REC):
         return lev
 
 
-    def _create_lev_object(self, lev):
-        self.level = float(self.level)
-        self.level = self._convert_level_to_unit(self.level)
+    def _create_lev_object(self, level):
+        level = float(level)
+        level = self._convert_level_to_unit(level)
         # uncertainty is 0.5 dB
         if self.unit == WATT:
             relerr = 0.122
         else:
             relerr = 0.059
-        obj = Quantity(self.unit, UncertainInput(self.level, self.level*relerr))
+        obj = Quantity(self.unit, UncertainInput(level, level*relerr))
         return obj
 
     def GetData(self):
@@ -110,7 +110,7 @@ class RECEIVER(REC):
         Non-blocking version of :meth:`GetData`.
 
         If implemented, this function will return ``(-1, None)`` until the answer from the device is available.
-        Then, it will return ``self.error, obj)``.
+        Then, it will return ``(self.error, obj)``.
 
         If *retrigger* is ``True`` or ``'on'``, the device will be triggered for a new measurment after the measurement has been
         red.
