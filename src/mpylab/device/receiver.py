@@ -104,8 +104,8 @@ class RECEIVER(DRIVER):
         DRIVER.__init__(self)
         self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
                       'GetFreq': [('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)],
-                      'GetData': [('LEVEL?', r'LEVEL (?P<lev>%s)' % self._FP)],
-                      'GetDataNB': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<lev>%s)' % self._FP)],
+                      'GetData': [('LEVEL?', r'LEVEL (?P<level>%s)' % self._FP)],
+                      'GetDataNB': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<level>%s)' % self._FP)],
                       'Trigger': [('*TRG', None)],
                       'SetAttenuation': [("f'ATTENUATION {attenuation} DB'", None)],
                       'GetAttenuation': [('ATTENUATION?', r'ATTENUATION (?P<attenuation>%s)' % self._FP)],
@@ -191,14 +191,14 @@ class RECEIVER(DRIVER):
         dct = self._do_cmds('GetData', locals())
         self._update(dct)
 
-        if self.error == 0 and self.power:
+        if self.error == 0 and self.level:
             self.update_internal_unit()
-            self.power = float(self.power)
+            self.level = float(self.level)
             try:
                 obj = quantities.Quantity(eval(self._internal_unit),
                                           ucomponents.UncertainInput(self.power, 0))
             except (AssertionError, NameError):
-                self.power, self.unit = self.convert.c2scuq(self._internal_unit, float(self.power))
+                self.level, self.unit = self.convert.c2scuq(self._internal_unit, float(self.power))
                 obj = quantities.Quantity(self.unit,
                                           ucomponents.UncertainInput(self.power, 0))
         else:

@@ -13,7 +13,10 @@ import sys
 import numpy as np
 
 from mpylab.device.receiver import RECEIVER as REC
-from mpylab.device.driver import DRIVER
+from scuq.quantities import Quantity
+from scuq.ucomponents import UncertainInput
+from scuq.si import VOLT, WATT
+
 
 
 class RECEIVER(REC):
@@ -21,8 +24,8 @@ class RECEIVER(REC):
         super().__init__()
         self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
                       'GetFreq': [('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)],
-                      'GetData': [('LEVEL?', r'LEVEL (?P<lev>%s)' % self._FP)],
-                      'GetDataNB': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<lev>%s)' % self._FP)],
+                      'GetData': [('LEVEL?', r'LEVEL (?P<level>%s)' % self._FP)],
+                      'GetDataNB': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<level>%s)' % self._FP)],
                       'Trigger': [('*TRG', None)],
                       'SetAttenuation': [("f'ATTENUATION {attenuation} DB'", None)],
                       'GetAttenuation': [('ATTENUATION?', r'ATTENUATION (?P<attenuation>%s)' % self._FP)],
@@ -46,10 +49,84 @@ class RECEIVER(REC):
         self.error = super().Init(ininame=ininame, channel=channel)
         sec = 'channel_%d' % channel
         try:
-            self.levelunit = self.conf[sec]['unit']
+            self.unit = self.conf[sec]['unit']
         except KeyError:
-            self.levelunit = self._internal_unit
+            self.unit = self._internal_unit
+        self._get_internal_unit()
         return self.error
+
+    def _get_internal_unit(self):
+        ans = self.query('SPECIALFUNC?', None)
+        ans = ans[ans.index(',20,') + 4 : ans.index(',21,')]    # dBm ist SPECIALFUNC 20
+        if ans == 'ON':
+            self._internal_unit = 'dBm'
+        else:
+            self._internal_unit = 'dBuV'
+        return self._internal_unit
+
+    def _convert_level_to_unit(self, lev, Z=50):
+        if self._internal_unit.upper() == 'DBM':   # level is in dBm
+            if self.unit.upper() == 'WATT':
+                lev = 10**(0.1*lev) * 1e-3   # Watt
+            elif self.unit.upper() == 'VOLT':
+                lev = lev + 90 + 10*np.log10(Z)   # dBuV
+                lev = 10**(0.05*lev) * 1e-6   # Volt
+            else:
+                raise RuntimeError('Unrecognized unit: %s' % self.unit)
+        elif self._internal_unit.upper() == 'DBUV':
+            if self.unit.upper() == 'WATT':
+                lev = lev - 90 - 10*np.log10(Z)   # dBm
+                lev = np.pow(10, (0.1*lev)) * 1e-3   # Watt
+            elif self.unit.upper() == 'VOLT':
+                lev = np.power(10, (0.05*lev)) * 1e-6   # Volt
+            else:
+                raise RuntimeError('Unrecognized unit: %s' % self.unit)
+        else:
+            raise RuntimeError('Unrecognized internal unit: %s' % self._internal_unit)
+        return lev
+
+
+    def _create_lev_object(self, lev):
+        self.level = float(self.level)
+        self.level = self._convert_level_to_unit(self.level)
+        # uncertainty is 0.5 dB
+        if self.unit.upper() == 'WATT':
+            relerr = 0.122
+        else:
+            relerr = 0.059
+        obj = Quantity(eval(self.unit.upper()), UncertainInput(self.level, self.level*relerr))
+        return obj
+
+    def GetData(self):
+        self.error = 0
+        dct = self._do_cmds('GetData', locals())
+        self._update(dct)
+        obj = self._create_lev_object(self.level)
+        return self.error, obj
+
+    def GetDataNB(self, retrigger):
+        """
+        Non-blocking version of :meth:`GetData`.
+
+        If implemented, this function will return ``(-1, None)`` until the answer from the device is available.
+        Then, it will return ``self.error, obj)``.
+
+        If *retrigger* is ``True`` or ``'on'``, the device will be triggered for a new measurment after the measurement has been
+        red.
+
+        If not implemented, the method will return :meth:`GetData`.
+        """
+        obj = None
+        self.error = 0
+        dct = self._do_cmds('GetDataNB', locals())
+        self._update(dct)
+        if self.level:
+            if self.level == '0.00':
+                return None    # Not ready yet
+            obj = self._create_lev_object(self.level)
+            if retrigger in (True, 'ON', 'On', 'on'):
+                self.Trigger()
+        return self.error, obj
 
 
 def main():
@@ -79,7 +156,7 @@ def main():
                         min_attenuation: 10
                         meas_time: 0.05
                         preamplifier: on
-                        unit: dBuV
+                        unit: Watt
                         attenuation: auto
                         rbw: auto
                         detector: PEAK
@@ -99,14 +176,12 @@ def main():
     for freq in [9e3, 100e3, 500e3, 1e6, 10e6, 30e6]:
         print(("Set freq to %e Hz" % freq))
         err, rfreq = d.SetFreq(freq)
-        if err == 0:
-            print(("Freq set to %e Hz" % rfreq))
-        else:
-            print("Error setting freq")
+        err, dat = d.GetData()
+        print(f"Freq {rfreq} Hz, Level: {dat}")
 
 
-    for _rbw in np.linspace(200, 10e3, 100, endpoint=True):
-        err, rbw = d.SetResolutionBandwidth(205)
+    for _rbw in np.linspace(200, 20e3, 100, endpoint=True):
+        err, rbw = d.SetResolutionBandwidth(_rbw)
         print(f"RBW (Hz) {_rbw} = {rbw}")
 
     d.Quit()
