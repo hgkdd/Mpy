@@ -45,7 +45,7 @@ mu0 = 4 * math.pi * 1e-7
 eps0 = 1.0 / (mu0 * c * c)
 pi = math.pi
 
-def normalize_caseless(text: str) -> str:
+def normalize_string(text: str) -> str:
     return unicodedata.normalize("NFKD", text)
 
 def case_insensitive_string_compare(s1: str, s2: str) -> bool:
@@ -53,8 +53,8 @@ def case_insensitive_string_compare(s1: str, s2: str) -> bool:
         return False
     if s1.lower() == s2.lower():
         return True
-    s1 = normalize_caseless(s1)
-    s2 = normalize_caseless(s2)
+    s1 = normalize_string(s1)
+    s2 = normalize_string(s2)
     return s1.casefold() == s2.casefold()
 
 def cmp(a: Any, b: Any) -> int:
