@@ -963,8 +963,8 @@ class POWERMETER(PWRMTR):
         self.pfac = None
         self.plimit = quantities.Quantity(si.WATT, 1.0)  # 1 Watt max power for the sensor
 
-    def Init(self, ininame, channel=1):
-        self.conf = Configuration(ininame, self.conftmpl).conf
+    def Init(self, ini, channel=1):
+        self.conf = Configuration(ini, self.conftmpl).conf
         pmini = self.conf['description']['pmini']
         pmini = next(locate(pmini, paths=self.SearchPaths))
         self.pm_instance = getattr(device, 'Powermeter')(SearchPaths=self.SearchPaths)

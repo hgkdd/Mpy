@@ -495,7 +495,7 @@ if __name__ == '__main__':
 
 
     d = RECEIVER()
-    d.Init(ininame=ini, channel=1)
+    d.Init(ini=ini, channel=1)
     if not ini:
         d.SetVirtual(False)
 

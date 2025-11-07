@@ -4,7 +4,7 @@ import mpylab.device.nport as nport
 ini = sys.argv[1]
 
 cbl = nport.CABLE()
-cbl.init(ininame=ini)
+cbl.init(ini=ini)
 
 for freq in (1e9,):  # range(10,90):
     cbl.setFreq(freq)

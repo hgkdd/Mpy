@@ -6,7 +6,7 @@ from mpylab.device import amplifier
 ini = sys.argv[1]
 
 dev = amplifier.AMPLIFIER()
-dev.init(ininame=ini)
+dev.init(ini=ini)
 
 for freq in range(10, 90):
     dev.setFreq(freq)

@@ -88,11 +88,11 @@ class DRIVER(object):
         else:
             self.dev = Virtual_Communication(self.IDN)
 
-    def Init(self, ininame=None, channel=None):
+    def Init(self, ini=None, channel=None):
         """
         Init the instrument.
         
-        :param ininame: filename or file-like object with the initialization parameters for the device. 
+        :param ini: filename or file-like object with the initialization parameters for the device.
                         This parameter is handled by 
                         :meth:`mpylab.tools.Configuration.Configuration` which takes also 
                         a configuration template stored in ``self.conftmpl``.
@@ -105,11 +105,11 @@ class DRIVER(object):
         self.channel = channel
         if not self.channel:
             self.channel = 1
-        if not ininame:
+        if not ini:
             self.conf['init_value']['virtual'] = True
             self._init_bus(virtual=True)
         else:
-            self.Configuration = Configuration(ininame, self.conftmpl, casesensitive=True)
+            self.Configuration = Configuration(ini, self.conftmpl, casesensitive=True)
             self.conf.update(self.Configuration.conf)
             if not self.conf['init_value']['virtual']:
                 self._init_bus(virtual=False)

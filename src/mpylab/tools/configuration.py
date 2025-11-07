@@ -58,12 +58,12 @@ class Configuration:
     """
     Class for all configuration files.
     """
-    def __init__(self, ininame: str | TextIO, cnftmpl: dict, casesensitive: bool = False) -> None:
+    def __init__(self, ini: str | TextIO, cnftmpl: dict, casesensitive: bool = False) -> None:
         """
         Constructor
 
         Parameter:
-          - *ininame*: name of the config file of file like object
+          - *ini*: name of the config file of file like object
           - *cnftmpl*: dict; configuration template
           - *casesensitive*: bool; match case sensitive or not; default: False
         """
@@ -74,10 +74,10 @@ class Configuration:
 
         try:
             # try to open file
-            fp = open(os.path.normpath(ininame), 'r')    # open file by its name
+            fp = open(os.path.normpath(ini), 'r')    # open file by its name
         except (IOError, FileNotFoundError, TypeError):
             # assume a file like object
-            fp = ininame   # file like object
+            fp = ini   # file like object
 
         # read the whole ini file in to a dict
         config = configparser.ConfigParser()

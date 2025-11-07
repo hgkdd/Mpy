@@ -39,10 +39,10 @@ class RECEIVER(REC):
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         self.error = 0
 
-    def Init(self, ininame=None, channel=None):
+    def Init(self, ini=None, channel=None):
         if channel is None:
             channel = 1
-        self.error = super().Init(ininame=ininame, channel=channel)
+        self.error = super().Init(ini=ini, channel=channel)
         sec = 'channel_%d' % channel
         try:
             self.unit = self.conf[sec]['unit']
@@ -206,7 +206,7 @@ def main():
 
 
     rec = RECEIVER()
-    rec.Init(ininame=ini, channel=1)
+    rec.Init(ini=ini, channel=1)
     if not ini:
         rec.SetVirtual(False)
 
@@ -215,9 +215,9 @@ def main():
 
     for freq in [9e3, 100e3, 500e3, 1e6, 10e6, 30e6]:
         print(f"Set freq to {freq} Hz")
-        err, rfreq = rec.SetFreq(freq)
+        err, returned_freq = rec.SetFreq(freq)
         err, dat = rec.GetData()
-        print(f"Freq {rfreq} Hz, Level: {dat} --> {rec._get_db_from_obj(dat)} {rec._internal_unit}")
+        print(f"Freq {returned_freq} Hz, Level: {dat} --> {rec._get_db_from_obj(dat)} {rec._internal_unit}")
 
     for _rbw in np.linspace(200, 20e3, 100, endpoint=True):
         err, rbw = rec.SetResolutionBandwidth(_rbw)

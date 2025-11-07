@@ -213,18 +213,18 @@ class Device(object):
         cdata.t = tt
         return cdata
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         if channel is None:
             channel = 1
         self.channel = channel
         tmpfiles = []
-        if hasattr(ininame, 'read'):  # file like object
+        if hasattr(ini, 'read'):  # file like object
             import tempfile
             import configparser
             import io
             from mpylab.tools.util import format_block
             cp = configparser.ConfigParser()
-            cp.read_file(ininame)
+            cp.read_file(ini)
             for section in cp.sections():
                 for option, value in cp.items(section):
                     try:
@@ -241,16 +241,16 @@ class Device(object):
             tmpfiles.append(tmpf)
             cp.write(tmpf)
             tmpf.flush()
-            self.ininame = tmpf.name
+            self.ini = tmpf.name
         else:
             try:
-                self.ininame = os.path.normpath(ininame)
-                open(self.ininame, 'r')  # try to open the file
+                self.ini = os.path.normpath(ini)
+                open(self.ini, 'r')  # try to open the file
             except (IOError, AttributeError):
-                raise "Unable to open '%s' for read." % self.ininame
+                raise "Unable to open '%s' for read." % self.ini
 
         # get instrument type and name of DLL from ini-file
-        (self.TypeOfInstrument, self.DLLname) = self._getTypeAndDLL(self.ininame)
+        (self.TypeOfInstrument, self.DLLname) = self._getTypeAndDLL(self.ini)
         self.TypeOfInstrument = self.TypeOfInstrument.lower()
         try:
             # fuzzy type matching...
@@ -261,7 +261,7 @@ class Device(object):
                                       ignorecase=True)[0]
         except IndexError:
             raise 'Instrument type %s from file %s not in list of valid instrument types: %r' % (self.TypeOfInstrument,
-                                                                                                 ininame,
+                                                                                                 ini,
                                                                                                  self.__class__._types)
         # split extension to see if we have a DLL or a pyd
         (DLLbase, DLLext) = os.path.splitext(self.DLLname)
@@ -318,7 +318,7 @@ class Device(object):
                 setattr(self, "%s" % klass, getattr(self, "_%s_wrap" % klass)(getattr(self, "_%s" % klass)))
         # call the init method
         # print self._lib_Init
-        ret = self._lib_Init(self.ininame, channel=channel)
+        ret = self._lib_Init(self.ini, channel=channel)
         for tt in tmpfiles:
             tt.close()
         # update self.virtual
@@ -328,11 +328,11 @@ class Device(object):
     def _Init_wrap(self, method):
         if isinstance(method, ct._CFuncPtr):
             # method return for CVI case
-            def m(ininame=None, channel=None):
-                if ininame is None:
-                    c_ininame = ct.c_char_p(self.ininame)
+            def m(ini=None, channel=None):
+                if ini is None:
+                    c_ini = ct.c_char_p(self.ini)
                 else:
-                    c_ininame = ct.c_char_p(ininame)
+                    c_ini = ct.c_char_p(ini)
                 if channel is None:
                     c_channel = ct.c_int(self.channel)
                 else:
@@ -340,7 +340,7 @@ class Device(object):
                 c_instance = ct.c_int(0)
                 c_error = ct.c_int(0)
                 method.restype = ct.c_int
-                retval = method(c_ininame, c_channel, ct.byref(c_instance), ct.byref(c_error))
+                retval = method(c_ini, c_channel, ct.byref(c_instance), ct.byref(c_error))
                 self.instance = c_instance.value
                 self.error = c_error.value
                 return self.error
@@ -409,9 +409,9 @@ class Device(object):
             m = method
         return m
 
-    def _getTypeAndDLL(self, ininame):
+    def _getTypeAndDLL(self, ini):
         self.config = configparser.ConfigParser()
-        self.config.read(ininame)
+        self.config.read(ini)
         self.confsections = self.config.sections()
         sec = fstrcmp('description', self.confsections, n=1, cutoff=0, ignorecase=True)[0]
         thetype = self.config.get(sec, "type")
@@ -453,11 +453,11 @@ class NPort(Device):
         # call parent init
         Device.__init__(self, **kw)
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         if channel is None:
             channel = 1
         # load DLL or pyd (etc), register wrappers for common methods
-        ret = Device.Init(self, ininame, channel)
+        ret = Device.Init(self, ini, channel)
 
         # register additional wrappers
         self._addAttributes()
@@ -514,9 +514,9 @@ class Amplifier(NPort):
         # print Amplifier._postfix
         # print NPort._postfix
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         # load DLL or pyd (etc), register wrappers for common methods
-        ret = NPort.Init(self, ininame, channel)
+        ret = NPort.Init(self, ini, channel)
 
         # register additional wrappers
         self._addAttributes()
@@ -567,11 +567,11 @@ class Signalgenerator(Device):
         self.Z = quantities.Quantity(si.OHM, 50)
         self.levelunit = None
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         if channel == None:
             channel = 1
 
-        ret = Device.Init(self, ininame, channel)
+        ret = Device.Init(self, ini, channel)
         sec = fstrcmp('CHANNEL_%d' % channel, self.confsections, n=1, cutoff=0, ignorecase=True)[0]
         self.levelunit = self.config.get(sec, 'unit')
 
@@ -750,10 +750,10 @@ class Powermeter(Device):
     def __init__(self, **kw):
         Device.__init__(self, **kw)
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         if channel is None:
             channel = 1
-        ret = Device.Init(self, ininame, channel)
+        ret = Device.Init(self, ini, channel)
         # register additional wrappers
         self._addAttributes()
         return ret
@@ -880,10 +880,10 @@ class Spectrumanalyzer(Powermeter):
         Spectrumanalyzer._postfix.update(Powermeter._postfix)
         self.levelunit = None
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         if channel is None:
             channel = 1
-        ret = Powermeter.Init(self, ininame, channel)
+        ret = Powermeter.Init(self, ini, channel)
         # self.levelunit=self.config.get('channel_%d'%channel,'unit')
         sec = fstrcmp('CHANNEL_%d' % channel, self.confsections, n=1, cutoff=0, ignorecase=True)[0]
         self.levelunit = self.config.get(sec, 'unit')  # MH
@@ -1464,10 +1464,10 @@ class Switch(Device):
         # call parent init
         Device.__init__(self, **kw)
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         if channel is None:
             channel = 1
-        ret = Device.Init(self, ininame, channel)
+        ret = Device.Init(self, ini, channel)
         # register additional wrappers
         self._addAttributes()
         return ret
@@ -1618,10 +1618,10 @@ class Fieldprobe(Device):
         # call parent init
         Device.__init__(self, **kw)
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         if channel is None:
             channel = 1
-        ret = Device.Init(self, ininame, channel)
+        ret = Device.Init(self, ini, channel)
         # register additional wrappers
         self._addAttributes()
         return ret
@@ -1765,10 +1765,10 @@ class Motorcontroller(Device):
         Device.__init__(self, **kw)
         self.posunit = None
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         if channel is None:
             channel = 1
-        ret = Device.Init(self, ininame, channel)
+        ret = Device.Init(self, ini, channel)
         sec = fstrcmp('CHANNEL_%d' % channel, self.confsections, n=1, cutoff=0, ignorecase=True)[0]
         self.posunit = self.config.get(sec, 'unit')
 
@@ -1885,8 +1885,8 @@ class Tuner(Device):
         # call parent init
         Device.__init__(self, **kw)
 
-    def Init(self, ininame, channel=None):
-        ret = Device.Init(self, ininame, channel)
+    def Init(self, ini, channel=None):
+        ret = Device.Init(self, ini, channel)
 
         # register additional wrappers
         self._addAttributes()
@@ -1964,9 +1964,9 @@ class Step2port(NPort):
         Step2port._postfix.update(NPort._postfix)
         self.chunit = None
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         # load DLL or pyd (etc), register wrappers for common methods
-        ret = NPort.Init(self, ininame, channel)
+        ret = NPort.Init(self, ini, channel)
         sec = fstrcmp('CHANNEL_%d' % channel, self.confsections, n=1, cutoff=0, ignorecase=True)[0]
         self.chunit = self.config.get(sec, 'unit')
 
@@ -2084,10 +2084,10 @@ class Vectornetworkanalyser(Device):
         # call parent init
         Device.__init__(self, **kw)
 
-    def Init(self, ininame, channel=None):
+    def Init(self, ini, channel=None):
         if channel is None:
             channel = 1
-        ret = Device.Init(self, ininame, channel)
+        ret = Device.Init(self, ini, channel)
 
         # register additional wrappers
         self._addAttributes()

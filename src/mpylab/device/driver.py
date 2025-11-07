@@ -169,23 +169,23 @@ class DRIVER:
         self.write(cmd)
         return self.read(tmpl)
 
-    def get_config(self, ininame, channel):
+    def get_config(self, ini, channel):
         self.channel = channel
         if not self.channel:
             self.channel = 1
-        if not ininame:
+        if not ini:
             self.conf['init_value']['virtual'] = True
         else:
-            self.Configuration = Configuration(ininame, self.conftmpl)
+            self.Configuration = Configuration(ini, self.conftmpl)
             self.conf.update(self.Configuration.conf)
 
-    def Init(self, ininame=None, channel=None):
+    def Init(self, ini=None, channel=None):
         """
         Init the instrument.
         
         Parameters:
             
-           - *ininame*: filename or file-like object with the initialization
+           - *ini*: filename or file-like object with the initialization
              parameters for the device. This parameter is handled by 
              :meth:`mpylab.tools.Configuration.Configuration` which takes also 
              a configuration template stored in ``self.conftmpl``.
@@ -195,7 +195,7 @@ class DRIVER:
         Return: 0 if sucessful. 
         """
         self.error = 0
-        self.get_config(ininame, channel)
+        self.get_config(ini, channel)
         if not self.conf['init_value'].get('virtual', False):
             buspars = {}
             for k in ('timeout',

@@ -13,8 +13,8 @@ class POWERMETER(PM):
         self.lasttrigger = None
         self.istriggered = False
 
-    def Init(self, ininame=None, channel=None):
-        self.error = PM.Init(self, ininame=ininame, channel=channel)
+    def Init(self, ini=None, channel=None):
+        self.error = PM.Init(self, ini=ini, channel=channel)
         self.ch = channel
         self.trg_threshold = self.conf['channel_%d' % channel]['trg_threshold']
         self.gpib = self.conf['init_value']['gpib']
