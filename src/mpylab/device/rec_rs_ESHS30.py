@@ -9,6 +9,7 @@
 import numpy as np
 
 from mpylab.device.receiver import RECEIVER as REC
+from mpylab.tools.util import case_insensitive_string_compare
 from scuq.quantities import Quantity
 from scuq.ucomponents import UncertainInput
 from scuq.si import VOLT, WATT
@@ -45,9 +46,9 @@ class RECEIVER(REC):
         sec = 'channel_%d' % channel
         try:
             self.unit = self.conf[sec]['unit']
-            if self.unit.upper() == 'WATT':
+            if case_insensitive_string_compare(self.unit, 'Watt'):
                 self.unit = WATT
-            elif self.unit.upper() == 'VOLT':
+            elif case_insensitive_string_compare(self.unit, 'Volt'):
                 self.unit = VOLT
             else:
                 raise RuntimeError('Unrecognized unit: %s' % self.unit)
@@ -56,10 +57,48 @@ class RECEIVER(REC):
         self._get_internal_unit()
         return self.error
 
-    def _get_internal_unit(self):
+    def _get_db_from_obj(self, obj, Z=50):
+        value = obj.get_expectation_value_as_float()
+        dBval = None
+        unit = obj._unit
+        if unit is VOLT:
+            if case_insensitive_string_compare(self._internal_unit, 'dBuV'):
+                dBval = 20 * np.log10(value * 1e6)
+            elif case_insensitive_string_compare(self._internal_unit, 'dBm'):
+                mW = value * value / Z * 1e3
+                dBval = 10 * np.log10(mW)
+            else:
+                raise RuntimeError('Unrecognized unit: %s' % self._internal_unit)
+        elif unit is WATT:
+            if case_insensitive_string_compare(self._internal_unit, 'dBuV'):
+                uV = np.sqrt(value * Z) * 1e6
+                dBval = 20 * np.log10(uV)
+            elif case_insensitive_string_compare(self._internal_unit, 'dBm'):
+                dBval = 10 * np.log10(value * 1e3)
+            else:
+                raise RuntimeError('Unrecognized unit: %s' % self._internal_unit)
+        else:
+            raise RuntimeError('Unrecognized unit: %s' % self.unit)
+        return dBval
+
+    def _get_bool_from_specialfunc(self, number):
+        status = None
+        key = str(number)
         ans = self.query('SPECIALFUNC?', None)
-        ans = ans[ans.index(',20,') + 4 : ans.index(',21,')]    # dBm ist SPECIALFUNC 20
-        if ans == 'ON':
+        lst = ans.lstrip('SPECIALFUNC ').split(',')
+        try:
+            dct = {lst[i]: lst[i+1] for i in range(0, len(lst), 2)}
+            status = (dct[key] == 'ON')  # True if 'ON'
+        except (IndexError, KeyError):
+            raise RuntimeWarning('Unable to val for from SPECIALFUNC %s' % number)
+        return status
+
+    def _get_internal_unit(self):
+        try:
+            isdBm = self._get_bool_from_specialfunc(20)
+        except UserWarning:
+            raise RuntimeError('Unable to get internal unit from SPECIALFUNC')
+        if isdBm:
             self._internal_unit = 'dBm'
         else:
             self._internal_unit = 'dBuV'
@@ -109,23 +148,23 @@ class RECEIVER(REC):
         """
         Non-blocking version of :meth:`GetData`.
 
-        If implemented, this function will return ``(-1, None)`` until the answer from the device is available.
+        This function will return ``(-1, None)`` until the answer from the device is available.
         Then, it will return ``(self.error, obj)``.
 
         If *retrigger* is ``True`` or ``'on'``, the device will be triggered for a new measurment after the measurement has been
         red.
-
-        If not implemented, the method will return :meth:`GetData`.
         """
         obj = None
         self.error = 0
         dct = self._do_cmds('GetDataNB', locals())
         self._update(dct)
         if self.level:
-            if self.level == '0.00':
-                return None    # Not ready yet
+            if self.level == '0.00':   # this is returned from the instrument if data not ready
+                self.level = None
+                self.error = -1
+                return self.error, None    # Not ready yet
             obj = self._create_lev_object(self.level)
-            if retrigger is True or retrigger.upper() == 'ON':
+            if retrigger is True or case_insensitive_string_compare(retrigger, 'on'):
                 self.Trigger()
         return self.error, obj
 
@@ -166,26 +205,25 @@ def main():
         ini = io.StringIO(ini)
 
 
-    d = RECEIVER()
-    d.Init(ininame=ini, channel=1)
+    rec = RECEIVER()
+    rec.Init(ininame=ini, channel=1)
     if not ini:
-        d.SetVirtual(False)
+        rec.SetVirtual(False)
 
-    err, des = d.GetDescription()
-    print(("Description: %s" % des))
+    err, des = rec.GetDescription()
+    print("Description: %s" % des)
 
     for freq in [9e3, 100e3, 500e3, 1e6, 10e6, 30e6]:
-        print(("Set freq to %e Hz" % freq))
-        err, rfreq = d.SetFreq(freq)
-        err, dat = d.GetData()
-        print(f"Freq {rfreq} Hz, Level: {dat}")
-
+        print(f"Set freq to {freq} Hz")
+        err, rfreq = rec.SetFreq(freq)
+        err, dat = rec.GetData()
+        print(f"Freq {rfreq} Hz, Level: {dat} --> {rec._get_db_from_obj(dat)} {rec._internal_unit}")
 
     for _rbw in np.linspace(200, 20e3, 100, endpoint=True):
-        err, rbw = d.SetResolutionBandwidth(_rbw)
+        err, rbw = rec.SetResolutionBandwidth(_rbw)
         print(f"RBW (Hz) {_rbw} = {rbw}")
 
-    d.Quit()
+    rec.Quit()
 
 
 if __name__ == '__main__':
