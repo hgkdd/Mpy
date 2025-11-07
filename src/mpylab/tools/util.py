@@ -46,9 +46,22 @@ eps0 = 1.0 / (mu0 * c * c)
 pi = math.pi
 
 def normalize_string(text: str) -> str:
+    """
+    Returns a normalized version (NFKD) of the input string *text*.
+
+    The normal form KD (NFKD) will apply the compatibility decomposition, that is,
+    replace all compatibility characters with their equivalents.
+    """
     return unicodedata.normalize("NFKD", text)
 
 def case_insensitive_string_compare(s1: str, s2: str) -> bool:
+    """
+    Compares case insensitive string *s1* and *s2*.
+
+    Returns *True* or *False*.
+
+    If *s1* or *s2* are not instances of str, *False* is returned.
+    """
     if not isinstance(s1, str) or not isinstance(s2, str):
         return False
     if s1.lower() == s2.lower():
