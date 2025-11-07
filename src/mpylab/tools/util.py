@@ -15,6 +15,7 @@ import sys
 import time
 import traceback
 import smtplib
+import unicodedata
 from email.message import EmailMessage
 from typing import Any
 
@@ -43,6 +44,18 @@ c = 2.99792458e8
 mu0 = 4 * math.pi * 1e-7
 eps0 = 1.0 / (mu0 * c * c)
 pi = math.pi
+
+def normalize_caseless(text: str) -> str:
+    return unicodedata.normalize("NFKD", text)
+
+def case_insensitive_string_compare(s1: str, s2: str) -> bool:
+    if not isinstance(s1, str) or not isinstance(s2, str):
+        return False
+    if s1.lower() == s2.lower():
+        return True
+    s1 = normalize_caseless(s1)
+    s2 = normalize_caseless(s2)
+    return s1.casefold() == s2.casefold()
 
 def cmp(a: Any, b: Any) -> int:
     """*cmp* was deprecated with python 3.0.
