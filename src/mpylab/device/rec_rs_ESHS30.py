@@ -185,7 +185,7 @@ def main():
                         driver: rec_rs_ESHS30.py
 
                         [Init_Value]
-                        fstart: 9e6
+                        fstart: 9e3
                         fstop: 30e6
                         fstep: 1
                         visa: GPIB0::17::INSTR
