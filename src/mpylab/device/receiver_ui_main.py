@@ -34,6 +34,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.conf = None
         self.ini = None
         self.dev = None
+        self.freq = None
+        self.meastime = None
+        self.rbw = None
+        self.att = None
+        self.min_att = None
+        self.detector = None
+        self.preamplifier = None
+
         self.freq_units = bidict({0: 'radioButton_freq_1',
                                   3: 'radioButton_freq_k',
                                   6: 'radioButton_freq_M',
@@ -58,7 +66,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.radioButton_rbw_1.toggled.connect(self.rbw_changed)
         self.radioButton_rbw_k.toggled.connect(self.rbw_changed)
         self.radioButton_rbw_M.toggled.connect(self.rbw_changed)
+        self.checkBox_rbw_auto.toggled.connect(self.rbw_changed)
 
+        self.doubleSpinBox_meastime.valueChanged.connect(self.meastime_changed)
+        self.radioButton_meastime_s.toggled.connect(self.meastime_changed)
+        self.radioButton_meastime_ms.toggled.connect(self.meastime_changed)
+
+        self.doubleSpinBox_att.valueChanged.connect(self.att_changed)
+        self.checkBox_att_auto.toggled.connect(self.att_changed)
 
         self.update_from_ini()
 
@@ -72,13 +87,46 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.update_freq(self.freq)
         return self.freq
 
-    def rbw_changed(self):
-        val = self.doubleSpinBox_rbw.value()
-        for n, attr in self.rbw_units.items():
+    def meastime_changed(self):
+        val = self.doubleSpinBox_meastime.value()
+        for n, attr in self.meastime_units.items():
             if getattr(self, attr).isChecked():
-                self.rbw = val * 10**n
+                self.meastime = val * 10**n
                 break
+        err, self.meastime = self.dev.SetMeasTime(self.meastime)
+        self.update_meastime(self.meastime)
+        return self.meastime
+
+    def rbw_changed(self):
+        if self.checkBox_rbw_auto.isChecked():
+            pass  # TODO: Implement auto rbw
+        else:
+            val = self.doubleSpinBox_rbw.value()
+            for n, attr in self.rbw_units.items():
+                if getattr(self, attr).isChecked():
+                    self.rbw = val * 10**n
+                    break
+            err, self.rbw = self.dev.SetResolutionBandwidth(self.rbw)
+            self.update_rbw(self.rbw)
         return self.rbw
+
+    def att_changed(self):
+        if self.checkBox_att_auto.isChecked():
+            pass  # TODO: Implement auto att
+        else:
+            self.att = self.doubleSpinBox_att.value()
+            err, self.att = self.dev.SetAttenuation(self.att)
+            self.update_att(self.att)
+        return self.rbw
+
+    def update_att(self, att):
+        if att is None:   # auto
+            self.checkBox_att_auto.setChecked(True)
+            self.doubleSpinBox_att.setEnabled(False)
+        else:
+            self.checkBox_att_auto.setChecked(False)
+            self.doubleSpinBox_att.setEnabled(True)
+            self.doubleSpinBox_att.setValue(att)
 
     def update_freq(self, freq):
         val, n = map_to_1000(freq)
@@ -91,9 +139,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         getattr(self, self.meastime_units[n]).setChecked(True)
 
     def update_rbw(self, rbw):
-        val, n = map_to_1000(float(rbw))
-        self.doubleSpinBox_rbw.setValue(val)
-        getattr(self, self.rbw_units[n]).setChecked(True)
+        if rbw is None:
+            self.checkBox_rbw_auto.setChecked(True)
+            self.doubleSpinBox_rbw.setEnabled(False)
+        else:
+            self.checkBox_rbw_auto.setChecked(False)
+            self.doubleSpinBox_rbw.setEnabled(True)
+            val, n = map_to_1000(float(rbw))
+            self.doubleSpinBox_rbw.setValue(val)
+            getattr(self, self.rbw_units[n]).setChecked(True)
 
     def update_from_ini(self):
         if self.dev:
@@ -121,18 +175,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         att = ini_conf['channel_1']['attenuation']
         if case_insensitive_string_compare(att, 'auto'):
-            self.checkBox_att_auto.setChecked(True)
+            self.update_att(None)
         else:
-            self.checkBox_att_auto.setChecked(False)
-            self.doubleSpinBox_att.setValue(float(att))
+            self.update_att(float(att))
 
         rbw = ini_conf['channel_1']['rbw']
         if case_insensitive_string_compare(rbw, 'auto'):
-            self.checkBox_rbw_auto.setChecked(True)
+            self.update_rbw(None)
         else:
-            self.checkBox_rbw_auto.setChecked(False)
             self.update_rbw(float(rbw))
-
         detector = ini_conf['channel_1']['detector']
         idx = self.comboBox_detec.findText(detector, Qt.MatchFlag.MatchContains)
         self.comboBox_detec.setCurrentIndex(idx)
