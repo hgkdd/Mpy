@@ -54,6 +54,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.radioButton_freq_M.toggled.connect(self.freq_changed)
         self.radioButton_freq_G.toggled.connect(self.freq_changed)
 
+        self.doubleSpinBox_rbw.valueChanged.connect(self.rbw_changed)
+        self.radioButton_rbw_1.toggled.connect(self.rbw_changed)
+        self.radioButton_rbw_k.toggled.connect(self.rbw_changed)
+        self.radioButton_rbw_M.toggled.connect(self.rbw_changed)
+
+
         self.update_from_ini()
 
     def freq_changed(self):
@@ -62,8 +68,32 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             if getattr(self, attr).isChecked():
                 self.freq = val * 10**n
                 break
+        err, self.freq = self.dev.SetFreq(self.freq)
+        self.update_freq(self.freq)
         return self.freq
 
+    def rbw_changed(self):
+        val = self.doubleSpinBox_rbw.value()
+        for n, attr in self.rbw_units.items():
+            if getattr(self, attr).isChecked():
+                self.rbw = val * 10**n
+                break
+        return self.rbw
+
+    def update_freq(self, freq):
+        val, n = map_to_1000(freq)
+        self.doubleSpinBox_freq.setValue(val)
+        getattr(self, self.freq_units[n]).setChecked(True)
+
+    def update_meastime(self, meastime):
+        val, n = map_to_1000(meastime)
+        self.doubleSpinBox_meastime.setValue(val)
+        getattr(self, self.meastime_units[n]).setChecked(True)
+
+    def update_rbw(self, rbw):
+        val, n = map_to_1000(float(rbw))
+        self.doubleSpinBox_rbw.setValue(val)
+        getattr(self, self.rbw_units[n]).setChecked(True)
 
     def update_from_ini(self):
         if self.dev:
@@ -81,14 +111,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         minfreq = ini_conf['init_value']['fstart']
         maxfreq = ini_conf['init_value']['fstop']
-        val, n = map_to_1000(minfreq)
-        self.doubleSpinBox_freq.setValue(val)
-        getattr(self, self.freq_units[n]).setChecked(True)
+        self.update_freq(minfreq)
 
         meastime = ini_conf['channel_1']['meas_time']
-        val, n = map_to_1000(meastime)
-        self.doubleSpinBox_meastime.setValue(val)
-        getattr(self, self.meastime_units[n]).setChecked(True)
+        self.update_meastime(meastime)
 
         min_att = ini_conf['channel_1']['min_attenuation']
         self.doubleSpinBox_minatt.setValue(min_att)
@@ -105,9 +131,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.checkBox_rbw_auto.setChecked(True)
         else:
             self.checkBox_rbw_auto.setChecked(False)
-            val, n = map_to_1000(float(rbw))
-            self.doubleSpinBox_rbw.setValue(val)
-            getattr(self, self.rbw_units[n]).setChecked(True)
+            self.update_rbw(float(rbw))
 
         detector = ini_conf['channel_1']['detector']
         idx = self.comboBox_detec.findText(detector, Qt.MatchFlag.MatchContains)
@@ -116,6 +140,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         preamplifier = ini_conf['channel_1']['preamplifier']
         idx = self.comboBox_preamp.findText(preamplifier, Qt.MatchFlag.MatchContains)
         self.comboBox_preamp.setCurrentIndex(idx)
+
+
         self.ini.seek(0)   # seek to top of ini 'file'
         self.dev.Init(ini=self.ini, channel=1)
         self.label_levelunit.setText(self.dev._internal_unit)
