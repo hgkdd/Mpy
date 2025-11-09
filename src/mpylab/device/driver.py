@@ -159,10 +159,13 @@ class DRIVER:
         print(("In read", tmpl))
         dct = None
         ans = eval(input('%s in: %s -> ' % (self.IDN, tmpl)))
-        m = re.match(tmpl, ans)
-        if m:
-            dct = m.groupdict()
-        return dct
+        if tmpl is None:
+            return ans
+        else:
+            m = re.match(tmpl, ans)
+            if m:
+                dct = m.groupdict()
+            return dct
 
     def _debug_query(self, cmd, tmpl):
         print(("In query", cmd, tmpl))
@@ -196,8 +199,8 @@ class DRIVER:
         """
         self.error = 0
         self.get_config(ini, channel)
+        buspars = {}
         if not self.conf['init_value'].get('virtual', False):
-            buspars = {}
             for k in ('timeout',
                       'chunk_size',
                       'values_format',
@@ -210,10 +213,10 @@ class DRIVER:
                 except AttributeError:
                     pass
 
-            self.dev = self._init_bus(**buspars)
-            if self.dev is not None:
-                dct = self._do_cmds('Init', locals())
-                self._update(dct)
+        self.dev = self._init_bus(**buspars)
+        if self.dev is not None:
+            dct = self._do_cmds('Init', locals())
+            self._update(dct)
         # print self.error
         return self.error
 
