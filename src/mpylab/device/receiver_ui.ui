@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>954</width>
-    <height>634</height>
+    <height>638</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -36,6 +36,13 @@
           </size>
          </property>
         </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_trigger">
+         <property name="text">
+          <string>Trigger</string>
+         </property>
+        </widget>
        </item>
        <item>
         <widget class="QLabel" name="label_8">
@@ -114,8 +121,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>425</width>
-               <height>258</height>
+               <width>482</width>
+               <height>289</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_2">
@@ -135,7 +142,7 @@ fstart: 9e3
 fstop: 30e6
 fstep: 1
 visa: GPIB0::17::INSTR
-virtual: 1
+virtual: 0
 
 [Channel_1]
 name: RFin
@@ -492,8 +499,8 @@ detector: PEAK</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>898</width>
-            <height>98</height>
+            <width>896</width>
+            <height>88</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout">
@@ -515,7 +522,7 @@ detector: PEAK</string>
      <x>0</x>
      <y>0</y>
      <width>954</width>
-     <height>33</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuReceiver">

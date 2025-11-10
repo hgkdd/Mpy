@@ -252,6 +252,7 @@ class RECEIVER(DRIVER):
         self.error = 0
         dct = self._do_cmds('GetAttenuation', locals())
         self._update(dct)
+        self.attenuation = float(self.attenuation)
         return self.error, self.attenuation
 
 

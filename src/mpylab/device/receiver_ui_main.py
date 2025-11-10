@@ -4,7 +4,7 @@ from numpy import sign
 from bidict import bidict
 from importlib import import_module
 from PySide6 import QtWidgets, QtCore
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 
 from receiver_ui import Ui_MainWindow
 
@@ -31,6 +31,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
         self.conftmpl = RECEIVER().conftmpl
+        self.after_init = False
         self.conf = None
         self.ini = None
         self.dev = None
@@ -52,7 +53,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.meastime_units = bidict({0: 'radioButton_meastime_s',
                                   -3: 'radioButton_meastime_ms'})
 
+        lev_timer = QTimer(self)
+        lev_timer.timeout.connect(self.update_level)
+        lev_timer.start(1000)
+
+
         self.pushButton_init.clicked.connect(self.init_clicked)
+
+        self.pushButton_trigger.clicked.connect(self.trigger_clicked)
+
         self.checkBox_att_auto.stateChanged.connect(self.auto_att_changed)
         self.checkBox_rbw_auto.stateChanged.connect(self.auto_rbw_changed)
 
@@ -75,7 +84,39 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.doubleSpinBox_att.valueChanged.connect(self.att_changed)
         self.checkBox_att_auto.toggled.connect(self.att_changed)
 
+        self.doubleSpinBox_minatt.valueChanged.connect(self.minatt_changed)
+
+        self.comboBox_preamp.currentIndexChanged.connect(self.preamplifier_changed)
+
+        self.comboBox_detec.currentIndexChanged.connect(self.detect_changed)
+
+
         self.update_from_ini()
+
+    def update_level(self):
+        obj = None
+        txt = 'None'
+        if self.after_init:
+            self.error, obj = self.dev.GetDataNB(retrigger=True)
+            if obj is None:
+                txt = 'None'
+            else:
+                txt = str(round(self.dev._get_db_from_obj(obj), 2))
+                self.plainTextEdit_output.appendPlainText(str(obj))
+        self.label_level.setText(txt)
+
+
+    def update_preamplifier(self):
+        self.preamplifier = self.comboBox_preamp.currentText()
+        if self.after_init:
+            err, self.preamplifier = self.dev.SetPreamplifier(self.preamplifier)
+        return self.preamplifier
+
+    def update_detector(self):
+        self.detector = self.comboBox_detec.currentText()
+        if self.after_init:
+            err, self.detector = self.dev.SetDetector(self.detector)
+        return self.detector
 
     def freq_changed(self):
         val = self.doubleSpinBox_freq.value()
@@ -83,9 +124,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             if getattr(self, attr).isChecked():
                 self.freq = val * 10**n
                 break
-        err, self.freq = self.dev.SetFreq(self.freq)
+        if self.after_init:
+            err, self.freq = self.dev.SetFreq(self.freq)
         self.update_freq(self.freq)
+        self.rbw_changed()
         return self.freq
+
 
     def meastime_changed(self):
         val = self.doubleSpinBox_meastime.value()
@@ -93,31 +137,69 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             if getattr(self, attr).isChecked():
                 self.meastime = val * 10**n
                 break
-        err, self.meastime = self.dev.SetMeasTime(self.meastime)
+        if self.after_init:
+            err, self.meastime = self.dev.SetMeasTime(self.meastime)
         self.update_meastime(self.meastime)
         return self.meastime
 
+    def preamplifier_changed(self):
+        txt = self.comboBox_preamp.currentText()
+        if self.after_init:
+            err, self.preamplifier = self.dev.SetPreamplifier(txt)
+        return self.preamplifier
+
+    def detect_changed(self):
+        txt = self.comboBox_detec.currentText()
+        if self.after_init:
+            err, self.detector = self.dev.SetDetector(txt)
+        return self.detector
+
     def rbw_changed(self):
         if self.checkBox_rbw_auto.isChecked():
-            pass  # TODO: Implement auto rbw
+            if self.after_init:
+                err, self.rbw = self.dev.SetResolutionBandwidth(None)
+                val, n = map_to_1000(float(self.rbw))
+                self.doubleSpinBox_rbw.setValue(val)
         else:
             val = self.doubleSpinBox_rbw.value()
             for n, attr in self.rbw_units.items():
                 if getattr(self, attr).isChecked():
                     self.rbw = val * 10**n
                     break
-            err, self.rbw = self.dev.SetResolutionBandwidth(self.rbw)
-            self.update_rbw(self.rbw)
+            if self.after_init:
+                err, self.rbw = self.dev.SetResolutionBandwidth(self.rbw)
+                self.update_rbw(self.rbw)
         return self.rbw
 
     def att_changed(self):
         if self.checkBox_att_auto.isChecked():
-            pass  # TODO: Implement auto att
+            if self.after_init:
+                err, self.att = self.dev.SetAttenuation(None)
+                self.doubleSpinBox_att.setValue(float(self.att))
         else:
             self.att = self.doubleSpinBox_att.value()
-            err, self.att = self.dev.SetAttenuation(self.att)
+            if self.after_init:
+                err, self.att = self.dev.SetAttenuation(self.att)
             self.update_att(self.att)
-        return self.rbw
+        return self.att
+
+    def trigger_clicked(self):
+        self.error = 0
+        if self.after_init:
+            self.dev.Trigger()
+
+    def minatt_changed(self):
+        self.min_att = self.doubleSpinBox_minatt.value()
+        if self.after_init:
+            err, self.min_att = self.dev.SetMinAttenuation(self.min_att)
+            self.update_minatt(self.min_att)
+        self.update_att(self.att)
+        return self.min_att
+
+    def update_minatt(self, min_att):
+        self.doubleSpinBox_minatt.setValue(min_att)
+        err, self.att = self.dev.GetAttenuation()
+        self.doubleSpinBox_att.setValue(self.att)
 
     def update_att(self, att):
         if att is None:   # auto
@@ -132,6 +214,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         val, n = map_to_1000(freq)
         self.doubleSpinBox_freq.setValue(val)
         getattr(self, self.freq_units[n]).setChecked(True)
+
 
     def update_meastime(self, meastime):
         val, n = map_to_1000(meastime)
@@ -150,10 +233,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             getattr(self, self.rbw_units[n]).setChecked(True)
 
     def update_from_ini(self):
-        if self.dev:
-            self.dev.Quit()
-            self.dev = None
-
         initxt = self.plainTextEdit_ini.toPlainText()
         ini = format_block(initxt)
         self.ini = io.StringIO(ini)
@@ -184,22 +263,37 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.update_rbw(None)
         else:
             self.update_rbw(float(rbw))
+
         detector = ini_conf['channel_1']['detector']
         idx = self.comboBox_detec.findText(detector, Qt.MatchFlag.MatchContains)
         self.comboBox_detec.setCurrentIndex(idx)
+        self.update_detector()
 
         preamplifier = ini_conf['channel_1']['preamplifier']
         idx = self.comboBox_preamp.findText(preamplifier, Qt.MatchFlag.MatchContains)
         self.comboBox_preamp.setCurrentIndex(idx)
+        self.update_preamplifier()
 
 
         self.ini.seek(0)   # seek to top of ini 'file'
-        self.dev.Init(ini=self.ini, channel=1)
-        self.label_levelunit.setText(self.dev._internal_unit)
 
 
     def init_clicked(self):
+        if self.after_init:
+            self.dev.Quit()
+            self.after_init = False
+
         self.update_from_ini()
+        self.dev.Init(ini=self.ini, channel=1)
+        self.after_init = True
+        self.label_levelunit.setText(self.dev._internal_unit)
+        self.dev.Trigger()
+        self.freq_changed()
+        self.preamplifier_changed()
+        self.detect_changed()
+        self.rbw_changed()
+        self.meastime_changed()
+        self.att_changed()
 
     def auto_att_changed(self):
         state = self.checkBox_att_auto.isChecked()

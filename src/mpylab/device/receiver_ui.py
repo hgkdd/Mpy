@@ -27,7 +27,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(954, 634)
+        MainWindow.resize(954, 638)
         self.actionInfo = QAction(MainWindow)
         self.actionInfo.setObjectName(u"actionInfo")
         self.actionQuit = QAction(MainWindow)
@@ -47,6 +47,11 @@ class Ui_MainWindow(object):
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_6.addItem(self.horizontalSpacer)
+
+        self.pushButton_trigger = QPushButton(self.frame_3)
+        self.pushButton_trigger.setObjectName(u"pushButton_trigger")
+
+        self.horizontalLayout_6.addWidget(self.pushButton_trigger)
 
         self.label_8 = QLabel(self.frame_3)
         self.label_8.setObjectName(u"label_8")
@@ -96,7 +101,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 425, 258))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 482, 289))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.plainTextEdit_ini = QPlainTextEdit(self.scrollAreaWidgetContents)
@@ -319,7 +324,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 898, 98))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 896, 88))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout.setObjectName(u"gridLayout")
         self.plainTextEdit_output = QPlainTextEdit(self.scrollAreaWidgetContents_2)
@@ -337,7 +342,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 954, 33))
+        self.menubar.setGeometry(QRect(0, 0, 954, 23))
         self.menuReceiver = QMenu(self.menubar)
         self.menuReceiver.setObjectName(u"menuReceiver")
         self.menuFile = QMenu(self.menubar)
@@ -393,6 +398,7 @@ class Ui_MainWindow(object):
         self.actionInfo.setText(QCoreApplication.translate("MainWindow", u"Info", None))
         self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
         self.actionOpen_Ini_File.setText(QCoreApplication.translate("MainWindow", u"Open Ini-File", None))
+        self.pushButton_trigger.setText(QCoreApplication.translate("MainWindow", u"Trigger", None))
         self.label_8.setText(QCoreApplication.translate("MainWindow", u"Level:", None))
         self.label_level.setText(QCoreApplication.translate("MainWindow", u"-100,5", None))
         self.label_levelunit.setText(QCoreApplication.translate("MainWindow", u"dBuV", None))
@@ -410,7 +416,7 @@ class Ui_MainWindow(object):
 "fstop: 30e6\n"
 "fstep: 1\n"
 "visa: GPIB0::17::INSTR\n"
-"virtual: 1\n"
+"virtual: 0\n"
 "\n"
 "[Channel_1]\n"
 "name: RFin\n"

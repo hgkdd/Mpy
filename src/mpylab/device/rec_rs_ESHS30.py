@@ -7,6 +7,7 @@
    :license: GPL-3 or higher
 """
 import numpy as np
+from docutils.nodes import error
 
 from mpylab.device.receiver import RECEIVER as REC
 from mpylab.tools.util import case_insensitive_string_compare
@@ -23,21 +24,25 @@ class RECEIVER(REC):
                       'GetData': [('LEVEL?', r'LEVEL (?P<level>%s)' % self._FP)],
                       'GetDataNB': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<level>%s)' % self._FP)],
                       'Trigger': [('*TRG', None)],
-                      'SetAttenuation': [("f'ATTENUATION {attenuation} DB'", None)],
+                      'SetAttenuation': [('ATTENUATION:AUTO OFF', None), ("f'ATTENUATION {attenuation} DB'", None)],
                       'GetAttenuation': [('ATTENUATION?', r'ATTENUATION (?P<attenuation>%s)' % self._FP)],
-                      'SetMinAttenuation': [("f'MIN:ATTENUATION {min_attenuation} DB'", None)],
-                      'GetMinAttenuation': [('MIN:ATTENUATION?', r'MIN:ATTENUATION (?P<min_attenuation>%s)' % self._FP)],
+                      #'SetMinAttenuation': [("f'MIN:ATTENUATION {min_attenuation} DB'", None)],
+                      #'GetMinAttenuation': [('MIN:ATTENUATION?', r'MIN:ATTENUATION (?P<min_attenuation>%s)' % self._FP)],
                       'SetMeasTime': [("f'MEASUREMENT:TIME {meas_time} s'", None)],
                       'GetMeasTime': [('MEASUREMENT:TIME?', r'MEASUREMENT:TIME (?P<meas_time>%s)' % self._FP)],
                       'SetDetector': [("f'DETECTOR {detector}'", None)],
                       'GetDetector': [('DETECTOR?', r'DETECTOR (?P<detector>.*)')],
                       'SetPreamplifier': [("f'PREAMPLIFIER {preamplifier}'", None)],
                       'GetPreamplifier': [('PREAMPLIFIER?', r'PREAMPLIFIER (?P<preamplifier>.*)')],
-                      'SetResolutionBandwidth': [("f'BANDWIDTH:IF {rbw} HZ'", None)],
+                      'SetResolutionBandwidth': [("SPECIALFUNC 1,OFF", None), ("f'BANDWIDTH:IF {rbw} HZ'", None)],
                       'GetResolutionBandwidth': [('BANDWIDTH:IF?', r'BANDWIDTH:IF (?P<rbw>%s)' % self._FP)],
                       'Quit': [('*CLS', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         self.error = 0
+        self.min_attenuation = 10    # a safe value as default
+        self.detector_map = {'peak': 'PEAK',
+                             'qpeak': 'QUASIPEAK',
+                             'average': 'AVERAGE'}
 
     def Init(self, ini=None, channel=None):
         if channel is None:
@@ -56,6 +61,7 @@ class RECEIVER(REC):
             self.unit = VOLT
         self._get_internal_unit()
         return self.error
+
 
     def _get_db_from_obj(self, obj, Z=50):
         value = obj.get_expectation_value_as_float()
@@ -137,6 +143,66 @@ class RECEIVER(REC):
         obj = Quantity(self.unit, UncertainInput(level, level*relerr))
         return obj
 
+    def SetPreamplifier(self, preamplifier):
+        self.error = 0
+        dct = self._do_cmds('SetPreamplifier', locals())
+        self._update(dct)
+        dct = self._do_cmds('GetPreamplifier', locals())
+        self._update(dct)
+        return self.error, self.preamplifier
+
+    def GetPreamplifier(self):
+        self.error = 0
+        dct = self._do_cmds('GetPreamplifier', locals())
+        self._update(dct)
+        return self.error, self.preamplifier
+
+    def SetDetector(self, detector):
+        self.error = 0
+        detector = self.detector_map[detector.lower()]
+        dct = self._do_cmds('SetDetector', locals())
+        self._update(dct)
+        dct = self._do_cmds('GetDetector', locals())
+        self._update(dct)
+        for key, value in self.detector_map.items():
+            if self.detector == value:
+                self.detector = key
+        return self.error, self.detector
+
+    def GetDetector(self):
+        self.error = 0
+        dct = self._do_cmds('GetDetector', locals())
+        self._update(dct)
+        return self.error, self.detector
+
+
+
+    def SetResolutionBandwidth(self, rbw):
+        self.error = 0
+        if rbw is None or case_insensitive_string_compare(rbw, 'auto'):
+            self.write('SPECIALFUNC 1,ON')
+        else:
+            dct = self._do_cmds('SetResolutionBandwidth', locals())
+            self._update(dct)
+        dct = self._do_cmds('GetResolutionBandwidth', locals())
+        self._update(dct)
+        return self.error, self.rbw
+
+    def SetAttenuation(self, attenuation):
+        self.error = 0
+        if attenuation is None or case_insensitive_string_compare(attenuation, 'auto'):
+            self.write('ATTENUATION:AUTO ON')
+        else:
+            attenuation = int(np.ceil(attenuation / 10.0)) * 10    # ESHS can only 10,20,30,...
+            attenuation = int(max(self.min_attenuation, attenuation))   # respect min_attenuation
+            dct = self._do_cmds('SetAttenuation', locals())
+            self._update(dct)
+        dct = self._do_cmds('GetAttenuation', locals())
+        self._update(dct)
+        self.attenuation = float(self.attenuation)
+        return self.error, self.attenuation
+
+
     def GetData(self):
         self.error = 0
         dct = self._do_cmds('GetData', locals())
@@ -167,6 +233,15 @@ class RECEIVER(REC):
             if retrigger is True or case_insensitive_string_compare(retrigger, 'on'):
                 self.Trigger()
         return self.error, obj
+
+    def SetMinAttenuation(self, att):
+        self.min_attenuation = max(att, 10)   # 10 dB is minimal min_attenuation
+        if self.min_attenuation > self.attenuation:
+            self.error, self.attenuation = self.SetAttenuation(self.min_attenuation)
+        return 0, self.min_attenuation
+
+    def GetMinAttenuation(self):
+        return 0, self.min_attenuation
 
 
 def main():
