@@ -65,6 +65,8 @@ class RECEIVER(REC):
         self.write("PRESET")
 
         self._get_internal_unit()
+
+
         return self.error
 
 
@@ -180,7 +182,23 @@ class RECEIVER(REC):
         self._update(dct)
         return self.error, self.detector
 
+    def SetMeasTime(self, meas_time):
+        self.error = 0
+        if meas_time is None or case_insensitive_string_compare(meas_time, 'auto'):
+            self.write('SPECIALFUNC 2,ON')   # couple meas_time to ZF bandwidth
+        else:
+            self.write('SPECIALFUNC 2,OFF')   # couple meas_time to ZF bandwidth
+            dct = self._do_cmds('SetMeasTime', locals())
+            self._update(dct)
+        dct = self._do_cmds('GetMeasTime', locals())
+        self._update(dct)
+        return self.error, self.meas_time
 
+    def GetMeasTime(self):
+        self.error = 0
+        dct = self._do_cmds('GetMeasTime', locals())
+        self._update(dct)
+        return self.error, self.meas_time
 
     def SetResolutionBandwidth(self, rbw):
         self.error = 0
