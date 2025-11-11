@@ -7,7 +7,6 @@
    :license: GPL-3 or higher
 """
 import numpy as np
-from docutils.nodes import error
 
 from mpylab.device.receiver import RECEIVER as REC
 from mpylab.tools.util import case_insensitive_string_compare
@@ -48,6 +47,7 @@ class RECEIVER(REC):
         if channel is None:
             channel = 1
         self.error = super().Init(ini=ini, channel=channel)
+
         sec = 'channel_%d' % channel
         try:
             self.unit = self.conf[sec]['unit']
@@ -59,6 +59,11 @@ class RECEIVER(REC):
                 raise RuntimeError('Unrecognized unit: %s' % self.unit)
         except KeyError:
             self.unit = VOLT
+        # Preset
+        self.write("*CLS")
+        self.write("*RST")
+        self.write("PRESET")
+
         self._get_internal_unit()
         return self.error
 
