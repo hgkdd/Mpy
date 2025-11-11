@@ -65,6 +65,12 @@ class RECEIVER(REC):
         self.write("PRESET")
 
         self._get_internal_unit()
+        self.error, self.min_attenuation = self.SetMinAttenuation(self.conf[f'channel_{channel}']['min_attenuation'])
+        self.error, self.detector = self.SetDetector(self.conf[f'channel_{channel}']['detector'])
+        self.error, self.rbw = self.SetResolutionBandwidth(self.conf[f'channel_{channel}']['rbw'])
+        self.error, self.meas_time = self.SetMeasTime(self.conf[f'channel_{channel}']['meas_time'])
+        self.error, self.preamplifier = self.SetPreamplifier(self.conf[f'channel_{channel}']['preamplifier'])
+        self.error, self.attenuation = self.SetAttenuation(self.conf[f'channel_{channel}']['attenuation'])
 
 
         return self.error
@@ -259,7 +265,7 @@ class RECEIVER(REC):
 
     def SetMinAttenuation(self, att):
         self.min_attenuation = max(att, 10)   # 10 dB is minimal min_attenuation
-        if self.min_attenuation > self.attenuation:
+        if self.attenuation is None or self.min_attenuation > self.attenuation:
             self.error, self.attenuation = self.SetAttenuation(self.min_attenuation)
         return 0, self.min_attenuation
 
