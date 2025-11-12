@@ -264,7 +264,7 @@ class RECEIVER(REC):
         return self.error, obj
 
     def SetMinAttenuation(self, att):
-        self.min_attenuation = max(att, 10)   # 10 dB is minimal min_attenuation
+        self.min_attenuation = max(att, 0)   # 0 dB is minimal min_attenuation
         if self.attenuation is None or self.min_attenuation > self.attenuation:
             self.error, self.attenuation = self.SetAttenuation(self.min_attenuation)
         return 0, self.min_attenuation
