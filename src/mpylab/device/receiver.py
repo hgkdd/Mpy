@@ -67,7 +67,7 @@ class RECEIVER(DRIVER):
         - *unit*: a string containing the unit of the returned power/voltage readings.
           However, :mod:`scuq` will ignore dB-settings, and the returned power/voltage will contain
           the unit anyway.
-        - *meas_time*: the measuring time for that channel
+        - *meas_time*: the measuring time for that channel, or *auto*
         - *attenuation*: value of the attenuation, may be *auto*
         - *min_attenuation*: value of the minimum attenuation
         - *detector*: 'PEAK', 'AVERAGE', 'QPEAK'
@@ -93,7 +93,7 @@ class RECEIVER(DRIVER):
                      'detector': str,
                      'attenuation': str,
                      'min_attenuation': int,
-                     'meas_time': float,
+                     'meas_time': str,
                      'rbw': str,
                      'unit': str,
                      'preamplifier': str}}
