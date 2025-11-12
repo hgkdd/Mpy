@@ -7,8 +7,9 @@
 
    :license: GPL-3 or higher
 """
+import cmath
 from scipy.interpolate import interp1d
-from numpy import nan_to_num
+from numpy import nan_to_num, atan2
 from scuq.ucomponents import Context, UncertainInput
 from scuq.quantities import Quantity
 
@@ -18,7 +19,7 @@ def _arg(obj):
        `imag` and `real`, `0` ist returned. Else, it returns `math.atan2(obj.imag,obj.real)`.
     """
     try:
-        phi = math.atan2(obj.imag, obj.real)  # complex
+        phi = atan2(obj.imag, obj.real)  # complex
     except AttributeError:
         # real
         phi = 0
