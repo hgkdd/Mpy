@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>954</width>
-    <height>638</height>
+    <height>654</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -121,8 +121,8 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>482</width>
-               <height>289</height>
+               <width>426</width>
+               <height>258</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_2">
@@ -161,10 +161,23 @@ detector: PEAK</string>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_init">
-            <property name="text">
-             <string>Init</string>
-            </property>
+           <widget class="QWidget" name="widget_4" native="true">
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="QPushButton" name="pushButton_load_ini">
+               <property name="text">
+                <string>Load Ini-File</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_init">
+               <property name="text">
+                <string>Init</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -499,8 +512,8 @@ detector: PEAK</string>
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>896</width>
-            <height>88</height>
+            <width>898</width>
+            <height>98</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout">
@@ -522,7 +535,7 @@ detector: PEAK</string>
      <x>0</x>
      <y>0</y>
      <width>954</width>
-     <height>23</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuReceiver">
@@ -561,7 +574,6 @@ detector: PEAK</string>
  </widget>
  <tabstops>
   <tabstop>plainTextEdit_ini</tabstop>
-  <tabstop>pushButton_init</tabstop>
   <tabstop>plainTextEdit_output</tabstop>
   <tabstop>doubleSpinBox_freq</tabstop>
   <tabstop>radioButton_freq_1</tabstop>
@@ -583,5 +595,38 @@ detector: PEAK</string>
   <tabstop>scrollArea_2</tabstop>
  </tabstops>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionQuit</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>476</x>
+     <y>326</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_load_ini</sender>
+   <signal>clicked()</signal>
+   <receiver>actionOpen_Ini_File</receiver>
+   <slot>trigger()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>149</x>
+     <y>440</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

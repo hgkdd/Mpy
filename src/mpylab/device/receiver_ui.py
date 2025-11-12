@@ -27,7 +27,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(954, 638)
+        MainWindow.resize(954, 654)
         self.actionInfo = QAction(MainWindow)
         self.actionInfo.setObjectName(u"actionInfo")
         self.actionQuit = QAction(MainWindow)
@@ -101,7 +101,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 482, 289))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 426, 258))
         self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
         self.plainTextEdit_ini = QPlainTextEdit(self.scrollAreaWidgetContents)
@@ -113,10 +113,22 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.scrollArea)
 
-        self.pushButton_init = QPushButton(self.groupBox)
+        self.widget_4 = QWidget(self.groupBox)
+        self.widget_4.setObjectName(u"widget_4")
+        self.horizontalLayout = QHBoxLayout(self.widget_4)
+        self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.pushButton_load_ini = QPushButton(self.widget_4)
+        self.pushButton_load_ini.setObjectName(u"pushButton_load_ini")
+
+        self.horizontalLayout.addWidget(self.pushButton_load_ini)
+
+        self.pushButton_init = QPushButton(self.widget_4)
         self.pushButton_init.setObjectName(u"pushButton_init")
 
-        self.verticalLayout.addWidget(self.pushButton_init)
+        self.horizontalLayout.addWidget(self.pushButton_init)
+
+
+        self.verticalLayout.addWidget(self.widget_4)
 
 
         self.horizontalLayout_2.addWidget(self.groupBox)
@@ -324,7 +336,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 896, 88))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 898, 98))
         self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout.setObjectName(u"gridLayout")
         self.plainTextEdit_output = QPlainTextEdit(self.scrollAreaWidgetContents_2)
@@ -342,7 +354,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 954, 23))
+        self.menubar.setGeometry(QRect(0, 0, 954, 30))
         self.menuReceiver = QMenu(self.menubar)
         self.menuReceiver.setObjectName(u"menuReceiver")
         self.menuFile = QMenu(self.menubar)
@@ -360,8 +372,7 @@ class Ui_MainWindow(object):
         self.label_4.setBuddy(self.comboBox_detec)
         self.label_6.setBuddy(self.doubleSpinBox_att)
 #endif // QT_CONFIG(shortcut)
-        QWidget.setTabOrder(self.plainTextEdit_ini, self.pushButton_init)
-        QWidget.setTabOrder(self.pushButton_init, self.plainTextEdit_output)
+        QWidget.setTabOrder(self.plainTextEdit_ini, self.plainTextEdit_output)
         QWidget.setTabOrder(self.plainTextEdit_output, self.doubleSpinBox_freq)
         QWidget.setTabOrder(self.doubleSpinBox_freq, self.radioButton_freq_1)
         QWidget.setTabOrder(self.radioButton_freq_1, self.radioButton_freq_k)
@@ -389,6 +400,8 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionOpen_Ini_File)
 
         self.retranslateUi(MainWindow)
+        self.actionQuit.triggered.connect(MainWindow.close)
+        self.pushButton_load_ini.clicked.connect(self.actionOpen_Ini_File.trigger)
 
         QMetaObject.connectSlotsByName(MainWindow)
     # setupUi
@@ -427,6 +440,7 @@ class Ui_MainWindow(object):
 "attenuation: auto\n"
 "rbw: auto\n"
 "detector: PEAK", None))
+        self.pushButton_load_ini.setText(QCoreApplication.translate("MainWindow", u"Load Ini-File", None))
         self.pushButton_init.setText(QCoreApplication.translate("MainWindow", u"Init", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"Functions", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"Meas Time", None))

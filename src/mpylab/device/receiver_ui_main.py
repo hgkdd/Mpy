@@ -1,10 +1,12 @@
 import io
 
+from PySide6.QtWidgets import QDialog
 from numpy import sign
 from bidict import bidict
 from importlib import import_module
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtWidgets
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from receiver_ui import Ui_MainWindow
 
@@ -90,6 +92,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.comboBox_detec.currentIndexChanged.connect(self.detect_changed)
 
+        # menue
+        self.actionInfo.triggered.connect(self.info_clicked)
+        self.actionOpen_Ini_File.triggered.connect(self.open_Ini_File_clicked)
+
 
         self.update_from_ini()
 
@@ -104,6 +110,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 txt = str(round(self.dev._get_db_from_obj(obj), 2))
                 self.plainTextEdit_output.appendPlainText(str(obj))
         self.label_level.setText(txt)
+
+    def info_clicked(self):
+        dialog = QMessageBox()
+        dialog.setWindowTitle("Info")
+        dialog.setText("This program is part of MpyLab.")
+        dialog.exec()
+
+    def open_Ini_File_clicked(self):
+        dialog = QFileDialog()
+        inifilemame, _ = dialog.getOpenFileName(self, "Open Ini File",".", "Ini-Files (*.ini)")
+        if inifilemame:
+            initxt = open(inifilemame, 'r').read()
+            self.plainTextEdit_ini.setPlainText(initxt)
 
 
     def update_preamplifier(self):
