@@ -5,7 +5,7 @@ from numpy import piecewise, log10, array
 def log_linear(f1,v1,f2,v2):
     return lambda f: (v2-v1) * log10(f/f1) / log10(f2/f1) + v1
 
-class EN55011:
+class LIMIT:
     description_Group = {1: """
                             # **Group 1**: (general purpose applications)
                             
@@ -72,6 +72,8 @@ class EN55011:
                                 # Test Setup: 
                                 
                                 **Class B** equipment shall be measured on a test site."""}
+    fmin = 150e3
+    fmax = 30e6
 
     def __init__(self, group=None, classification=None, detector=None, ports=None):
         self.group = None
@@ -157,12 +159,12 @@ class EN55011:
     def limit_G1_CA_AC_QP(self, f):    # only <= 20 kVA
         return self.limit_G1_CA_AC_AV(f) + 13
 
-CISPR11 = EN55011
+CISPR11 = EN55011 = LIMIT
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
     from mpylab.tools.spacing import logspace
-    limit = EN55011(group=1, classification='B', detector='QP', ports='AC')
+    limit = LIMIT(group=1, classification='B', detector='QP', ports='AC')
     print(limit.description)
     freqs = logspace(9e3, 50e6, 1.05)
 
