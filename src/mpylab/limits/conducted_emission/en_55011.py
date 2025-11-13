@@ -121,8 +121,6 @@ class EN55011:
         except AttributeError:
             raise
 
-
-
     def limit_G1_CB_AC_AV(self, f):
         if not isinstance(f, type(array)):
             f = array(f)
@@ -144,6 +142,22 @@ class EN55011:
 
     def limit_G2_CB_AC_QP(self, f): # same as Group 1
         return self.limit_G2_CB_AC_QP(f)
+
+    def limit_G1_CA_AC_AV(self, f):     # only <= 20 kVA
+        if not isinstance(f, type(array)):
+            f = array(f)
+        conditions = [(f >= 150e3) & (f < 500e3),
+                      (f >= 500e3) & (f <= 30e6)]
+        functions = [66,
+                     56,
+                     None]
+        results = piecewise(f, conditions, functions)
+        return results
+
+    def limit_G1_CA_AC_QP(self, f):    # only <= 20 kVA
+        return self.limit_G1_CA_AC_AV(f) + 13
+
+CISPR11 = EN55011
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
