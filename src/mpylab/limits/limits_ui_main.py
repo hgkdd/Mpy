@@ -3,6 +3,7 @@ from importlib import import_module
 from PySide6 import QtWidgets
 from PySide6.QtWidgets import QFileSystemModel, QFileIconProvider
 from PySide6.QtCore import QDir
+from PySide6.QtGui import QAbstractFileIconProvider
 
 from limits_ui import Ui_MainWindow
 
@@ -19,8 +20,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         icon_provider = QFileIconProvider()
         model.setIconProvider(icon_provider)
         model.setRootPath("")
-        model.setOption(QFileSystemModel.DontUseCustomDirectoryIcons)
-        model.setOption(QFileSystemModel.DontWatchForChanges)
+        model.setOption(QAbstractFileIconProvider.Option.DontUseCustomDirectoryIcons)
+        model.setOption(QFileSystemModel.Option.DontWatchForChanges)
         tree = self.treeView
         tree.setModel(model)
         if root_path:
@@ -38,7 +39,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             des = mod.LIMIT().description
             self.textEdit_description.setMarkdown(des)
         except Exception as e:
-            print(e)
+            pass
 
 if __name__ == "__main__":
     import sys
