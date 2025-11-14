@@ -59,6 +59,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             root_index = model.index(QDir.cleanPath(root_path))
             if root_index.isValid():
                 tree.setRootIndex(root_index)
+        tree.hideColumn(1)
+        tree.hideColumn(2)
+        tree.hideColumn(3)
 
     def tree_view_clicked(self):
         index = self.treeView.selectedIndexes()[0]
@@ -113,6 +116,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.plot_canvas.axes.grid(True)
         self.plot_canvas.axes.set_xlabel('Frequency in Hz')
         self.plot_canvas.axes.set_ylabel(f'Limit in {self.limit.unit}')
+        self.plot_canvas.axes.set_title(self.limit.description_title)
         # Trigger the canvas to update and redraw.
         self.plot_canvas.draw()
 

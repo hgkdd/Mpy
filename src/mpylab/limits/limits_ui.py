@@ -101,10 +101,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
-        self.pushButton = QPushButton(self.frame_2)
-        self.pushButton.setObjectName(u"pushButton")
+        self.pushButton_quit = QPushButton(self.frame_2)
+        self.pushButton_quit.setObjectName(u"pushButton_quit")
 
-        self.horizontalLayout.addWidget(self.pushButton)
+        self.horizontalLayout.addWidget(self.pushButton_quit)
 
 
         self.gridLayout_3.addWidget(self.frame_2, 1, 0, 1, 1)
@@ -119,6 +119,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
+        self.pushButton_quit.clicked.connect(MainWindow.close)
 
         self.tabWidget.setCurrentIndex(0)
 
@@ -131,6 +132,6 @@ class Ui_MainWindow(object):
         self.groupBox_variations.setTitle(QCoreApplication.translate("MainWindow", u"Variations", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_description), QCoreApplication.translate("MainWindow", u"Description", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_graph), QCoreApplication.translate("MainWindow", u"Graph", None))
-        self.pushButton.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
+        self.pushButton_quit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
     # retranslateUi
 
