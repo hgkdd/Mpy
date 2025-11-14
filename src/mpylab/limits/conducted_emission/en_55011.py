@@ -6,8 +6,8 @@ def log_linear(f1,v1,f2,v2):
     return lambda f: (v2-v1) * log10(f/f1) / log10(f2/f1) + v1
 
 class LIMIT:
-    description_Group = {1: """
-                            # **Group 1**: (general purpose applications)
+    description_Group = {'1': """
+                            # Group 1: (general purpose applications)
                             
                             All equipment in the scope of EN 55011 (CISPR 11) which is not classified as Group 2 equipment. 
                             
@@ -22,8 +22,10 @@ class LIMIT:
                             - Industrial process measurement and control equipment
                             - Semiconductor manufacturing equipment
                             - Switch mode power supplies""",
-                         2: """
-                             # **Group 2** (ISM RF applications): All ISM RF equipment in which radio-frequency energy in the frequency 
+                         '2': """
+                             # Group 2 (ISM RF applications): 
+                             
+                             All ISM RF equipment in which radio-frequency energy in the frequency 
                              range 9kHz to 400GHz is intentionally generated and used or only used locally, in the form 
                              of electromagnetic radiation, inductive and/or capacitive coupling, for the treatment 
                              of material, for inspection/analysis purposes, or for transfer of electromagnetic energy. 
@@ -42,7 +44,7 @@ class LIMIT:
                              - Demonstration models for education and training
                              - Battery chargers and power supplies – wireless power transfer (WPT) mode"""}
     description_Classification = {'A': """
-                                        # **Class A** (higher emission limits, industrial) 
+                                        # Class A (higher emission limits, industrial) 
                                         
                                         **Class A** devices are devices that are suitable for use in all areas other than 
                                         residential and such areas, and they are connected to the public mains.
@@ -56,7 +58,7 @@ class LIMIT:
                                         *Caution: This equipment is not intended for use in residential environments 
                                         and may not provide adequate protection to radio reception in such environments.*""",
                                   'B': """
-                                        # **Class B** (lower emission limits, residential): 
+                                        # Class B (lower emission limits, residential): 
                                         
                                         **Class B** devices are devices that are suitable for use in residential areas 
                                         and such areas, and they are connected to the public mains."""}
@@ -74,52 +76,56 @@ class LIMIT:
                                 **Class B** equipment shall be measured on a test site."""}
     fmin = 150e3
     fmax = 30e6
+    variations = {'Group': ('1', '2'),
+                       'Classification': ('A', 'B'),
+                       'Detector': ('QP', 'AV'),
+                       'Port': ('AC', 'DC')}
+    unit = 'dBuV'
 
-    def __init__(self, group=None, classification=None, detector=None, ports=None):
+    def __init__(self, group=None, classification=None, detector=None, port=None):
         self.group = None
         self.classification = None
         self.detector = None
-        self.ports = None
-        self.unit = 'dBuV'
+        self.port = None
         self.limitline = None
 
         if group is None:
-            self.group = 1
+            self.group = '1'
         else:
-            if group not in  (1, 2):
-                raise ValueError("EN55011: Group must be 1 or 2")
+            if group not in  self.variations['Group']:
+                raise ValueError(f"EN55011: Group must be in {self.variations['Group']}")
             self.group = group
 
         if classification is None:
             self.classification = 'A'
         else:
             classification = classification.upper()
-            if classification not in ('A', 'B'):
-                raise ValueError("EN55011: Class must be 'A' or 'B'")
+            if classification not in self.variations['Classification']:
+                raise ValueError(f"EN55011: Classification must be in {self.variations['Classification']}")
             self.classification = classification
 
         if detector is None:
             self.detector = 'QP'
         else:
             detector = detector.upper()
-            if detector not in ('QP', 'AV'):
-                raise ValueError("EN55011: Detector must be 'QP' or 'AV'")
+            if detector not in self.variations['Detector']:
+                raise ValueError(f"EN55011: Detector must be in {self.variations['Detector']}")
             self.detector = detector
 
-        if ports is None:
-            self.ports = 'AC'
+        if port is None:
+            self.port = 'AC'
         else:
-            ports = ports.upper()
-            if ports not in ('AC', 'DC'):
-                raise ValueError("EN55011: Ports must be 'AC' or 'DC'")
-            self.ports = ports
+            port = port.upper()
+            if port not in self.variations['Port']:
+                raise ValueError(f"EN55011: Ports must be in {self.variations['Port']}")
+            self.port = port
 
         self.description = "".join((cleandoc(self.description_Group[self.group]), '\n\n',
                                     cleandoc(self.description_Classification[self.classification]), '\n\n',
                                     cleandoc(self.description_TestSetup[self.classification])))
 
         try:
-            self.limitline = getattr(self, f'limit_G{self.group}_C{self.classification}_{self.ports}_{self.detector}')
+            self.limitline = getattr(self, f'limit_G{self.group}_C{self.classification}_{self.port}_{self.detector}')
         except AttributeError:
             raise
 
@@ -143,7 +149,7 @@ class LIMIT:
         return self.limit_G1_CB_AC_AV(f)
 
     def limit_G2_CB_AC_QP(self, f): # same as Group 1
-        return self.limit_G2_CB_AC_QP(f)
+        return self.limit_G1_CB_AC_QP(f)
 
     def limit_G1_CA_AC_AV(self, f):     # only <= 20 kVA
         if not isinstance(f, type(array)):
@@ -159,12 +165,38 @@ class LIMIT:
     def limit_G1_CA_AC_QP(self, f):    # only <= 20 kVA
         return self.limit_G1_CA_AC_AV(f) + 13
 
+    def limit_G2_CA_AC_AV(self, f):     # only <= 75 kVA
+        if not isinstance(f, type(array)):
+            f = array(f)
+        conditions = [(f >= 150e3) & (f < 500e3),
+                      (f >= 500e3) & (f <= 5e6),
+                      (f >= 5e6) & (f <= 30e6)]
+        functions = [90,
+                     76,
+                     log_linear(5e6,80,30e6,60),
+                     None]
+        results = piecewise(f, conditions, functions)
+        return results
+
+    def limit_G2_CA_AC_QP(self, f):     # only <= 75 kVA
+        if not isinstance(f, type(array)):
+            f = array(f)
+        conditions = [(f >= 150e3) & (f < 500e3),
+                      (f >= 500e3) & (f <= 5e6),
+                      (f >= 5e6) & (f <= 30e6)]
+        functions = [100,
+                     86,
+                     log_linear(5e6,90,30e6,73),
+                     None]
+        results = piecewise(f, conditions, functions)
+        return results
+
 CISPR11 = EN55011 = LIMIT
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
     from mpylab.tools.spacing import logspace
-    limit = LIMIT(group=1, classification='B', detector='QP', ports='AC')
+    limit = LIMIT(group='1', classification='B', detector='QP', port='AC')
     print(limit.description)
     freqs = logspace(9e3, 50e6, 1.05)
 

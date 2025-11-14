@@ -15,10 +15,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QHBoxLayout,
-    QHeaderView, QMainWindow, QMenuBar, QPushButton,
-    QScrollArea, QSizePolicy, QSpacerItem, QStatusBar,
-    QTabWidget, QTextEdit, QTreeView, QWidget)
+from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QGroupBox,
+    QHBoxLayout, QHeaderView, QMainWindow, QMenuBar,
+    QPushButton, QScrollArea, QSizePolicy, QSpacerItem,
+    QStatusBar, QTabWidget, QTextEdit, QTreeView,
+    QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -40,6 +41,13 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.treeView)
 
+        self.groupBox_variations = QGroupBox(self.frame)
+        self.groupBox_variations.setObjectName(u"groupBox_variations")
+        self.verticalLayout = QVBoxLayout(self.groupBox_variations)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+
+        self.horizontalLayout_2.addWidget(self.groupBox_variations)
+
         self.tabWidget = QTabWidget(self.frame)
         self.tabWidget.setObjectName(u"tabWidget")
         self.tab_description = QWidget()
@@ -59,15 +67,22 @@ class Ui_MainWindow(object):
         self.tab_graph.setObjectName(u"tab_graph")
         self.gridLayout_2 = QGridLayout(self.tab_graph)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.scrollArea = QScrollArea(self.tab_graph)
-        self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea_graph = QScrollArea(self.tab_graph)
+        self.scrollArea_graph.setObjectName(u"scrollArea_graph")
+        self.scrollArea_graph.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 590, 543))
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 542, 540))
+        self.gridLayout_5 = QGridLayout(self.scrollAreaWidgetContents)
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
+        self.verticalLayout_graph = QVBoxLayout()
+        self.verticalLayout_graph.setObjectName(u"verticalLayout_graph")
 
-        self.gridLayout_2.addWidget(self.scrollArea, 0, 0, 1, 1)
+        self.gridLayout_5.addLayout(self.verticalLayout_graph, 0, 0, 1, 1)
+
+        self.scrollArea_graph.setWidget(self.scrollAreaWidgetContents)
+
+        self.gridLayout_2.addWidget(self.scrollArea_graph, 0, 0, 1, 1)
 
         self.tabWidget.addTab(self.tab_graph, "")
 
@@ -97,7 +112,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1342, 30))
+        self.menubar.setGeometry(QRect(0, 0, 1342, 33))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -113,6 +128,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+        self.groupBox_variations.setTitle(QCoreApplication.translate("MainWindow", u"Variations", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_description), QCoreApplication.translate("MainWindow", u"Description", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_graph), QCoreApplication.translate("MainWindow", u"Graph", None))
         self.pushButton.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
