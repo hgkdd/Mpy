@@ -69,7 +69,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         name = info.fileName()
         path = info.absolutePath()
         try:
-            self.mod = import_module(f'.{name.rstrip('.py')}', package='mpylab.limits.conducted_emission')
+            index = path.rfind('/')
+            submodule = path[index + 1:]
+            self.mod = import_module(f'.{name.rstrip('.py')}', package=f'mpylab.limits.{submodule}')
             #des = mod.LIMIT().description
             self.textEdit_description.setMarkdown('Please choose from variations.')
         except Exception as e:

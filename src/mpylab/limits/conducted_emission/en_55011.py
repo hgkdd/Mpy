@@ -134,7 +134,8 @@ class LIMIT:
             attr = attr.replace(')','')
             self.limitline = getattr(self, attr)
         except AttributeError:
-            raise
+            # raise UserWarning(f"EN55011: Attribute '{attr}' not found. Using 'no_limit' instead.")
+            self.limitline = self.no_limit
 
     def no_limit(self, f):
         if not isinstance(f, type(array)):
