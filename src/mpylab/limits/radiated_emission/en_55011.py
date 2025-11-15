@@ -1,12 +1,11 @@
 from inspect import cleandoc
-from numpy import piecewise, log10, array, full_like, nan
+from numpy import piecewise, array, full_like, nan
+
+from mpylab.limits.limit import Limit
 
 
-def log_linear(f1,v1,f2,v2):
-    return lambda f: (v2-v1) * log10(f/f1) / log10(f2/f1) + v1
-
-class LIMIT:
-    description_title = "DIN EN 55011:2022-05 (CISPR-11)"
+class LIMIT(Limit):
+    description_title = "DIN EN 55011:2022-05 (CISPR-11), radiated"
     description_Group = {'1': """
                             ## Group 1: (general purpose applications)
                             
@@ -106,6 +105,10 @@ class LIMIT:
     unit = 'dBµV/m'
 
     def __init__(self, group=None, classification=None, detector=None, port=None, distance=None):
+        super().__init__()
+        self.group = group
+        self.classification = classification
+        self.detector = detector
         self.group = None
         self.classification = None
         self.detector = None
@@ -165,11 +168,6 @@ class LIMIT:
         except AttributeError:
             # raise UserWarning(f"EN55011: Attribute '{attr}' not found. Using 'no_limit' instead.")
             self.limitline = self.no_limit
-
-    def no_limit(self, f):
-        if not isinstance(f, type(array)):
-            f = array(f)
-        return full_like(f, nan)
 
     # AC below 20 kVA
     def limit_G1_CB_AC_less_20_kVA_QP_10_m(self, f):
