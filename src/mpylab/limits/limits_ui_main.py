@@ -12,6 +12,7 @@ from PySide6.QtCore import QDir
 from PySide6.QtGui import QAbstractFileIconProvider
 
 from mpylab.tools.spacing import linspace, logspace
+#from mpylab.limits.qtlimit_proxy import HideFileTypesProxy
 
 from limits_ui import Ui_MainWindow
 
@@ -44,17 +45,40 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.plot_canvas.show()
 
 
-
-
     def populate_tree(self, root_path='.'):
+        tree = self.treeView
+
         model = QFileSystemModel()
+        #model.setReadOnly(True)
+        #model.setRootPath("")
+
+        #skip_exts = ['.ui']   # a list exentions to skip
+        #skip_regex = [r'__']  #, r'limit', 'qtlimit']
+        #proxy = HideFileTypesProxy(excludes=skip_exts, regexes=skip_regex, parent=self)
+        #proxy.setDynamicSortFilter(True)
+        #proxy.setSourceModel(model)
+
+        #idx = model.setRootPath(".")
+        #tree.setRootIndex(proxy.mapFromSource(idx))
+
+        #tree._model = model
+        #tree._proxy = proxy
+
         icon_provider = QFileIconProvider()
         model.setIconProvider(icon_provider)
         model.setRootPath("")
         model.setOption(QFileSystemModel.DontUseCustomDirectoryIcons)
         model.setOption(QFileSystemModel.DontWatchForChanges)
-        tree = self.treeView
+        model.setNameFilters(['*.py'])
+        model.setNameFilterDisables(False)
+        model.setReadOnly(True)
+
+        #idx = model.setRootPath(".")
+        #self.setRootIndex(proxy.mapFromSource(idx))
+
+
         tree.setModel(model)
+        #tree._proxy = proxy
         if root_path:
             root_index = model.index(QDir.cleanPath(root_path))
             if root_index.isValid():
