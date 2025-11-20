@@ -106,9 +106,6 @@ class LIMIT(Limit):
 
     def __init__(self, group=None, classification=None, detector=None, port=None, distance=None):
         super().__init__()
-        self.group = group
-        self.classification = classification
-        self.detector = detector
         self.group = None
         self.classification = None
         self.detector = None
