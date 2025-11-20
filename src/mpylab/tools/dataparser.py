@@ -218,7 +218,8 @@ class DatFile(Parser):
         r'line : ABSERROR val NEWLINE'
         self.relerror = None
         self.abserror = p[2]
-        
+        #print(f"ABSERROR: {self.abserror}")
+
 
     def p_line_data1(self, p):
         r'line : FPNUMBER val val val NEWLINE'
