@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 import importlib.machinery
 import inspect
+from io import StringIO
 from typing import Any
 
 import pydot
@@ -97,6 +98,10 @@ class Graph():
             meth = getattr(pydot, m)
             try:
                 if m == 'graph_from_dot_file':
+                    if isinstance(fname_or_data, StringIO):
+                        self.dotcontents = fname_or_data.read()  #
+                        dotgraph = pydot.graph_from_dot_data(self.dotcontents)
+                        break
                     # print self.SearchPaths, fname_or_data
                     try:
                         # print "Hey", self.instance_from_pickle
