@@ -125,6 +125,7 @@ class Device(object):
                  "SWITCHED2PORT",
                  "SPECTRUMANALYZER",
                  "RECEIVER",
+                 "VLISN",
                  "VECTORNETWORKANALYZER")
     # map instrument types to prefixes
     _pyprefixdict = dict(list(zip(_types, _pyprefix)))
