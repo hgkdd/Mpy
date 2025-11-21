@@ -19,7 +19,7 @@ import configparser
 from numpy import bool_, sqrt
 from scipy.interpolate import interp1d
 
-import mpylab.device.device as device
+#import mpylab.device.device as device
 from scuq.ucomponents import Context
 from scuq.quantities import Quantity
 from scuq.si import WATT
@@ -515,6 +515,8 @@ class MGraph(Graph):
                    'step2port': 'SwitchedTwoPort',
                    'spectrumanalyzer': 'Spectrumanalyzer',
                    'vectornetworkanalyser': 'NetworkAnalyser',
+                   'receiver': 'Receiver',
+                   'vlisn': 'VLISN',
                    'custom': 'Custom'}
         devs = list(dev_map.keys())
         ddict = DictObj()
@@ -547,15 +549,17 @@ class MGraph(Graph):
                 raise IndexError(
                     'Instrument type %s from file %s not in list of valid instrument types: %r' % (typetxt, ini, devs))
             dtype = dev_map[best_type_guess]
+            driver = dct['inidic']['description']['driver']
             if dtype == 'Custom':
-                driver = dct['inidic']['description']['driver']
                 cls = dct['inidic']['description']['class']
                 drvfile = next(locate(driver, self.SearchPaths))
                 # m = imp.load_source('m', drvfile)
                 m = importlib.machinery.SourceFileLoader(driver, drvfile).load_module()
                 d = getattr(m, cls)()
             else:
-                d = getattr(device, dtype)(SearchPaths=self.SearchPaths)
+                m = importlib.import_module(f".{driver.rstrip('.py').lower()}", package='mpylab.device')
+                d = getattr(m, dtype.upper())()
+#                d = getattr(device, dtype)(SearchPaths=self.SearchPaths)
             ddict[name] = dct['inst'] = d  # save instances in nodes dict and in return value
             # self.CallerGlobals['d']=d
             # exec str(key)+'=d' in self.CallerGlobals # valiable in caller context
