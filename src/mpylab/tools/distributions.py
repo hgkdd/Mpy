@@ -160,27 +160,27 @@ def chi2_test(data: ArrayLike | callable, cdf: callable) -> float:
     return c2t.pvalue
 
 
-# def test_for_rayleigh(ees: ArrayLike) -> tuple[ArrayLike, ArrayLike, object, object, float, float]:
-#     n_ees = len(ees)
-#     hist, bins = np.histogram(ees)
-#     low_range = bins.min()
-#     binsize = (bins.max() - low_range) / (bins.size - 1)
-#     # hist_area = sum(hist) * binsize
-#     # nhist = [_h / hist_area for _h in hist]
-#     e_cdf = ECDF(ees)
-#     loc, scale = rayleigh.fit(ees, floc=0)
-#     ray_fit = rayleigh(loc=loc, scale=scale)
-#     cdf_fit = ray_fit.cdf(ees)
-#     # calc estimates for chi2-test
-#     estimates = []
-#     _l = low_range
-#     for _h in bins[1:]:
-#         estimates.append(ray_fit.cdf(_h) - ray_fit.cdf(_l))
-#         _l = _h
-#     factor = sum(hist) / sum(estimates)
-#     estimates = [_e * factor for _e in estimates]
-#     cs, p_cs = chisquare(hist, f_exp=estimates)
-#     # print(p_cs)
-#     ks, p_ks = ks_2samp(e_cdf(ees), cdf_fit)
-#     # print(p_ks)
-#     return hist, bins, e_cdf, ray_fit, p_cs, p_ks
+def test_for_rayleigh(ees: ArrayLike) -> tuple[ArrayLike, ArrayLike, object, object, float, float]:
+    n_ees = len(ees)
+    hist, bins = np.histogram(ees)
+    low_range = bins.min()
+    binsize = (bins.max() - low_range) / (bins.size - 1)
+    # hist_area = sum(hist) * binsize
+    # nhist = [_h / hist_area for _h in hist]
+    e_cdf = ECDF(ees)
+    loc, scale = rayleigh.fit(ees, floc=0)
+    ray_fit = rayleigh(loc=loc, scale=scale)
+    cdf_fit = ray_fit.cdf(ees)
+    # calc estimates for chi2-test
+    estimates = []
+    _l = low_range
+    for _h in bins[1:]:
+        estimates.append(ray_fit.cdf(_h) - ray_fit.cdf(_l))
+        _l = _h
+    factor = sum(hist) / sum(estimates)
+    estimates = [_e * factor for _e in estimates]
+    cs, p_cs = chisquare(hist, f_exp=estimates)
+    # print(p_cs)
+    p_ks = ks_test(e_cdf, cdf_fit)
+    # print(p_ks)
+    return hist, bins, e_cdf, ray_fit, p_cs, p_ks
