@@ -237,7 +237,7 @@ class MGraph(Graph):
         self.map = themap
         if SearchPaths is None:
             SearchPaths = [os.getcwd()]
-        super(MGraph, self).__init__(fname_or_data, SearchPaths=SearchPaths)
+        super().__init__(fname_or_data, SearchPaths=SearchPaths)
         self.name = GName(self)
         try:
             self.graph = self.graph[0]    # new version of pydot
