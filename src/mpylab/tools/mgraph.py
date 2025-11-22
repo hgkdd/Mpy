@@ -13,6 +13,7 @@ import importlib.machinery
 import inspect
 from io import StringIO
 from typing import Any
+from pathlib import Path
 
 import pydot
 import configparser
@@ -327,7 +328,7 @@ class MGraph(Graph):
 
     def get_path_correction(self, start, end, unit=None):
         """
-        Get the correction (S12) from *start* to *end*.
+        Get the correction (S21) from *start* to *end*.
         If *unit* is None, an AMPLITUDERATIO is returned.
         *unit* has to be AMPLITUDERATIO or POWERRATIO (from mpylab.tools.aunits)
         """
@@ -557,7 +558,10 @@ class MGraph(Graph):
                 m = importlib.machinery.SourceFileLoader(driver, drvfile).load_module()
                 d = getattr(m, cls)()
             else:
-                m = importlib.import_module(f".{driver.rstrip('.py').lower()}", package='mpylab.device')
+                modname = Path(driver)
+                modname = modname.with_suffix('')   # remove suffix
+                modname = modname.name.lower()
+                m = importlib.import_module(f".{modname}", package='mpylab.device')
                 d = getattr(m, dtype.upper())()
 #                d = getattr(device, dtype)(SearchPaths=self.SearchPaths)
             ddict[name] = dct['inst'] = d  # save instances in nodes dict and in return value
