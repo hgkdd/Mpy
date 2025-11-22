@@ -9,6 +9,6 @@ class Limit:
 
     def no_limit(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         return full_like(f, nan)
 

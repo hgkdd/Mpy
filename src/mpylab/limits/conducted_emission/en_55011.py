@@ -140,7 +140,7 @@ class LIMIT(Limit):
     # AC below 20 kVA
     def limit_G1_CB_AC_less_20_kVA_AV(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
                       (f >= 500e3) & (f < 5e6),
                       (f >= 5e6) & (f <= 30e6)]
@@ -162,7 +162,7 @@ class LIMIT(Limit):
 
     def limit_G1_CA_AC_less_20_kVA_AV(self, f):     # only <= 20 kVA
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
                       (f >= 500e3) & (f <= 30e6)]
         functions = [66,
@@ -176,7 +176,7 @@ class LIMIT(Limit):
 
     def limit_G2_CA_AC_less_20_kVA_AV(self, f):     # only <= 75 kVA
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
                       (f >= 500e3) & (f <= 5e6),
                       (f >= 5e6) & (f <= 30e6)]
@@ -189,7 +189,7 @@ class LIMIT(Limit):
 
     def limit_G2_CA_AC_less_20_kVA_QP(self, f):     # only <= 75 kVA
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
                       (f >= 500e3) & (f <= 5e6),
                       (f >= 5e6) & (f <= 30e6)]
@@ -228,7 +228,7 @@ class LIMIT(Limit):
     # AC over 75 kVA
     def limit_G1_CA_AC_over_75_kVA_AV(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
                       (f >= 500e3) & (f <= 5e6),
                       (f >= 5e6) & (f <= 30e6)]
@@ -264,7 +264,7 @@ class LIMIT(Limit):
     # DC below 20 kVA
     def limit_G1_CB_DC_less_20_kVA_AV(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
                       (f >= 500e3) & (f < 5e6),
                       (f >= 5e6) & (f <= 30e6)]
@@ -286,7 +286,7 @@ class LIMIT(Limit):
 
     def limit_G1_CA_DC_less_20_kVA_AV(self, f):     # only <= 20 kVA
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 5e6),
                       (f >= 5e6) & (f <= 30e6)]
         functions = [log_linear(150e3,84,5e6,76),
@@ -307,7 +307,7 @@ class LIMIT(Limit):
     # DC lower 75 kVA
     def limit_G1_CA_DC_less_75_kVA_AV(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 5e6),
                       (f >= 5e6) & (f <= 30e6)]
         functions = [log_linear(150e3,106,5e6,96),
@@ -318,7 +318,7 @@ class LIMIT(Limit):
 
     def limit_G1_CA_DC_less_75_kVA_QP(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 5e6),
                       (f >= 5e6) & (f <= 30e6)]
         functions = [log_linear(150e3,116,5e6,106),
@@ -348,7 +348,7 @@ class LIMIT(Limit):
     # DC over 75 kVA
     def limit_G1_CA_DC_over_75_kVA_AV(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 5e6),
                       (f >= 5e6) & (f <= 30e6)]
         functions = [log_linear(150e3,122,5e6,112),
@@ -359,7 +359,7 @@ class LIMIT(Limit):
 
     def limit_G1_CA_DC_over_75_kVA_QP(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 5e6),
                       (f >= 5e6) & (f <= 30e6)]
         functions = [log_linear(150e3,132,5e6,122),

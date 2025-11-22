@@ -169,7 +169,7 @@ class LIMIT(Limit):
     # AC below 20 kVA
     def limit_G1_CB_AC_less_20_kVA_QP_10_m(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 30e6) & (f < 230e6),
                       (f >= 230e6) & (f < 1e9)]
         functions = [30,
@@ -189,7 +189,7 @@ class LIMIT(Limit):
 
     def limit_G1_CA_AC_over_20_kVA_QP_10_m(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         return full_like(f, 50)
 
     def limit_G1_CA_AC_over_20_kVA_QP_3_m(self, f):
@@ -197,7 +197,7 @@ class LIMIT(Limit):
 
     def limit_G1_CB_AC_less_20_kVA_AV_3_m(self, f):
         if not isinstance(f, type(array)):
-            f = array(f)
+            f = array(f, dtype=float)
         conditions = [(f >= 1e9) & (f < 3e9),
                       (f >= 3e9) & (f < 6e9)]
         functions = [50,
