@@ -47,6 +47,19 @@ class RECEIVER(REC):
         self.error = 0
         return self.error, len(cmd)
 
+    def GetDescription(self):
+        self.error = 0
+        return self.error, "ESHS Dummy"
+
+    def SetFreq(self, freq):
+        self.error = 0
+        self.freq = freq
+        return self.error, self.freq
+
+    def GetFreq(self):
+        self.error = 0
+        return self.error, self.freq
+
     def Init(self, ini=None, channel=None):
         if channel is None:
             channel = 1
@@ -248,14 +261,14 @@ def main():
                         vendor:      'Rohde&Schwarz'
                         serialnr:
                         deviceid:
-                        driver: rec_rs_ESHS30.py
+                        driver: rec_rs_eshs30_dummy.py
 
                         [Init_Value]
                         fstart: 9e3
                         fstop: 30e6
                         fstep: 1
                         visa: GPIB0::17::INSTR
-                        virtual: 0
+                        virtual: 1
 
                         [Channel_1]
                         name: RFin
