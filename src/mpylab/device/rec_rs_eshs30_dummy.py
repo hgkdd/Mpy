@@ -214,7 +214,7 @@ class RECEIVER(REC):
     def GetData(self):
         self.error = 0
         lower = -10
-        upper = 20
+        upper = 60
         self.level = lower + np.random.random() * (upper - lower)
         obj = self._create_lev_object(self.level)
         return self.error, obj
