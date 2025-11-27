@@ -51,11 +51,11 @@ class VLISN(VL):
         self._set_pin_state(self._FLT_, state)   # low Filter ON
 
 
-    def Init(self, ini=None, channel=None):
+    def Init(self, ini=None, channel=None, ignore_bus=True):
         self.path = None
         self.ip = None
         self.filter = None
-        super().Init(ini=ini, channel=channel, ignore_bus=True)
+        super().Init(ini=ini, channel=channel, ignore_bus=ignore_bus)
 
         sec = 'channel_%d' % self.channel
         self.ip = self.conf['init_value']['ip']
