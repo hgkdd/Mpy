@@ -23,9 +23,11 @@ class VLISN(DRIVER):
                     {'fstart': float,
                      'fstop': float,
                      'fstep': float,
+                     'visa': str,
                      'nr_of_channels': int,
                      'path': str,
                      'unit': str,
+                     'filter': strbool,
                      'virtual': strbool},
                 'channel_%d':
                     {'name': str,
@@ -41,9 +43,9 @@ class VLISN(DRIVER):
         self.conf = {'init_value': {'virtual': False}}
         self.data = {}
 
-    def Init(self, ini=None, channel=None):
-        super().Init(ini=ini, channel=channel)
-        path = self.conf['init_value']['path'].upper()
+    def Init(self, ini=None, channel=None, ignore_bus=False):
+        super().Init(ini=ini, channel=channel, ignore_bus=ignore_bus)
+        self.path = self.conf['init_value']['path'].upper()
         for ch in self.Configuration.channel_list:
             thename = self._get('channel_%d' % ch, 'name')
             thefile = self._get('channel_%d' % ch, 'file')
@@ -57,7 +59,7 @@ class VLISN(DRIVER):
             self.data[thename]['data'] = self.data[thename]['datafile'].run()
             # print self.data[thename]['data']
             self.data[thename]['interpol'] = UQ_interpol(self.data[thename]['data'])
-        self.SetPath(path)
+        # self.SetPath(path)
         return self.error
 
     def _get(self, sec, key):
@@ -122,6 +124,14 @@ class VLISN(DRIVER):
         if self.path is None:
             raise RuntimeError("V-LISN: Path has to be in ('L', 'L1', 'L2', 'L3', 'N')")
         return self.GetPath()
+
+    def SetFilter(self, state):
+        self.error = 0
+        self.filter = state
+
+    def GetFilter(self):
+        self.error = 0
+        return self.error, bool(self.filter)
 
 def main():
     import sys

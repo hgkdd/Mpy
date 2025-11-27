@@ -245,7 +245,7 @@ class DRIVER:
             self.Configuration = Configuration(ini, self.conftmpl)
             self.conf.update(self.Configuration.conf)
 
-    def Init(self, ini=None, channel=None):
+    def Init(self, ini=None, channel=None, ignore_bus=False):
         """
         Init the instrument.
         
@@ -262,6 +262,8 @@ class DRIVER:
         """
         self.error = 0
         self.get_config(ini, channel)
+        if ignore_bus:
+            return 0
         buspars = {}
         if not self.conf['init_value'].get('virtual', False):
             for k in ('timeout',

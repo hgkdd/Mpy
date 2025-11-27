@@ -3,28 +3,22 @@ import requests
 
 from mpylab.device.vlisn import VLISN as VL
 from mpylab.tools.util import case_insensitive_string_compare
+from mpylab.tools.configuration import Configuration
 
 class VLISN(VL):
     """
     V-Type LISN device R&S ENV216
     """
     conftmpl = VL.conftmpl
+    conftmpl['init_value']['ip'] = str
 
     ip = '192.168.88.6'
     _FLT_ = 19
     _L_ = 18
     _N_ = 16
 
-    def __init__(self, ip=None):
+    def __init__(self):
         super().__init__()
-        if ip:
-            self.ip = ip
-
-        self._set_as_digital_out(self._FLT_)
-        self._set_as_digital_out(self._L_)
-        self._set_as_digital_out(self._N_)
-        self._set_L()
-        self._set_filter(False)
 
     def _set_as_digital_out(self, pin):
         request = f"http://{self.ip}/mode/{pin}/o"
@@ -59,7 +53,19 @@ class VLISN(VL):
 
     def Init(self, ini=None, channel=None):
         self.path = None
-        super().Init(ini=ini, channel=channel)
+        self.ip = None
+        self.filter = None
+        super().Init(ini=ini, channel=channel, ignore_bus=True)
+
+        sec = 'channel_%d' % self.channel
+        self.ip = self.conf['init_value']['ip']
+        self.filter = bool(self.conf['init_value']['filter'])
+
+        self._set_as_digital_out(self._FLT_)
+        self._set_as_digital_out(self._L_)
+        self._set_as_digital_out(self._N_)
+        self.SetPath(self.path)
+        self._set_filter(self.filter)
         return self.error
 
     def SetPath(self, path):
@@ -76,6 +82,10 @@ class VLISN(VL):
         if self.path is None:
             raise RuntimeError("V-LISN: Path has to be in ('L', 'N')")
         return self.GetPath()
+
+    def SetFilter(self, state):
+        self._set_filter(state)
+        self.filter = bool(state)
 
 def main():
     import sys
@@ -101,6 +111,8 @@ def main():
                          FSTOP = 30e6
                          FSTEP = 0.0
                          NR_OF_CHANNELS =  1
+                         IP = 192.168.88.6
+                         FILTER = 0
                          PATH = L
                          VIRTUAL = 0
 
@@ -129,6 +141,19 @@ def main():
             err, uq = lisn.GetData(what='S21')
             val, unc, unit = ctx.value_uncertainty_unit(uq)
             print(freq, uq, abs(val), abs(unc), unit)
+
+    while(True):
+        ans = input('L, N, F, f, Q > ')
+        if ans in 'Qq':
+            break
+        if ans in 'F':
+            lisn.SetFilter(True)
+        if ans in 'f':
+            lisn.SetFilter(False)
+        if ans in 'Ll':
+            lisn.SetPath('L')
+        if ans in 'Nn':
+            lisn.SetPath('N')
 
 
 if __name__ == '__main__':
