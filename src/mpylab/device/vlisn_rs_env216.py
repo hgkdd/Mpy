@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import requests
+
 from mpylab.device.vlisn import VLISN as VL
 from mpylab.tools.util import case_insensitive_string_compare
 
@@ -8,8 +10,52 @@ class VLISN(VL):
     """
     conftmpl = VL.conftmpl
 
-    def __init__(self, **kw):
-        super().__init__(**kw)
+    ip = '192.168.88.6'
+    _FLT_ = 19
+    _L_ = 18
+    _N_ = 16
+
+    def __init__(self, ip=None):
+        super().__init__()
+        if ip:
+            self.ip = ip
+
+        self._set_as_digital_out(self._FLT_)
+        self._set_as_digital_out(self._L_)
+        self._set_as_digital_out(self._N_)
+        self._set_L()
+        self._set_filter(False)
+
+    def _set_as_digital_out(self, pin):
+        request = f"http://{self.ip}/mode/{pin}/o"
+        ans = requests.get(request)
+        return ans
+
+    def _set_as_digital_in(self, pin):
+        request = f"http://{self.ip}/mode/{pin}/i"
+        ans = requests.get(request)
+        return ans
+
+    def _set_pin_state(self, pin, state):
+        request = f"http://{self.ip}/digital/{pin}/{state}"
+        ans = requests.get(request)
+        return ans
+
+    def _set_L(self):
+        self._set_pin_state(self._N_, 1)
+        self._set_pin_state(self._L_, 0)    # low for L
+
+    def _set_N(self):
+        self._set_pin_state(self._L_, 1)    # low for L
+        self._set_pin_state(self._N_, 0)   # low for N
+
+    def _set_filter(self, state):
+        if state:
+            state = 0
+        else:
+            state = 1
+        self._set_pin_state(self._FLT_, state)   # low Filter ON
+
 
     def Init(self, ini=None, channel=None):
         self.path = None
@@ -18,12 +64,14 @@ class VLISN(VL):
 
     def SetPath(self, path):
         self.error = 0
-        # self.path = None
+        self.path = None
         for _path in ('L', 'N'):
             if case_insensitive_string_compare(path, _path):
-                if self.path != _path:
-                    ans = input(f"Switch to {_path} and press enter.")
-                    self.path = _path
+                if _path == 'N':
+                    self._set_N()
+                else:
+                    self._set_L()
+                self.path = _path
                 break
         if self.path is None:
             raise RuntimeError("V-LISN: Path has to be in ('L', 'N')")
