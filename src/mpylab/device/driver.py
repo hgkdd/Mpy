@@ -10,6 +10,8 @@ This is the :mod:`mpylab.device.driver` module.
 
 import re
 import os
+import time
+
 from mpylab.tools.configuration import Configuration, fstrcmp
 from mpylab.device.device import CONVERT, Device
 
@@ -77,18 +79,47 @@ class DRIVER:
                   lock=None):
         gpib = None
         visa = None
+        prologix = None
         virtual = False
         if 'gpib' in self.conf['init_value']:
             gpib = self.conf['init_value']['gpib']
         if 'visa' in self.conf['init_value']:
             visa = self.conf['init_value']['visa']
+            if visa.lower().startswith('prologix'):
+                prologix = visa
+                visa = None
         if 'virtual' in self.conf['init_value']:
             virtual = self.conf['init_value']['virtual']
-        if virtual or not (gpib or visa):  # Virtual mode
+        if virtual or not (gpib or visa or prologix):  # Virtual mode
             self.dev = None
             self.write = self._debug_write
             self.read = self._debug_read
             self.query = self._debug_query
+            return self.dev
+        elif prologix:   # prologix mode
+            import socket
+            # prologix looks like: PROLOGIX::192.168.7.206::1234::SOCKET::17
+            # we have to extract ip-addr and port
+            s = prologix.split('::')
+            ip = s[1]
+            port = int(s[2])
+            self.prologix_gpib = int(s[4])
+            self.prologix_bufsize = 256
+            self.prologix_TXEOL = b'\n'
+            self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+            self.dev.settimeout(timeout)
+            self.dev.connect((ip, port))
+            time.sleep(0.1)
+            self.write = self._prologix_write
+            self.read = self._prologix_read
+            self.query = self._prologix_query
+            self.write('++savecfg 0')  # Don't write configuration to eprom (!)
+            self.write('++mode 1')  # Set mode as controller
+            # gpib_write('++ifc')# Controller-In-Charge # nötig?
+            self.write('++auto 0')  # Turn off read-after-write
+            self.write(f'++read_tmo_ms 3000')
+            self.write(f'++addr {self.prologix_gpib}')
+            self.write('++clr')
             return self.dev
         else:  # Normal mode
             import pyvisa
@@ -117,6 +148,38 @@ class DRIVER:
             self.read = self._gpib_read
             self.query = self._gpib_query
             return self.dev
+
+    def _socket_read(self):
+        ans = self.dev.recv(self.prologix_bufsize)
+        ans = ans.decode('ascii')
+        ans = ans.strip()
+        return ans
+
+    def _prologix_write(self, cmd):
+        stat = 0
+        if self.dev and isinstance(cmd, str):
+            stat = self.dev.send(cmd.encode('ascii') + self.prologix_TXEOL)
+        return stat
+
+    def _prologix_read(self, tmpl=None):
+        dct = None
+        if self.dev:
+            self._prologix_write('++read eoi')
+            ans = self._socket_read()
+            if tmpl is None:
+                return ans
+            m = re.match(tmpl, ans)
+            if m:
+                dct = m.groupdict()
+        return dct
+
+    def _prologix_query(self, cmd, tmpl=None):
+        # print("In query", cmd, tmpl)
+        dct = None
+        if self.dev and isinstance(cmd, str):
+            ans = self._prologix_write(cmd)
+            dct = self._prologix_read(tmpl=tmpl)
+        return dct
 
     def _gpib_write(self, cmd):
         # print "In write", cmd

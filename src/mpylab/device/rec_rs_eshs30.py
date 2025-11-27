@@ -292,7 +292,7 @@ def main():
                         fstart: 9e3
                         fstop: 30e6
                         fstep: 1
-                        visa: GPIB0::17::INSTR
+                        visa: PROLOGIX::192.168.88.5::1234::SOCKET::17
                         virtual: 0
 
                         [Channel_1]

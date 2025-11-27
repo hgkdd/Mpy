@@ -40,7 +40,7 @@ class RECEIVER(DRIVER):
                         {'name': str,
                          'detector': str,
                          'attenuation': str,
-                         'meas_time': float,
+                         'meas_time': str,
                          'min_attenuation': int,
                          'unit': str,
                          'preamplifier': str}}
