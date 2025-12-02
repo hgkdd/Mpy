@@ -10,6 +10,7 @@ This is the :mod:`mpylab.device.driver` module.
 
 import re
 import os
+import select
 import time
 
 from mpylab.tools.configuration import Configuration, fstrcmp
@@ -106,6 +107,7 @@ class DRIVER:
             self.prologix_gpib = int(s[4])
             self.prologix_bufsize = 256
             self.prologix_TXEOL = b'\n'
+            self.prologix_timeout_s = 3
             self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
             self.dev.settimeout(timeout)
             self.dev.connect((ip, port))
@@ -117,7 +119,7 @@ class DRIVER:
             self.write('++mode 1')  # Set mode as controller
             # gpib_write('++ifc')# Controller-In-Charge # nötig?
             self.write('++auto 0')  # Turn off read-after-write
-            self.write(f'++read_tmo_ms 3000')
+            self.write(f'++read_tmo_ms {1000*self.prologix_timeout_s}')
             self.write(f'++addr {self.prologix_gpib}')
             self.write('++clr')
             return self.dev
@@ -150,9 +152,12 @@ class DRIVER:
             return self.dev
 
     def _socket_read(self):
-        ans = self.dev.recv(self.prologix_bufsize)
-        ans = ans.decode('ascii')
-        ans = ans.strip()
+        ans = None
+        ready = select.select([self.dev], [], [], self.prologix_timeout_s)[0]
+        if ready:
+            ans = self.dev.recv(self.prologix_bufsize)
+            ans = ans.decode('ascii')
+            ans = ans.strip()
         return ans
 
     def _prologix_write(self, cmd):
