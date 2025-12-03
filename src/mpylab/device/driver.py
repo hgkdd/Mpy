@@ -109,7 +109,7 @@ class DRIVER:
             self.prologix_TXEOL = b'\n'
             self.prologix_timeout_s = 3
             self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-            self.dev.settimeout(timeout)
+            #self.dev.settimeout(self.prologix_timeout_s)
             self.dev.connect((ip, port))
             time.sleep(0.1)
             self.write = self._prologix_write
@@ -164,13 +164,17 @@ class DRIVER:
     def _prologix_write(self, cmd):
         stat = 0
         if self.dev and isinstance(cmd, str):
+            #tmo = self.dev.gettimeout()
             stat = self.dev.send(cmd.encode('ascii') + self.prologix_TXEOL)
+            #self.dev.settimeout(tmo)
         return stat
 
     def _prologix_read(self, tmpl=None):
         dct = None
         if self.dev:
+            #tmo = self.dev.gettimeout()
             self._prologix_write('++read eoi')
+            #self.dev.settimeout(tmo)
             ans = self._socket_read()
             if tmpl is None:
                 return ans
@@ -183,8 +187,11 @@ class DRIVER:
         # print("In query", cmd, tmpl)
         dct = None
         if self.dev and isinstance(cmd, str):
+            #tmo = self.dev.gettimeout()
             ans = self._prologix_write(cmd)
+            time.sleep(0.1)
             dct = self._prologix_read(tmpl=tmpl)
+            #self.dev.settimeout(tmo)
         return dct
 
     def _gpib_write(self, cmd):
