@@ -153,7 +153,8 @@ class DRIVER:
 
     def _socket_read(self):
         ans = None
-        ready = select.select([self.dev], [], [], self.prologix_timeout_s)[0]
+        #ready = select.select([self.dev], [], [], self.prologix_timeout_s)[0]
+        ready = True
         if ready:
             ans = self.dev.recv(self.prologix_bufsize)
             ans = ans.decode('ascii')
