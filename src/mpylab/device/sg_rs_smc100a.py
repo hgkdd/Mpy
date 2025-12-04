@@ -152,13 +152,13 @@ def main():
                 fstart: 100e6
                 fstop: 6e9
                 fstep: 1
-                gpib: 10 
+                visa: TCPIP::192.168.88.254::INSTR
                 virtual: 0
 
                 [Channel_1]
                 name: RFOut
-                level: -100.0
-                unit: dBm
+                level: -10.0
+                unit: dBuV
                 outpoutstate: 0
                 """)
     ini = io.StringIO(ini)
