@@ -112,7 +112,7 @@ def to_quantity(fromunit, value):
     obj = Quantity(scuq_unit, converter(value))
     return obj
 
-def from_qunantity(tounit, obj):
+def from_quantity(tounit, obj):
     """
     Create a float from a scuq quantity (with conversion to dB)
 
@@ -198,5 +198,5 @@ if __name__ == '__main__':
             print(f"to_quantity: {val} {unit} -> {to_quantity(unit, val)}")
 
     unit = 'dBuV'
-    print(f"from_qunantity: {u} -> {from_qunantity(unit, u)} {unit}")
+    print(f"from_quantity: {u} -> {from_quantity(unit, u)} {unit}")
 
