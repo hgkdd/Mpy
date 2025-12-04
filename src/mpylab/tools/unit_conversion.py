@@ -100,7 +100,7 @@ uconv_from_quantity = { "1":  {"1": _ident,
                         }
 
 
-def to_qunantity(fromunit, value):
+def to_quantity(fromunit, value):
     """
     Create a scuq quantity from a unit and a value (with conversion from dB)
 
@@ -195,7 +195,7 @@ if __name__ == '__main__':
 
     for val in range(-60, 60, 10):
         for unit in ('dBm', 'dBuV', 'dBV/m'):
-            print(f"to_qunantity: {val} {unit} -> {to_qunantity(unit, val)}")
+            print(f"to_quantity: {val} {unit} -> {to_quantity(unit, val)}")
 
     unit = 'dBuV'
     print(f"from_qunantity: {u} -> {from_qunantity(unit, u)} {unit}")
