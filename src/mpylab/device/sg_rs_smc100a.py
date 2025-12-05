@@ -80,15 +80,15 @@ class SIGNALGENERATOR(SGNLGNRTR):
         # Optionen inhaltet. 
         #
 
-        # dBm = dBµV - 107   @ 50 OHM
-        # dBuV = dBm + 107
+        # dBm = dBµV - 106.9897  @ 50 OHM
+        # dBuV = dBm + 106.9897
         from_u = self.levelunit
         if self.levelunit.lower() == 'dbm' and self._internal_unit.lower() == 'dbuv':
             # v has to be converted from dBm to dBuV
-            v_conv = lambda v: float(v+107)
+            v_conv = lambda v: float(v+106.9897)
             from_u = self._internal_unit
         elif self.levelunit.lower() == 'dbuv' and self._internal_unit.lower() == 'dbm':
-            v_conv = lambda v: float(v-107)
+            v_conv = lambda v: float(v-106.9897)
             from_u = self._internal_unit
         else:
             v_conv = lambda v: float(v)
