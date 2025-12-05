@@ -104,6 +104,18 @@ class SIGNALGENERATOR(DRIVER):
 
     def SetLevel(self, lv):
         self.error = 0
+
+        if self._internal_unit.lower() in ('dbm', 'w'):
+            if lv._unit == 'V':
+                lv = lv**2 / quantities.Quantity(si.VOLT/si.AMPERE, 50)   # V -> W  P=U^2/Z
+                lv = lv.reduce_to(si.WATT)
+        elif self._internal_unit.lower() in ('dbuv', 'v'):
+            if lv._unit == 'W':
+                lv = np.sqrt(lv * quantities.Quantity(si.VOLT/si.AMPERE, 50))  # W -> V  U = sqrt(P*Z)
+                lv = lv.reduce_to(si.VOLT)
+        else:
+            raise ValueError(f'Level unit {lv._unit} not compatible with internal unit {self._internal_unit}.')
+
         level = lv.get_value(lv._unit)
         unit = lv._unit
 
