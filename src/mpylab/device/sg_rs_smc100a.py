@@ -79,6 +79,21 @@ class SIGNALGENERATOR(SGNLGNRTR):
         # es sich um eine Art Tabelle mit drei Spalten, welche die möglichen Initialisierungsschritte und falls vorhanden zugehörigen
         # Optionen inhaltet. 
         #
+
+        # dBm = dBµV - 107   @ 50 OHM
+        # dBuV = dBm + 107
+        from_u = self.levelunit
+        if self.levelunit.lower() == 'dbm' and self._internal_unit.lower() == 'dbuv':
+            # v has to be converted from dBm to dBuV
+            v_conv = lambda v: float(v+107)
+            from_u = self._internal_unit
+        elif self.levelunit.lower() == 'dbuv' and self._internal_unit.lower() == 'dbm':
+            v_conv = lambda v: float(v-107)
+            from_u = self._internal_unit
+        else:
+            v_conv = lambda v: float(v)
+            from_u = self.levelunit
+
         self._cmds['Preset'] = []
         presets = [('attmode',
                     [('0', 'auto'), ('1', 'fixed')],
@@ -88,14 +103,14 @@ class SIGNALGENERATOR(SGNLGNRTR):
                    #     ("'OUTP:ATT %f dB'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
                    ('leveloffset',
                     None,
-                    ("'SOUR:POW:LEV:IMM:OFFS %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))",
+                    ("'SOUR:POW:LEV:IMM:OFFS %f'%self.convert.c2c(from_u, self._internal_unit, v_conv(v))",
                      None)),
                    ('levellimit',
                     None,
-                    ("'SOUR:POW:LIM:AMPL %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
+                    ("'SOUR:POW:LIM:AMPL %f'%self.convert.c2c(from_u, self._internal_unit, v_conv(v))", None)),
                    ('level',
                     None,
-                    ("'SOUR:POW:LEVEL:IMM:AMPL %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))",
+                    ("'SOUR:POW:LEVEL:IMM:AMPL %f'%self.convert.c2c(from_u, self._internal_unit, v_conv(v))",
                      None)),
                    ('outputstate',
                     [('1', 'on')],
@@ -153,11 +168,11 @@ def main():
                 fstop: 6e9
                 fstep: 1
                 visa: TCPIP::192.168.88.254::INSTR
-                virtual: 0
+                virtual: 1
 
                 [Channel_1]
                 name: RFOut
-                level: -10.0
+                level: 0.0
                 unit: dBuV
                 outpoutstate: 0
                 """)
