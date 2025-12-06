@@ -97,7 +97,7 @@ class SIGNALGENERATOR(DRIVER):
         # dBm = dBµV - 106.9897  @ 50 OHM
         # dBuV = dBm + 106.9897
         from_u = level_unit
-        if leve_lunit.lower() == 'dbm' and internal_unit.lower() == 'dbuv':
+        if level_unit.lower() == 'dbm' and internal_unit.lower() == 'dbuv':
             # v has to be converted from dBm to dBuV
             v_conv = lambda v: float(v + 90 + deziZ)
             from_u = self._internal_unit
