@@ -22,7 +22,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         self.map['PM_sources']['EXT1'] = 'EXT'
         self.map['PM_pol']['NORMAL'] = 'NORM'
         self.map['PM_pol']['INVERTED'] = 'INV'
-        self._internal_unit = 'dBm'
+        self._internal_unit = 'dBm'    # level can only be set in dBm
         #
         # Im Wörterbuch '._cmds' werden die Befehle zum Steuern des speziellen Signalgenerators definiert, z.B. SetFreq() zum Setzen
         # der Frequenz. Diese können in der Dokumentation des entsprechenden Signalgenerators nachgeschlagen werden.
@@ -80,19 +80,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         # Optionen inhaltet. 
         #
 
-        # dBm = dBµV - 106.9897  @ 50 OHM
-        # dBuV = dBm + 106.9897
-        from_u = self.levelunit
-        if self.levelunit.lower() == 'dbm' and self._internal_unit.lower() == 'dbuv':
-            # v has to be converted from dBm to dBuV
-            v_conv = lambda v: float(v+106.9897)
-            from_u = self._internal_unit
-        elif self.levelunit.lower() == 'dbuv' and self._internal_unit.lower() == 'dbm':
-            v_conv = lambda v: float(v-106.9897)
-            from_u = self._internal_unit
-        else:
-            v_conv = lambda v: float(v)
-            from_u = self.levelunit
+        from_u, v_conv = self._adjust_for_unit(self.levelunit, self._internal_unit, impedance=50)
 
         self._cmds['Preset'] = []
         presets = [('attmode',

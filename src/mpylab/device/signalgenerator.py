@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from math import log10
 import bidict
 from scuq import quantities
 from scuq import si
@@ -90,6 +91,24 @@ class SIGNALGENERATOR(DRIVER):
         self.level = None
         self.unit = None
         self._internal_unit = 'dBm'
+
+    def _adjust_for_unit(self, level_unit, internal_unit, impedance=50):
+        deziZ = 10*log10(impedance)
+        # dBm = dBµV - 106.9897  @ 50 OHM
+        # dBuV = dBm + 106.9897
+        from_u = level_unit
+        if leve_lunit.lower() == 'dbm' and internal_unit.lower() == 'dbuv':
+            # v has to be converted from dBm to dBuV
+            v_conv = lambda v: float(v + 90 + deziZ)
+            from_u = self._internal_unit
+        elif self.levelunit.lower() == 'dbuv' and self._internal_unit.lower() == 'dbm':
+            v_conv = lambda v: float(v - 90 - deziZ)
+            from_u = self._internal_unit
+        else:
+            v_conv = lambda v: float(v)
+            from_u = self.levelunit
+
+        return from_u, v_conv
 
     def SetFreq(self, freq):
         # set a certain frequency
