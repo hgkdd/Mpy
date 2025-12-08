@@ -4,6 +4,7 @@ from math import log10
 import bidict
 from scuq import quantities
 from scuq import si
+import numpy as np
 from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool, fstrcmp
 
@@ -125,11 +126,11 @@ class SIGNALGENERATOR(DRIVER):
         self.error = 0
 
         if self._internal_unit.lower() in ('dbm', 'w'):
-            if lv._unit == 'V':
+            if str(lv._unit) == 'V':
                 lv = lv**2 / quantities.Quantity(si.VOLT/si.AMPERE, 50)   # V -> W  P=U^2/Z
                 lv = lv.reduce_to(si.WATT)
         elif self._internal_unit.lower() in ('dbuv', 'v'):
-            if lv._unit == 'W':
+            if str(lv._unit) == 'W':
                 lv = np.sqrt(lv * quantities.Quantity(si.VOLT/si.AMPERE, 50))  # W -> V  U = sqrt(P*Z)
                 lv = lv.reduce_to(si.VOLT)
         else:
