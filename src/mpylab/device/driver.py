@@ -11,11 +11,13 @@ This is the :mod:`mpylab.device.driver` module.
 import re
 import os
 import select
+import socket
 import time
 
 from mpylab.tools.configuration import Configuration, fstrcmp
 from mpylab.device.device import CONVERT, Device
 
+SOCKETWAITTIME = 0.15
 
 class DRIVER:
     """
@@ -98,19 +100,18 @@ class DRIVER:
             self.query = self._debug_query
             return self.dev
         elif prologix:   # prologix mode
-            import socket
             # prologix looks like: PROLOGIX::192.168.7.206::1234::SOCKET::17
             # we have to extract ip-addr and port
             s = prologix.split('::')
-            ip = s[1]
-            port = int(s[2])
+            self.prologix_ip = ip = s[1]
+            self.prologix_port = int(s[2])
             self.prologix_gpib = int(s[4])
             self.prologix_bufsize = 256
             self.prologix_TXEOL = b'\n'
             self.prologix_timeout_s = 3
-            self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+            self.dev = True #    socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
             #self.dev.settimeout(self.prologix_timeout_s)
-            self.dev.connect((ip, port))
+            #self.dev.connect((self.prologix_ip, self.prologix_port))
             time.sleep(0.1)
             self.write = self._prologix_write
             self.read = self._prologix_read
@@ -122,6 +123,7 @@ class DRIVER:
             self.write(f'++read_tmo_ms {1000*self.prologix_timeout_s}')
             self.write(f'++addr {self.prologix_gpib}')
             self.write('++clr')
+            #self.dev.close()
             return self.dev
         else:  # Normal mode
             import pyvisa
@@ -153,27 +155,59 @@ class DRIVER:
 
     def _socket_read(self):
         ans = None
-        #ready = select.select([self.dev], [], [], self.prologix_timeout_s)[0]
-        ready = True
+        #self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+        #self.dev.connect((self.prologix_ip, self.prologix_port))
+        ready = select.select([self.dev], [], [], self.prologix_timeout_s)[0]
+        #ready = True
         if ready:
             ans = self.dev.recv(self.prologix_bufsize)
             ans = ans.decode('ascii')
             ans = ans.strip()
+        #self.dev.close()
         return ans
 
-    def _prologix_write(self, cmd):
+    def _prologix_write(self, cmd, open_socket=True):
         stat = 0
+        if open_socket:
+            self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         if self.dev and isinstance(cmd, str):
             #tmo = self.dev.gettimeout()
+            if open_socket:
+                # time.sleep(SOCKETWAITTIME)
+                for _ in range(5):
+                    try:
+                        time.sleep(0.1)
+                        self.dev.connect((self.prologix_ip, self.prologix_port))
+                        break
+                    except ConnectionRefusedError:
+                        continue
+                else:
+                    raise RuntimeError('Connection Refused')
             stat = self.dev.send(cmd.encode('ascii') + self.prologix_TXEOL)
             #self.dev.settimeout(tmo)
+        if open_socket:
+            self.dev.close()
         return stat
 
-    def _prologix_read(self, tmpl=None):
+    def _prologix_read(self, tmpl=None, open_socket=True):
         dct = None
+        if open_socket:
+            self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         if self.dev:
             #tmo = self.dev.gettimeout()
-            self._prologix_write('++read eoi')
+            if open_socket:
+                # time.sleep(SOCKETWAITTIME)
+                for _ in range(5):
+                    try:
+                        time.sleep(0.1)
+                        self.dev.connect((self.prologix_ip, self.prologix_port))
+                        break
+                    except ConnectionRefusedError:
+                        continue
+                else:
+                    raise RuntimeError('Connection Refused')
+            self.dev.send('++read eoi'.encode('ascii') + self.prologix_TXEOL)
+            # self._prologix_write('++read eoi')
             #self.dev.settimeout(tmo)
             ans = self._socket_read()
             if tmpl is None:
@@ -181,17 +215,31 @@ class DRIVER:
             m = re.match(tmpl, ans)
             if m:
                 dct = m.groupdict()
+            if open_socket:
+                self.dev.close()
         return dct
 
     def _prologix_query(self, cmd, tmpl=None):
         # print("In query", cmd, tmpl)
         dct = None
+        self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+        # time.sleep(SOCKETWAITTIME)
+        for _ in range(5):
+            try:
+                time.sleep(0.1)
+                self.dev.connect((self.prologix_ip, self.prologix_port))
+                break
+            except ConnectionRefusedError:
+                continue
+        else:
+            raise RuntimeError('Connection Refused')
         if self.dev and isinstance(cmd, str):
             #tmo = self.dev.gettimeout()
-            ans = self._prologix_write(cmd)
-            time.sleep(0.1)
-            dct = self._prologix_read(tmpl=tmpl)
+            ans = self._prologix_write(cmd, open_socket=False)
+            time.sleep(0.05)
+            dct = self._prologix_read(tmpl=tmpl, open_socket=False)
             #self.dev.settimeout(tmo)
+        self.dev.close()
         return dct
 
     def _gpib_write(self, cmd):
