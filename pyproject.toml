@@ -45,7 +45,7 @@ dependencies = [
     "gpib-ctypes>=0.3.0",
     "levenshtein>=0.27.1",
     "matplotlib>=3.7.5",
-    "msvcrt ; sys_platform == 'win32'",
+    #"msvcrt; sys_platform == 'win32'",
     "numpy>=1.24.4",
     "pathvalidate>=3.3.1",
     "ply>=3.11",
