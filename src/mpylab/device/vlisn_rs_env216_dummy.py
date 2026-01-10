@@ -20,7 +20,7 @@ class VLISN(VL):
         self.error = 0
         # self.path = None
         for _path in ('L', 'N'):
-            if case_insensitive_string_compare(path, _path):
+            if case_insensitive_string_compare(path[0], _path):
                 if self.path != _path:
                     self.path = _path
                 break
