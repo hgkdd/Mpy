@@ -246,7 +246,7 @@ class DRIVER:
         # print "In write", cmd
         stat = 0
         if self.dev and isinstance(cmd, str):
-            stat = self.dev.write(cmd)
+            stat = self.dev.write(f"{cmd}; *OPC?")
         return stat
 
     def _gpib_read(self, tmpl=None):
