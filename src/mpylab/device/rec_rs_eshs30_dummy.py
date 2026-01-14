@@ -77,9 +77,9 @@ class RECEIVER(REC):
         except KeyError:
             self.unit = VOLT
         # Preset
-        self.write("*CLS")
-        self.write("*RST")
-        self.write("PRESET")
+        #self.write("*CLS")
+        #self.write("*RST")
+        #self.write("PRESET")
 
         self._get_internal_unit()
         self.error, self.min_attenuation = self.SetMinAttenuation(self.conf[f'channel_{channel}']['min_attenuation'])
