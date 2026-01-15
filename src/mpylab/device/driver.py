@@ -242,11 +242,15 @@ class DRIVER:
         self.dev.close()
         return dct
 
-    def _gpib_write(self, cmd):
+    def _gpib_write(self, cmd, send_opc=False):
         # print "In write", cmd
         stat = 0
         if self.dev and isinstance(cmd, str):
-            stat = self.dev.write(f"{cmd}; *OPC?")
+            if send_opc:
+                cmd_str = f"{cmd}; *OPC?"
+            else:
+                cmd_str = f"{cmd}"
+            stat = self.dev.write(cmd_str)
         return stat
 
     def _gpib_read(self, tmpl=None):
