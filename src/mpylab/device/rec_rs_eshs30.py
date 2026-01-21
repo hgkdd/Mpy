@@ -42,6 +42,8 @@ class RECEIVER(REC):
         self.detector_map = {'peak': 'PEAK',
                              'qpeak': 'QUASIPEAK',
                              'average': 'AVERAGE'}
+        self.send_opc = True
+        self.delay = 0   # query delay
 
     def Init(self, ini=None, channel=None):
         if channel is None:
@@ -60,9 +62,9 @@ class RECEIVER(REC):
         except KeyError:
             self.unit = VOLT
         # Preset
-        self.write("*CLS")
-        self.write("*RST")
-        self.write("PRESET")
+        self.write("*CLS", send_opc=True)
+        self.write("*RST", send_opc=True)
+        self.write("PRESET", send_opc=True)
 
         self._get_internal_unit()
         self.error, self.min_attenuation = self.SetMinAttenuation(self.conf[f'channel_{channel}']['min_attenuation'])
@@ -191,9 +193,9 @@ class RECEIVER(REC):
     def SetMeasTime(self, meas_time):
         self.error = 0
         if meas_time is None or case_insensitive_string_compare(meas_time, 'auto'):
-            self.write('SPECIALFUNC 2,ON')   # couple meas_time to ZF bandwidth
+            self.write('SPECIALFUNC 2,ON', send_opc=True)   # couple meas_time to ZF bandwidth
         else:
-            self.write('SPECIALFUNC 2,OFF')   # couple meas_time to ZF bandwidth
+            self.write('SPECIALFUNC 2,OFF', send_opc=True)   # couple meas_time to ZF bandwidth
             dct = self._do_cmds('SetMeasTime', locals())
             self._update(dct)
         dct = self._do_cmds('GetMeasTime', locals())
@@ -209,7 +211,7 @@ class RECEIVER(REC):
     def SetResolutionBandwidth(self, rbw):
         self.error = 0
         if rbw is None or case_insensitive_string_compare(rbw, 'auto'):
-            self.write('SPECIALFUNC 1,ON')
+            self.write('SPECIALFUNC 1,ON', send_opc=True)
         else:
             dct = self._do_cmds('SetResolutionBandwidth', locals())
             self._update(dct)
@@ -220,7 +222,7 @@ class RECEIVER(REC):
     def SetAttenuation(self, attenuation):
         self.error = 0
         if attenuation is None or case_insensitive_string_compare(attenuation, 'auto'):
-            self.write('ATTENUATION:AUTO ON')
+            self.write('ATTENUATION:AUTO ON', send_opc=True)
         else:
             attenuation = int(np.ceil(attenuation / 10.0)) * 10    # ESHS can only 10,20,30,...
             attenuation = int(max(self.min_attenuation, attenuation))   # respect min_attenuation

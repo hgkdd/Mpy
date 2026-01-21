@@ -166,11 +166,15 @@ class DRIVER:
         #self.dev.close()
         return ans
 
-    def _prologix_write(self, cmd, open_socket=True):
+    def _prologix_write(self, cmd, open_socket=True, send_opc=False):
         stat = 0
         if open_socket:
             self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         if self.dev and isinstance(cmd, str):
+            if send_opc:
+                cmd_str = f"{cmd}; *OPC?"
+            else:
+                cmd_str = f"{cmd}"
             #tmo = self.dev.gettimeout()
             if open_socket:
                 # time.sleep(SOCKETWAITTIME)
@@ -183,7 +187,7 @@ class DRIVER:
                         continue
                 else:
                     raise RuntimeError('Connection Refused')
-            stat = self.dev.send(cmd.encode('ascii') + self.prologix_TXEOL)
+            stat = self.dev.send(cmd_str.encode('ascii') + self.prologix_TXEOL)
             #self.dev.settimeout(tmo)
         if open_socket:
             self.dev.close()
@@ -219,8 +223,9 @@ class DRIVER:
                 self.dev.close()
         return dct
 
-    def _prologix_query(self, cmd, tmpl=None):
+    def _prologix_query(self, cmd, tmpl=None, send_opc=False):
         # print("In query", cmd, tmpl)
+
         dct = None
         self.dev = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         # time.sleep(SOCKETWAITTIME)
@@ -234,8 +239,12 @@ class DRIVER:
         else:
             raise RuntimeError('Connection Refused')
         if self.dev and isinstance(cmd, str):
+            if send_opc:
+                cmd_str = f"{cmd}; *OPC?"
+            else:
+                cmd_str = f"{cmd}"
             #tmo = self.dev.gettimeout()
-            ans = self._prologix_write(cmd, open_socket=False)
+            ans = self._prologix_write(cmd_str, open_socket=False)
             time.sleep(0.05)
             dct = self._prologix_read(tmpl=tmpl, open_socket=False)
             #self.dev.settimeout(tmo)
@@ -265,11 +274,15 @@ class DRIVER:
                 dct = m.groupdict()
         return dct
 
-    def _gpib_query(self, cmd, tmpl=None):
+    def _gpib_query(self, cmd, tmpl=None, send_opc=False):
         # print("In query", cmd, tmpl)
         dct = None
         if self.dev and isinstance(cmd, str):
-            ans = self.dev.query(cmd)
+            if send_opc:
+                cmd_str = f"{cmd}; *OPC?"
+            else:
+                cmd_str = f"{cmd}"
+            ans = self.dev.query(cmd_str)
             if tmpl is None:
                 return ans
             # print "ans=",ans
@@ -279,8 +292,12 @@ class DRIVER:
                 dct = m.groupdict()
         return dct
 
-    def _debug_write(self, cmd):
-        print("%s out:" % self.IDN, cmd)
+    def _debug_write(self, cmd, send_opc=False):
+        if send_opc:
+            cmd_str = f"{cmd}; *OPC?"
+        else:
+            cmd_str = f"{cmd}"
+        print("%s out:" % self.IDN, cmd_str)
         return 0
 
     def _debug_read(self, tmpl):
@@ -295,8 +312,13 @@ class DRIVER:
                 dct = m.groupdict()
             return dct
 
-    def _debug_query(self, cmd, tmpl):
-        print(("In query", cmd, tmpl))
+    def _debug_query(self, cmd, tmpl, send_opc=False):
+        if send_opc:
+            cmd_str = f"{cmd}; *OPC?"
+        else:
+            cmd_str = f"{cmd}"
+
+        print(("In query", cmd_str, tmpl))
         self.write(cmd)
         return self.read(tmpl)
 
@@ -359,6 +381,7 @@ class DRIVER:
         return self.conf[sectok][keytok]
 
     def _do_cmds(self, key, callerdict=None):
+        send_opc = getattr(self, 'send_opc', False)  # look for send_opc; default to dont send
         dct = {}  # preset returned dictionary
         if not hasattr(self, '_cmds'):
             return dct  # if self._cmds is not defined we return a empty dict
@@ -380,11 +403,12 @@ class DRIVER:
                     try:
                         exec(expr, callerdict)
                     except (SyntaxError, NameError, TypeError):
-                        self.write(expr)
+                        if send_opc:
+                            self.write(expr, send_opc=send_opc)
                 elif not cmd:  # only data read    no cmd, no write
                     dct.update(self.read(tmpl))
                 else:  # both -> write and read
-                    dct.update(self.query(expr, tmpl))
+                    dct.update(self.query(expr, tmpl, send_opc=send_opc))
 
         return dct
 
