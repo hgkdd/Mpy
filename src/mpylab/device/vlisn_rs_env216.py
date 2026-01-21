@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from mpylab.device.vlisn import VLISN as VL
 from mpylab.tools.util import case_insensitive_string_compare
@@ -20,19 +22,27 @@ class VLISN(VL):
     def __init__(self):
         super().__init__()
 
+    def _requests_get(self, req, retries=3):
+        session = requests.Session()
+        retry = Retry(connect=retries, backoff_factor=0.5)
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        ans = session.get(req)
+        return ans
+
     def _set_as_digital_out(self, pin):
         request = f"http://{self.ip}/mode/{pin}/o"
-        ans = requests.get(request)
+        ans = self._requests_get(request)
         return ans
 
     def _set_as_digital_in(self, pin):
         request = f"http://{self.ip}/mode/{pin}/i"
-        ans = requests.get(request)
+        ans = self._requests_get(request)
         return ans
 
     def _set_pin_state(self, pin, state):
         request = f"http://{self.ip}/digital/{pin}/{state}"
-        ans = requests.get(request)
+        ans = self._requests_get(request)
         return ans
 
     def _set_L(self):
