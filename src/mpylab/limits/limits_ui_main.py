@@ -5,18 +5,17 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
-from PySide6 import QtWidgets
-from PySide6.QtWidgets import (QFileSystemModel, QFileIconProvider,
+from PyQt6 import QtWidgets
+from PyQt6.QtGui import QFileSystemModel
+from PyQt6.QtWidgets import (QFileIconProvider,
                                QLabel, QSpacerItem, QSizePolicy, QComboBox, QLayout)
-from PySide6.QtCore import QDir
-from PySide6.QtGui import QAbstractFileIconProvider
+from PyQt6.QtCore import QDir
 
 from mpylab.tools.spacing import linspace, logspace
-#from mpylab.limits.qtlimit_proxy import HideFileTypesProxy
 
 from limits_ui import Ui_MainWindow
 
-os.environ["QT_API"] = "PySide6"
+os.environ["QT_API"] = "PyQt6"
 
 
 class MplCanvas(FigureCanvas):
@@ -67,8 +66,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         icon_provider = QFileIconProvider()
         model.setIconProvider(icon_provider)
         model.setRootPath("")
-        model.setOption(QFileSystemModel.DontUseCustomDirectoryIcons)
-        model.setOption(QFileSystemModel.DontWatchForChanges)
+        model.setOption(QFileSystemModel.Option.DontUseCustomDirectoryIcons)
+        model.setOption(QFileSystemModel.Option.DontWatchForChanges)
         model.setNameFilters(['*.py'])
         model.setNameFilterDisables(False)
         model.setReadOnly(True)
@@ -95,7 +94,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         try:
             index = path.rfind('/')
             submodule = path[index + 1:]
-            self.mod = import_module(f'.{name.rstrip('.py')}', package=f'mpylab.limits.{submodule}')
+            self.mod = import_module(f'.{name.rstrip(".py")}', package=f'mpylab.limits.{submodule}')
             #des = mod.LIMIT().description
             self.textEdit_description.setMarkdown('Please choose from variations.')
         except Exception as e:
@@ -114,7 +113,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.var_combobox[label] = combobox
             combobox.show()
             combobox.currentIndexChanged.connect(self.update_description)
-        layout.addItem(QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        layout.addItem(QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
         self.update_description()
 
 
