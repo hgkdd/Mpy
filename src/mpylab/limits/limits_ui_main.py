@@ -5,17 +5,16 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
-from PyQt6 import QtWidgets
-from PyQt6.QtGui import QFileSystemModel
-from PyQt6.QtWidgets import (QFileIconProvider,
+from PySide6 import QtWidgets
+from PySide6.QtWidgets import (QFileSystemModel, QFileIconProvider,
                                QLabel, QSpacerItem, QSizePolicy, QComboBox, QLayout)
-from PyQt6.QtCore import QDir
+from PySide6.QtCore import QDir
 
 from mpylab.tools.spacing import linspace, logspace
 
 from limits_ui import Ui_MainWindow
 
-os.environ["QT_API"] = "PyQt6"
+os.environ["QT_API"] = "PySide6"
 
 
 class MplCanvas(FigureCanvas):
