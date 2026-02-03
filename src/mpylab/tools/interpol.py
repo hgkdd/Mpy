@@ -9,7 +9,7 @@
 """
 import cmath
 from scipy.interpolate import interp1d
-from numpy import nan_to_num, atan2
+from numpy import nan_to_num, atan2, errstate
 from scuq.ucomponents import Context, UncertainInput
 from scuq.quantities import Quantity
 
@@ -51,9 +51,11 @@ def unwrap(dct, arg=None):
         unwrapped[1].append(abs(dct[f]))
         unwrapped[2].append(phik)
         try:
-            q = dct[freqs[k + 1]] / dct[f]   # quantity(next freq) / quantity(actual freq) -> get delta of arg
+            with errstate(divide='ignore'):
+                q = dct[freqs[k + 1]] / dct[f]   # quantity(next freq) / quantity(actual freq) -> get delta of arg
             q = nan_to_num(q)  # replace NaN with appropriate numbers
             dang = arg(q)   # delta of argument
+            # print(f"f, dct(f): {f} {dct[f]}")
         except ZeroDivisionError:
             dang = 0        # no correction needed
 
