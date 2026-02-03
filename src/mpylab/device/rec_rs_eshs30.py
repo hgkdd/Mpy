@@ -42,8 +42,8 @@ class RECEIVER(REC):
         self.detector_map = {'peak': 'PEAK',
                              'qpeak': 'QUASIPEAK',
                              'average': 'AVERAGE'}
-        self.send_opc = False
-        self.delay = 0   # query delay
+        self.send_opc = True
+        self.delay = 0.1   # query delay
 
     def Init(self, ini=None, channel=None):
         if channel is None:
