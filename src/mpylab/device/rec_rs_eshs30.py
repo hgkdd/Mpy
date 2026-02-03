@@ -20,9 +20,9 @@ class RECEIVER(REC):
         super().__init__()
         self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
                       'GetFreq': [('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)],
-                      'GetData': [('LEVEL?', r'LEVEL (?P<level>%s)' % self._FP)],
+                      'GetData': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<level>%s)' % self._FP)],
                       'GetDataNB': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<level>%s)' % self._FP)],
-                      'Trigger': [('*TRG', None)],
+                      'Trigger': [('*TRG;*WAI', None)],
                       'SetAttenuation': [('ATTENUATION:AUTO OFF', None), ("f'ATTENUATION {attenuation} DB'", None)],
                       'GetAttenuation': [('ATTENUATION?', r'ATTENUATION (?P<attenuation>%s)' % self._FP)],
                       #'SetMinAttenuation': [("f'MIN:ATTENUATION {min_attenuation} DB'", None)],
@@ -42,7 +42,7 @@ class RECEIVER(REC):
         self.detector_map = {'peak': 'PEAK',
                              'qpeak': 'QUASIPEAK',
                              'average': 'AVERAGE'}
-        self.send_opc = True
+        self.send_opc = False
         self.delay = 0   # query delay
 
     def Init(self, ini=None, channel=None):
@@ -236,6 +236,7 @@ class RECEIVER(REC):
 
     def GetData(self):
         self.error = 0
+        self.Trigger()
         dct = self._do_cmds('GetData', locals())
         self._update(dct)
         obj = self._create_lev_object(self.level)
