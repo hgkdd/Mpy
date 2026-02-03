@@ -403,8 +403,7 @@ class DRIVER:
                     try:
                         exec(expr, callerdict)
                     except (SyntaxError, NameError, TypeError):
-                        if send_opc:
-                            self.write(expr, send_opc=send_opc)
+                        self.write(expr, send_opc=send_opc)
                 elif not cmd:  # only data read    no cmd, no write
                     dct.update(self.read(tmpl))
                 else:  # both -> write and read
