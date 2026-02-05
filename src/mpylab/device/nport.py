@@ -51,7 +51,7 @@ class NPORT(DRIVER):
             self.data[thename] = {}
             self.data[thename]['unit'] = theunit
             self.data[thename]['datafile'] = DatFile(filename=thefile,
-                                                     interpolation=theinterpol)
+                                                     interpolation=theinterpol, SearchPaths=self.SearchPaths)
             # print(self.data[thename]['datafile'])
             self.data[thename]['data'] = self.data[thename]['datafile'].run()
             # print self.data[thename]['data']
