@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import importlib.machinery
+import importlib.util
 import io
 import time
 
@@ -978,8 +978,12 @@ class POWERMETER(PWRMTR):
             setattr(self, m, getattr(self.pm_instance, m))
 
         # sw=imp.load_source('sw', 'c:\\MpyConfig\\LargeRC\\script\\sw_rc_rx.py')
-        sw = importlib.machinery.SourceFileLoader('sw', '/opt/share/MpyConfig/LargeRC/script/sw_rc_rx.py').load_module()
-        self.sw_instance = sw.SWController()
+
+        spec = importlib.util.spec_from_file_location('sw', '/opt/share/MpyConfig/LargeRC/script/sw_rc_rx.py')
+        # Modul aus der Spezifikation erstellen
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.sw_instance = module.SWController()
         swini = format_block("""
                         [DESCRIPTION]
                         DESCRIPTION = RC RX Switch
