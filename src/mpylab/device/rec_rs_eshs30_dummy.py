@@ -16,8 +16,8 @@ from scuq.si import VOLT, WATT
 
 
 class RECEIVER(REC):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kw):
+        REC.__init__(self, **kw)
         self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
                       'GetFreq': [('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)],
                       'GetData': [('LEVEL?', r'LEVEL (?P<level>%s)' % self._FP)],
@@ -284,7 +284,7 @@ def main():
         ini = io.StringIO(ini)
 
 
-    rec = RECEIVER()
+    rec = RECEIVER(SearchPaths=['.', '/opt/conf'])
     rec.Init(ini=ini, channel=1)
     if not ini:
         rec.SetVirtual(False)

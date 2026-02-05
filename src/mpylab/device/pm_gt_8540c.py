@@ -36,8 +36,8 @@ class POWERMETER(PWRMTR):
     Driver for the Gigatronics 854X powermeter
     """
 
-    def __init__(self):
-        PWRMTR.__init__(self)
+    def __init__(self, **kw):
+        PWRMTR.__init__(self, **kw)
         self._internal_unit = 'dBm'
         self.linav = linav_dB
         self.ch_tup = ('', 'A', 'B')

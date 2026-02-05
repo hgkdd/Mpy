@@ -30,9 +30,9 @@ class NPORT(DRIVER):
                      'interpolation': str,
                      'file': str}}
 
-    def __init__(self, **kw):
-        super().__init__(self, **kw)
-        self.kw = kw
+    def __init__(self, SearchPaths=None):
+        DRIVER.__init__(self, SearchPaths=SearchPaths)
+        # self.kw = kw
         self.error = 0
         self.conf = {'init_value': {'virtual': False}}
         self.data = {}
@@ -51,7 +51,7 @@ class NPORT(DRIVER):
             self.data[thename] = {}
             self.data[thename]['unit'] = theunit
             self.data[thename]['datafile'] = DatFile(filename=thefile,
-                                                     interpolation=theinterpol, **self.kw)
+                                                     interpolation=theinterpol)
             # print(self.data[thename]['datafile'])
             self.data[thename]['data'] = self.data[thename]['datafile'].run()
             # print self.data[thename]['data']

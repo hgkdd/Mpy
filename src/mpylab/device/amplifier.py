@@ -18,8 +18,8 @@ class AMPLIFIER(NPORT):
     STATES = ('Operate', 'Standby', 'POn', 'POff')
     _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
 
-    def __init__(self):
-        NPORT.__init__(self)
+    def __init__(self, SearchPaths=None):
+        NPORT.__init__(self, SearchPaths=SearchPaths)
         self._cmds = {'Pon': [("Set to POn", None)],
                       'Standby': [("Set to Standby", None)],
                       'Operate': [("Set to Operate", None)],

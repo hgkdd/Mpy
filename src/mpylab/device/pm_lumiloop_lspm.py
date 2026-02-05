@@ -48,8 +48,8 @@ class POWERMETER(PMMTR):
     npm = 1
     data = []
 
-    def __init__(self):
-        PMMTR.__init__(self)
+    def __init__(self, **kw):
+        PWRMTR.__init__(self, **kw)
         self._internal_unit = 'dBm'
         self.freq = None
         self._cmds = {'Zero': [],

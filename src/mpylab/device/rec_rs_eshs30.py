@@ -16,8 +16,8 @@ from scuq.si import VOLT, WATT
 
 
 class RECEIVER(REC):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kw):
+        REC.__init__(self, **kw)
         self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
                       'GetFreq': [('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)],
                       'GetData': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<level>%s)' % self._FP)],

@@ -21,7 +21,8 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     #
     #                    Init
     # *************************************************************************
-    def __init__(self):
+    def __init__(self, **kw):
+        SPECTRUMAN.__init__(self, **kw)
 
         # Map: {Allgemein gültige Bezeichnung : Bezeichnung Gerät}
         self.MapTRACEMODES = {'WRITE': 'WRITe',
@@ -71,7 +72,6 @@ class SPECTRUMANALYZER(SPECTRUMAN):
                                      'EXT': 'EXTERNAL'
                                      }
 
-        SPECTRUMAN.__init__(self)
         self.trace = 1
         self._internal_unit = 'dBm'
 

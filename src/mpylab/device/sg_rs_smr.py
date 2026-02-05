@@ -2,14 +2,13 @@
 import sys
 import io
 from scuq import *
-from .signalgenerator import SIGNALGENERATOR
-
+from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 
 # import pprint
 
-class SMR(SIGNALGENERATOR):
-    def __init__(self):
-        SIGNALGENERATOR.__init__(self)
+class SIGNALGENERATOR(SGNLGNRTR):
+    def __init__(self, **kw):
+        SGNLGNRTR.__init__(self, **kw)
         self._internal_unit = 'dBm'
         self._cmds = {'Init': [('*RST', None),
                                (':OUTPUT1:STATE OFF', None)],

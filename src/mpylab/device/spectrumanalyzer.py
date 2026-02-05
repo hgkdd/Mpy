@@ -62,8 +62,8 @@ class SPECTRUMANALYZER(DRIVER):
 
     _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
 
-    def __init__(self, **kw):
-        super().__init__(self, **kw)
+    def __init__(self, SearchPaths=None):
+        DRIVER.__init__(self, SearchPaths=SearchPaths)
         self._cmds = {'SetCenterFreq': [("'CENTERFREQ %s HZ'%something", None)],
                       'GetCenterFreq': [('CENTERFREQ?', r'CENTERFREQ (?P<cfreq>%s) HZ' % self._FP)],
                       'SetSpan': [("'SPAN %s HZ'%something", None)],

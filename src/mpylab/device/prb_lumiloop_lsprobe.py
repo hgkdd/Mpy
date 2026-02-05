@@ -24,8 +24,8 @@ class FIELDPROBE(FLDPRB):
     nprb = 1
     data = []
 
-    def __init__(self):
-        FLDPRB.__init__(self)
+    def __init__(self, **kw):
+        FLDPRB.__init__(self, **kw)
         self._internal_unit = si.VOLT / si.METER
         self.freq = None
         self._cmds = {'Zero': [],

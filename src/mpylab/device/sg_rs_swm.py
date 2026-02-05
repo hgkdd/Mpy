@@ -10,8 +10,8 @@ from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 
 
 class SIGNALGENERATOR(SGNLGNRTR):
-    def __init__(self):
-        SGNLGNRTR.__init__(self)
+    def __init__(self, **kw):
+        SGNLGNRTR.__init__(self, **kw)
         self._internal_unit = 'dBm'
         self._cmds = {'Init': [('*RST', None),
                                (':FREQ:CW 10MHZ', None),

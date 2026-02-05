@@ -9,7 +9,7 @@ class VLISN(VL):
     conftmpl = VL.conftmpl
 
     def __init__(self, **kw):
-        super().__init__(**kw)
+        VL.__init__(self, **kw)
 
     def Init(self, ini=None, channel=None):
         self.path = None
