@@ -13,8 +13,8 @@ class VLISN(VL):
     """
     conftmpl = VL.conftmpl
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kw):
+        VL.__init__(self, **kw)
 
 
 
