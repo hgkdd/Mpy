@@ -5,7 +5,7 @@ build-backend = "uv_build"
 [project]
 name = "mpylab"
 version = "0.9.5"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     {name = "Hans Georg Krauthäuser", email = "hgk@ieee.org"},
     {name = "Christian Albrecht"},
@@ -57,6 +57,7 @@ dependencies = [
     "pyvisa-py>=0.7.2",
     "requests>=2.32.5",
     "scipy>=1.10.1",
+    "scipy-stubs~=1.17.0",
     "scuq>=0.9",
     "simpleeval>=0.9.13",
 ]

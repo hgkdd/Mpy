@@ -509,8 +509,8 @@ class NETWORKANALYZER(DRIVER):
                                      'returntype': float}
                  }
 
-    def __init__(self):
-        DRIVER.__init__(self)
+    def __init__(self, **kw):
+        super().__init__(self, **kw)
         self._cmds = {}
 
 

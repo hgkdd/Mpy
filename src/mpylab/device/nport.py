@@ -31,7 +31,7 @@ class NPORT(DRIVER):
                      'file': str}}
 
     def __init__(self, **kw):
-        DRIVER.__init__(self, **kw)
+        super().__init__(self, **kw)
         self.kw = kw
         self.error = 0
         self.conf = {'init_value': {'virtual': False}}
@@ -155,7 +155,7 @@ def main():
                          """)
         ini = io.StringIO(ini)
 
-    cbl = NPORT()
+    cbl = NPORT(SearchPaths=['testpfad'])
     err = cbl.Init(ini)
     ctx = scuq.ucomponents.Context()
     for freq in range(10, 100, 10):

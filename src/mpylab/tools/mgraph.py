@@ -562,7 +562,7 @@ class MGraph(Graph):
                 modname = modname.with_suffix('')   # remove suffix
                 modname = modname.name.lower()
                 m = importlib.import_module(f".{modname}", package='mpylab.device')
-                d = getattr(m, dtype.upper())()
+                d = getattr(m, dtype.upper())(SearchPaths=self.SearchPaths)
 #                d = getattr(device, dtype)(SearchPaths=self.SearchPaths)
             ddict[name] = dct['inst'] = d  # save instances in nodes dict and in return value
             # self.CallerGlobals['d']=d

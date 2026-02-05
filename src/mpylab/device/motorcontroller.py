@@ -32,8 +32,8 @@ class MOTORCONTROLLER(DRIVER):
     # defintion from http://docs.python.org/library/re.html
     # _FP=r'[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?'
 
-    def __init__(self):
-        DRIVER.__init__(self)
+    def __init__(self, **kw):
+        super().__init__(self, **kw)
         self._cmds = {'Goto': [("'GOTO %s DEG'%to", None)],
                       'GetState': [('STATE?', r'POS (?P<pos>%s) DEG, DIR (?P<dir>\d+)' % (self._FP))],
                       'SetSpeed': [("'SPEED %s'%(speed)", None)],

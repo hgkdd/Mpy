@@ -101,8 +101,8 @@ class POWERMETER(DRIVER):
 
     _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
 
-    def __init__(self):
-        DRIVER.__init__(self)
+    def __init__(self, **kw):
+        super().__init__(self, **kw)
         self._cmds = {'SetFreq': [("'FREQ %s HZ'%freq", None)],
                       'GetFreq': [('FREQ?', r'FREQ (?P<freq>%s) HZ' % self._FP)],
                       'GetData': [('POW?', r'POW (?P<power>%s) (?P<unit>)\S+' % self._FP)],

@@ -7,9 +7,9 @@ from mpylab.device.powermeter import POWERMETER as PM
 class POWERMETER(PM):
     instances = {}
 
-    def __init__(self):
+    def __init__(self, **kw):
         POWERMETER.conftmpl['channel_%d'].setdefault('trg_threshold', float)
-        PM.__init__(self)
+        super().__init__(self, **kw)
         self.lasttrigger = None
         self.istriggered = False
 

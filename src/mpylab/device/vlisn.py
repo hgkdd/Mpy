@@ -36,7 +36,7 @@ class VLISN(DRIVER):
                      'file': str}}
 
     def __init__(self, **kw):
-        DRIVER.__init__(self, **kw)
+        super().__init__(self, **kw)
         self.kw = kw
         self.error = 0
         self.path = None

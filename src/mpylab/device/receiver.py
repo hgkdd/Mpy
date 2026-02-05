@@ -100,8 +100,8 @@ class RECEIVER(DRIVER):
 
     _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
 
-    def __init__(self):
-        DRIVER.__init__(self)
+    def __init__(self, **kw):
+        super().__init__(self, **kw)
         self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
                       'GetFreq': [('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)],
                       'GetData': [('LEVEL?', r'LEVEL (?P<level>%s)' % self._FP)],
