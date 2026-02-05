@@ -64,8 +64,8 @@ class SIGNALGENERATOR(DRIVER):
     # defintion from http://docs.python.org/library/re.html
     # _FP=r'[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?'
 
-    def __init__(self, **kw):
-        super().__init__(self, **kw)
+    def __init__(self, SearchPaths=None):
+        DRIVER.__init__(self, SearchPaths=SearchPaths)
         self._cmds = {'SetFreq': [("'FREQ %s HZ'%freq", None)],
                       'GetFreq': [('FREQ?', r'FREQ (?P<freq>%s) HZ' % self._FP)],
                       'SetLevel': [("'LEVEL %s %s'%(level,unit)", None)],

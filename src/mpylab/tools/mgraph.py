@@ -9,7 +9,8 @@
 """
 from __future__ import annotations
 import os
-import importlib.machinery
+#import importlib.machinery
+import importlib.util
 import inspect
 from io import StringIO
 from typing import Any
@@ -555,8 +556,14 @@ class MGraph(Graph):
                 cls = dct['inidic']['description']['class']
                 drvfile = next(locate(driver, self.SearchPaths))
                 # m = imp.load_source('m', drvfile)
-                m = importlib.machinery.SourceFileLoader(driver, drvfile).load_module()
-                d = getattr(m, cls)()
+                # Spezifikation aus der Datei erstellen
+                spec = importlib.util.spec_from_file_location(driver, drvfile)
+                # Modul aus der Spezifikation erstellen
+                module = importlib.util.module_from_spec(spec)
+                # Modul ausführen
+                spec.loader.exec_module(module)
+                # module = importlib.machinery.SourceFileLoader(driver, drvfile).load_module()
+                d = getattr(module, cls)()
             else:
                 modname = Path(driver)
                 modname = modname.with_suffix('')   # remove suffix

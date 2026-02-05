@@ -21,8 +21,8 @@ class VLISN(VL):
     _L3_ = 18
     _N_ = 19
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kw):
+        VL.__init__(self, **kw)
 
     def _requests_get(self, req, retries=3):
         session = requests.Session()

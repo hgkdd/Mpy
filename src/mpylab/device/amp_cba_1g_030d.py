@@ -8,8 +8,8 @@ class AMPLIFIER(AMP):
     conftmpl = AMP.conftmpl
     conftmpl['init_value']['gpib'] = int
 
-    def __init__(self):
-        AMP.__init__(self)
+    def __init__(self, **kw):
+        AMP.__init__(self, **kw)
         self._cmds = {'POn': [("RFON", None)],
                       'POff': [("RFOF", None)],
                       'Operate': [("ZEROATT", None)],

@@ -10,8 +10,8 @@ class POWERMETER(PWRMTR):
     Driver for the R&S NRP
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kw):
+        PWRMTR.__init__(self, **kw)
         self._internal_unit = 'dBm'
         self._data_ = 0
         self.sensor = {}

@@ -14,8 +14,8 @@ from mpylab.tools.configuration import fstrcmp
 # Diese greift auf die Unterklasse SIGNALGENERATOR (signalgenerator.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
 class SIGNALGENERATOR(SGNLGNRTR):
-    def __init__(self):
-        SGNLGNRTR.__init__(self)
+    def __init__(self, **kw):
+        SGNLGNRTR.__init__(self, **kw)
         # print self.map
         self.map['AM_sources']['INT1'] = 'LF1'
         self.map['AM_sources']['INT2'] = 'LF2'

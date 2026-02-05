@@ -20,9 +20,8 @@ from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 # child class for the special signalgenerator
 class SIGNALGENERATOR(SGNLGNRTR):
     # function for initialization
-    def __init__(self):
-        # initialize parent class
-        SGNLGNRTR.__init__(self)
+    def __init__(self, **kw):
+        SGNLGNRTR.__init__(self, **kw)
         # overwrite internal unit
         self._internal_unit = 'dBm'
         # overwrite defined commands, save as a dictionary
