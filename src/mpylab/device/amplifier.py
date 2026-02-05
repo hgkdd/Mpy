@@ -26,6 +26,9 @@ class AMPLIFIER(NPORT):
                       'POff': [("Set to POff", None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
+    def Init(self, ini=None, channel=None, ignore_bus=False):
+        return NPORT.Init(self, ini=ini, channel=channel, ignore_bus=ignore_bus)
+
     def SetState(self, state):
         """
         Switch the state of the amplifier (in remote operation).

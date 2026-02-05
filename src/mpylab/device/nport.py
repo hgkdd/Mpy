@@ -37,8 +37,8 @@ class NPORT(DRIVER):
         self.conf = {'init_value': {'virtual': False}}
         self.data = {}
 
-    def Init(self, ini=None, channel=None):
-        super().Init(ini=ini, channel=channel)
+    def Init(self, ini=None, channel=None, ignore_bus=True):
+        super().Init(ini=ini, channel=channel, ignore_bus=ignore_bus)
         # self.error=0
         # self.Configuration=Configuration(ini, self.conftmpl)
         # print self.Configuration.conf
