@@ -355,6 +355,7 @@ class FIELDPROBE(FLDPRB):
             FIELDPROBE.main_instance = None
             FIELDPROBE.nprb = 1
             FIELDPROBE.data = None
+            self.write(':SYST:LAS:EN 0,0')
         self.error = 0
         return self.error
 
