@@ -49,7 +49,7 @@ class POWERMETER(PMMTR):
     data = []
 
     def __init__(self, **kw):
-        PWRMTR.__init__(self, **kw)
+        PMMTR.__init__(self, **kw)
         self._internal_unit = 'dBm'
         self.freq = None
         self._cmds = {'Zero': [],
