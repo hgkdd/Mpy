@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pydot
 import configparser
-from numpy import bool_, sqrt
+from numpy import bool_, sqrt, absolute
 from scipy.interpolate import interp1d
 
 #import mpylab.device.device as device
@@ -1054,7 +1054,7 @@ class MGraph(Graph):
         if not len(levels):
             return None
         else:
-            return min(levels)
+            return min(absolute(levels))
 
     def CalcLevelFrom(self, sg, limiter, what):
         if sg not in self.nodes:
