@@ -12,6 +12,7 @@ This is :mod:`mpylab.tools.distributions`.
 
 import numpy as np
 from numpy.typing import ArrayLike
+from typing import Callable
 from scipy.interpolate import interp1d
 from scipy.stats import rayleigh, chisquare, kstest
 
@@ -115,7 +116,7 @@ def fit_rayleigh(data: ArrayLike) -> tuple[float, float]:
     loc, scale = rayleigh.fit(data)
     return loc, scale
 
-def ks_test(data: ArrayLike | callable, cdf: ArrayLike | callable ) -> float:
+def ks_test(data: ArrayLike | Callable[[float], float], cdf: ArrayLike | Callable[[float], float] ) -> float:
     """
     Performs the Kolmogorov-Smirnov test for goodness of fit.
 
@@ -136,7 +137,7 @@ def ks_test(data: ArrayLike | callable, cdf: ArrayLike | callable ) -> float:
     kstestresult = kstest(data, cdf)
     return kstestresult.pvalue
 
-def chi2_test(data: ArrayLike | callable, cdf: callable) -> float:
+def chi2_test(data: ArrayLike | Callable[[float], float], cdf: Callable[[float], float]) -> float:
     """
     Performs a Chisquare test for the expected counts for the reference distribution (cdf) and those from the observed distribution (data).
 
