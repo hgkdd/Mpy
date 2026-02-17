@@ -124,7 +124,7 @@ class Graph():
                             raise  # reraise
                 else:
                     dotgraph = meth(fname_or_data)
-            except (IOError, IndexError):
+            except (IOError, IndexError, StopIteration):
                 continue
             else:
                 break
@@ -1193,3 +1193,15 @@ class Leveler(object):
             if (pin >= self.MaxSafe) and (pout <= soll):
                 break
         return pin, pout
+
+
+if __name__ == '__main__':
+    dotstr = """digraph {
+                a -> b
+}"""
+    mg = MGraph(fname_or_data=dotstr, themap={'a': 'a', 'b': 'b'})
+    corr = mg.get_path_correction('a', 'b')
+    print(corr)
+
+
+
