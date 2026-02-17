@@ -156,38 +156,70 @@ class Graph():
         except (AttributeError, KeyError):
             return True
 
+    # def find_all_paths(self, start, end, path=None, edge=None):
+    #     """
+    #     Find all all_paths in graph from *start* to *end* (without circles).
+    #     Ignores edges with attribute `active==False`.
+    #     As user: allways call with `path=None` and `edges=None`; these are only used within recursion
+    #     """
+    #     # print 'enter:', start, end, path
+    #     # path = path + [start]
+    #     if path is None:
+    #         path = []   # initialize list
+    #     if edge:
+    #         path.append(edge)  # edge given -> append to path
+    #         # path = path + [edge]
+    #         # print "added edge to path:", edge.get_source(), edge.get_destination(), path
+    #     if start == end:  # end node reached
+    #         # print "start==end: returning", [path]
+    #         return [path]  # this is the end of the recursion
+    #     all_paths = []   # initialize list of all paths
+    #     # list of all edges with source==start
+    #     start_edges = [e for e in self.edges if e.get_source() == start]
+    #     for edge in start_edges:
+    #         next_node = edge.get_destination()    # end of this edge
+    #         gnode = self.graph.get_node(next_node)  # next node in underlying graph
+    #         eact = self._active(edge)   # active flag of edge
+    #         gact = self._active(gnode)  # active flag of next node
+    #         is_active = eact and gact   # both active?
+    #         if is_active and edge not in path:   # new active edge
+    #             newpaths = self.find_all_paths(next_node, end, path, edge)   # start recursion
+    #             # print "newpaths returned:", newpaths
+    #             for newpath in newpaths:
+    #                 all_paths.append(newpath)   # append to list of all paths
+    #     # print 'exit:', all_paths
+    #     return all_paths
+
     def find_all_paths(self, start, end, path=None, edge=None):
         """
         Find all all_paths in graph from *start* to *end* (without circles).
         Ignores edges with attribute `active==False`.
         As user: allways call with `path=None` and `edges=None`; these are only used within recursion
         """
-        # print 'enter:', start, end, path
-        # path = path + [start]
         if path is None:
-            path = []   # initialize list
+            path = []
         if edge:
-            path.append(edge)  # edge given -> append to path
-            # path = path + [edge]
-            # print "added edge to path:", edge.get_source(), edge.get_destination(), path
-        if start == end:  # end node reached
-            # print "start==end: returning", [path]
-            return [path]  # this is the end of the recursion
-        all_paths = []   # initialize list of all paths
-        # list of all edges with source==start
+            path.append(edge)
+
+        if start == end:
+            res = [path.copy()]  # Kopie, sonst später wieder kaputt
+            if edge:
+                path.pop()
+            return res
+
+        all_paths = []
         start_edges = [e for e in self.edges if e.get_source() == start]
-        for edge in start_edges:
-            next_node = edge.get_destination()    # end of this edge
-            gnode = self.graph.get_node(next_node)  # next node in underlying graph
-            eact = self._active(edge)   # active flag of edge
-            gact = self._active(gnode)  # active flag of next node
-            is_active = eact and gact   # both active?
-            if is_active and edge not in path:   # new active edge
-                newpaths = self.find_all_paths(next_node, end, path, edge)   # start recursion
-                # print "newpaths returned:", newpaths
-                for newpath in newpaths:
-                    all_paths.append(newpath)   # append to list of all paths
-        # print 'exit:', all_paths
+
+        for edge2 in start_edges:
+            next_node = edge2.get_destination()
+            gnode = self.graph.get_node(next_node)
+            is_active = self._active(edge2) and self._active(gnode)
+
+            if is_active and edge2 not in path:
+                all_paths.extend(self.find_all_paths2(next_node, end, path, edge2))
+
+        if edge:
+            path.pop()
         return all_paths
 
     def get_common_parent(self, n1, n2):
@@ -1198,8 +1230,15 @@ class Leveler(object):
 if __name__ == '__main__':
     dotstr = """digraph {
                 a -> b
+                b -> c
+                c -> d
+                d -> e
+                e -> f
+                a -> g
 }"""
-    mg = MGraph(fname_or_data=dotstr, themap={'a': 'a', 'b': 'b'})
+    names = {v: v for v in 'abcdefg'}
+    mg = MGraph(fname_or_data=dotstr, themap=names)
+    p = mg.find_all_paths2('a', 'd')
     corr = mg.get_path_correction('a', 'b')
     print(corr)
 
