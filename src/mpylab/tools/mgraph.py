@@ -216,7 +216,7 @@ class Graph():
             is_active = self._active(edge2) and self._active(gnode)
 
             if is_active and edge2 not in path:
-                all_paths.extend(self.find_all_paths2(next_node, end, path, edge2))
+                all_paths.extend(self.find_all_paths(next_node, end, path, edge2))
 
         if edge:
             path.pop()
