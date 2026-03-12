@@ -101,6 +101,13 @@ class POWERMETER(PMMTR):
             POWERMETER.npm = int(ans['npm'])
             ans = self.query(':syst:chan?', r'(?P<nch>\d)')   # Number of channels (typical:1)
             POWERMETER.nch = int(ans['nch'])
+            ans = self.query(':syst:vers?', r'(?P<version>\s)')   # version (e.g. '1.1')
+            POWERMETER.version = ans['version']
+            POWERMETER.relerror_dct = {'1.0': 0.016,  # 0.07 dB
+                                '1.1': 0.016,
+                                '2.0': 0.047,   # 0.2 dB
+                                '2.1': 0.047}
+            POWERMETER.relerror = POWERMETER.relerror_dct.get(POWERMETER.version, 0.047)
 
             # wait for laser ready
             self.write(':syst:las:en 1,0')
@@ -324,7 +331,7 @@ class POWERMETER(PMMTR):
         self.error = 0
         if self.is_main_instance:
             # relative error for single measured point
-            relerr = 0.047   # 0.2 dB
+            relerr = self.relerror
             err, ps  = self._float_force_trigger_GetData(forceTRIG_CL=True)
             sqrt_n = np.sqrt(len(ps[0]))
             relerr /= sqrt_n
