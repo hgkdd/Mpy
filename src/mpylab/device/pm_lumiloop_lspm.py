@@ -101,7 +101,7 @@ class POWERMETER(PMMTR):
             POWERMETER.npm = int(ans['npm'])
             ans = self.query(':syst:chan?', r'(?P<nch>\d)')   # Number of channels (typical:1)
             POWERMETER.nch = int(ans['nch'])
-            ans = self.query(':syst:vers?', r'(?P<version>\s)')   # version (e.g. '1.1')
+            ans = self.query(':syst:vers?', r'(?P<version>\d.\d)')   # version (e.g. '1.1')
             POWERMETER.version = ans['version']
             POWERMETER.relerror_dct = {'1.0': 0.016,  # 0.07 dB
                                 '1.1': 0.016,
