@@ -14,15 +14,17 @@ def dBm2W(vals):
     watts = np.power(10, 0.1*np.asarray(vals))*0.001
     return watts
 
-def linav_dB(dbvals):
+def linav_dB(dbvals, fac=10):
     """
-    Input: sequence of dB-scaled values
+    Input: dbvals sequence of dB-scaled values
+    fac: float, defaults to 10; sometimes 20 may be used
+
     Output: dB-scaled lin-average of the input sequence
 
-    Example: linav_dB([0,-10]) -> -0.301
+    Example: linav_dB([0,-10]) -> -2.5963, linav_dB([0,-10], fac=20) -> -3.633
     """
-    linmean = np.mean(np.power(10., 0.1 * np.asarray(dbvals)))
-    return 10 * np.log10(linmean)
+    linmean = np.mean(np.power(10., 1./fac * np.asarray(dbvals)))
+    return fac * np.log10(linmean)
 
 
 def linav_lin(linvals):
