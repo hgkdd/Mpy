@@ -9,35 +9,11 @@ from scuq import si, quantities, ucomponents
 import numpy as np
 
 from mpylab.device.powermeter import POWERMETER as PMMTR
+from mpylab.tools.statistic import linstat_lin
 
 def dBm2W(vals):
     watts = np.power(10, 0.1*np.asarray(vals))*0.001
     return watts
-
-def linav_dB(dbvals, fac=10):
-    """
-    Input: dbvals sequence of dB-scaled values
-    fac: float, defaults to 10; sometimes 20 may be used
-
-    Output: dB-scaled lin-average of the input sequence
-
-    Example: linav_dB([0,-10]) -> -2.5963, linav_dB([0,-10], fac=20) -> -3.633
-    """
-    linmean = np.mean(np.power(10., 1./fac * np.asarray(dbvals)))
-    return fac * np.log10(linmean)
-
-
-def linstat_lin(linvals):
-    """
-    Input: sequence of lin-scaled values
-    Output: lin-scaled lin-average and lin-standart deviation of the input sequence
-
-    Example: linav_lin([0,-10]) -> -5
-    """
-    linmean = np.mean(np.asarray(linvals))
-    linstd = np.std(np.asarray(linvals))
-    return linmean, linstd
-
 
 class POWERMETER(PMMTR):
     conftmpl = PMMTR.conftmpl

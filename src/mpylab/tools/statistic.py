@@ -6,6 +6,7 @@ This is :mod:`mpylab.tools.statistic`.
 
    :license: GPLv3 or higher
 """
+import statistics
 import numpy
 from collections.abc import MutableSequence, Sequence
 from itertools import chain
@@ -91,6 +92,40 @@ def autocorrelation(x, maxlag=None, cyclic=True):
         result.append(r)
     return result
 
+def linstat_dB(dbvals, fac=10):
+    """
+    Input: dbvals sequence of dB-scaled values
+    fac: float, defaults to 10; sometimes 20 may be used
+
+    Output: dB-scaled lin-average of the input sequence, upper_std, lower_std
+
+    Example: linav_dB([0,-10]) -> -2.5963, 3.339, 445.9, linav_dB([0,-10], fac=20) -> -3.633, 4.78, 11.52
+    """
+    vals = [v/fac for v in dbvals]
+    linmean = statistics.mean(numpy.power(10., vals))
+    linstd = statistics.stdev(numpy.power(10., vals))
+    upper = linmean + linstd
+    lower = linmean - linstd
+    lower = max(numpy.nextafter(numpy.float32(0), numpy.float32(1)), lower)   # values below zero cannot be convertet to dB
+    mean_dB = fac * numpy.log10(linmean)
+    upper_dB = fac * numpy.log10(upper)
+    lower_dB = fac * numpy.log10(lower)
+    upper_std = upper_dB - mean_dB
+    lower_std = mean_dB - lower_dB
+    return mean_dB, upper_std, lower_std
+
+
+def linstat_lin(linvals):
+    """
+    Input: sequence of lin-scaled values
+    Output: lin-scaled lin-average and lin-standart deviation of the input sequence
+
+    Example: linstat_lin([0,-10]) -> -5, 7.07
+    """
+    linmean = statistics.mean(linvals)
+    linstd = statistics.stdev(linvals)
+    return linmean, linstd
+
 
 if __name__ == "__main__":
     from scuq.quantities import Quantity
@@ -105,3 +140,6 @@ if __name__ == "__main__":
         print(f'autocorrelation (number): {autocorrelation(x, cyclic=cy)}')
         print(f'autocorrelation (Quantity): {autocorrelation(qx, cyclic=cy)}')
 
+    print(linstat_lin([0, -10]))
+    print(linstat_dB([0, -10]))
+    print(linstat_dB([0, -10], fac=20))
