@@ -27,15 +27,16 @@ def linav_dB(dbvals, fac=10):
     return fac * np.log10(linmean)
 
 
-def linav_lin(linvals):
+def linstat_lin(linvals):
     """
     Input: sequence of lin-scaled values
-    Output: lin-scaled lin-average of the input sequence
+    Output: lin-scaled lin-average and lin-standart deviation of the input sequence
 
     Example: linav_lin([0,-10]) -> -5
     """
     linmean = np.mean(np.asarray(linvals))
-    return linmean
+    linstd = np.std(np.asarray(linvals))
+    return linmean, linstd
 
 
 class POWERMETER(PMMTR):
@@ -110,6 +111,9 @@ class POWERMETER(PMMTR):
                                 '2.0': 0.047,   # 0.2 dB
                                 '2.1': 0.047}
             POWERMETER.relerror = POWERMETER.relerror_dct.get(POWERMETER.version, 0.047)
+            # we assume a typ-b uncertainty here. Furthermore we guess the distribution to be rectangular
+            # so we have to estimate the standard uncertainty
+            POWERMETER.relerror = POWERMETER.relerror / np.sqrt(3)
 
             # wait for laser ready
             self.write(':syst:las:en 1,0')
@@ -333,10 +337,9 @@ class POWERMETER(PMMTR):
         self.error = 0
         if self.is_main_instance:
             # relative error for single measured point
-            relerr = self.relerror
+            uc = self.relerror   # standard deviation of the instrument
             err, ps  = self._float_force_trigger_GetData(forceTRIG_CL=True)
             sqrt_n = np.sqrt(len(ps[0]))
-            relerr /= sqrt_n
             #exs_av = []
             #eys_av = []
             #ezs_av = []
@@ -345,8 +348,10 @@ class POWERMETER(PMMTR):
                 data.append([])
                 for ch in range(3):
                     watts = dBm2W(ps[p][ch])
-                    aver = linav_lin(watts)
-
+                    aver, std  = linstat_lin(watts)
+                    # Geräteunsicherheit bleibt, hinzu kommt die Streuung der Einzelwerte durch sqrt(N)
+                    std = std / sqrt_n
+                    relerr = np.sqrt(self.relerror**2 + std**2)
                     data[p].append(quantities.Quantity(si.WATT,
                                                   ucomponents.UncertainInput(aver, aver * relerr)))
             POWERMETER.data = data
