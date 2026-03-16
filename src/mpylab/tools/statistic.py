@@ -44,6 +44,13 @@ def variance(x):
     var = summation([(xi-mu)**2 for xi in x]) / (n - 1)
     return var
 
+def stddev(x):
+    """
+    Compute the standard deviation of an iterable (scuq.Quantity aware).
+    """
+    v = variance(x)
+    return numpy.sqrt(v)
+
 def covariance(x,y):
     """
     Compute the covariance of two iterable (scuq.Quantity aware).
