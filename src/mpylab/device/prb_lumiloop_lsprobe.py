@@ -5,10 +5,12 @@ import time
 import struct
 import itertools
 
+
 from scuq import si, quantities, ucomponents
 import numpy as np
 
 from mpylab.device.fieldprobe import FIELDPROBE as FLDPRB
+from mpylab.tools.statistic import linstat_lin
 # from test.test_interpol import freqs
 
 
@@ -309,9 +311,13 @@ class FIELDPROBE(FLDPRB):
                 relerr = 0.12  # 1 dB
             else:
                 relerr = 0.17  # 1.4 dB
+            # we assume a typ-b uncertainty here. Furthermore we guess the distribution to be rectangular
+            # so we have to estimate the standard uncertainty
+            u = relerr / np.sqrt(3)
+
             err, exs, eys, ezs  = self._float_force_trigger_GetData(forceTRIG_CL=True)
             sqrt_n = np.sqrt(len(exs[0]))
-            relerr /= sqrt_n
+            # relerr /= sqrt_n
             #exs_av = []
             #eys_av = []
             #ezs_av = []
@@ -322,12 +328,18 @@ class FIELDPROBE(FLDPRB):
                 #exs_av.append(np.average(exs[p]))
                 #eys_av.append(np.average(eys[p]))
                 #ezs_av.append(np.average(ezs[p]))
+                av_x, std_x = linstat_lin(exs[p])
+                av_y, std_y = linstat_lin(eys[p])
+                av_z, std_z = linstat_lin(ezs[p])
+                relerr_x = np.sqrt(u**2 + std_x**2)
+                relerr_y = np.sqrt(u**2 + std_y**2)
+                relerr_z = np.sqrt(u**2 + std_z**2)
                 data_x.append(quantities.Quantity(self._internal_unit,
-                                                  ucomponents.UncertainInput(np.average(exs[p]), np.average(exs[p])* relerr)))
+                                                  ucomponents.UncertainInput(av_x, av_x * relerr_x)))
                 data_y.append(quantities.Quantity(self._internal_unit,
-                                                  ucomponents.UncertainInput(np.average(eys[p]), np.average(eys[p]) * relerr)))
+                                                  ucomponents.UncertainInput(av_y, av_y * relerr_y)))
                 data_z.append(quantities.Quantity(self._internal_unit,
-                                                  ucomponents.UncertainInput(np.average(ezs[p]), np.average(ezs[p]) * relerr)))
+                                                  ucomponents.UncertainInput(av_z, av_z * relerr_z)))
 
             FIELDPROBE.data = [data_x, data_y, data_z]
         data = [FIELDPROBE.data[0][self.ch-1], FIELDPROBE.data[1][self.ch-1], FIELDPROBE.data[2][self.ch-1]]
