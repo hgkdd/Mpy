@@ -109,8 +109,8 @@ def linstat_dB(dbvals, fac=10):
     Example: linav_dB([0,-10]) -> -2.5963, 3.339, 445.9, linav_dB([0,-10], fac=20) -> -3.633, 4.78, 11.52
     """
     vals = [v/fac for v in dbvals]
-    linmean = statistics.mean(numpy.power(10., vals))
-    linstd = statistics.stdev(numpy.power(10., vals))
+    linmean = mean(numpy.power(10., vals))
+    linstd = stddev(numpy.power(10., vals))
     upper = linmean + linstd
     lower = linmean - linstd
     lower = max(numpy.nextafter(numpy.float32(0), numpy.float32(1)), lower)   # values below zero cannot be convertet to dB
@@ -129,8 +129,10 @@ def linstat_lin(linvals):
 
     Example: linstat_lin([0,-10]) -> -5, 7.07
     """
-    linmean = statistics.mean(linvals)
-    linstd = statistics.stdev(linvals)
+    linmean = mean(linvals)
+    linstd = stddev(linvals)
+    #linmean = statistics.mean(linvals)
+    #linstd = statistics.stdev(linvals)
     return linmean, linstd
 
 
