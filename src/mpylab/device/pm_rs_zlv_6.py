@@ -51,6 +51,7 @@ class POWERMETER(PMMTR):
 
     def GetData(self):
         # set marker 1 to peak
+        self.write('INIT1:IMM')
         self.write('CALC:MARK1:MAX')
         self.write('CALC:MARK1:X?')
         mfreq = float(self.dev.read())
