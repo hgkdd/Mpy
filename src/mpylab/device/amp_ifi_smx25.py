@@ -38,12 +38,12 @@ class AMPLIFIER(AMP):
         # use ~B1 because active is LOW
         # bit 5 is Band 1 active
         # bit 6 is Band 2 active
-        if (~B1 & 1 << 5) and (freq >= 250e6):
+        if (~B1 & 1 << 5) and (freq >= 220e6):
             self.write('B2')
             while ~B1 & 1 << 5 or E:
                 B1, E = self._getstat()
                 time.sleep(.4)
-        elif (~B1 & 1 << 6) and (freq < 250e6):
+        elif (~B1 & 1 << 6) and (freq < 220e6):
             self.write('B1')
             while ~B1 & 1 << 6 or E:
                 B1, E = self._getstat()
