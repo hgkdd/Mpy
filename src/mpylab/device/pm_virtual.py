@@ -2,6 +2,7 @@
 #
 import io
 import sys
+import math
 
 import mpylab.tools.spacing
 from mpylab.device.powermeter import POWERMETER as PMMTR
@@ -12,8 +13,8 @@ from scuq.si import WATT
 class POWERMETER(PMMTR):
     conftmpl = PMMTR.conftmpl
     conftmpl['init_value']['visa'] = str
-    conftmpl['channel_%d']['value'] = float
-    conftmpl['channel_%d']['uncertainty'] = float
+    conftmpl['channel_%d']['value'] = str
+    conftmpl['channel_%d']['uncertainty'] = str
 
     def __init__(self, **kw):
         PMMTR.__init__(self, **kw)
@@ -60,9 +61,10 @@ class POWERMETER(PMMTR):
         return self.GetData()
 
     def GetData(self):
-        mpower = self.value
+        f = self.freq
+        mpower = eval(self.value)
         mpower_watt = 10**(mpower*0.1)*0.001
-        unc = self.uncertainty
+        unc = eval(self.uncertainty)
         unc_watt = 10**((mpower+unc)*0.1)*0.001
         power = Quantity(WATT, UncertainInput(mpower_watt ,unc_watt))
         return 0, power
@@ -91,7 +93,7 @@ def main():
 
                         [Channel_1]
                         unit: 'dBm'
-                        value: 0
+                        value: 10*math.sin(f)
                         uncertainty: 0.1
 
                         [Channel_2]
@@ -103,7 +105,7 @@ def main():
 
     pm = POWERMETER()
 
-    err = pm.Init(ini, channel=2)
+    err = pm.Init(ini, channel=1)
 
     freqs = mpylab.tools.spacing.logspace(30e6, 1e9, 1.1, endpoint=True)
     for f in freqs:
