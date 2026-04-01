@@ -10,13 +10,14 @@
 import sys
 import io
 from mpylab.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
-from mpylab.device.networkanalyzer_ui import UI as super_ui
 from mpylab.tools.spacing import logspaceN, linspaceN
 from mpylab.device.tools import *
 from mpylab.device.r_types import *
-from mpylab.device.validators import *
+#from mpylab.device.validators import *
 from mpylab.device.mpy_exceptions import *
-from mpylab.device.Meta_ui import DriverUIWidget
+#from mpylab.device.Meta_ui import DriverUIWidget
+from PySide6 import QtWidgets
+from mpylab.device.networkanalyzer_ui import NetworkAnalyzerWidget
 
 
 class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
@@ -728,48 +729,70 @@ class WINDOW(object):
         return self.name
 
 
-class UI(super_ui, metaclass=Metaui):
+class UI(NetworkAnalyzerWidget):
     """
-    Klasse für die grafische Oberfläche zum Testen des Gerätes.
-    
-    Mit Hilfer der Metaklasse Metaui wird ein großteil aller Buttons und Felder
-    automatisch anhand anhand des _commands-Dict und _cmds-Dict der Driver-Klasse bzw. 
-    -Superklasse erstellt.
-    
-    
-    In dieser Klasse können weitere tuiapi.Group erstellt werden, welche nicht schon
-    durch die Super-Klasse oder Metaklasse erstellt wurden. 
-    
-    Diese Klasse muss von der UI-Superklasse des Drivers abgeleitet sein.
+    PySide6-Version der UI aus nw_rs_zlv.py.
+
+    Gegenüber SpectrumAnalyzerWidget ergänzt diese Klasse den alten
+    Traits-Zusatzbereich "Main_Rest" mit:
+        - SetWindow Button
+        - aktuellem Window-Wert
+        - Eingabefeld für neues Window
     """
 
-    # Driver Klasse
-    __driverclass__ = NETWORKANALYZER
+    def __init__(self, instance, ini=None, parent=None):
+        super().__init__(instance, ini=ini, parent=parent)
 
-    # Super Klasse des Drivers
-    __super_driverclass__ = NETWORKAN
+        self.setWindowTitle("R&S ZVL Network Analyzer")
+        self._build_zlv_tab()
 
-    # Comands aus dem _cmds-Dict welche ignoriert werden sollen.
-    _ignore = ('SetChannel', 'CreateChannel', 'GetSpectrum')
+    def _build_zlv_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
 
-    # __init__ Funktion
-    def __init__(self, instance, ini=None):
-        super_ui.__init__(self, instance, ini)
+        group = QtWidgets.QGroupBox("Main_Rest")
+        group_layout = QtWidgets.QHBoxLayout(group)
 
-    SetWindow = tapi.Button("SetWindow")
-    SETWINDOW = tapi.Str()
-    newSETWINDOW = tapi.Str()
+        self.set_window_button = QtWidgets.QPushButton("SetWindow")
+        self.set_window_button.clicked.connect(self.on_set_window_clicked)
 
-    def _SetWindow_fired(self):
-        err, value = self.dv.SetWindow(self.newSETWINDOW)
-        self.SETWINDOW = value
+        self.setwindow_value = QtWidgets.QLineEdit()
+        self.setwindow_value.setReadOnly(True)
+        self.setwindow_value.setPlaceholderText("Wert")
+        self.setwindow_value.setMinimumWidth(160)
 
-    Main_S = tuiapi.Group(tuiapi.Group(tuiapi.Item('SetWindow', show_label=False, width=100),
-                                       tuiapi.Item('SETWINDOW', label='Wert', style='readonly', width=70),
-                                       tuiapi.Item('newSETWINDOW', label='traceName', width=60),
-                                       orientation='horizontal'),
-                          label='Main_Rest')
+        self.new_setwindow_edit = QtWidgets.QLineEdit()
+        self.new_setwindow_edit.setPlaceholderText("traceName")
+        self.new_setwindow_edit.setMinimumWidth(160)
 
+        group_layout.addWidget(self.set_window_button)
+        group_layout.addWidget(QtWidgets.QLabel("Wert"))
+        group_layout.addWidget(self.setwindow_value)
+        group_layout.addWidget(QtWidgets.QLabel("traceName"))
+        group_layout.addWidget(self.new_setwindow_edit)
+        group_layout.addStretch()
+
+        layout.addWidget(group)
+        layout.addStretch()
+
+        self.tabs.addTab(tab, "Main_Rest")
+
+    def on_set_window_clicked(self):
+        try:
+            window_name = self.new_setwindow_edit.text().strip()
+            if not window_name:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Eingabe fehlt",
+                    "Bitte einen Window-Namen eingeben."
+                )
+                return
+
+            err, value = self.dv.SetWindow(window_name)
+            self.setwindow_value.setText(str(value))
+
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "SetWindow-Fehler", str(e))
 
 ##########################################################################
 #
@@ -777,16 +800,12 @@ class UI(super_ui, metaclass=Metaui):
 ###########################################################################
 def main():
     from mpylab.tools.util import format_block
-    #
-    # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
-    # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
-    # 'StringIO' in eine virtuelle Datei umgewandelt.
-    #
     err = 0
+
     try:
         ini = sys.argv[1]
     except IndexError:
-        ini = format_block("""
+        ini_text = format_block("""
                         [DESCRIPTION]
                         description: 'ZLV-K1'
                         type:        'NETWORKANALYZER'
@@ -814,104 +833,21 @@ def main():
                         SetSweepPoints: 100
                         SetSweepType: 'Log'
                         """)
-        # rbw: 3e6
-        ini = io.StringIO(ini)
-
-    #        ini2=format_block("""
-    #                        [DESCRIPTION]
-    #                        description: 'ZLV-K1'
-    #                        type:        'NETWORKANALYZER'
-    #                        vendor:      'Rohde&Schwarz'
-    #                        serialnr:
-    #                        deviceid:
-    #                        driver:
-
-    #                        [Init_Value]
-    #                        fstart: 100e6
-    #                        fstop: 6e9
-    #                        fstep: 1
-    #                        gpib: 18
-    #                        virtual: 0
-
-    #                        [channel_1]
-    #                        unit: 'dBm'
-    #                        SetRefLevel: 0
-    #                        SetRBW: 10e3
-    #                        SetSpan: 5999991000
-    #                        CreateWindow: 'default'
-    #                        CreateTrace: 'default','S11'
-    #                        SetSweepCount: 1
-    #                        SetSweepPoints: 50
-    #                        SetSweepType: 'LINEAR'
-    #                        """)
-    #        ini2=io.StringIO(ini2)
-
-    # #
-    # # Zum Test des Treibers werden sogenannte Konsistenzabfragen ('assert' Bedingungen) verwendet, welche einen 'AssertationError' liefern,
-    # # falls die Bedingung 'false' ist. Zuvor wird eine Testfrequenz und ein Level festgelegt, ein Objekt der Klasse SMB100A erzeugt und der
-    # # Signalgenerator initialisiert.
-    # #
-    # from mpylab.device.networkanalyzer_ui import UI as UI
-    nw = NETWORKANALYZER()
-    #    nw2=NETWORKANALYZER()
-
-    try:
-        UI(nw)
-    except NameError:
-        pass
+        ini = io.StringIO(ini_text)
     else:
+        try:
+            with open(ini, "r", encoding="utf-8") as f:
+                ini = io.StringIO(f.read())
+        except OSError as e:
+            print(f"INI-Datei konnte nicht gelesen werden: {e}")
+            sys.exit(1)
 
-        ui = UI(nw, ini=ini)
-        ui.configure_traits()
-        sys.exit(0)
+    nw = NETWORKANALYZER()
 
-    err = nw.Init(ini)
-    assert err == 0, 'Init() fails with error %d' % (err)
+    app = QtWidgets.QApplication(sys.argv)
+    ui = UI(nw, ini=ini)
+    ui.show()
+    sys.exit(app.exec())
 
-    #    err=nw2.Init(ini2)
-    #    assert err==0, 'Init() fails with error %d'%(err)
-
-    _assertlist = [
-        ("SetCenterFreq", (3e9), "assert"),  # Default:3e9
-        ('SetSpan', (5999991000), "print"),  # Default:6e9
-        ('SetStartFreq', (9e3), "assert"),  # Default:9e3
-        ('SetStopFreq', (6e9), "assert"),  # Default:6e9
-        ('SetRBW', (10e3), "assert"),  # Default:10e3
-        ('SetSweepType', ("LOGARITHMIC"), "print"),  # LINear | LOGARITHMIC | SEGMent
-        ('SetSweepPoints', (50), "assert"),  # Default: 201
-        # ('SetSweepCount',(1),"print"),                       #Default: 1
-    ]
-
-    for funk, value, test in _assertlist:
-        err, ret = eval("nw.%s(%s)" % (funk, ", ".join(value)))
-        assert err == 0, '%s() fails with error %d' % (funk, err)
-        if value is not None:
-            if test == "assert":
-                assert ret == value, '%s() returns freq=%s instead of %s' % (funk, ret, value)
-            else:
-                print(('%s(): Rückgabewert: %s   Sollwert: %s' % (funk, ret, value)))
-        else:
-            print(('%s(): Rückgabewert: %s' % (funk, ret)))
-
-    err, spec = nw.GetSpectrum()
-    assert err == 0, 'GetSpectrum() fails with error %d' % (err)
-    print(spec)
-
-
-#    err,spec=nw2.GetSpectrum()
-#    assert err==0, 'GetSpectrum() fails with error %d'%(err)
-#    print spec
-
-# err=nw.Quit()
-# assert err==0, 'Quit() fails with error %d'%(err)
-#
-
-
-#  ------------ Hauptprogramm ---------------------------
-#
-# Die Treiberdatei selbst und damit das Hauptprogramm wird nur gestartet, um den Treibercode zu testen. In diesem Fall springt
-# das Programm direkt in die Funktion 'main()'. Bei der sp￤teren Verwendung des Treibers wird nur die Klasse 'SMB100A' und deren
-# Methoden importiert.
-#
 if __name__ == '__main__':
     main()

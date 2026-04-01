@@ -16,8 +16,8 @@ conv = CONVERT()
 
 std_ini_text = format_block("""
                 [DESCRIPTION]
-                description: sp template
-                type:        'SPECTRUMANALYZER'
+                description: nw template
+                type:        'Networkanalyser'
                 vendor:      some company
                 serialnr:    SN12345
                 deviceid:    internal ID
@@ -73,7 +73,7 @@ class MplCanvas(FigureCanvas):
         self.draw()
 
 
-class SpectrumAnalyzerWidget(QtWidgets.QWidget):
+class NetworkAnalyzerWidget(QtWidgets.QWidget):
     """
     PySide6-Ersatz für die TraitsUI/Chaco-Oberfläche.
     """
@@ -86,7 +86,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
         self.int_unit = "dBm"
         self.power = ()
 
-        self.setWindowTitle("Spectrum Analyzer")
+        self.setWindowTitle("Network Analyzer")
         self.resize(1000, 700)
 
         self._build_ui()
@@ -212,7 +212,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
 # ----------------------------------------------------------------------
 
 if __name__ == "__main__":
-    class DummySpectrumDriver:
+    class DummyNetworkDriver:
         def Init(self, ini):
             print("Init called")
             print(ini.read())
@@ -231,6 +231,6 @@ if __name__ == "__main__":
             print("Quit called")
 
     app = QtWidgets.QApplication(sys.argv)
-    w = SpectrumAnalyzerWidget(DummySpectrumDriver())
+    w = NetworkAnalyzerWidget(DummyNetworkDriver())
     w.show()
     sys.exit(app.exec())

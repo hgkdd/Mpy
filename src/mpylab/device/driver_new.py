@@ -6,14 +6,14 @@
 
 """
 
-import re
+import re, os
 from mpylab.tools.configuration import Configuration, fstrcmp
 from mpylab.device.device import CONVERT, Device
 
 
 # from tools import *
 
-class DRIVER(object):
+class DRIVER:
     """
     Parent class for all py-drivers.
     
@@ -59,7 +59,10 @@ class DRIVER(object):
     # __metaclass__=Meta_Driver
 
 
-    def __init__(self):
+    def __init__(self, SearchPaths=None):
+        if SearchPaths is None:
+            SearchPaths = [os.getcwd()]
+        self.SearchPaths = SearchPaths
         self.error = 0
         self._commands = {}
         self.conf = {'description':  {},
