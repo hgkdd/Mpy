@@ -1,304 +1,496 @@
 # -*- coding: utf-8 -*-
 """This is :mod:`mpylab.device.Metaui`: Metaclass to Build a standard GUI from the _setgetlist.
 
-   :author: Christian Albrecht, Hans Georg Krauthaeuser
+   :author: Hans Georg Krauthaeuser
 
    :license: GPL-3 or higher
 """
-
-import traits.api as tapi
-from traits.etsconfig.api import ETSConfig
-from traits.has_traits import MetaHasTraits
-
-ETSConfig.toolkit = "wx"
-import traitsui.api as tuiapi
-import traitsui.menu as tuim
 import io
 import re
+import math
 import inspect
+from functools import partial
+
+from PySide6 import QtWidgets, QtCore
+
+""" Verwendung der Klasse:
+
+class MyDriverUI(DriverUIWidget):
+    __driverclass__ = MyConcreteDriver
+    __super_driverclass__ = MyDriverBase
+    _ignore = ["IrgendEinCommand"]
+
+    WINDOW_TITLE = "Spectrumanalyzer"
+
+    def build_extra_tabs(self):
+        tabs = []
+
+        info_tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(info_tab)
+        layout.addWidget(QtWidgets.QLabel("Zusätzlicher Tab"))
+        layout.addStretch()
+
+        tabs.append(("Info", info_tab))
+        return tabs
+
+# Starten so:
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+
+    w = MyDriverUI()
+    w.show()
+
+    sys.exit(app.exec())
+
+"""
 
 
-def erzeugeFired_Methode_mit_Rfunction(command, rfunction, param_list):
+
+
+def call_driver_method(driver, method_name, *args):
     """
-    Functionfactory zum erzeugen von Traits-fired Funktionen.
+    Sichere Methode zum Aufruf einer Driver-Funktion.
+    Erwartet oft Rückgaben wie (err, value) und liefert dann value zurück.
     """
+    method = getattr(driver, method_name)
+    result = method(*args)
 
-    def Methode_fired(self):
-        setattr(self, rfunction.upper(), str(eval('self.dv.%s(%s)' % (command, ", ".join(param_list)))[1]))
+    if isinstance(result, (tuple, list)) and len(result) >= 2:
+        return result[1]
+    return result
 
-    return Methode_fired
+
+def is_getter_name(name: str) -> bool:
+    return bool(re.match(r"^[Gg]et.*$", name))
 
 
-def erzeugeFired_Methode(name, param_list):
+def map_param_type_to_widget(py_type):
     """
-    Functionfactory zum erzeugen von Traits-fired Funktionen.
+    Ersetzt Erzeuge_TapiVar() durch passende Qt-Widgets.
     """
-
-    def Methode_fired(self):
-        setattr(self, name.upper(), str(eval('self.dv.%s(%s)' % (name, ", ".join(param_list)))[1]))
-
-    return Methode_fired
-
-
-def _Init_fired(self):
-    """
-    Standard init_fired Funktion.
-    """
-    ini = io.StringIO(self.INI)
-    self.dv.Init(ini)
-
-    # Alle Get Funktionen einmal aufrufen und so die Anzeige mit aktuellen Werten belegen.
-    for item in self.mainEntries:
-        m = re.match(r'^[Gg]et.*$', item)
-        if m:
-            getattr(self, "_%s_fired" % item)()
-
-
-def Erzeuge_TapiVar(typ):
-    """
-    Hilfsfunktion zum erstellen von Traits-Variablen.
-    """
-    if typ == float:
-        return tapi.Float()
-    elif typ == int:
-        return tapi.Int()
+    if py_type == int:
+        w = QtWidgets.QSpinBox()
+        w.setRange(-10_000_000, 10_000_000)
+        return w
+    elif py_type == float:
+        w = QtWidgets.QDoubleSpinBox()
+        w.setDecimals(9)
+        w.setRange(-1e15, 1e15)
+        w.setSingleStep(1.0)
+        return w
     else:
-        return tapi.Str()
+        return QtWidgets.QLineEdit()
 
 
-class Metaui(MetaHasTraits):
+def get_widget_value(widget):
+    if isinstance(widget, QtWidgets.QSpinBox):
+        return widget.value()
+    if isinstance(widget, QtWidgets.QDoubleSpinBox):
+        return widget.value()
+    if isinstance(widget, QtWidgets.QLineEdit):
+        return widget.text()
+    if isinstance(widget, QtWidgets.QComboBox):
+        return widget.currentText()
+    return None
+
+
+def set_widget_value(widget, value):
+    text = "" if value is None else str(value)
+
+    if isinstance(widget, QtWidgets.QSpinBox):
+        try:
+            widget.setValue(int(value))
+        except Exception:
+            pass
+        return
+
+    if isinstance(widget, QtWidgets.QDoubleSpinBox):
+        try:
+            widget.setValue(float(value))
+        except Exception:
+            pass
+        return
+
+    if isinstance(widget, QtWidgets.QLineEdit):
+        widget.setText(text)
+        return
+
+    if isinstance(widget, QtWidgets.QLabel):
+        widget.setText(text)
+        return
+
+
+class DriverUIWidget(QtWidgets.QWidget):
     """
-    Diese Metaklasse ermöglicht das einfache Erstellen von Guis für das Testen eines Drivers.
-    
-    Sie baut für alle im _commands- und _cmds-Dict vorhanden Commands und Functions passende Buttons und
-    Eingabefelder und nimmt so einem viel Schreibarbeit ab.
-    
-    Es werden für alles in _commands und _cmds definiert Kommandos Buttons und Felder erstellt. Sind in dem cmds-Dict mehr
-    Kommandos definiert als in _commands, so werden auch für diese Buttons gebaut. Der Grund für dieses Vorgehen liegt in der
-    Tatsache, dass diese GUI zum testen der Klasse gedacht ist und somit alle definierten Kommandso abgebildet werden sollen.
-    Sind in _commands Kommandos aufgeführt die nicht in der konkreten Dirver-Klasse vorhanden sind, so wird eine Methode
-    erstellt welche einen NotImplementedError wirft.
-    
-    
-    
-    Zu jeder Driver-Superklasse sollte ein UI-Superklasse existieren in der zusätzliche Taps definiert werden
-    die für alle von ihr abgeleiteten Driverklassen gleich sein sollen.
-    Damit die Metaklasse einwandfrei arbeiten kann, dürfen in der Superklasse nur 
-    sogenannte tuiapi.Group (das sind Taps) erstellt werden. Diese müssen wiederrum in einem Dict
-    mit dem Namen "GROUPS" gespeichert werden. Wobei folgende Konvention einzuhalten ist::
-    
-        GROUPS={'Name des Taps' : tuiapi.Group(...)}
-    
-    Als Beispiele siehe: :mod:`mpylab.device.networkanalyer_ui`
-    
-    
-    
-    Weiterhin muss eine UI-Klasse für jede konkrete Driver-Implementierung erstellt werden, diese muss von
-    der UI-Superklasse abgeleitet sein. In dieser muss die Meta_ui als Metaklasse angegeben werden, weiterhin 
-    sind folgende speziall Variablen nötig:
-    
-    **__driverclass__= :** Verweis auf eine konkrete Klasse einer Driver-Implementierung. ACHTUNG!! nur ein Verweis auf die Klasse, 
-                        keine Instanz der Klasse. 
-    
-    **__super_driverclass__=**: Verweis auf die Superklasse eines Driver. ACHTUNG!! nur ein Verweis auf die Klasse, 
-                            keine Instanz der Klasse.
-                            
-    Aus diesen Varialben holt sich die Metaklase das _commands-Dict und _cmds-Dict.
-    
-    Als Beispiel siehe: :class:`mpylab.device.nw_rs_zlv.UI`
-    
-    .. rubric:: Methods:
+    PySide6-Ersatz für die TraitsUI-Metaklassenlösung.
+
+    In Unterklassen setzen:
+        __driverclass__ = KonkreteDriverKlasse
+        __super_driverclass__ = DriverSuperklasse
+        _ignore = []
+
+    Optionale Erweiterung:
+        def build_extra_tabs(self) -> list[tuple[str, QWidget]]:
+            ...
+            return [("Name", widget), ...]
     """
 
-    # def __init__(cls, eins, zwei, drei):
-    #    print "init %s \n\n   %s  \n\n %s"%(eins,zwei,drei)
+    __driverclass__ = None
+    __super_driverclass__ = None
+    _ignore = []
 
-    def __new__(cls, class_name, bases, class_dict):
+    WINDOW_TITLE = "Driver UI"
 
-        class_dict.update({'_Init_fired': _Init_fired})
+    def __init__(self, driver_instance=None, ini_text="", parent=None):
+        super().__init__(parent)
 
-        driverclass = class_dict.get("__driverclass__")
-        super_driverclass = class_dict.get('__super_driverclass__')
+        if self.__driverclass__ is None:
+            raise ValueError("__driverclass__ muss gesetzt sein")
+        if self.__super_driverclass__ is None:
+            raise ValueError("__super_driverclass__ muss gesetzt sein")
 
-        tabs = 'INI_grp'
-        INI_grp = tuiapi.Group(
-            tuiapi.Item('INI', style='custom', springy=True, width=500, height=200, show_label=False),
-            tuiapi.Item('Init', show_label=False),
-            label='Ini')
+        self.dv = driver_instance if driver_instance is not None else self.__driverclass__()
+        self.main_entries = []
+        self.command_rows = {}
+        self.result_widgets = {}
+        self.param_widgets = {}
 
-        # ********************
-        # _cmds abarbeiten
-        # ********************
+        self.setWindowTitle(self.WINDOW_TITLE)
+        self.resize(1100, 800)
 
-        _cmds = driverclass._cmds
-        mainEntries = []
-        items_Map = {}
+        self._build_ui(ini_text)
 
-        for command_name, command in list(_cmds.items()):
-            items = ""
-            if command_name in class_dict['_ignore']:
+    # ------------------------------------------------------------------
+    # Aufbau
+    # ------------------------------------------------------------------
+
+    def _build_ui(self, ini_text: str):
+        outer = QtWidgets.QVBoxLayout(self)
+
+        self.tabs = QtWidgets.QTabWidget()
+        outer.addWidget(self.tabs)
+
+        self._build_ini_tab(ini_text)
+        self._build_main_tabs_from_cmds()
+        self._build_not_implemented_tabs_from_commands()
+        self._add_extra_tabs()
+
+        bottom = QtWidgets.QHBoxLayout()
+        bottom.addStretch()
+
+        self.close_button = QtWidgets.QPushButton("Schließen")
+        self.close_button.clicked.connect(self.close)
+        bottom.addWidget(self.close_button)
+
+        outer.addLayout(bottom)
+
+    def _build_ini_tab(self, ini_text: str):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        self.ini_edit = QtWidgets.QPlainTextEdit()
+        self.ini_edit.setPlainText(ini_text or "")
+        self.ini_edit.setMinimumHeight(220)
+
+        self.init_button = QtWidgets.QPushButton("Init")
+        self.init_button.clicked.connect(self._init_clicked)
+
+        layout.addWidget(self.ini_edit)
+        layout.addWidget(self.init_button)
+        layout.addStretch()
+
+        self.tabs.addTab(tab, "Ini")
+
+    def _build_main_tabs_from_cmds(self):
+        driverclass = self.__driverclass__
+        _cmds = getattr(driverclass, "_cmds", {})
+
+        rows = []
+
+        for command_name, command in _cmds.items():
+            if command_name in self._ignore:
                 continue
-            if command_name in mainEntries:
+            if command_name in self.main_entries:
                 continue
 
-            mainEntries.append(command_name)
+            self.main_entries.append(command_name)
+            row_widget = self._create_row_for_cmd(command_name, command)
+            if row_widget is not None:
+                rows.append(row_widget)
 
-            items = "%s tuiapi.Group(" % (items)
-            items = "%s tuiapi.Item('%s',show_label=False,width=100)," % (items, command_name)
-            class_dict[command_name] = tapi.Button(command_name)
+        self._add_rows_chunked_as_tabs(rows, prefix="Main")
 
-            if command.Rfunction():
-                items = "%s tuiapi.Item('%s',show_label=False,width=100)," % (items, command.Rfunction())
-                items = "%s tuiapi.Item('%s',label='Wert',style='readonly',width=70)," % (
-                    items, command.Rfunction().upper())
+    def _build_not_implemented_tabs_from_commands(self):
+        super_driverclass = self.__super_driverclass__
+        commands = getattr(super_driverclass, "_commands", {})
+        rows = []
 
-                class_dict[command.Rfunction().upper()] = Erzeuge_TapiVar(str)
-                class_dict[command.Rfunction()] = tapi.Button(command.Rfunction())
+        for command_name, item in commands.items():
+            if command_name in self.main_entries:
+                continue
+            if command_name in self._ignore:
+                continue
 
-                if command.Rfunction() not in mainEntries:
-                    mainEntries.append(command.Rfunction())
+            if self._is_directly_implemented(command_name, item):
+                continue
 
-                if command.Rfunction() in list(items_Map.keys()):
-                    del items_Map[command.Rfunction()]
-            else:
-                items = "%s tuiapi.Item('%s',label='%s',style='readonly',width=70)," % (
-                    items, command_name.upper(), 'Wert'.rjust(38))
-                class_dict[command_name.upper()] = Erzeuge_TapiVar(str)
+            row_widget = self._create_row_for_commands_entry(command_name, item)
+            if row_widget is not None:
+                rows.append(row_widget)
 
-            param_list = []
-            for param_name in command.getParameterTuple():
-                param = command.getParameter()[param_name]
-                if param.isClass_attr():
-                    continue
+        self._add_rows_chunked_as_tabs(rows, prefix="NotImp")
 
-                if hasattr(driverclass, command_name):
-                    if param_name not in inspect.getfullargspec(getattr(driverclass, command_name))[0]:
+    def _add_rows_chunked_as_tabs(self, row_widgets, prefix="Tab", chunk_size=16):
+        for idx in range(0, len(row_widgets), chunk_size):
+            chunk = row_widgets[idx:idx + chunk_size]
+
+            tab = QtWidgets.QWidget()
+            layout = QtWidgets.QVBoxLayout(tab)
+
+            for row in chunk:
+                layout.addWidget(row)
+
+            layout.addStretch()
+            self.tabs.addTab(tab, f"{prefix}_{idx // chunk_size}")
+
+    def _add_extra_tabs(self):
+        for title, widget in self.build_extra_tabs():
+            self.tabs.addTab(widget, title)
+
+    def build_extra_tabs(self):
+        """
+        Ersatz für Traits-GROUPS aus Basisklassen/UI-Klassen.
+        Kann in Unterklassen überschrieben werden.
+        """
+        return []
+
+    # ------------------------------------------------------------------
+    # Zeilenbau für _cmds
+    # ------------------------------------------------------------------
+
+    def _create_row_for_cmd(self, command_name, command):
+        row = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(row)
+        layout.setContentsMargins(4, 4, 4, 4)
+
+        # Button für das Hauptkommando
+        cmd_button = QtWidgets.QPushButton(command_name)
+        layout.addWidget(cmd_button)
+
+        result_target_name = None
+
+        # Falls das Kommando eine Rfunction hat:
+        rfunction = command.Rfunction() if hasattr(command, "Rfunction") else None
+        if rfunction:
+            r_button = QtWidgets.QPushButton(rfunction)
+            layout.addWidget(r_button)
+
+            result_widget = QtWidgets.QLineEdit()
+            result_widget.setReadOnly(True)
+            result_widget.setPlaceholderText("Wert")
+            result_widget.setMinimumWidth(160)
+            layout.addWidget(result_widget)
+
+            self.result_widgets[rfunction.upper()] = result_widget
+            result_target_name = rfunction.upper()
+
+            if rfunction not in self.main_entries:
+                self.main_entries.append(rfunction)
+
+            r_button.clicked.connect(partial(self._run_simple_method, rfunction, rfunction.upper()))
+        else:
+            result_widget = QtWidgets.QLineEdit()
+            result_widget.setReadOnly(True)
+            result_widget.setPlaceholderText("Wert")
+            result_widget.setMinimumWidth(160)
+            layout.addWidget(result_widget)
+
+            self.result_widgets[command_name.upper()] = result_widget
+            result_target_name = command_name.upper()
+
+        # Parameterfelder
+        param_widgets_for_command = []
+
+        for param_name in getattr(command, "getParameterTuple", lambda: [])():
+            param_meta = command.getParameter()[param_name]
+
+            if param_meta.isClass_attr():
+                continue
+
+            if hasattr(self.__driverclass__, command_name):
+                try:
+                    sig = inspect.signature(getattr(self.__driverclass__, command_name))
+                    if param_name not in sig.parameters:
                         continue
+                except Exception:
+                    pass
 
-                items = "%s tuiapi.Item('param_%s_%s',label='%s',width=60)," % (items,
-                                                                                command_name,
-                                                                                param_name.upper(),
-                                                                                param_name)
-                class_dict['param_%s_%s' % (command_name, param_name.upper())] = Erzeuge_TapiVar(param.Getptype())
-                param_list.append('self.param_%s_%s' % (command_name, param_name.upper()))
+            label = QtWidgets.QLabel(param_name)
+            layout.addWidget(label)
 
-            if command.Rfunction():
-                class_dict["_%s_fired" % command_name] = erzeugeFired_Methode_mit_Rfunction(command_name,
-                                                                                            command.Rfunction(),
-                                                                                            param_list)
-                class_dict["_%s_fired" % command.Rfunction()] = erzeugeFired_Methode(command.Rfunction(), [])
+            widget = map_param_type_to_widget(param_meta.Getptype())
+            widget.setMinimumWidth(120)
+            layout.addWidget(widget)
 
-            else:
-                class_dict["_%s_fired" % command_name] = erzeugeFired_Methode(command_name, param_list)
+            key = f"param_{command_name}_{param_name.upper()}"
+            self.param_widgets[key] = widget
+            param_widgets_for_command.append((param_name, widget))
 
-            items = "%s orientation='horizontal')" % (items)
-            items_Map[command_name] = items
+        layout.addStretch()
 
-        class_dict.update({'mainEntries': mainEntries})
+        cmd_button.clicked.connect(
+            partial(
+                self._run_command_with_params,
+                command_name,
+                result_target_name,
+                param_widgets_for_command,
+            )
+        )
 
-        item_List = list(items_Map.values())
-        item_List = [item_List[i:i + 16] for i in range(0, len(item_List), 16)]
+        self.command_rows[command_name] = row
+        return row
 
-        tabs_list_index = 0
-        tabs_list = []
+    # ------------------------------------------------------------------
+    # Zeilenbau für _commands
+    # ------------------------------------------------------------------
 
-        for item in item_List:
-            tabs_list.append(tuiapi.Group(eval(", ".join(item)), label='Main_%d' % tabs_list_index))
-            tabs = tabs + ", tabs_list[%d]" % tabs_list_index
-            tabs_list_index = tabs_list_index + 1
+    def _create_row_for_commands_entry(self, command_name, item):
+        row = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(row)
+        layout.setContentsMargins(4, 4, 4, 4)
 
-        # *******************
-        # commands abarbeiten
-        # *******************
+        button = QtWidgets.QPushButton(command_name)
+        layout.addWidget(button)
 
-        notIEntries = []
-        items_Map = {}
+        result_widget = QtWidgets.QLineEdit()
+        result_widget.setReadOnly(True)
+        result_widget.setPlaceholderText("Wert")
+        result_widget.setMinimumWidth(160)
+        layout.addWidget(result_widget)
 
-        for command_name, item in list(super_driverclass._commands.items()):
-            items = ""
-            if (command_name in mainEntries) or (command_name in notIEntries):
-                continue
-            if command_name in class_dict['_ignore']:
-                continue
+        self.result_widgets[command_name.upper()] = result_widget
 
-            if item['parameter']:
-                para_command = item['parameter']
-                if isinstance(para_command, str):
-                    para_command = (para_command,)
+        param_widgets_for_command = []
 
-            # Testen ob die Methode direkt, also nicht über _cmds, implementiert wurde:
-            # Wird die Methode in _commands angegeben, aber nicht implementiert wurde,
-            # Erzeug die Meta Klasse eine Methode die einen  NotImplementedError wirft
+        para_command = item.get("parameter")
+        if para_command:
+            if isinstance(para_command, str):
+                para_command = (para_command,)
+
+            for param_name in para_command:
+                label = QtWidgets.QLabel(param_name)
+                layout.addWidget(label)
+
+                widget = QtWidgets.QLineEdit()
+                widget.setMinimumWidth(120)
+                layout.addWidget(widget)
+
+                key = f"param_{command_name}_{param_name.upper()}"
+                self.param_widgets[key] = widget
+                param_widgets_for_command.append((param_name, widget))
+
+        layout.addStretch()
+
+        button.clicked.connect(
+            partial(
+                self._run_command_with_params,
+                command_name,
+                command_name.upper(),
+                param_widgets_for_command,
+            )
+        )
+
+        return row
+
+    # ------------------------------------------------------------------
+    # Logik
+    # ------------------------------------------------------------------
+
+    def _init_clicked(self):
+        try:
+            ini = io.StringIO(self.ini_edit.toPlainText())
+            self.dv.Init(ini)
+
+            # Alle Get-Funktionen einmal aufrufen
+            for item in self.main_entries:
+                if is_getter_name(item):
+                    target_name = item.upper()
+                    if target_name not in self.result_widgets:
+                        # Falls Getter über Rfunction o.ä. angelegt wurde
+                        target_name = item.upper()
+                    self._run_simple_method(item, target_name)
+
+        except Exception as e:
+            self._show_error("Init-Fehler", e)
+
+    def _run_simple_method(self, method_name, result_attr_name):
+        try:
+            value = call_driver_method(self.dv, method_name)
+            self._set_result(result_attr_name, value)
+        except Exception as e:
+            self._show_error(f"Fehler bei {method_name}", e)
+
+    def _run_command_with_params(self, command_name, result_attr_name, param_widgets_for_command):
+        try:
+            args = [get_widget_value(widget) for _, widget in param_widgets_for_command]
+            value = call_driver_method(self.dv, command_name, *args)
+            self._set_result(result_attr_name, value)
+        except Exception as e:
+            self._show_error(f"Fehler bei {command_name}", e)
+
+    def _set_result(self, result_name, value):
+        widget = self.result_widgets.get(result_name)
+        if widget is not None:
+            set_widget_value(widget, value)
+
+    def _show_error(self, title, exc):
+        QtWidgets.QMessageBox.critical(self, title, str(exc))
+
+    def _is_directly_implemented(self, command_name, item):
+        """
+        Entspricht der ursprünglichen Prüfung:
+        Wenn die Methode direkt implementiert ist und keinen NotImplementedError wirft,
+        dann wird sie nicht in den NotImp-Tabs aufgebaut.
+        """
+        driverclass = self.__driverclass__
+
+        try:
             driver_ins = driverclass()
+        except Exception:
+            # Wenn Instanzierung nicht klappt, lieber anzeigen statt verstecken
+            return False
+
+        try:
+            params = item.get("parameter")
+            args = []
+
+            if params:
+                if isinstance(params, str):
+                    params = (params,)
+                args = ["" for _ in params]
+
+            method = getattr(driverclass, command_name)
+            method(driver_ins, *args)
+
+        except NotImplementedError:
+            return False
+        except Exception:
+            # Irgendein anderer Fehler heißt nicht automatisch "implementiert"
+            return False
+        else:
+            return True
+        finally:
+            # falls Driver __del__ benötigt
             try:
-                p = ""
-                if item['parameter']:
-                    for param_name in para_command:
-                        p = p + "'',"
-                eval('driverclass.%s(driver_ins,%s)' % (command_name, p))
-            except NotImplementedError:
-                pass
-            else:
                 driver_ins.__del__()
-                continue
+            except Exception:
+                pass
 
-            driver_ins.__del__()
-
-            notIEntries.append(command_name)
-
-            items = "%s tuiapi.Group(" % (items)
-            items = "%s tuiapi.Item('%s',show_label=False,width=100)," % (items, command_name)
-            class_dict[command_name] = tapi.Button(command_name)
-
-            items = "%s tuiapi.Item('%s',label='%s',style='readonly',width=70)," % (items, command_name.upper(), 'Wert')
-            class_dict[command_name.upper()] = Erzeuge_TapiVar(str)
-
-            param_list = []
-
-            if item['parameter']:
-                for param_name in para_command:
-                    items = "%s tuiapi.Item('param_%s_%s',label='%s',width=60)," % (
-                        items, command_name, param_name.upper(), param_name)
-                    class_dict['param_%s_%s' % (command_name, param_name.upper())] = Erzeuge_TapiVar(str)
-                    param_list.append('self.param_%s_%s' % (command_name, param_name.upper()))
-
-            class_dict["_%s_fired" % command_name] = erzeugeFired_Methode(command_name, param_list)
-
-            items = "%s orientation='horizontal')" % (items)
-            items_Map[command_name] = items
-
-        item_List = list(items_Map.values())
-        item_List = [item_List[i:i + 16] for i in range(0, len(item_List), 16)]
-
-        for item in item_List:
-            tabs_list.append(tuiapi.Group(eval(", ".join(item)), label='NotImp_%d' % tabs_list_index))
-            tabs = tabs + ", tabs_list[%d]" % tabs_list_index
-            tabs_list_index = tabs_list_index + 1
-
-        # **********************
-        # In den UI Klassen definiert Groups holen:
-        # ************************
-
-        for i in class_dict:
-            if type(class_dict.get(i)) == tuiapi.Group:
-                tabs = '%s,class_dict.get("%s")' % (tabs, i)
-
-        i = 0
-        for b in bases:
-            for n, v in list(b.GROUPS.items()):
-                if type(v) == tuiapi.Group:
-                    tabs = '%s,bases[%d].GROUPS["%s"]' % (tabs, i, n)
-            i = i + 1
-
-        # *************
-        # Fenster zusammen bauen:
-        # ***************
-
-        tabs = "tuiapi.Group(%s, layout='tabbed')" % tabs
-
-        class_dict.update(
-            {'traits_view': tuiapi.View(eval(tabs), title="Spectrumanalyer", buttons=[tuim.CancelButton])})
-
-        # print "Meta   %s \n\n bases\n %s \n\n dict \n %s"%(class_name,str(bases),str(class_dict))
-
-        return MetaHasTraits.__new__(cls, class_name, bases, class_dict)
+    def closeEvent(self, event):
+        try:
+            if hasattr(self.dv, "Quit"):
+                self.dv.Quit()
+        except Exception:
+            pass
+        super().closeEvent(event)

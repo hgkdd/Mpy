@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
+
 import io
-import traits.api as tapi
-from traits.etsconfig.api import ETSConfig
-ETSConfig.toolkit = "wx"
-import traitsui.api as tuiapi
-import traitsui.menu as tuim
-from chaco.api import Plot, ArrayPlotData
-from enable.component_editor import ComponentEditor
+import sys
 import numpy as np
+
+from PySide6 import QtWidgets, QtCore
+
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+
 from mpylab.tools.util import format_block
 from mpylab.device.device import CONVERT
 
 conv = CONVERT()
 
-std_ini = format_block("""
+std_ini_text = format_block("""
                 [DESCRIPTION]
                 description: sp template
                 type:        'SPECTRUMANALYZER'
@@ -21,7 +22,7 @@ std_ini = format_block("""
                 serialnr:    SN12345
                 deviceid:    internal ID
                 driver:      dummy.py
-    
+
                 [Init_Value]
                 fstart: 100e6
                 fstop: 6e9
@@ -44,323 +45,364 @@ std_ini = format_block("""
                 attmode: 'auto'
                 sweeptime: 10e-3
                 sweeppoints: 500
-                """)
-std_ini = io.StringIO(std_ini)
+                """).strip()
 
 
-class UI(tapi.HasTraits):
-    Init = tapi.Button()
-    INI = tapi.Str()
-    int_unit = 'dBm'
+class MplCanvas(FigureCanvas):
+    def __init__(self, parent=None):
+        self.figure = Figure()
+        self.ax = self.figure.add_subplot(111)
+        super().__init__(self.figure)
+        self.setParent(parent)
 
-    # Button und Variablen für Traits anlegen
-    #
-    # Variablen Namen für Button:
-    # SetName
-    # GetName
-    # Variablen für Felder:
-    # NAME
-    # newNAME
-    #
-    # Name muss identisch mit dem Namen in der Liste mainTab sein! (siehe unten)
+        self.ax.set_title("Spectrum")
+        self.ax.set_xlabel("Frequenz in Hz")
+        self.ax.set_ylabel("Amplitude in dBm")
+        self._line, = self.ax.plot([], [])
 
-    SetCenterFreq = tapi.Button("SetCenterFreq")
-    GetCenterFreq = tapi.Button("GetCenterFreq")
-    CENTERFREQ = tapi.Float()
-    newCENTERFREQ = tapi.Float()
-    SetSpan = tapi.Button("SetSpan")
-    GetSpan = tapi.Button("GetSpan")
-    SPAN = tapi.Float()
-    newSPAN = tapi.Float()
-    SetStartFreq = tapi.Button("SetStartFreq")
-    GetStartFreq = tapi.Button("GetStartFreq")
-    STARTFREQ = tapi.Float()
-    newSTARTFREQ = tapi.Float()
-    SetStopFreq = tapi.Button("SetStopFreq")
-    GetStopFreq = tapi.Button("GetStopFreq")
-    STOPFREQ = tapi.Float()
-    newSTOPFREQ = tapi.Float()
-    SetRBW = tapi.Button("SetRBW")
-    GetRBW = tapi.Button("GetRBW")
-    RBW = tapi.Float()
-    newRBW = tapi.Str()
-    SetVBW = tapi.Button("SetVBW")
-    GetVBW = tapi.Button("GetVBW")
-    VBW = tapi.Float()
-    newVBW = tapi.Str()
-    SetRefLevel = tapi.Button("SetRefLevel")
-    GetRefLevel = tapi.Button("GetRefLevel")
-    REFLEVEL = tapi.Float()
-    newREFLEVEL = tapi.Float()
-    SetAtt = tapi.Button("SetAtt")
-    GetAtt = tapi.Button("GetAtt")
-    ATT = tapi.Float()
-    newATT = tapi.Str()
-    SetAttMode = tapi.Button("SetAttMode")
-    GetAttMode = tapi.Button("GetAttMode")
-    ATTMODE = tapi.Str()
-    newATTMODE = tapi.Str()
-    SetPreAmp = tapi.Button("SetPreAmp")
-    GetPreAmp = tapi.Button("GetPreAmp")
-    PREAMP = tapi.Float()
-    newPREAMP = tapi.Float()
-    SetDetector = tapi.Button("SetDetector")
-    GetDetector = tapi.Button("GetDetector")
-    DETECTOR = tapi.Str()
-    newDETECTOR = tapi.Str()
-    SetTraceMode = tapi.Button("SetTraceMode")
-    GetTraceMode = tapi.Button("GetTraceMode")
-    TRACEMODE = tapi.Str()
-    newTRACEMODE = tapi.Str()
-    SetTrace = tapi.Button("SetTrace")
-    GetTrace = tapi.Button("GetTrace")
-    TRACE = tapi.Int()
-    newTRACE = tapi.Int()
-    SetSweepCount = tapi.Button("SetSweepCount")
-    GetSweepCount = tapi.Button("GetSweepCount")
-    SWEEPCOUNT = tapi.Int()
-    newSWEEPCOUNT = tapi.Int()
-    SetSweepTime = tapi.Button("SetSweepTime")
-    GetSweepTime = tapi.Button("GetSweepTime")
-    SWEEPTIME = tapi.Float()
-    newSWEEPTIME = tapi.Str()
-    SetTriggerMode = tapi.Button("SetTriggerMode")
-    GetTriggerMode = tapi.Button("GetTriggerMode")
-    TRIGGERMODE = tapi.Str()
-    newTRIGGERMODE = tapi.Str()
-    SetTriggerDelay = tapi.Button("SetTriggerDelay")
-    GetTriggerDelay = tapi.Button("GetTriggerDelay")
-    TRIGGERDELAY = tapi.Float()
-    newTRIGGERDELAY = tapi.Float()
-    SetSweepPoints = tapi.Button("SetSweepPoints")
-    GetSweepPoints = tapi.Button("GetSweepPoints")
-    SWEEPPOINTS = tapi.Int()
-    newSWEEPPOINTS = tapi.Int()
+    def update_plot(self, x, y):
+        self.ax.clear()
+        self.ax.plot(x, y)
+        self.ax.set_title("Spectrum")
+        self.ax.set_xlabel("Frequenz in Hz")
+        self.ax.set_ylabel("Amplitude in dBm")
+        self.ax.relim()
+        self.ax.autoscale_view()
+        self.draw()
 
-    # In mainTab stehen alle Name der Buttons und Felder.
-    # Durch mainTab werden alle Buttons und Felder später automatisch angelegt.  
-    mainTab = ('CenterFreq', 'Span', 'StartFreq', 'StopFreq', 'RBW', 'VBW',
-               'RefLevel', 'Att', 'AttMode', 'PreAmp', 'Detector', 'TraceMode',
-               'Trace', 'SweepCount', 'SweepTime', 'TriggerMode', 'TriggerDelay', 'SweepPoints')
 
-    GetSpectrum = tapi.Button("GetSpectrum")
-    SPECTRUM = tapi.Str()
-    power = ()
+class UI(QtWidgets.QWidget):
+    int_unit = "dBm"
 
-    def __init__(self, instance, ini=None, *args, **kwargs):
-        # Wenn keine ini übergeben wurde wird die Standard ini verwendet.
-        super().__init__(*args, **kwargs)
+    mainTab = (
+        "CenterFreq", "Span", "StartFreq", "StopFreq", "RBW", "VBW",
+        "RefLevel", "Att", "AttMode", "PreAmp", "Detector", "TraceMode",
+        "Trace", "SweepCount", "SweepTime", "TriggerMode", "TriggerDelay", "SweepPoints"
+    )
+
+    # Typisierung der "new..." Eingabefelder möglichst nah am Traits-Original
+    field_types = {
+        "CenterFreq": float,
+        "Span": float,
+        "StartFreq": float,
+        "StopFreq": float,
+        "RBW": str,
+        "VBW": str,
+        "RefLevel": float,
+        "Att": str,
+        "AttMode": str,
+        "PreAmp": float,
+        "Detector": str,
+        "TraceMode": str,
+        "Trace": int,
+        "SweepCount": int,
+        "SweepTime": str,
+        "TriggerMode": str,
+        "TriggerDelay": float,
+        "SweepPoints": int,
+    }
+
+    def __init__(self, instance, ini=None, parent=None):
+        super().__init__(parent)
+
         self.sp = instance
-        if not ini:
-            ini = std_ini
-        self.ini = ini
-        self.INI = ini.read()
+        self.ini_source = ini if ini is not None else io.StringIO(std_ini_text)
 
-        # Plot Fenster erstellen.
-        x = np.array([])
-        y = np.array([])
-        self.plotdata = ArrayPlotData(x=x, y=y)
-        plot = Plot(self.plotdata)
-        plot.plot(("x", "y"), type="line", color="blue")
-        plot.title = "Spectrum"
-        plot.index_axis.title = 'Frequenz in Hz'
-        plot.value_axis.title = 'Amplitude in dBm'
-        self.plot = plot
+        self.power = ()
+        self.value_widgets = {}
+        self.new_widgets = {}
 
-    # *************************************************************************
-    #
-    # Funktionen die aufgerufen werden wenn ein Button gedrückt wird. 
-    # **************************************************************************
+        self.setWindowTitle("Spectrumanalyer")
+        self.resize(1200, 850)
 
-    # Spectrum holen und in Fester und Plot schreiben.
+        self._build_ui()
+        self._load_ini()
+
+    # ------------------------------------------------------------------
+    # UI-Aufbau
+    # ------------------------------------------------------------------
+
+    def _build_ui(self):
+        outer = QtWidgets.QVBoxLayout(self)
+
+        self.tabs = QtWidgets.QTabWidget()
+        outer.addWidget(self.tabs)
+
+        self._build_ini_tab()
+        self._build_main_tab()
+        self._build_spectrum_tab()
+        self._build_plot_tab()
+
+        bottom = QtWidgets.QHBoxLayout()
+        bottom.addStretch()
+
+        self.close_button = QtWidgets.QPushButton("Schließen")
+        self.close_button.clicked.connect(self.close)
+        bottom.addWidget(self.close_button)
+
+        outer.addLayout(bottom)
+
+    def _build_ini_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        self.ini_edit = QtWidgets.QPlainTextEdit()
+        self.ini_edit.setMinimumHeight(220)
+
+        self.init_button = QtWidgets.QPushButton("Init")
+        self.init_button.clicked.connect(self._Init_fired)
+
+        layout.addWidget(self.ini_edit)
+        layout.addWidget(self.init_button)
+        layout.addStretch()
+
+        self.tabs.addTab(tab, "Ini")
+
+    def _build_main_tab(self):
+        tab = QtWidgets.QWidget()
+        outer_layout = QtWidgets.QVBoxLayout(tab)
+
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+
+        content = QtWidgets.QWidget()
+        form_layout = QtWidgets.QVBoxLayout(content)
+
+        for name in self.mainTab:
+            row = self._create_main_row(name)
+            form_layout.addWidget(row)
+
+        form_layout.addStretch()
+        scroll.setWidget(content)
+
+        outer_layout.addWidget(scroll)
+        self.tabs.addTab(tab, "Main")
+
+    def _build_spectrum_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        self.spectrum_edit = QtWidgets.QPlainTextEdit()
+        self.spectrum_edit.setReadOnly(True)
+
+        self.get_spectrum_button_1 = QtWidgets.QPushButton("GetSpectrum")
+        self.get_spectrum_button_1.clicked.connect(self._GetSpectrum_fired)
+
+        layout.addWidget(self.spectrum_edit)
+        layout.addWidget(self.get_spectrum_button_1)
+        layout.addStretch()
+
+        self.tabs.addTab(tab, "Spectrum")
+
+    def _build_plot_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        self.plot = MplCanvas()
+
+        self.get_spectrum_button_2 = QtWidgets.QPushButton("GetSpectrum")
+        self.get_spectrum_button_2.clicked.connect(self._GetSpectrum_fired)
+
+        layout.addWidget(self.plot)
+        layout.addWidget(self.get_spectrum_button_2)
+
+        self.tabs.addTab(tab, "Plot")
+
+    def _create_main_row(self, name: str) -> QtWidgets.QWidget:
+        row = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(row)
+        layout.setContentsMargins(4, 4, 4, 4)
+
+        value_label = QtWidgets.QLabel("Wert")
+        value_widget = QtWidgets.QLineEdit()
+        value_widget.setReadOnly(True)
+        value_widget.setMinimumWidth(180)
+
+        new_label = QtWidgets.QLabel("Neu")
+        new_widget = self._create_input_widget(self.field_types.get(name, str))
+        new_widget.setMinimumWidth(160)
+
+        set_button = QtWidgets.QPushButton(f"Set{name}")
+        get_button = QtWidgets.QPushButton(f"Get{name}")
+
+        set_button.clicked.connect(lambda checked=False, n=name: self._call_setter(n))
+        get_button.clicked.connect(lambda checked=False, n=name: self._call_getter(n))
+
+        self.value_widgets[name] = value_widget
+        self.new_widgets[name] = new_widget
+
+        layout.addWidget(QtWidgets.QLabel(name))
+        layout.addSpacing(12)
+        layout.addWidget(value_label)
+        layout.addWidget(value_widget)
+        layout.addSpacing(12)
+        layout.addWidget(new_label)
+        layout.addWidget(new_widget)
+        layout.addSpacing(12)
+        layout.addWidget(set_button)
+        layout.addWidget(get_button)
+        layout.addStretch()
+
+        return row
+
+    def _create_input_widget(self, py_type):
+        if py_type is int:
+            widget = QtWidgets.QSpinBox()
+            widget.setRange(-1_000_000_000, 1_000_000_000)
+            return widget
+
+        if py_type is float:
+            widget = QtWidgets.QDoubleSpinBox()
+            widget.setDecimals(6)
+            widget.setRange(-1e15, 1e15)
+            widget.setSingleStep(1.0)
+            return widget
+
+        return QtWidgets.QLineEdit()
+
+    def _load_ini(self):
+        if hasattr(self.ini_source, "read"):
+            try:
+                content = self.ini_source.read()
+            except Exception:
+                content = std_ini_text
+        else:
+            content = str(self.ini_source)
+
+        self.ini_edit.setPlainText(content)
+
+    # ------------------------------------------------------------------
+    # Hilfsfunktionen
+    # ------------------------------------------------------------------
+
+    def _show_error(self, title, exc):
+        QtWidgets.QMessageBox.critical(self, title, str(exc))
+
+    def _get_input_value(self, name):
+        widget = self.new_widgets[name]
+        if isinstance(widget, QtWidgets.QSpinBox):
+            return widget.value()
+        if isinstance(widget, QtWidgets.QDoubleSpinBox):
+            return widget.value()
+        return widget.text()
+
+    def _set_value_display(self, name, value):
+        self.value_widgets[name].setText(str(value))
+
+    def _call_getter(self, name):
+        try:
+            method = getattr(self.sp, f"Get{name}")
+            result = method()
+            value = result[1] if isinstance(result, (tuple, list)) and len(result) >= 2 else result
+            self._set_value_display(name, value)
+        except Exception as e:
+            self._show_error(f"Get{name}-Fehler", e)
+
+    def _call_setter(self, name):
+        try:
+            method = getattr(self.sp, f"Set{name}")
+            new_value = self._get_input_value(name)
+            result = method(new_value)
+            value = result[1] if isinstance(result, (tuple, list)) and len(result) >= 2 else result
+            self._set_value_display(name, value)
+        except Exception as e:
+            self._show_error(f"Set{name}-Fehler", e)
+
+    # ------------------------------------------------------------------
+    # Entsprechungen der Traits-Methoden
+    # ------------------------------------------------------------------
+
     def _GetSpectrum_fired(self):
-        self.power = self.sp.GetSpectrum()[1]
-        x = np.array(self.power[0])
-        y = np.array(self.power[1])
-        self.plotdata.set_data('x', x)
-        self.plotdata.set_data('y', y)
-        self.plot.request_redraw()
+        try:
+            self.power = self.sp.GetSpectrum()[1]
+            x = np.array(self.power[0])
+            y = np.array(self.power[1])
 
-        self.SPECTRUM = str(self.power[0]) + "\n\n\n" + str(self.power[1])
+            self.plot.update_plot(x, y)
+            self.spectrum_edit.setPlainText(f"{self.power[0]}\n\n\n{self.power[1]}")
+        except Exception as e:
+            self._show_error("GetSpectrum-Fehler", e)
 
     def _Init_fired(self):
-        ini = io.StringIO(self.INI)
-        self.sp.Init(ini)
+        try:
+            ini = io.StringIO(self.ini_edit.toPlainText())
+            self.sp.Init(ini)
 
-        # Alle Get Funktionen einmal aufrufen und so die Anzeige mit aktuellen Werten belegen.
-        for item in self.mainTab:
-            getattr(self, "_Get%s_fired" % item)()
+            for item in self.mainTab:
+                self._call_getter(item)
+        except Exception as e:
+            self._show_error("Init-Fehler", e)
 
-    def _SetCenterFreq_fired(self):
-        err, value = self.sp.SetCenterFreq(self.newCENTERFREQ)
-        self.CENTERFREQ = value
+    # ------------------------------------------------------------------
+    # Optional wie früher
+    # ------------------------------------------------------------------
 
-    def _GetCenterFreq_fired(self):
-        self.CENTERFREQ = self.sp.GetCenterFreq()[1]
-
-    def _SetSpan_fired(self):
-        err, value = self.sp.SetSpan(self.newSPAN)
-        self.SPAN = value
-
-    def _GetSpan_fired(self):
-        self.SPAN = self.sp.GetSpan()[1]
-
-    def _SetStartFreq_fired(self):
-        err, value = self.sp.SetStartFreq(self.newSTARTFREQ)
-        self.STARTFREQ = value
-
-    def _GetStartFreq_fired(self):
-        self.STARTFREQ = self.sp.GetStartFreq()[1]
-
-    def _SetStopFreq_fired(self):
-        err, value = self.sp.SetStopFreq(self.newSTOPFREQ)
-        self.STOPFREQ = value
-
-    def _GetStopFreq_fired(self):
-        self.STOPFREQ = self.sp.GetStopFreq()[1]
-
-    def _SetRBW_fired(self):
-        err, value = self.sp.SetRBW(self.newRBW)
-        self.RBW = value
-
-    def _GetRBW_fired(self):
-        self.RBW = self.sp.GetRBW()[1]
-
-    def _SetVBW_fired(self):
-        err, value = self.sp.SetVBW(self.newVBW)
-        self.VBW = value
-
-    def _GetVBW_fired(self):
-        self.VBW = self.sp.GetVBW()[1]
-
-    def _SetRefLevel_fired(self):
-        err, value = self.sp.SetRefLevel(self.newREFLEVEL)
-        self.REFLEVEL = value
-
-    def _GetRefLevel_fired(self):
-        self.REFLEVEL = self.sp.GetRefLevel()[1]
-
-    def _SetAtt_fired(self):
-        err, value = self.sp.SetAtt(self.newATT)
-        self.ATT = value
-
-    def _GetAtt_fired(self):
-        self.ATT = self.sp.GetAtt()[1]
-
-    def _SetAttMode_fired(self):
-        err, value = self.sp.SetAttMode(self.newATTMODE)
-        self.ATTMODE = value
-
-    def _GetAttMode_fired(self):
-        self.ATTMODE = self.sp.GetAttMode()[1]
-
-    def _SetPreAmp_fired(self):
-        err, value = self.sp.SetPreAmp(self.newPREAMP)
-        self.PREAMP = value
-
-    def _GetPreAmp_fired(self):
-        self.PREAMP = self.sp.GetPreAmp()[1]
-
-    def _SetDetector_fired(self):
-        err, value = self.sp.SetDetector(self.newDETECTOR)
-        self.DETECTOR = value
-
-    def _GetDetector_fired(self):
-        self.DETECTOR = self.sp.GetDetector()[1]
-
-    def _SetTraceMode_fired(self):
-        err, value = self.sp.SetTraceMode(self.newTRACEMODE)
-        self.TRACEMODE = value
-
-    def _GetTraceMode_fired(self):
-        self.TRACEMODE = self.sp.GetTraceMode()[1]
-
-    def _SetTrace_fired(self):
-        err, value = self.sp.SetTrace(self.newTRACE)
-        self.TRACE = value
-
-    def _GetTrace_fired(self):
-        self.TRACE = self.sp.GetTrace()[1]
-
-    def _SetSweepCount_fired(self):
-        err, value = self.sp.SetSweepCount(self.newSWEEPCOUNT)
-        self.SWEEPCOUNT = value
-
-    def _GetSweepCount_fired(self):
-        self.SWEEPCOUNT = self.sp.GetSweepCount()[1]
-
-    def _SetSweepTime_fired(self):
-        err, value = self.sp.SetSweepTime(self.newSWEEPTIME)
-        self.SWEEPTIME = value
-
-    def _GetSweepTime_fired(self):
-        self.SWEEPTIME = self.sp.GetSweepTime()[1]
-
-    def _SetTriggerMode_fired(self):
-        err, value = self.sp.SetTriggerMode(self.newTRIGGERMODE)
-        self.TRIGGERMODE = value
-
-    def _GetTriggerMode_fired(self):
-        self.TRIGGERMODE = self.sp.GetTriggerMode()[1]
-
-    def _SetTriggerDelay_fired(self):
-        err, value = self.sp.SetTriggerDelay(self.newTRIGGERDELAY)
-        self.TRIGGERDELAY = value
-
-    def _GetTriggerDelay_fired(self):
-        self.TRIGGERDELAY = self.sp.GetTriggerDelay()[1]
-
-    def _SetSweepPoints_fired(self):
-        err, value = self.sp.SetSweepPoints(self.newSWEEPPOINTS)
-        self.SWEEPPOINTS = value
-
-    def _GetSweepPoints_fired(self):
-        self.SWEEPPOINTS = self.sp.GetSweepPoints()[1]
-
-    # *********************************************************************
-    #
-    # Fenster erstellen:
-    # **********************************************************************
-
-    # mainTab in einen String schreiben.
-    # Dieser String wird dann druch eval ausgewertet.
-    items = ""
-    for i in mainTab:
-        items = "%s tuiapi.Group(" % (items)
-        items = "%s tuiapi.Item('%s',label='Wert',style='readonly',width=70)," % (items, i.upper())
-        items = "%s tuiapi.Item('new%s',label='Neu',width=60)," % (items, i.upper())
-        items = "%s tuiapi.Item('Set%s',show_label=False)," % (items, i)
-        items = "%s tuiapi.Item('Get%s',show_label=False)," % (items, i)
-        items = "%s orientation='horizontal')," % (items)
-    items = items[:-1]
-
-    MAIN_grp = tuiapi.Group(eval(items),
-                            label='Main')
-
-    INI_grp = tuiapi.Group(tuiapi.Item('INI', style='custom', springy=True, width=500, height=200, show_label=False),
-                           tuiapi.Item('Init', show_label=False),
-                           label='Ini')
-
-    plot = tapi.Instance(Plot)
-    SPEC_grp = tuiapi.Group(
-        tuiapi.Item('SPECTRUM', style='custom', springy=True, width=500, height=200, show_label=False),
-        tuiapi.Item('GetSpectrum', show_label=False),
-        label='Spectrum')
-
-    PLOT_grp = tuiapi.Group(tuiapi.Item('plot', editor=ComponentEditor(), show_label=False),
-                            tuiapi.Item('GetSpectrum', show_label=False),
-                            label='Plot')
-
-    traits_view = tuiapi.View(tuiapi.Group(INI_grp, MAIN_grp, SPEC_grp, PLOT_grp, layout='tabbed'),
-                              title="Spectrumanalyer", buttons=[tuim.CancelButton])
+    def closeEvent(self, event):
+        try:
+            if hasattr(self.sp, "Quit"):
+                self.sp.Quit()
+        except Exception:
+            pass
+        super().closeEvent(event)
 
 
 def main():
-    import sys
-    ui = UI("")
-    ui.configure_traits()
-    sys.exit(0)
+    class DummySpectrumAnalyzer:
+        def __init__(self):
+            self.values = {
+                "CenterFreq": 3e9,
+                "Span": 6e9,
+                "StartFreq": 100e6,
+                "StopFreq": 6e9,
+                "RBW": "auto",
+                "VBW": "10e6",
+                "RefLevel": -20.0,
+                "Att": "auto",
+                "AttMode": "auto",
+                "PreAmp": 0.0,
+                "Detector": "APEak",
+                "TraceMode": "WRITe",
+                "Trace": 1,
+                "SweepCount": 0,
+                "SweepTime": "10e-3",
+                "TriggerMode": "IMMediate",
+                "TriggerDelay": 0.0,
+                "SweepPoints": 500,
+            }
+
+        def Init(self, ini):
+            print("Init called")
+            print(ini.read())
+
+        def GetSpectrum(self):
+            x = np.linspace(100e6, 6e9, 500)
+            y = -70 + 8 * np.sin(np.linspace(0, 20, 500))
+            return 0, (x.tolist(), y.tolist())
+
+        def Quit(self):
+            print("Quit called")
+
+        def __getattr__(self, name):
+            if name.startswith("Get"):
+                key = name[3:]
+                def getter():
+                    return 0, self.values[key]
+                return getter
+
+            if name.startswith("Set"):
+                key = name[3:]
+                def setter(value):
+                    self.values[key] = value
+                    return 0, value
+                return setter
+
+            raise AttributeError(name)
+
+    app = QtWidgets.QApplication(sys.argv)
+    ui = UI(DummySpectrumAnalyzer())
+    ui.show()
+    sys.exit(app.exec())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
