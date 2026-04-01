@@ -9,8 +9,6 @@
 
 import sys
 import io
-import traits.api as tapi
-import traitsui.api as tuiapi
 from mpylab.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
 from mpylab.device.networkanalyzer_ui import UI as super_ui
 from mpylab.tools.spacing import logspaceN, linspaceN
@@ -18,20 +16,18 @@ from mpylab.device.tools import *
 from mpylab.device.r_types import *
 from mpylab.device.validators import *
 from mpylab.device.mpy_exceptions import *
-from mpylab.device.Meta_ui import Metaui
+from mpylab.device.Meta_ui import DriverUIWidget
 
 
 class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
     """
-    This Driver use the new dirver framework!
-    
     Dieser Driver ist für einen R&S ZVL Vector Network Analyzer geschrieben.
     
     Für jede Instanz dieser Klasse wird auf dem Gerät ein neuer Channel erstellt.
     
     Jedem Channel können mehrere Traces zugeordnet werden. Auf dem Gerät muss, für alle
     Channels, jeder Trace einen eindeutigen Namen besitzen, die Driver Klasse ist so konzipiert,
-    dass diese Vorgabe aufjedenfall eingehalten wird. Deshalb entsprechen die Trace-Namen, auf dem
+    dass diese Vorgabe auf jeden Fall eingehalten wird. Deshalb entsprechen die Trace-Namen, auf dem
     Gerät, nicht denen welche der Funktion CreateTrace(tracename, sparam) übergeben wurden. So könnte
     beispielsweise in zwei Instanzen dieser Klasse der Name "Trc1" verwendet werden, auf dem Gerät würden
     z.B. die Namen "Trc1_Ch1WIN1TR1" und "Trc1_Ch2WIN1TR1" verwendet werden.
@@ -45,17 +41,17 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
     VISA-Komamndo. Für eine nähere Beschreibung der Command Klasse siehe: tools.Command und tools.Function.
         
     Das _cmds-Dict ist die zentrale Sammelstelle für alle VISA-Kommandos, aus diesem Dict erstellt die Driver Metaklasse
-    Funktionen für die Klasse, die nach dem dem erstellen eines Objetes sofort wie normale Methoden verwendet werden
+    Funktionen für die Klasse, die nach dem Erstellen eines Objetes sofort wie normale Methoden verwendet werden
     können.
     
     .. rubric:: Possibilities_maps:
     
     Nicht immer entsprechen die von den VISA-Befehlen gewordenten Werte den allgemein bekannten Bezeichnungen oder
     eine Firma bezeichnet eine bestimmt Funktionalität anders als allgemein üblich. Um solche Probleme leicht zu 
-    löschen gibt es die Possibilities_maps. Mit ihnen können VISA-bezifische Werte auf allgemein gültige gemapt und 
+    lösen gibt es die Possibilities_maps. Mit ihnen können VISA-spezifische Werte auf allgemein gültige gemapt und
     zurück gemappt werden.
         
-    Possibilities_maps können nur in einer konkreten Implementierung eines Driver verwendet werden, nicht in einer 
+    Possibilities_maps können nur in einer konkreten Implementierung eines Treibers verwendet werden, nicht in einer
     Driver-Superklasse. 
         
     Für eine nähre Beschreibung der Verwendung, siehe: tools.Meta_Driver
@@ -64,13 +60,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
     
     .. rubric:: Possibility-Listen:
     
-    Possibilities sind mögliche Werte für einen Parameter. Bei bestimmen Parameter können immer nur bestimmte
-    Werte übergeben werden, so sind beispielsweise bei sparam (S-Paramter) außschließlich ('S11', 'S12', 'S21', 'S22')
-    möglich. Damit nicht jeder kleine Schreibfehelr sofort zum Abbruch des Programm führt und damit sichergestellt ist
-    das immer ein richtier Wert übergeben wird, wird mit Hilfe eines Fuzzy-string-compares der übergebene Wert auf einen 
-    in der Posssibilites-Liste vorhandenen zurückgeführt.
+    Possibilities sind mögliche Werte für einen Parameter. Bei bestimmten Parameter können immer nur bestimmte
+    Werte übergeben werden, so sind beispielsweise bei sparam (S-Paramter) ausschließlich ('S11', 'S12', 'S21', 'S22')
+    möglich. Damit nicht jeder kleine Schreibfeheler sofort zum Abbruch des Programms führt und damit sichergestellt ist
+    das immer ein richtiger Wert übergeben wird, wird mithilfe eines Fuzzy-string-compares der übergebene Wert auf einen
+    in der Possibilites-Liste vorhandenen zurückgeführt.
         
-    Possibility-Listen können sowol in einer konkreten Implementierung einer Driver-Klasse als auch in einer Driver-
+    Possibility-Listen können sowohl in einer konkreten Implementierung einer Driver-Klasse als auch in einer Driver-
     Superklasse definiert werden. Es wird geraten die Definition immer in der Super-Klasse vorzunehmen, damit die 
     Possibilities für alle Driver gleich sind.
         
