@@ -128,7 +128,7 @@ class DRIVER:
         else:  # Normal mode
             import pyvisa
             import pyvisa.constants
-            self.rm = pyvisa.ResourceManager('@py')   # configure backend in .pyvisarc in your home dir
+            self.rm = pyvisa.ResourceManager()   # configure backend in .pyvisarc in your home dir
             if lock is None:
                 lock = pyvisa.constants.AccessModes.no_lock
             if visa:
