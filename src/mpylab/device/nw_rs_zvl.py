@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-"""This is :mod:`mpylab.device.nw_rs_zlv`:
+"""This is :mod:`mpylab.device.nw_rs_zvl`:
 
    :author: Christian Albrecht, Hans Georg Krauthäuser
 
