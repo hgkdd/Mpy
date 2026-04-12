@@ -2,21 +2,19 @@
 #
 """This is :mod:`mpylab.device.nw_rs_zlv`:
 
-   :author: Christian Albrecht
+   :author: Christian Albrecht, Hans Georg Krauthäuser
 
    :license: GPL-3 or higher
 """
 
 import sys
 import io
+import re
 from mpylab.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
 from mpylab.tools.spacing import logspaceN, linspaceN
-from mpylab.device.tools import *
-from mpylab.device.r_types import *
-#from mpylab.device.validators import *
-from mpylab.device.mpy_exceptions import *
-#from mpylab.device.Meta_ui import DriverUIWidget
-from PySide6 import QtWidgets
+from mpylab.device.meta_driver import Meta_Driver, CommandsStorage, Command, Parameter, Function
+from mpylab.device.r_types import TUPLE_OF_FLOAT
+from mpylab.device.mpy_exceptions import GeneralDriverError
 from mpylab.device.networkanalyzer_ui import NetworkAnalyzerWidget
 
 
@@ -137,9 +135,10 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
 
     _cmds = CommandsStorage(NETWORKAN,
                             # Manual S. 499
-                            Command('SetCenterFreq', 'SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ', (
-                                Parameter('channel', class_attr='internChannel'),
-                                Parameter('cfreq', ptype=float)  # requires=IN_RANGE(0,10e6))
+                            Command('SetCenterFreq',
+                                    'SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',
+                                    ( Parameter('channel', class_attr='internChannel'),
+                                                Parameter('cfreq', ptype=float)  # requires=IN_RANGE(0,10e6))
                             ), rfunction='GetCenterFreq'),
 
                             # Manual S. 499
@@ -729,70 +728,6 @@ class WINDOW(object):
         return self.name
 
 
-class UI(NetworkAnalyzerWidget):
-    """
-    PySide6-Version der UI aus nw_rs_zlv.py.
-
-    Gegenüber SpectrumAnalyzerWidget ergänzt diese Klasse den alten
-    Traits-Zusatzbereich "Main_Rest" mit:
-        - SetWindow Button
-        - aktuellem Window-Wert
-        - Eingabefeld für neues Window
-    """
-
-    def __init__(self, instance, ini=None, parent=None):
-        super().__init__(instance, ini=ini, parent=parent)
-
-        self.setWindowTitle("R&S ZVL Network Analyzer")
-        self._build_zlv_tab()
-
-    def _build_zlv_tab(self):
-        tab = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(tab)
-
-        group = QtWidgets.QGroupBox("Main_Rest")
-        group_layout = QtWidgets.QHBoxLayout(group)
-
-        self.set_window_button = QtWidgets.QPushButton("SetWindow")
-        self.set_window_button.clicked.connect(self.on_set_window_clicked)
-
-        self.setwindow_value = QtWidgets.QLineEdit()
-        self.setwindow_value.setReadOnly(True)
-        self.setwindow_value.setPlaceholderText("Wert")
-        self.setwindow_value.setMinimumWidth(160)
-
-        self.new_setwindow_edit = QtWidgets.QLineEdit()
-        self.new_setwindow_edit.setPlaceholderText("traceName")
-        self.new_setwindow_edit.setMinimumWidth(160)
-
-        group_layout.addWidget(self.set_window_button)
-        group_layout.addWidget(QtWidgets.QLabel("Wert"))
-        group_layout.addWidget(self.setwindow_value)
-        group_layout.addWidget(QtWidgets.QLabel("traceName"))
-        group_layout.addWidget(self.new_setwindow_edit)
-        group_layout.addStretch()
-
-        layout.addWidget(group)
-        layout.addStretch()
-
-        self.tabs.addTab(tab, "Main_Rest")
-
-    def on_set_window_clicked(self):
-        try:
-            window_name = self.new_setwindow_edit.text().strip()
-            if not window_name:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Eingabe fehlt",
-                    "Bitte einen Window-Namen eingeben."
-                )
-                return
-
-            err, value = self.dv.SetWindow(window_name)
-            self.setwindow_value.setText(str(value))
-
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "SetWindow-Fehler", str(e))
 
 ##########################################################################
 #
@@ -850,4 +785,73 @@ def main():
     sys.exit(app.exec())
 
 if __name__ == '__main__':
+    from PySide6 import QtWidgets
+
+
+    class UI(NetworkAnalyzerWidget):
+        """
+        PySide6-Version der UI aus nw_rs_zlv.py.
+
+        Gegenüber SpectrumAnalyzerWidget ergänzt diese Klasse den alten
+        Traits-Zusatzbereich "Main_Rest" mit:
+            - SetWindow Button
+            - aktuellem Window-Wert
+            - Eingabefeld für neues Window
+        """
+
+        def __init__(self, instance, ini=None, parent=None):
+            super().__init__(instance, ini=ini, parent=parent)
+
+            self.setWindowTitle("R&S ZVL Network Analyzer")
+            self._build_zlv_tab()
+
+        def _build_zlv_tab(self):
+            tab = QtWidgets.QWidget()
+            layout = QtWidgets.QVBoxLayout(tab)
+
+            group = QtWidgets.QGroupBox("Main_Rest")
+            group_layout = QtWidgets.QHBoxLayout(group)
+
+            self.set_window_button = QtWidgets.QPushButton("SetWindow")
+            self.set_window_button.clicked.connect(self.on_set_window_clicked)
+
+            self.setwindow_value = QtWidgets.QLineEdit()
+            self.setwindow_value.setReadOnly(True)
+            self.setwindow_value.setPlaceholderText("Wert")
+            self.setwindow_value.setMinimumWidth(160)
+
+            self.new_setwindow_edit = QtWidgets.QLineEdit()
+            self.new_setwindow_edit.setPlaceholderText("traceName")
+            self.new_setwindow_edit.setMinimumWidth(160)
+
+            group_layout.addWidget(self.set_window_button)
+            group_layout.addWidget(QtWidgets.QLabel("Wert"))
+            group_layout.addWidget(self.setwindow_value)
+            group_layout.addWidget(QtWidgets.QLabel("traceName"))
+            group_layout.addWidget(self.new_setwindow_edit)
+            group_layout.addStretch()
+
+            layout.addWidget(group)
+            layout.addStretch()
+
+            self.tabs.addTab(tab, "Main_Rest")
+
+        def on_set_window_clicked(self):
+            try:
+                window_name = self.new_setwindow_edit.text().strip()
+                if not window_name:
+                    QtWidgets.QMessageBox.warning(
+                        self,
+                        "Eingabe fehlt",
+                        "Bitte einen Window-Namen eingeben."
+                    )
+                    return
+
+                err, value = self.dv.SetWindow(window_name)
+                self.setwindow_value.setText(str(value))
+
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "SetWindow-Fehler", str(e))
+
+
     main()
