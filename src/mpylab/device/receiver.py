@@ -12,6 +12,7 @@ from scuq import *
 
 from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool
+from mpylab.tools.regular_expressions import FP
 
 
 class RECEIVER(DRIVER):
@@ -98,7 +99,7 @@ class RECEIVER(DRIVER):
                      'unit': str,
                      'preamplifier': str}}
 
-    _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
+    _FP = FP
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)

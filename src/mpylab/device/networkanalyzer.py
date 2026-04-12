@@ -14,6 +14,8 @@
 from mpylab.tools.configuration import strbool
 
 from mpylab.device.driver import DRIVER
+from mpylab.tools.regular_expressions import FP
+
 #from .driver_new import DRIVER
 
 
@@ -369,6 +371,8 @@ class NETWORKANALYZER(DRIVER):
             :return: Trigger Delay which is set on the Device 
             :rtype: Float
     """
+
+    _FP = FP
 
     conftmpl = {'description':
                     {'description': str,

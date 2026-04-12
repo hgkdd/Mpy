@@ -7,6 +7,7 @@ from scuq import *
 
 from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool
+from mpylab.tools.regular_expressions import FP
 
 
 class POWERMETER(DRIVER):
@@ -99,7 +100,7 @@ class POWERMETER(DRIVER):
                      'swr2': float,
                      'sensor': str}}
 
-    _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
+    _FP = FP
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)

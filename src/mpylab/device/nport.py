@@ -4,6 +4,8 @@ from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool, fstrcmp
 from mpylab.tools.dataparser import DatFile
 from mpylab.tools.interpol import UQ_interpol
+from mpylab.tools.regular_expressions import FP
+
 
 
 class NPORT(DRIVER):
@@ -11,6 +13,9 @@ class NPORT(DRIVER):
     Child class for all py-drivers for n-ports (like antennas, cables, hybrids, ...)
     The parent class is DRIVER
     """
+
+    _FP = FP
+
     conftmpl = {'description':
                     {'description': str,
                      'type': str,

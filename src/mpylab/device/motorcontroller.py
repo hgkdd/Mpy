@@ -2,6 +2,7 @@
 
 from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool
+from mpylab.tools.regular_expressions import FP
 
 
 class MOTORCONTROLLER(DRIVER):
@@ -27,10 +28,8 @@ class MOTORCONTROLLER(DRIVER):
 
     # regular expression for a Fixed Point value in the raw string notation
     # this is the same as %e,%E,%f,%F known from scanf
-    _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
+    _FP = FP
 
-    # defintion from http://docs.python.org/library/re.html
-    # _FP=r'[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?'
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)

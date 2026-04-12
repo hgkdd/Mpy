@@ -5,6 +5,7 @@ from mpylab.tools.configuration import strbool, fstrcmp
 from mpylab.tools.dataparser import DatFile
 from mpylab.tools.interpol import UQ_interpol
 from mpylab.tools.util import case_insensitive_string_compare
+from mpylab.tools.regular_expressions import FP
 
 
 class VLISN(DRIVER):
@@ -34,6 +35,7 @@ class VLISN(DRIVER):
                      'unit': str,
                      'interpolation': str,
                      'file': str}}
+    _FP = FP
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)

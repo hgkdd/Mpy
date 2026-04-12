@@ -5,6 +5,7 @@ import re
 
 from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool, fstrcmp
+from mpylab.tools.regular_expressions import FP
 
 
 class SPECTRUMANALYZER(DRIVER):
@@ -60,7 +61,7 @@ class SPECTRUMANALYZER(DRIVER):
                      'sweeptime': float,
                      'sweeppoints': int}}
 
-    _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
+    _FP = FP
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)

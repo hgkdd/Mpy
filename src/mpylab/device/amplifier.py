@@ -2,6 +2,7 @@
 
 from mpylab.device.nport import NPORT  # parent class
 from mpylab.tools.configuration import fstrcmp  # fuzzy string compare
+from mpylab.tools.regular_expressions import FP
 
 
 class AMPLIFIER(NPORT):
@@ -16,7 +17,7 @@ class AMPLIFIER(NPORT):
     The class is base class for all drivers of remote controlled amplifies. 
     """
     STATES = ('Operate', 'Standby', 'POn', 'POff')
-    _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
+    _FP = FP
 
     def __init__(self, SearchPaths=None):
         NPORT.__init__(self, SearchPaths=SearchPaths)

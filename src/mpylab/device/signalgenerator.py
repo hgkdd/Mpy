@@ -7,6 +7,7 @@ from scuq import si
 import numpy as np
 from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool, fstrcmp
+from mpylab.tools.regular_expressions import FP
 
 
 class SIGNALGENERATOR(DRIVER):
@@ -59,10 +60,7 @@ class SIGNALGENERATOR(DRIVER):
 
     # regular expression for a Fixed Point value in the raw string notation
     # this is the same as %e,%E,%f,%F known from scanf
-    _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'
-
-    # defintion from http://docs.python.org/library/re.html
-    # _FP=r'[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?'
+    _FP = FP
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)
