@@ -10,7 +10,7 @@ import inspect
 import copy
 from mpylab.device.r_types import *
 from mpylab.tools.configuration import fstrcmp
-from mpylab.device.driver_new import DRIVER
+from mpylab.device.driver import DRIVER
 
 
 class Meta_Driver(type):

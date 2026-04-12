@@ -13,8 +13,8 @@
 
 from mpylab.tools.configuration import strbool
 
-# from mpylab.device.driver import DRIVER
-from .driver_new import DRIVER
+from mpylab.device.driver import DRIVER
+#from .driver_new import DRIVER
 
 
 class NETWORKANALYZER(DRIVER):
