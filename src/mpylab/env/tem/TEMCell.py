@@ -552,8 +552,7 @@ class TEMCell(Measure.Measure):
         try:
             self.messenger(util.tstamp() + " ...done", [])
             if freqs is None:
-                _fg = LogSpace(80e6, 1000e6, 1.01, True)
-                freqs = [f for f in LogSpace.logspace]
+                freqs = [f for f in LogSpace(80e6, 1000e6, 1.01, True)]
 
             # set up voltage, noise, ...
             voltage = {}
@@ -787,8 +786,7 @@ Select EUT position.
         try:
             self.messenger(util.tstamp() + " ...done", [])
             if freqs is None:
-                _fg = LogSpace(80e6, 1000e6, 1.01, True)
-                freqs = [f for f in LogSpace.logspace]
+                freqs = [f for f in LogSpace(80e6, 1000e6, 1.01, True)]
 
             # set up voltage, noise, ...
             voltage = {}

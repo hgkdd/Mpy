@@ -15,15 +15,14 @@ class LogSpace:
         self.stop = stop
         self.step = step
         self.endpoint = endpoint
-        self.logspace = self.logspace_gen(self.start, self.stop, self.step, self.endpoint)
 
-    def logspace_gen(self, start, stop, step, endpoint=True):
-        f = start
-        while f <= stop:
+    def __iter__(self):
+        f = self.start
+        while f <= self.stop:
             yield f
-            f *= step
-        if endpoint and f > stop:
-            yield stop
+            f *= self.step
+        if self.endpoint and f > self.stop:
+            yield self.stop
 
 
 class LinSpace:
@@ -32,13 +31,11 @@ class LinSpace:
         self.stop = stop
         self.step = step
         self.endpoint = endpoint
-        self.linspace = self.linspace_gen(self.start, self.stop, self.step, self.endpoint)
 
-    def logspace_gen(self, start, stop, step, endpoint=True):
-        f = start
-        while f <= stop:
+    def __iter__(self):
+        f = self.start
+        while f <= self.stop:
             yield f
-            f += step
-        if endpoint and f > stop:
-            yield stop
-
+            f += self.step
+        if self.endpoint and f > self.stop:
+            yield self.stop
