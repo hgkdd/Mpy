@@ -11,7 +11,7 @@ import os
 
 from mpylab.tools.configuration import Configuration, fstrcmp
 from mpylab.device.device import CONVERT, Device
-from mpybab.device.communication_gpib import CommunicationGpib
+from mpylab.device.communication_gpib import CommunicationGpib
 from mpylab.device.communication_debug import CommunicationDebug
 from mpylab.device.communication_prologix import CommunicationPrologix
 
