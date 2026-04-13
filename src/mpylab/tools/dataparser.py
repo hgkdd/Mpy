@@ -11,61 +11,8 @@ This is :mod:`mpylab.tools.dataparser`.
 
 from mpylab.tools.plyparser import Parser
 import math
-from scuq import *
-from mpylab.tools.aunits import *
-
-
-def cmp(a, b):
-    return (a > b) - (a < b)
-
-
-class UConv(object):
-    def _ident(v):
-        return v
-
-    def _dBfac(fac):
-        def dB(v):
-            return pow(10,v/fac)
-        return dB
-
-    def _mulfac(method, fac):
-        def new_m(v):
-            return fac*method(v)
-        return new_m
-
-    uconv={ "1":    (units.ONE, _ident),
-            "dimensionless":    (units.ONE, _ident),
-            "dbm":  (si.WATT, _mulfac(_dBfac(10), 1e-3)),
-            "w":    (si.WATT, _ident),
-            "dbuv": (si.VOLT, _mulfac(_dBfac(20), 1e-6)),
-            "v":    (si.VOLT, _ident),
-            "db":   (POWERRATIO, _dBfac(10)),
-            "hz":   (si.HERTZ, _ident),
-            "khz":  (si.HERTZ, _mulfac(_ident, 1e3)),
-            "mhz":  (si.HERTZ, _mulfac(_ident, 1e6)),
-            "ghz":  (si.HERTZ, _mulfac(_ident, 1e9)),
-            "v/m":  (EFIELD, _ident),
-            "dbv/m": (EFIELD, _dBfac(20)),
-            "m": (si.METER, _ident),
-            "cm": (si.METER, _mulfac(_ident, 1e-2)),
-            "mm": (si.METER, _mulfac(_ident, 1e-3)),
-            "deg": (si.RADIAN, _mulfac(_ident, math.pi/180.0)),
-            "rad": (si.RADIAN, _ident),
-            "steps": (units.ONE, _ident), 
-            "db1/m": (EFIELD/si.VOLT, _dBfac(20)),
-            "dbi": (POWERRATIO, _dBfac(10)),
-            "dbd": (POWERRATIO,  _mulfac(_dBfac(10), 1.64)),   # 1.64: Directivity of a half wave dipole
-            "1/m": (EFIELD/si.VOLT, _ident),
-            "a/m": (HFIELD, _ident),
-            "dba/m": (HFIELD, _dBfac(20)),
-            "w/m2": (POYNTING, _ident),
-            "dbw/m2": (POYNTING, _dBfac(20)),
-            "s/m": (HFIELD/si.VOLT, _ident),
-            "dbs/m": (HFIELD/si.VOLT, _dBfac(20)),
-            "amplituderatio": (AMPLITUDERATIO, _ident),
-            "powerratio": (POWERRATIO, _ident),
-            "h": (si.HENRY, _ident),
-            "f": (si.FARAD, _ident)}
+from scuq import quantities, ucomponents
+from mpylab.tools.uconv import UConv
 
 
 class DatFile(Parser):
@@ -109,7 +56,7 @@ class DatFile(Parser):
             print f, uq, val, err, unit
 
     """
-    
+
     reserved = ('FUNIT',
                 'UNIT',
                 'RELERROR',
@@ -130,11 +77,10 @@ class DatFile(Parser):
     t_LSBRACE = r'\['
     t_RSBRACE = r'\]'
     t_COMMA = r','
-    
+
     t_ignore_COMMENT = r'\#.*'
 
     # A string containing ignored characters (spaces and tabs)
-    
     t_ignore = ' \t:'
 
     def __init__(self, **kw):
@@ -145,14 +91,25 @@ class DatFile(Parser):
         self.abserror = None
         self.data = {}
         Parser.__init__(self, **kw)
-        
+
+    def _freq_conv(self):
+        _, conv = UConv.get(self.funit)
+        return conv
+
+    def _from_unit(self):
+        dim, conv = UConv.get(self.fromunit)
+        return dim, conv
+
+    def _from_conv(self):
+        _, conv = self._from_unit()
+        return conv
 
     # A regular expression rule with some action code
 
     def t_FPNUMBER(self, t):
         r'[+-]?[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?'
         try:
-            t.value = float(t.value)    
+            t.value = float(t.value)
         except ValueError:
             print("Line %d: Number %s is too large!" % (t.lineno, t.value))
             t.value = 0
@@ -192,7 +149,6 @@ class DatFile(Parser):
 
     def p_line_funit(self, p):
         r'line : FUNIT idanycase NEWLINE'
-        # print(p[2])
         self.funit = p[2]
 
     def p_line_unit(self, p):
@@ -206,7 +162,6 @@ class DatFile(Parser):
 
     def p_idanycase_id(self, p):
         r'idanycase : ID'
-        # print(len(p))
         p[0] = p[1].lower()
 
     def p_line_relerr(self, p):
@@ -218,27 +173,38 @@ class DatFile(Parser):
         r'line : ABSERROR val NEWLINE'
         self.relerror = None
         self.abserror = p[2]
-        #print(f"ABSERROR: {self.abserror}")
-
 
     def p_line_data1(self, p):
         r'line : FPNUMBER val val val NEWLINE'
-        freq = UConv.uconv[self.funit][1](p[1])
-        uq = self._makeuq(p[2], p[3], p[4], UConv.uconv[self.fromunit][0])
-        self.data.setdefault(freq, uq)
+        freq_conv = self._freq_conv()
+        from_dim, _ = self._from_unit()
+
+        freq = freq_conv(p[1])
+        uq = self._makeuq(p[2], p[3], p[4], from_dim)
+
+        if freq in self.data:
+            raise ValueError(f"Duplicate frequency detected: {freq} (line {p.lineno(1)})")
+        self.data[freq] = uq
 
     def p_line_data2(self, p):
         r'line : FPNUMBER val NEWLINE'
-        freq = UConv.uconv[self.funit][1](p[1])
+        freq_conv = self._freq_conv()
+        from_dim, _ = self._from_unit()
+
+        freq = freq_conv(p[1])
         v = p[2]
         s = 0
-        if self.relerror:
-            s = v*self.relerror
-        if self.abserror:
+        if self.relerror is not None:
+            s = v * self.relerror
+        if self.abserror is not None:
             s = self.abserror
+
         ui = ucomponents.UncertainInput(v, s)
-        uq = quantities.Quantity(UConv.uconv[self.fromunit][0], ui)
-        self.data.setdefault(freq, uq)
+        uq = quantities.Quantity(from_dim, ui)
+
+        if freq in self.data:
+            raise ValueError(f"Duplicate frequency detected: {freq} (line {p.lineno(1)})")
+        self.data[freq] = uq
 
     def p_val_number(self, p):
         r'val : number'
@@ -246,41 +212,47 @@ class DatFile(Parser):
 
     def p_number_fpnumber(self, p):
         r'number : FPNUMBER'
-        p1 = UConv.uconv[self.fromunit][1](p[1])
-        p[0] = p1
+        from_conv = self._from_conv()
+        p[0] = from_conv(p[1])
 
     def p_val_ri(self, p):
         r'val : LBRACE FPNUMBER COMMA FPNUMBER RBRACE'
-        p2 = UConv.uconv[self.fromunit][1](p[2])
-        p4 = UConv.uconv[self.fromunit][1](p[4])
+        from_conv = self._from_conv()
+
+        p2 = from_conv(p[2])
+        p4 = from_conv(p[4])
         p[0] = complex(p2, p4)
 
     def p_val_ma(self, p):
         r'val : LSBRACE FPNUMBER COMMA FPNUMBER RSBRACE'
-        m = UConv.uconv[self.fromunit][1](p[2])
-        ang = float(p[4])*math.pi/180.
-        p[0] = complex(m*math.cos(ang), m*math.sin(ang))
+        from_conv = self._from_conv()
+
+        m = from_conv(p[2])
+        ang = float(p[4]) * math.pi / 180.0
+        p[0] = complex(m * math.cos(ang), m * math.sin(ang))
 
     # Error rule for syntax errors
     def p_error(self, p):
         print("Syntax error in input!")
+
     def _makeuq(self, a, b, c, unit):
         def cplx_cmp(a):
             try:
-                # length(a) * sgn(a.real)
-                ma = abs(a)*a.real/abs(a.real)
+                # komplexer Fall
+                re = a.real
+                if re == 0:
+                    # rein imaginär → Vorzeichen nicht definierbar über real
+                    # fallback: nur Betrag (neutral)
+                    return abs(a)
+                return abs(a) * (re / abs(re))
             except AttributeError:
-                ma = a
-            # try:
-            #     mb=abs(b)*b.real/abs(b.real)
-            # except AttributeError:
-            #     mb=b
-            return ma   # cmp(ma,mb)
+                # reeller Fall
+                return a
+
         l, v, u = sorted((a, b, c), key=cplx_cmp)
-        delta = (u-l)*0.5
+        delta = (u - l) * 0.5
         ui = ucomponents.UncertainInput(v, delta)
         return quantities.Quantity(unit, ui)
-
 
 if __name__ == '__main__':
     import sys
@@ -314,3 +286,19 @@ if __name__ == '__main__':
         uq = result[f]
         val, err, unit = ctx.value_uncertainty_unit(uq)
         print(f, uq, val, err, unit)
+
+
+    test_input = """FUNIT: Hz
+    UNIT: powerratio
+    ABSERROR: [0.1, 1]
+    10 [1, 0]
+    """
+
+    DF = DatFile(filename=io.StringIO(test_input))
+    result = DF.run()
+
+    print("funit:", DF.funit)
+    print("fromunit:", DF.fromunit)
+    print("tounit:", DF.tounit)
+    print("abserror:", DF.abserror)
+    print("data keys:", sorted(result.keys()))
