@@ -3,12 +3,11 @@ from Levenshtein import distance as ldistance
 
 def rmcp(seq, ignorecase=True):
     """remove common prefix from sequence elements"""
-    if ignorecase is True:
+    if ignorecase:
         seq = [s.lower() for s in seq]
     cp = commonprefix(seq)
     n = len(cp)
-    return [s[n:] for s in seq]
-
+    return [s[n:] for s in seq], cp
 
 def relative(a, b, first_must_match=True):
     """
@@ -21,83 +20,199 @@ def relative(a, b, first_must_match=True):
     @rtype: float
     @return: the distance
     """
+    if not a or not b:
+        return 1.0 if a == b else 0.0
+
     if first_must_match and a[0] != b[0]:
-        r = 0.0
-    else:
-        d = distance(a, b)
-        longer = float(max((len(a), len(b))))
-        shorter = float(min((len(a), len(b))))
-        r = ((longer - d) / longer) * (shorter / longer)
+        return 0.0
+
+    d = ldistance(a, b)
+    longer = float(max((len(a), len(b))))
+    shorter = float(min((len(a), len(b))))
+    r = ((longer - d) / longer) * (shorter / longer)
     return r
 
-
-def distance(a, b):
-    dist = levenshtein(a, b, ch_cost=1, add_cost=1, del_cost=1)
-    #    print a, b, dist
-    return dist
-
-
-def old_fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
-    a = a.strip("'")
-    a = a.strip('"')
-    if n is None:
-        n = 3  # difflibs default
-    if cutoff is None:
-        cutoff = 0.0  # don't sort out not-so-good matches
+def fstrcmp(a, possibilities, cutoff=0.0, ignorecase=True, use_rmcp=True):
+    a = a.strip("'\"")
 
     if ignorecase:
-        dists = [relative(a.lower(), p) for p in rmcp(possibilities, ignorecase=ignorecase)]
-        # print rmcp(possibilities,ignorecase=ignorecase)
+        a_cmp = a.lower()
+        poss_cmp = [p.lower() for p in possibilities]
     else:
-        dists = [relative(a, p) for p in rmcp(possibilities, ignorecase=ignorecase)]
-    # handle perfect matches
-    for i, p in enumerate(possibilities):
-        if (ignorecase and a.lower() == p.lower()) or a == p:
-            dists[i] = 1
+        a_cmp = a
+        poss_cmp = possibilities[:]
 
-    pairs = list(zip(dists, possibilities))
-    # print pairs
-    # return [v for d,v in sorted(pairs,None,None,True) if d >= cutoff] 2.7
-    return [v for d, v in sorted(pairs, key=None, reverse=True) if d >= cutoff]
+    # optional common-prefix removal
+    if use_rmcp:
+        poss_cmp, cp = rmcp(poss_cmp, ignorecase=False)
+        if a_cmp.startswith(cp):
+            a_cmp = a_cmp[len(cp):]
 
-def fstrcmp(a, possibilities, n=None, cutoff=None, ignorecase=True):
-    a = a.strip("'")
-    a = a.strip('"')
+    scores = []
+    for orig, p in zip(possibilities, poss_cmp):
+        score = relative(a_cmp, p)
+
+        # boost exact matches
+        if ignorecase:
+            if a.lower() == orig.lower():
+                score = 1.0
+        else:
+            if a == orig:
+                score = 1.0
+
+        scores.append((score, orig))
+
+    return [v for s, v in sorted(scores, reverse=True) if s >= cutoff]
+
+def fstrcmp_scpi(a, possibilities, cutoff=0.0, ignorecase=True):
+    """
+    Token-based fuzzy matcher for SCPI commands.
+
+    The command is split at ':' and each token is compared separately.
+    Ranking prefers:
+    1. exact token matches
+    2. token prefix matches
+    3. token substring matches
+    4. best fuzzy token similarity
+
+    Example:
+        fstrcmp_scpi("BAND", ["SENS:FREQ:START", "SENS:BAND:RES"])
+        -> ["SENS:BAND:RES", "SENS:FREQ:START"]
+    """
+    a = a.strip("'\"")
+    if not a:
+        return []
 
     if ignorecase:
-        dists = [ldistance(a.lower(), p) for p in rmcp(possibilities, ignorecase=ignorecase)]
-        # print rmcp(possibilities,ignorecase=ignorecase)
+        a_cmp = a.lower()
+        poss_cmp = [p.lower() for p in possibilities]
     else:
-        dists = [ldistance(a, p) for p in rmcp(possibilities, ignorecase=ignorecase)]
+        a_cmp = a
+        poss_cmp = list(possibilities)
 
-    pairs = list(zip(dists, possibilities))
-    return [v for d, v in sorted(pairs, key=None)]
+    scored = []
 
+    for orig, candidate in zip(possibilities, poss_cmp):
+        tokens = candidate.split(":")
+        token_scores = []
 
-def levenshtein(a, b, ch_cost=1, add_cost=1, del_cost=1):
-    """Calculates the Levenshtein distance between a and b."""
-    n, m = len(a), len(b)
-    if n > m:
-        # Make sure n <= m, to use O(min(n,m)) space
-        a, b = b, a
-        n, m = m, n
+        for token in tokens:
+            score = relative(a_cmp, token)
 
-    current = list(range(n + 1))
-    for i in range(1, m + 1):
-        previous, current = current, [i] + [0] * n
-        for j in range(1, n + 1):
-            add, delete = previous[j] + add_cost, current[j - 1] + del_cost
-            change = previous[j - 1]
-            if a[j - 1] != b[i - 1]:
-                change = change + ch_cost
-            current[j] = min(add, delete, change)
+            # exact token match
+            if a_cmp == token:
+                score += 1.0
+            # token startswith search term
+            elif token.startswith(a_cmp):
+                score += 0.75
+            # search term appears inside token
+            elif a_cmp in token:
+                score += 0.5
 
-    return current[n]
+            token_scores.append(score)
 
+        best_token_score = max(token_scores) if token_scores else 0.0
+
+        # exact full-command match gets absolute priority
+        if ignorecase:
+            if a.lower() == orig.lower():
+                best_token_score = 10.0
+        else:
+            if a == orig:
+                best_token_score = 10.0
+
+        scored.append((best_token_score, orig))
+
+    return [v for s, v in sorted(scored, reverse=True) if s >= cutoff]
 
 if __name__ == "__main__":
-    from sys import argv
+#    from sys import argv
 
     # print levenshtein(argv[1],argv[2],ch_cost=float(argv[3]), add_cost=float(argv[4]), del_cost=float(argv[5]))
-    print(old_fstrcmp(argv[1], ('ON', 'OFF')))
-    print(fstrcmp(argv[1], ('ON', 'OFF')))
+#    print(old_fstrcmp(argv[1], ('ON', 'OFF')))
+#    print(fstrcmp(argv[1], ('ON', 'OFF')))
+    print("=== rmcp tests ===")
+    seq = ["SENS:FREQ:START", "SENS:FREQ:STOP", "SENS:FREQ:CENT"]
+    trimmed, cp = rmcp(seq)
+    print("input      :", seq)
+    print("prefix     :", repr(cp))
+    print("trimmed    :", trimmed)
+    print()
+
+    seq = ["ON", "OFF"]
+    trimmed, cp = rmcp(seq)
+    print("input      :", seq)
+    print("prefix     :", repr(cp))
+    print("trimmed    :", trimmed)
+    print()
+
+    print("=== relative tests ===")
+    print("relative('ON', 'ON')            =", relative("ON", "ON"))
+    print("relative('ON', 'OFF')           =", relative("ON", "OFF"))
+    print("relative('FREQ', 'FREQu')       =", relative("FREQ", "FREQu"))
+    print("relative('', '')                =", relative("", ""))
+    print("relative('', 'ABC')             =", relative("", "ABC"))
+    print()
+
+    print("=== fstrcmp tests ===")
+    possibilities = ("ON", "OFF")
+    print("fstrcmp('ON', ('ON','OFF'))")
+    print(" ->", fstrcmp("ON", possibilities))
+    print()
+
+    print("fstrcmp('OF', ('ON','OFF'))")
+    print(" ->", fstrcmp("OF", possibilities))
+    print()
+
+    possibilities = (
+        "SENS:FREQ:START",
+        "SENS:FREQ:STOP",
+        "SENS:FREQ:CENT",
+        "SENS:BAND:RES",
+    )
+
+    print("fstrcmp('SENS:FREQ:STAR', possibilities)")
+    print(" ->", fstrcmp("SENS:FREQ:STAR", possibilities))
+    print()
+
+    print("fstrcmp('freq:start', possibilities, ignorecase=True)")
+    print(" ->", fstrcmp("freq:start", possibilities, ignorecase=True))
+    print()
+
+    print("fstrcmp('SENS:FREQ:ST', possibilities, cutoff=0.2)")
+    print(" ->", fstrcmp("SENS:FREQ:ST", possibilities, cutoff=0.2))
+    print()
+
+    print("fstrcmp('BAND', possibilities, use_rmcp=False)")
+    print(" ->", fstrcmp("BAND", possibilities, use_rmcp=False))
+    print()
+
+    print("=== exact match priority ===")
+    possibilities = ("Voltage", "Current", "Power")
+    print("fstrcmp('power', possibilities, ignorecase=True)")
+    print(" ->", fstrcmp("power", possibilities, ignorecase=True))
+
+    possibilities = (
+        "SENS:FREQ:START",
+        "SENS:FREQ:STOP",
+        "SENS:FREQ:CENT",
+        "SENS:BAND:RES",
+        "OUTP:STAT",
+        "SOUR:POW:LEV",
+    )
+
+    print("=== fstrcmp_scpi tests ===")
+    tests = [
+        "BAND",
+        "FREQ",
+        "STAR",
+        "STOP",
+        "CENT",
+        "POW",
+        "OUTP",
+        "STAT",
+        "SENS:BAND:RES",
+    ]
+
+    for t in tests:
+        print(f"{t!r} -> {fstrcmp_scpi(t, possibilities)}")
