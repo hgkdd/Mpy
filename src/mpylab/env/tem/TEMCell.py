@@ -23,7 +23,7 @@ from scuq.ucomponents import Context
 from mpylab.env import Measure
 from mpylab.tools import util, mgraph, interpol
 from mpylab.tools.aunits import POWERRATIO, EFIELD
-from mpylab.tools.log_freq import LogFreq
+from mpylab.tools.space_generators import LogSpace
 
 
 # from mpylab.tools.aunits import *
@@ -552,8 +552,8 @@ class TEMCell(Measure.Measure):
         try:
             self.messenger(util.tstamp() + " ...done", [])
             if freqs is None:
-                _fg = LogFreq(80e6, 1000e6, 1.01, True)
-                freqs = [f for f in LogFreq.logspace]
+                _fg = LogSpace(80e6, 1000e6, 1.01, True)
+                freqs = [f for f in LogSpace.logspace]
 
             # set up voltage, noise, ...
             voltage = {}
@@ -787,8 +787,8 @@ Select EUT position.
         try:
             self.messenger(util.tstamp() + " ...done", [])
             if freqs is None:
-                _fg = LogFreq(80e6, 1000e6, 1.01, True)
-                freqs = [f for f in LogFreq.logspace]
+                _fg = LogSpace(80e6, 1000e6, 1.01, True)
+                freqs = [f for f in LogSpace.logspace]
 
             # set up voltage, noise, ...
             voltage = {}
