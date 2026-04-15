@@ -216,7 +216,7 @@ class SPECTRUMANALYZER(DRIVER):
 
         ###Maping
         if possibilities:
-            something = fstrcmp(something, getattr(self, possibilities), n=1, cutoff=0, ignorecase=True)[0]
+            something = fstrcmp(something, getattr(self, possibilities), cutoff=0, ignorecase=True)[0]
 
             # Ist Map Vorhanden?
             try:

@@ -64,8 +64,8 @@ class VLISN(DRIVER):
         return self.error
 
     def _get(self, sec, key):
-        sectok = fstrcmp(sec, self.conftmpl, n=1, cutoff=0, ignorecase=True)[0]
-        keytok = fstrcmp(key, self.conftmpl[sectok], n=1, cutoff=0, ignorecase=True)[0]
+        sectok = fstrcmp(sec, self.conftmpl, cutoff=0, ignorecase=True)[0]
+        keytok = fstrcmp(key, self.conftmpl[sectok], cutoff=0, ignorecase=True)[0]
         if '%' in sectok:
             pos = sectok.index('%')
             sectok = sectok[:pos] + sec[pos:]

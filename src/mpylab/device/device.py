@@ -242,10 +242,11 @@ class Device(object):
                             cp.set(section, option, tt.name)
                     except:
                         pass
-            tmpf = tempfile.NamedTemporaryFile()
+            tmpf = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False)
             tmpfiles.append(tmpf)
             cp.write(tmpf)
             tmpf.flush()
+            tmpf.close()
             self.ini = tmpf.name
         else:
             try:
@@ -261,7 +262,6 @@ class Device(object):
             # fuzzy type matching...
             best_type_guess = fstrcmp(self.TypeOfInstrument,
                                       self.__class__._types,
-                                      n=1,
                                       cutoff=0,
                                       ignorecase=True)[0]
         except IndexError:
@@ -418,7 +418,7 @@ class Device(object):
         self.config = configparser.ConfigParser()
         self.config.read(ini)
         self.confsections = self.config.sections()
-        sec = fstrcmp('description', self.confsections, n=1, cutoff=0, ignorecase=True)[0]
+        sec = fstrcmp('description', self.confsections, cutoff=0, ignorecase=True)[0]
         thetype = self.config.get(sec, "type")
         theDLL = self.config.get(sec, "driver")
         return (thetype, theDLL)
@@ -633,8 +633,8 @@ class CONVERT(object):
             data = (data,)
 
         ret = []
-        fuguess = fstrcmp(fromunit, self.cunits, n=1, cutoff=0, ignorecase=True)[0]
-        tuguess = fstrcmp(tounit, self.cunits, n=1, cutoff=0, ignorecase=True)[0]
+        fuguess = fstrcmp(fromunit, self.cunits, cutoff=0, ignorecase=True)[0]
+        tuguess = fstrcmp(tounit, self.cunits, cutoff=0, ignorecase=True)[0]
         # print self.cunits
         # print fromunit, '->', fuguess
         # print tounit, '->', tuguess
@@ -661,7 +661,7 @@ class CONVERT(object):
         except AttributeError:
             # print Cunit, type(Cunit)
             Cunit = self.units_list[Cunit][0]
-        guess = fstrcmp(Cunit, self.cunits, n=1, cutoff=0, ignorecase=True)[0]
+        guess = fstrcmp(Cunit, self.cunits, cutoff=0, ignorecase=True)[0]
         uconf = self.udct[guess]
 
         for item in data:
@@ -689,7 +689,7 @@ class CONVERT(object):
             data = (data,)
 
         ret = []
-        guess = fstrcmp(Cunit, self.cunits, n=1, cutoff=0, ignorecase=True)[0]
+        guess = fstrcmp(Cunit, self.cunits, cutoff=0, ignorecase=True)[0]
         pos = self.get_Cunit_int(guess)  # Cunit is an integer
         uconf = self.udct[guess]  # XXX?(bei Berechnung Richtung berücksichtigen)
         if uconf[0] != Sunit:
@@ -754,10 +754,10 @@ def cbl_tst(ini):
                          [description]
                          DESCRIPTION = Just a Cable
                          TYPE = CABLE
-                         VENDOR =UMD
+                         VENDOR = TUD
                          SERIALNR = 
                          DEVICEID = 
-                         DRIVER = mpylab.device.nport.py
+                         DRIVER = nport.py
 
                          [INIT_VALUE]
                          FSTART = 0

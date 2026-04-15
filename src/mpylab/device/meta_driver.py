@@ -951,7 +951,7 @@ class Parameter(object):
         self._validate(value)
 
         if self.possib and isinstance(value, str):
-            value = fstrcmp(value, self.possib, n=1, cutoff=0, ignorecase=True)[0]
+            value = fstrcmp(value, self.possib, cutoff=0, ignorecase=True)[0]
             # print 'value after fsrtrcmp ',value
 
         if self.possib_map:

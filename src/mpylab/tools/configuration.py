@@ -59,7 +59,7 @@ class Configuration:
         # print(self.sections_in_ini)
         for sec in self.sections_in_ini:   # iterate sections
             # print(sec.strip("'"), sec)
-            tmplsec = fstrcmp(sec, list(self.cnftmpl.keys()), n=1, cutoff=0, ignorecase=True)[0]   # take best match from fuzzy string compare; sec vs keys in cnftmpl
+            tmplsec = fstrcmp(sec, list(self.cnftmpl.keys()), cutoff=0, ignorecase=True)[0]   # take best match from fuzzy string compare; sec vs keys in cnftmpl
             thesec = tmplsec
             try:
                 # print sec,'\n', tmplsec,'\n','\n'
@@ -83,7 +83,7 @@ class Configuration:
 
             for key, val in config.items(sec):
                 # print  key, val
-                tmplkey = fstrcmp(key, list(self.cnftmpl[tmplsec].keys()), n=1, cutoff=0, ignorecase=True)[0]   # best fuzzy match
+                tmplkey = fstrcmp(key, list(self.cnftmpl[tmplsec].keys()), cutoff=0, ignorecase=True)[0]   # best fuzzy match
                 # print self.cnftmpl[tmplsec].keys()
                 if self.casesensitive:
                     tmplkey_c = tmplkey

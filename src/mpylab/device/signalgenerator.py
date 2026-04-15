@@ -170,11 +170,11 @@ class SIGNALGENERATOR(DRIVER):
 
     def ConfAM(self, source, freq, depth, waveform, LFOut):
         self.error = 0
-        source = fstrcmp(source, self.AM_sources, n=1, cutoff=0, ignorecase=True)[0]
+        source = fstrcmp(source, self.AM_sources, cutoff=0, ignorecase=True)[0]
         source = self.map['AM_sources'][source]
-        waveform = fstrcmp(waveform, self.AM_waveforms, n=1, cutoff=0, ignorecase=True)[0]
+        waveform = fstrcmp(waveform, self.AM_waveforms, cutoff=0, ignorecase=True)[0]
         waveform = self.map['AM_waveforms'][waveform]
-        LFOut = fstrcmp(LFOut, self.AM_LFOut, n=1, cutoff=0, ignorecase=True)[0]
+        LFOut = fstrcmp(LFOut, self.AM_LFOut, cutoff=0, ignorecase=True)[0]
         LFOut = self.map['AM_LFOut'][LFOut]
         dct = self._do_cmds('ConfAM', locals())
         # print dct
@@ -191,9 +191,9 @@ class SIGNALGENERATOR(DRIVER):
 
     def ConfPM(self, source, freq, pol, width, delay):
         self.error = 0
-        source = fstrcmp(source, self.PM_sources, n=1, cutoff=0, ignorecase=True)[0]
+        source = fstrcmp(source, self.PM_sources, cutoff=0, ignorecase=True)[0]
         source = self.map['PM_sources'][source]
-        pol = fstrcmp(pol, self.PM_pol, n=1, cutoff=0, ignorecase=True)[0]
+        pol = fstrcmp(pol, self.PM_pol, cutoff=0, ignorecase=True)[0]
         pol = self.map['PM_pol'][pol]
         dct = self._do_cmds('ConfPM', locals())
         dct['source'] = self.map['PM_sources'][:dct['source']]

@@ -60,8 +60,8 @@ class SIGNALGENERATOR(SGNLGNRTR):
         #
 
     def ConfAM(self, source, freq, depth, waveform, LFOut):
-        source = fstrcmp(source, self.AM_sources, n=1, cutoff=0, ignorecase=True)[0]
-        waveform = fstrcmp(waveform, self.AM_waveforms, n=1, cutoff=0, ignorecase=True)[0]
+        source = fstrcmp(source, self.AM_sources, cutoff=0, ignorecase=True)[0]
+        waveform = fstrcmp(waveform, self.AM_waveforms, cutoff=0, ignorecase=True)[0]
         lfo = 1
         if source == 'INT2':
             lfo = 2
@@ -86,7 +86,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         return SGNLGNRTR.ConfAM(self, source, freq, depth, waveform, LFOut)
 
     def ConfPM(self, source, freq, pol, width, delay):
-        source = fstrcmp(source, self.PM_sources, n=1, cutoff=0, ignorecase=True)[0]
+        source = fstrcmp(source, self.PM_sources, cutoff=0, ignorecase=True)[0]
         if source == 'EXT2':
             raise NotImplementedError
         if source == 'OFF':
