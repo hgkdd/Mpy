@@ -95,14 +95,15 @@ class POWERMETER(PWRMTR):
             presets = [('filter', [], [])]  # TODO: fill with information from ini-file
 
             for k, vals, actions in presets:
-                # print k, vals, actions
                 try:
                     v = self.conf[sec][k]
-                    # print sec, k, v
-                    if vals is None:  # no comparision
-                        # print actions[0], self.convert.c2c(self.levelunit, self._internal_unit, float(v)), float(v), self.levelunit
-                        # print eval(actions[0])
-                        self._cmds['Preset'].append((eval(actions[0]), actions[1]))
+                    if vals is None:  # no comparison
+                        method_name = actions[0] # or: actions[0].split('.')[-1]
+                        try:
+                            method = getattr(self, method_name)
+                        except AttributeError as exc:
+                            raise ValueError(f"Unknown preset method '{actions[0]}' for key '{k}'") from exc
+                        self._cmds['Preset'].append((method, actions[1]))
                     else:
                         for idx, vi in enumerate(vals):
                             if v.lower() in vi:
@@ -234,7 +235,7 @@ def test_init(cha):
 def main():
     import io
     from mpylab.tools.util import format_block
-    from mpylab.device.powermeter_ui import UI as UI
+    from mpylab.device.powermeter_ui import PowerMeterWidget as UI
 
     try:
         ini = sys.argv[1]

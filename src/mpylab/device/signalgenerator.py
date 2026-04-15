@@ -25,14 +25,19 @@ class SIGNALGENERATOR(DRIVER):
 
     ATT_modes = ('AUTO', 'FIXED')
 
-    map = {}
-    for name in ('AM_sources',
-                 'AM_waveforms',
-                 'AM_LFOut',
-                 'PM_sources',
-                 'PM_pol',
-                 'ATT_modes'):
-        map[name] = bidict.bidict([(a, a) for a in eval(name)])  # key=value
+    PARAMETER_SETS = {
+        'AM_sources': AM_sources,
+        'AM_waveforms': AM_waveforms,
+        'AM_LFOut': AM_LFOut,
+        'PM_sources': PM_sources,
+        'PM_pol': PM_pol,
+        'ATT_modes': ATT_modes,
+    }
+
+    map = {
+        name: bidict.bidict((v, v) for v in values)
+        for name, values in PARAMETER_SETS.items()
+    }
 
     conftmpl = {'description':
                     {'description': str,
