@@ -8,6 +8,7 @@ This is the :mod:`mpylab.device.driver` module.
 """
 
 import os
+import pyvisa
 
 from mpylab.tools.configuration import Configuration, fstrcmp
 from mpylab.device.device import CONVERT, Device
@@ -189,8 +190,8 @@ class DRIVER:
         return self.error
 
     def _get(self, sec, key):
-        sectok = fstrcmp(sec, self.conftmpl, cutoff=0, ignorecase=True)[0]
-        keytok = fstrcmp(key, self.conftmpl[sectok], cutoff=0, ignorecase=True)[0]
+        sectok = fstrcmp(sec, list(self.conftmpl.keys()), cutoff=0, ignorecase=True)[0]
+        keytok = fstrcmp(key, list(self.conftmpl[sectok].keys()), cutoff=0, ignorecase=True)[0]
         if '%' in sectok:
             pos = sectok.index('%')
             sectok = sectok[:pos] + sec[pos:]
@@ -217,7 +218,7 @@ class DRIVER:
                     try:
                         exec(expr, callerdict)
                     except (SyntaxError, NameError, TypeError):
-                        self.write(expr, send_opc=send_opc)
+                        self.write(expr)
                 elif not cmd:  # only data read    no cmd, no write
                     dct.update(self.read(tmpl))
                 else:  # both -> write and read
@@ -274,6 +275,90 @@ class DRIVER:
         dct = self._do_cmds('GetDescription', locals())
         # print dct
         self._update(dct)
-        des = str(self.conf.get('description', ''))
-        # print self.conf['description'], self.IDN
-        return self.error, f'{des}; {self.IDN}'
+        desc_dict = self.conf.get('description', {})
+        desc = desc_dict.get('description', '')
+        return self.error, f'{desc}; {self.IDN}'
+
+if __name__ == "__main__":
+    import io
+    from mpylab.tools.util import format_block
+    from mpylab.tools.configuration import strbool
+
+    class DummyDriver(DRIVER):
+        conftmpl = {
+            'description': {
+                'description': str,
+                'type': str,
+                'vendor': str,
+                'serialnr': str,
+                'deviceid': str,
+                'driver': str,
+            },
+            'init_value': {
+                'gpib': int,
+                'visa': str,
+                'virtual': strbool,
+            },
+            'channel_%d': {
+                'name': str,
+                'unit': str,
+            }
+        }
+
+        def __init__(self):
+            super().__init__()
+            self.IDN = "DUMMY,TEST,0001,1.0"
+            self._cmds = {}
+
+    ini_text = format_block("""
+        [DESCRIPTION]
+        description: 'Dummy Test Device'
+        type: 'DUMMY'
+        vendor: 'OpenAI'
+        serialnr: '12345'
+        deviceid: 'DEV-01'
+        driver: 'dummy_driver'
+
+        [INIT_VALUE]
+        virtual: 1
+        gpib: 18
+
+        [CHANNEL_1]
+        name: 'CH1'
+        unit: 'dBm'
+    """)
+
+    ini = io.StringIO(ini_text)
+
+    print("=== DRIVER Texttest ===")
+
+    drv = DummyDriver()
+
+    try:
+        print("Initialisiere ...")
+        err = drv.Init(ini=ini, channel=1)
+        print("Init-Fehlercode:", err)
+
+        print("\n--- Konfiguration ---")
+        print("conf:", drv.conf)
+        print("channel:", drv.channel)
+
+        print("\n--- Virtual Mode ---")
+        print("GetVirtual():", drv.GetVirtual())
+        print("CommunicationClass:", type(drv.CommunicationClass).__name__ if drv.CommunicationClass else None)
+        print("dev:", drv.dev)
+
+        print("\n--- Description ---")
+        print("GetDescription():", drv.GetDescription())
+
+        print("\n--- Einzelzugriffe ---")
+        print("description.description:", drv.conf['description']['description'])
+        print("init_value.virtual:", drv.conf['init_value']['virtual'])
+        print("channel_1.name:", drv.conf['channel_1']['name'])
+        print("channel_1.unit:", drv.conf['channel_1']['unit'])
+
+        print("\nTexttest erfolgreich.")
+
+    except Exception as e:
+        print("Texttest fehlgeschlagen:", e)
+        raise
