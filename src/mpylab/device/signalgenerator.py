@@ -6,7 +6,8 @@ from scuq import quantities
 from scuq import si
 import numpy as np
 from mpylab.device.driver import DRIVER
-from mpylab.tools.configuration import strbool, fstrcmp
+from mpylab.tools.configuration import strbool
+from mpylab.tools.compare import fstrcmp
 from mpylab.tools.regular_expressions import FP
 
 
@@ -147,20 +148,18 @@ class SIGNALGENERATOR(DRIVER):
         dct = self._do_cmds('GetLevel', locals())
         self._update(dct)
 
-        if self.error == 0 and self.level:
+        if self.error == 0 and self.level is not None:
             self.level = float(self.level)
-            try:
-                obj = quantities.Quantity(eval(self._internal_unit), self.level)
-            except (AssertionError, NameError):
-                self.level, self.unit = self.convert.c2scuq(self._internal_unit, float(self.level))
-                obj = quantities.Quantity(self.unit, self.level)
+            self.level, self.unit = self.convert.c2scuq(self._internal_unit, self.level)
+            obj = quantities.Quantity(self.unit, self.level)
         else:
             obj = None
+
         return self.error, obj
 
     def SetState(self, state):
         self.error = 0
-        if state.lower() == 'on':
+        if str(state).lower() == 'on':
             dct = self._do_cmds('RFOn', locals())
             self._update(dct)
         else:
@@ -196,8 +195,8 @@ class SIGNALGENERATOR(DRIVER):
         pol = fstrcmp(pol, self.PM_pol, cutoff=0, ignorecase=True)[0]
         pol = self.map['PM_pol'][pol]
         dct = self._do_cmds('ConfPM', locals())
-        dct['source'] = self.map['PM_sources'][:dct['source']]
-        dct['pol'] = self.map['PM_pol'][:dct['pol']]
+        dct['source'] = self.map['PM_sources'].inverse[dct['source']]
+        dct['pol'] = self.map['PM_pol'].inverse[dct['pol']]
         if 'period' in dct:
             dct['freq'] = 1. / float(dct['period'])
         self._update(dct)
@@ -205,7 +204,7 @@ class SIGNALGENERATOR(DRIVER):
 
     def SetAM(self, state):
         self.error = 0
-        if state.lower() == 'on':
+        if str(state).lower() == 'on':
             dct = self._do_cmds('AMOn', locals())
             self._update(dct)
         else:
@@ -215,7 +214,7 @@ class SIGNALGENERATOR(DRIVER):
 
     def SetPM(self, state):
         self.error = 0
-        if state.lower() == 'on':
+        if str(state).lower() == 'on':
             dct = self._do_cmds('PMOn', locals())
             self._update(dct)
         else:
