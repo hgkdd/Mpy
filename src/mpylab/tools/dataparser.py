@@ -13,6 +13,7 @@ from mpylab.tools.plyparser import Parser
 import math
 from scuq import quantities, ucomponents
 from mpylab.tools.uconv import UConv
+from mpylab.tools.compare import cplx_key
 
 
 class DatFile(Parser):
@@ -236,20 +237,7 @@ class DatFile(Parser):
         print("Syntax error in input!")
 
     def _makeuq(self, a, b, c, unit):
-        def cplx_cmp(a):
-            try:
-                # komplexer Fall
-                re = a.real
-                if re == 0:
-                    # rein imaginär → Vorzeichen nicht definierbar über real
-                    # fallback: nur Betrag (neutral)
-                    return abs(a)
-                return abs(a) * (re / abs(re))
-            except AttributeError:
-                # reeller Fall
-                return a
-
-        l, v, u = sorted((a, b, c), key=cplx_cmp)
+        l, v, u = sorted((a, b, c), key=cplx_key)
         delta = (u - l) * 0.5
         ui = ucomponents.UncertainInput(v, delta)
         return quantities.Quantity(unit, ui)
