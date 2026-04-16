@@ -11,6 +11,7 @@ import time
 from mpylab.tools.configuration import fstrcmp
 from mpylab.tools.aunits import *
 import mpylab.tools.umd_types as umd_types
+from mpylab.tools.compare import cmp, cplx_cmp
 from scuq import ucomponents, quantities
 from scuq import units
 from scuq import si
@@ -22,26 +23,7 @@ except ImportError:
     pass
 
 
-def cmp(a, b):
-    return (a > b) - (a < b)
-
-
-def cplx_cmp(a, b):
-    # magnituide * sgn(real part)
-    try:
-        ma = abs(a) * a.real / abs(a.real)
-        # ma=a._abs()*a.r/abs(a.r)
-    except AttributeError:
-        ma = a
-    try:
-        mb = abs(b) * b.real / abs(b.real)
-        # mb=b._abs()*b.r/abs(b.r)
-    except AttributeError:
-        mb = b
-    return cmp(ma, mb)
-
-
-class Device(object):
+class Device:
     """
     Wrapper class to use either py-drivers or DLL-drivers.
     """
@@ -505,7 +487,7 @@ class VLISN(Device):
         super().__init__(**kw)
 
 
-class CONVERT(object):
+class CONVERT:
     # (old_unit , scuq_unit , lin_factor(10 or 20) , si_factor)
     units_list = (('UMD_dimensionless', units.ONE, None, 1.),
                   ('UMD_dBm', si.WATT, 10., 1e-3),
