@@ -197,6 +197,41 @@ class DRIVER:
             sectok = sectok[:pos] + sec[pos:]
         return self.conf[sectok][keytok]
 
+    def _render_cmd(self, cmd, callerdict=None):
+        """
+        Render a command string during the transition from eval-based command
+        expressions to str.format-based templates.
+
+        Supported for now:
+        1. New style:
+             "FREQ {freq} HZ"
+           -> cmd.format(**callerdict)
+
+        2. Legacy style:
+             "'FREQ %s HZ'%freq"
+           -> eval(cmd, callerdict)
+
+        If formatting/evaluation is not possible, the original cmd is returned.
+        """
+        if callerdict is None:
+            callerdict = {}
+
+        # New template style: only try format when curly braces are present
+        if isinstance(cmd, str) and ('{' in cmd and '}' in cmd):
+            try:
+                return cmd.format(**callerdict)
+            except (KeyError, AttributeError, IndexError, ValueError):
+                pass
+
+        # Legacy fallback
+        try:
+            expr = eval(cmd, callerdict)
+            if expr is None:
+                return cmd
+            return expr
+        except (SyntaxError, NameError, TypeError, AttributeError, ValueError):
+            return cmd
+
     def _do_cmds(self, key, callerdict=None):
         send_opc = getattr(self, 'send_opc', False)  # look for send_opc; default to dont send
         dct = {}  # preset returned dictionary
@@ -204,15 +239,8 @@ class DRIVER:
             return dct  # if self._cmds is not defined we return a empty dict
         if key in self._cmds:  # in key is the name of the command to excecute, e.g. 'SetFreq'
             for cmd, tmpl in self._cmds[key]:  # loop all command, template pairs for key 'key'
-                try:  # try to eval cmd as a python expression in callerdict and assign result to expr
-                    # This will insert the value of variables (e.g. freq) into the command
-                    expr = eval(cmd, callerdict)
-                    # print expr
-                    if expr is None:  # no substitution -> None is reutned
-                        expr = cmd
-                except (SyntaxError, NameError):
-                    expr = cmd  # else, expr is set to cmd
-                    # tmpl is the mask for the string to read
+                expr = self._render_cmd(cmd, callerdict)
+                # tmpl is the mask for the string to read
                 if not tmpl:  # no mask, no read
                     # expr may be a function call. Let's try..
                     try:
