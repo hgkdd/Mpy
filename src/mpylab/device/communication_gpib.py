@@ -14,7 +14,7 @@ from mpylab.device.communication_generic import generic_read, generic_write, gen
 
 class CommunicationGpib:
     def __init__(self, res_name,
-                 lock=pyvisa.constants.AccessModes.no_lock,
+                 lock=None,
                  timeout_s=3,
                  chunk_size=20480,
                  query_delay_s=0,
@@ -31,6 +31,8 @@ class CommunicationGpib:
         :param read_term: *str*, read termination character, default is None
         :param write_term: *str*, write termination character, default is None
         """
+        if lock is None:
+            lock = pyvisa.constants.AccessModes.no_lock
         if not isinstance(res_name, str) or not res_name.strip():
             raise ValueError("res_name must be a non-empty string")
         if timeout_s <= 0:

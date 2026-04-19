@@ -21,12 +21,12 @@ class ValidateError(Exception):
     def __str__(self):
         m = ''
         if self.parameter:
-            m = m + "    Parameter: %s" % self.parameter
+            m = m + f"    Parameter: {self.parameter}"
         if self.parameter and self.command:
             m = m + "    of the"
         if self.command:
-            m = m + "    Command: %s" % self.command
-        return "%s \n%s" % (self.message, m)
+            m = m + f"    Command: {self.command}"
+        return f"{self.message} \n{m}"
 
 
 class Return_TypesError(Exception):

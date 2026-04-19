@@ -43,7 +43,7 @@ class IN_RANGE(object):
         self.min = mini
         self.max = maxi
         if message != '':
-            self.message = 'Argument out of Range. Argument must be between %s and %s' % (self.min, self.max)
+            self.message = f'Argument out of Range. Argument must be between {self.min} and {self.max}'
         else:
             self.message = message
 
@@ -89,7 +89,7 @@ class IS_LOWER_THAN(object):
         """
         self.max = maxi
         if message != '':
-            self.message = 'Argument is greater than or equal %s. Argument must be lower.' % (self.max)
+            self.message = f'Argument is greater than or equal {self.max}. Argument must be lower.'
         else:
             self.message = message
 
@@ -135,7 +135,7 @@ class IS_GREATER_THAN(object):
         """
         self.min = mini
         if message != '':
-            self.message = 'Argument is lower than or equal %s. Argument must be greater.' % (self.min)
+            self.message = f'Argument is lower than or equal {self.min}. Argument must be greater.'
         else:
             self.message = message
 
@@ -181,7 +181,7 @@ class IS_LOWER_EQUAL_THAN(object):
         """
         self.max = maxi
         if message != '':
-            self.message = 'Argument is greater than %s. Argument must be lower or equal.' % (self.max)
+            self.message = f'Argument is greater than {self.max}. Argument must be lower or equal.'
         else:
             self.message = message
 
@@ -221,7 +221,7 @@ class IS_GREATER_EQUAL_THAN(object):
         """
         self.min = mini
         if message != '':
-            self.message = 'Argument is lower than %s. Argument must be greater or equal.' % (self.min)
+            self.message = f'Argument is lower than {self.min}. Argument must be greater or equal.'
         else:
             self.message = message
 
@@ -267,7 +267,7 @@ class IS_IN_SET(object):
         """
         self.set = seti
         if message != '':
-            self.message = 'Argument must be in Set %s.' % (self.set)
+            self.message = f'Argument must be in Set {self.set}.'
         else:
             self.message = message
 

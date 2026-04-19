@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-# import pyvisa.vpp43 as vpp43
 from scuq import *
 
 from mpylab.device.powermeter import POWERMETER as PWRMTR
 
-
-# import pprint
 
 def linav_dB(dbvals):
     """
@@ -41,20 +38,23 @@ class POWERMETER(PWRMTR):
         self._internal_unit = 'dBm'
         self.linav = linav_dB
         self.ch_tup = ('', 'A', 'B')
-        self._cmds = {'SetFreq': [("'%sE FR %s HZ'%(self.ch_tup[self.channel], freq)", None)],
-                      'GetFreq': [],
-                      'ZeroOn': [("'%sE ZE'%self.ch_tup[self.channel]", None)],
-                      'ZeroOff': [],
-                      'Quit': [],
-                      'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+        prefix = f"{self.ch_tup[self.channel]}E"
+        self._cmds = {
+            'SetFreq': [(f"{prefix} FR {{freq}} HZ", None)],
+            'GetFreq': [],
+            'ZeroOn': [(f"{prefix} ZE", None)],
+            'ZeroOff': [],
+            'Quit': [],
+            'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]
+        }
 
     def _get_sensor_type(self):
         """
         return the type of the attached sensor as a string.
         """
         self._lock()
-        cmd = "TEST EEPROM %s TYPE?" % self.ch_tup[self.channel]
-        tmpl = '(?P<SENSOR>\\d+)'
+        cmd = f"TEST EEPROM {self.ch_tup[self.channel]} TYPE?"
+        tmpl = r'(?P<SENSOR>\d+)'
         dct = self.query(cmd, tmpl)
         self._unlock()
         return dct['SENSOR']
@@ -84,7 +84,7 @@ class POWERMETER(PWRMTR):
             self.error = PWRMTR.Init(self, ini, self.channel)  # run init from parent class
             self.dev.write("TR3")
 
-            sec = 'channel_%d' % self.channel
+            sec = f'channel_{self.channel}'
             try:
                 self.levelunit = self.conf[sec]['unit']
             except KeyError:
@@ -125,7 +125,7 @@ class POWERMETER(PWRMTR):
     def update_internal_unit(self):
         # get internal unit
         tup = ('W', 'dBm', '%', 'dB')
-        ans = self.dev.ask('%sP SM' % self.ch_tup[self.channel])
+        ans = self.dev.ask(f'{self.ch_tup[self.channel]}P SM')
         ans = int(ans[-1])
         self._internal_unit = tup[ans]
         # Here, the appropriate average routine is set up
@@ -156,13 +156,17 @@ class POWERMETER(PWRMTR):
         self.value = self.linav([float(ans)])
         swr_err = self.get_standard_mismatch_uncertainty()
         self.power = float(self.value)
-        try:
-            obj = quantities.Quantity(eval(self._internal_unit),
-                                      ucomponents.UncertainInput(self.power, self.power * swr_err))
-        except (AssertionError, NameError):
-            self.power, self.unit = self.convert.c2scuq(self._internal_unit, float(self.power))
-            obj = quantities.Quantity(self.unit,
-                                      ucomponents.UncertainInput(self.power, self.power * swr_err))
+        power_value = float(self.power)
+        iu = self._internal_unit
+        if isinstance(iu, str):
+            power_value, power_unit = self.convert.c2scuq(iu, power_value)   # iu ist a str 'dbm', ...
+        elif isinstance(iu, units.Unit):  # iu is a scuq unit
+            power_unit = iu
+        else:
+            raise TypeError(f"_internal_unit must be str or scuq Unit, got {type(iu).__name__}: {iu!r}")
+
+        obj = quantities.Quantity(power_unit,
+                                  ucomponents.UncertainInput(power_value, power_value * swr_err))
         return self.error, obj  # TODO: include other uncertainties
 
     def GetDataNB(self, retrigger):
@@ -234,6 +238,8 @@ def test_init(cha):
 
 def main():
     import io
+    import sys
+    from PySide6 import QtWidgets
     from mpylab.tools.util import format_block
     from mpylab.device.powermeter_ui import PowerMeterWidget as UI
 
@@ -275,8 +281,11 @@ def main():
         ini = io.StringIO(ini)
 
     pm = POWERMETER()
+    app = QtWidgets.QApplication(sys.argv)
     ui = UI(pm, ini=ini)
-    ui.configure_traits()
+    ui.show()
+    sys.exit(app.exec())
+
 
 
 if __name__ == '__main__':
@@ -289,34 +298,11 @@ if __name__ == '__main__':
     pm1.SetFreq(50e6)
     time.sleep(5)
 
-    # pm2=test_init(2)
     try:
         i = 0
         while True:
             pm1.Trigger()
-            # pm2.Trigger()
-            print((i, "PM%d" % ch, pm1.GetData()))
+            print(f"{i} PM{ch} {pm1.GetData()}")
             i += 1
-            # print "PM2", pm2.GetData()
     finally:
         pm1.Quit()
-        # pm2.Quit()
-
-    # for i in range(5):
-    # pm1.Trigger()
-    # print "PM1", pm1.GetData()
-    # pm2.Trigger()
-    # print "PM2", pm2.GetData()
-    # pm2.Quit()
-    # for i in range(5):
-    # pm1.Trigger()
-    # print "PM1", pm1.GetData()
-    # pm2=test_init(2)
-    # for i in range(5):
-    # pm1.Trigger()
-    # print "PM1", pm1.GetData()
-    # pm2.Trigger()
-    # print "PM2", pm2.GetData()
-    time.sleep(5)
-    # pm1.Quit()
-    # pm2.Quit()

@@ -2,6 +2,7 @@
 from simpleeval import simple_eval
 
 from mpylab.device.amplifier import AMPLIFIER as AMP
+from tools.numeric_eval import safe_numeric_eval
 
 
 class AMPLIFIER(AMP):
@@ -86,7 +87,7 @@ def main():
     print(amp.GetDescription())
     ctx = scuq.ucomponents.Context()
     while True:
-        freq = float(simple_eval(input("Freq / Hz: ")))
+        freq = safe_numeric_eval(input("Freq / Hz: "))
         if freq < 0:
             break
         amp.SetFreq(freq)

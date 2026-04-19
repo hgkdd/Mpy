@@ -532,6 +532,6 @@ if __name__ == '__main__':
         d.SetVirtual(False)
 
     err, des = d.GetDescription()
-    print(("Description: %s" % des))
+    print(f"Description: {des}")
 
     d.Quit()

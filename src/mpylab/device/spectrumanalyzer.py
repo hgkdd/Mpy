@@ -65,46 +65,46 @@ class SPECTRUMANALYZER(DRIVER):
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)
-        self._cmds = {'SetCenterFreq': [("'CENTERFREQ %s HZ'%something", None)],
-                      'GetCenterFreq': [('CENTERFREQ?', r'CENTERFREQ (?P<cfreq>%s) HZ' % self._FP)],
-                      'SetSpan': [("'SPAN %s HZ'%something", None)],
-                      'GetSpan': [('SPAN?', r'SPAN (?P<span>%s) HZ' % self._FP)],
-                      'SetStartFreq': [("'STARTFREQ %s HZ'%something", None)],
-                      'GetStartFreq': [('STARTFREQ?', r'STARTFREQ (?P<stfreq>%s) HZ' % self._FP)],
-                      'SetStopFreq': [("'STOPFREQ %s HZ'%something", None)],
-                      'GetStopFreq': [('STOPFREQ?', r'STOPFREQ (?P<spfreq>%s) HZ' % self._FP)],
-                      'SetRBW': [("'RBW %s HZ'%something", None)],
-                      'GetRBW': [('RBW?', r'RBW (?P<rbw>%s) HZ' % self._FP)],
-                      'SetVBW': [("'VBW %s HZ'%something", None)],
-                      'GetVBW': [('VBW?', r'VBW (?P<vbw>%s) HZ' % self._FP)],
-                      'SetRefLevel': [("'REFLEVEL %s DBM'%something", None)],
-                      'GetRefLevel': [('REFLEVEL?', r'REFLEVEL (?P<reflevel>%s) DBM' % self._FP)],
-                      'SetAtt': [("'ATT %s DB'%something", None)],
-                      'GetAtt': [('ATT?', r'ATT (?P<att>%s) DB' % self._FP)],
+        self._cmds = {'SetCenterFreq': [("CENTERFREQ {something} HZ", None)],
+                      'GetCenterFreq': [('CENTERFREQ?', rf'CENTERFREQ (?P<cfreq>{self._FP}) HZ')],
+                      'SetSpan': [("SPAN {something} HZ", None)],
+                      'GetSpan': [('SPAN?', rf'SPAN (?P<span>{self._FP}) HZ')],
+                      'SetStartFreq': [("STARTFREQ {something} HZ", None)],
+                      'GetStartFreq': [('STARTFREQ?', rf'STARTFREQ (?P<stfreq>{self._FP}) HZ')],
+                      'SetStopFreq': [("STOPFREQ {something} HZ", None)],
+                      'GetStopFreq': [('STOPFREQ?', rf'STOPFREQ (?P<spfreq>{self._FP}) HZ')],
+                      'SetRBW': [("RBW {something} HZ", None)],
+                      'GetRBW': [('RBW?', rf'RBW (?P<rbw>{self._FP}) HZ')],
+                      'SetVBW': [("VBW {something} HZ", None)],
+                      'GetVBW': [('VBW?', rf'VBW (?P<vbw>{self._FP}) HZ')],
+                      'SetRefLevel': [("REFLEVEL {something} DBM", None)],
+                      'GetRefLevel': [('REFLEVEL?', rf'REFLEVEL (?P<reflevel>{self._FP}) DBM')],
+                      'SetAtt': [("ATT {something} DB", None)],
+                      'GetAtt': [('ATT?', rf'ATT (?P<att>{self._FP}) DB')],
                       'SetAttAuto': [("ATT -1", None)],
-                      'SetAttMode': [("'ATTMode %s'%something", None)],
+                      'SetAttMode': [("ATTMode {something}", None)],
                       'GetAttMode': [('ATTMode?', r'ATTMODE (?P<attmode>.*)')],
-                      'SetPreAmp': [("'PREAMP %s DB'%something", None)],
-                      'GetPreAmp': [('PREAMP?', r'PREAMP (?P<preamp>%s) DB' % self._FP)],
-                      'SetDetector': [("'DET %s'%something", None)],
+                      'SetPreAmp': [("PREAMP {something} DB", None)],
+                      'GetPreAmp': [('PREAMP?', rf'PREAMP (?P<preamp>{self._FP}) DB')],
+                      'SetDetector': [("DET {something}", None)],
                       'GetDetector': [('DET?', r'DET (?P<det>.*)')],
-                      'SetTraceMode': [("'TMODE %s'%something", None)],
+                      'SetTraceMode': [("TMODE {something}", None)],
                       'GetTraceMode': [('TMODE?', r'TMODE (?P<tmode>.*)')],
-                      'SetTrace': [("'TRACE %d'%trace", None)],
+                      'SetTrace': [("TRACE {trace}", None)],
                       'GetTrace': [('TRACE?', r'TRACE (?P<trace>\d+)')],
-                      'SetSweepCount': [("'SWEEPCOUNT %d'%something", None)],
+                      'SetSweepCount': [("SWEEPCOUNT {something}", None)],
                       'GetSweepCount': [('SWEEPCOUNT?', r'SWEEPCOUNT (?P<scount>\d+)')],
-                      'SetSweepTime': [("'SWEEPTIME %s us'%something", None)],
-                      'GetSweepTime': [('SWEEPTIME?', r'SWEEPTIME (?P<stime>%s) us' % self._FP)],
-                      'SetSweepPoints': [("'SWEEPPOINTS %s '%something", None)],
-                      'GetSweepPoints': [('SWEEPPOINTS?', r'SWEEPPOINTS (?P<spoints>%s)' % self._FP)],
-                      'GetSpectrum': [('DATA?', r'DATA (?P<power>%s)' % self._FP)],
-                      'GetSpectrumNB': [('DATA?', r'DATA (?P<power>%s)' % self._FP)],
-                      'SetTriggerMode': [("'TRGMODE %d'%something", None)],
+                      'SetSweepTime': [("SWEEPTIME {something} us", None)],
+                      'GetSweepTime': [('SWEEPTIME?', rf'SWEEPTIME (?P<stime>{self._FP}) us')],
+                      'SetSweepPoints': [("SWEEPPOINTS {something} ", None)],
+                      'GetSweepPoints': [('SWEEPPOINTS?', rf'SWEEPPOINTS (?P<spoints>{self._FP})')],
+                      'GetSpectrum': [('DATA?', rf'DATA (?P<power>{self._FP})')],
+                      'GetSpectrumNB': [('DATA?', rf'DATA (?P<power>{self._FP})')],
+                      'SetTriggerMode': [("TRGMODE {something}", None)],
                       'GetTriggerMode': [('TRGMODE?', r'TRGMODE (?P<trgmode>.*)')],
-                      'SetTriggerDelay': [("'TRGDELAY %s us'%something", None)],
-                      'GetTriggerDelay': [('TRGDELAY?', r'TRGDELAY (?P<tdelay>%s) us' % self._FP)],
-                      'SetWindow': [("'WINDOW %d'%window", None)],
+                      'SetTriggerDelay': [("TRGDELAY {something} us", None)],
+                      'GetTriggerDelay': [('TRGDELAY?', rf'TRGDELAY (?P<tdelay>{self._FP}) us')],
+                      'SetWindow': [("WINDOW {window}", None)],
                       'Quit': [('QUIT', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
@@ -222,11 +222,11 @@ class SPECTRUMANALYZER(DRIVER):
             try:
                 # Wenn Wert zum Key = None, dann Abbruch mit Fehler
                 # sonst setzen von something auf Wert in Map
-                if getattr(self, "Map%s" % possibilities)[something] is None:
+                if getattr(self, f"Map{possibilities}")[something] is None:
                     self.error = 1
                     return self.error, 0
                 else:
-                    something = getattr(self, "Map%s" % possibilities)[something]
+                    something = getattr(self, f"Map{possibilities}")[something]
             except AttributeError:
                 None
 
@@ -279,19 +279,23 @@ class SPECTRUMANALYZER(DRIVER):
         self._update(dct)
         if self.error == 0:
             if not dct:
-                setattr(self, what, eval(what))
+                setattr(self, what, getattr(self, what))
             else:
                 setattr(self, what, type_(getattr(self, what)))
+            # if not dct:
+            #     setattr(self, what, eval(what))
+            # else:
+            #     setattr(self, what, type_(getattr(self, what)))
 
         # Zürück Mapen
         try:
             # Wenn Wert zum Key = None, dann Abbruch mit Fehler
             # sonst setzen von something auf Wert in Map
-            if getattr(self, "Map%s_Back" % possibilities)[getattr(self, what)] is None:
+            if getattr(self, f"Map{possibilities}_Back")[getattr(self, what)] is None:
                 self.error = 1
                 return self.error, 0
             else:
-                setattr(self, what, getattr(self, "Map%s_Back" % possibilities)[getattr(self, what)])
+                setattr(self, what, getattr(self, f"Map{possibilities}_Back")[getattr(self, what)])
         except AttributeError:
             None
 
@@ -318,19 +322,23 @@ class SPECTRUMANALYZER(DRIVER):
         self._update(dct)
         if self.error == 0:
             if not dct:
-                setattr(self, what, eval(what))
+                setattr(self, what, getattr(self, what))
             else:
                 setattr(self, what, type_(getattr(self, what)))
+            # if not dct:
+            #     setattr(self, what, eval(what))
+            # else:
+            #     setattr(self, what, type_(getattr(self, what)))
 
         # Zürück Mapen
         try:
             # Wenn Wert zum Key = None, dann Abbruch mit Fehler
             # sonst setzen von something auf Wert in Map
-            if getattr(self, "Map%s_Back" % possibilities)[getattr(self, what)] is None:
+            if getattr(self, f"Map{possibilities}_Back")[getattr(self, what)] is None:
                 self.error = 1
                 return self.error, 0
             else:
-                setattr(self, what, getattr(self, "Map%s_Back" % possibilities)[getattr(self, what)])
+                setattr(self, what, getattr(self, f"Map{possibilities}_Back")[getattr(self, what)])
         except AttributeError:
             None
 
@@ -366,13 +374,13 @@ if __name__ == '__main__':
         d.SetVirtual(False)
 
     err, des = d.GetDescription()
-    print(("Description: %s" % des))
+    print(f"Description: {des}")
 
     for cfreq in [100]:
-        print(("Set center freq to %e Hz" % cfreq))
+        print(f"Set center freq to {cfreq:e} Hz")
         err, rfreq = d.SetCenterFreq(cfreq)
         if err == 0:
-            print(("Center Freq set to %e Hz" % rfreq))
+            print(f"Center Freq set to {rfreq:e} Hz")
         else:
             print("Error setting center freq")
 

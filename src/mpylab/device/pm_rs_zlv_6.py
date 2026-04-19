@@ -34,7 +34,7 @@ class POWERMETER(PMMTR):
         if channel is None:
             channel = 1
         self.error = PMMTR.Init(self, ini, self.channel)  # run init from parent class
-        sec = 'channel_%d' % channel
+        sec = f'channel_{channel}'
         try:
             self.levelunit = self.conf[sec]['unit']
         except KeyError:

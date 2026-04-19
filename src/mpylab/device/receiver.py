@@ -104,22 +104,22 @@ class RECEIVER(DRIVER):
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)
         self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
-                      'GetFreq': [('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)],
-                      'GetData': [('LEVEL?', r'LEVEL (?P<level>%s)' % self._FP)],
-                      'GetDataNB': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<level>%s)' % self._FP)],
+                      'GetFreq': [('FREQUENCY?', rf'FREQUENCY (?P<freq>{self._FP})')],
+                      'GetData': [('LEVEL?', rf'LEVEL (?P<level>{self._FP})')],
+                      'GetDataNB': [('LEVEL:LASTVALUE?', rf'LEVEL:LASTVALUE (?P<level>{self._FP})')],
                       'Trigger': [('*TRG', None)],
                       'SetAttenuation': [("f'ATTENUATION {attenuation} DB'", None)],
-                      'GetAttenuation': [('ATTENUATION?', r'ATTENUATION (?P<attenuation>%s)' % self._FP)],
+                      'GetAttenuation': [('ATTENUATION?', rf'ATTENUATION (?P<attenuation>{self._FP})')],
                       'SetMinAttenuation': [("f'MIN:ATTENUATION {min_attenuation} DB'", None)],
-                      'GetMinAttenuation': [('MIN:ATTENUATION?', r'MIN:ATTENUATION (?P<min_attenuation>%s)' % self._FP)],
+                      'GetMinAttenuation': [('MIN:ATTENUATION?', rf'MIN:ATTENUATION (?P<min_attenuation>{self._FP})')],
                       'SetMeasTime': [("f'MEASUREMENT:TIME {meas_time} s'", None)],
-                      'GetMeasTime': [('MEASUREMENT:TIME?', r'MEASUREMENT:TIME (?P<meas_time>%s)' % self._FP)],
+                      'GetMeasTime': [('MEASUREMENT:TIME?', rf'MEASUREMENT:TIME (?P<meas_time>{self._FP})')],
                       'SetDetector': [("f'DETECTOR {detector}'", None)],
                       'GetDetector': [('DETECTOR?', r'DETECTOR (?P<detector>.*)')],
                       'SetPreamplifier': [("f'PREAMPLIFIER {preamplifier}'", None)],
                       'GetPreamplifier': [('PREAMPLIFIER?', r'PREAMPLIFIER (?P<preamplifier>.*)')],
                       'SetResolutionBandwidth': [("f'BANDWIDTH:IF {rbw} HZ'", None)],
-                      'GetResolutionBandwidth': [('BANDWIDTH:IF?', r'BANDWIDTH:IF (?P<rbw>%s)' % self._FP)],
+                      'GetResolutionBandwidth': [('BANDWIDTH:IF?', rf'BANDWIDTH:IF (?P<rbw>{self._FP})')],
                       'Quit': [('*CLS', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         self.freq = None
@@ -195,13 +195,17 @@ class RECEIVER(DRIVER):
         if self.error == 0 and self.level:
             self.update_internal_unit()
             self.level = float(self.level)
-            try:
-                obj = quantities.Quantity(eval(self._internal_unit),
-                                          ucomponents.UncertainInput(self.power, 0))
-            except (AssertionError, NameError):
-                self.level, self.unit = self.convert.c2scuq(self._internal_unit, float(self.power))
-                obj = quantities.Quantity(self.unit,
-                                          ucomponents.UncertainInput(self.power, 0))
+            level_value = self.level
+            iu = self._internal_unit
+            if isinstance(iu, str):
+                level_value, level_unit = self.convert.c2scuq(iu, level_value)  # iu ist a str 'dbm', ...
+            elif isinstance(iu, units.Unit):  # iu is a scuq unit
+                level_unit = iu
+            else:
+                raise TypeError(f"_internal_unit must be str or scuq Unit, got {type(iu).__name__}: {iu!r}")
+
+            obj = quantities.Quantity(level_unit,
+                                      ucomponents.UncertainInput(level_value, 0))
         else:
             obj = None
         return self.error, obj
@@ -502,13 +506,13 @@ if __name__ == '__main__':
         d.SetVirtual(False)
 
     err, des = d.GetDescription()
-    print(("Description: %s" % des))
+    print(f"Description: {des}")
 
     for freq in [9e3, 100e3, 500e3, 1e6, 10e6, 30e6]:
-        print(("Set freq to %e Hz" % freq))
+        print(f"Set freq to {freq:e} Hz")
         err, rfreq = d.SetFreq(freq)
         if err == 0:
-            print(("Freq set to %e Hz" % rfreq))
+            print(f"Freq set to {rfreq:e} Hz")
         else:
             print("Error setting freq")
 

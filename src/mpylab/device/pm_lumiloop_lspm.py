@@ -65,7 +65,7 @@ class POWERMETER(PMMTR):
         if self.visa and not self.virtual:  # ignore virtual instruments
             key = self._hash()  # here: visa_ch
             if key in POWERMETER.instances:
-                raise RuntimeWarning("Multi Channel Field Probe: Instance already in use: %s" % key)
+                raise RuntimeWarning(f"Multi Channel Field Probe: Instance already in use: {key}")
 
             POWERMETER.instances.setdefault(key, self)  # register this instance
         if len(POWERMETER.instances.keys()) == 1:
@@ -98,7 +98,7 @@ class POWERMETER(PMMTR):
         return self.error
 
     def _hash(self):
-        return "%s_%s" % (self.visa, self.ch)
+        return f"{self.visa}_{self.ch}"
 
     def wait_for_laser_ready(self):
         if not self.is_main_instance:

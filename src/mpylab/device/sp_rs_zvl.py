@@ -84,60 +84,60 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         # Schlüsselwort wird eine Liste zugeordnet, wobei jeder Listeneintrag ein Tupel ist und jeder Tupel einen Befehl und eine Vorlage
         # für die darauffolgende Antwort des Signalgenerators enthaelt.
         #
-        self._cmds = {'SetCenterFreq': [("'FREQuency:CENTer %s HZ'%something", None)],
-                      'GetCenterFreq': [('FREQuency:CENTer?', r'(?P<cfreq>%s)' % self._FP)],
-                      'SetSpan': [("'FREQuency:SPAN %s HZ'%something", None)],
-                      'GetSpan': [('FREQuency:SPAN?', r'(?P<span>%s)' % self._FP)],
-                      'SetStartFreq': [("'FREQuency:STARt %s HZ'%something", None)],
-                      'GetStartFreq': [('FREQuency:STARt?', r'(?P<stfreq>%s)' % self._FP)],
-                      'SetStopFreq': [("'FREQuency:STOP %s HZ'%something", None)],
-                      'GetStopFreq': [('FREQuency:STOP?', r'(?P<spfreq>%s)' % self._FP)],
+        self._cmds = {'SetCenterFreq': [("FREQuency:CENTer {something} HZ", None)],
+                      'GetCenterFreq': [('FREQuency:CENTer?', rf'(?P<cfreq>{self._FP})')],
+                      'SetSpan': [("FREQuency:SPAN {something} HZ", None)],
+                      'GetSpan': [('FREQuency:SPAN?', rf'(?P<span>{self._FP})')],
+                      'SetStartFreq': [("FREQuency:STARt {something} HZ", None)],
+                      'GetStartFreq': [('FREQuency:STARt?', rf'(?P<stfreq>{self._FP})')],
+                      'SetStopFreq': [("FREQuency:STOP {something} HZ", None)],
+                      'GetStopFreq': [('FREQuency:STOP?', rf'(?P<spfreq>{self._FP})')],
                       'SetRBWAuto': [("SENSe:BANDwidth:RESolution:Auto On", None)],
-                      'SetRBW': [("'SENSe:BANDwidth:RESolution %s HZ'%something", None)],
-                      'GetRBW': [('SENSe:BANDwidth:RESolution?', r'(?P<rbw>%s)' % self._FP)],
+                      'SetRBW': [("SENSe:BANDwidth:RESolution {something} HZ", None)],
+                      'GetRBW': [('SENSe:BANDwidth:RESolution?', rf'(?P<rbw>{self._FP})')],
                       # VBW kann nur bestimmt Werte annehmen
                       # The command is not available if FFT filtering is switched on and the set bandwidth is <= 30 kHz or if the quasi–peak detector is switched on.
                       'SetVBWAuto': [("SENSe:BANDwidth:VIDeo:Auto On", None)],
-                      'SetVBW': [("'SENSe:BANDwidth:VIDeo %s HZ'%something", None)],
-                      'GetVBW': [('SENSe:BANDwidth:VIDeo?', r'(?P<vbw>%s)' % self._FP)],
-                      'SetRefLevel': [("'DISP:WIND:TRAC%s:Y:RLEV %s DBM'%(self.trace,something)", None)],
-                      'GetRefLevel': [("'DISP:WIND:TRAC%s:Y:RLEV?'%self.trace", r'(?P<reflevel>%s)' % self._FP)],
-                      'SetAtt': [("'INPut:ATTenuation %s DB'%something", None)],
-                      'GetAtt': [('INPut:ATTenuation?', r'(?P<att>%s)' % self._FP)],
+                      'SetVBW': [("SENSe:BANDwidth:VIDeo {something} HZ", None)],
+                      'GetVBW': [('SENSe:BANDwidth:VIDeo?', rf'(?P<vbw>{self._FP})')],
+                      'SetRefLevel': [("'DISP:WIND:TRAC{self.trace}:Y:RLEV {something} DBM'", None)],
+                      'GetRefLevel': [("'DISP:WIND:TRAC{self.trace}:Y:RLEV?'", rf'(?P<reflevel>{self._FP})')],
+                      'SetAtt': [("INPut:ATTenuation {something} DB", None)],
+                      'GetAtt': [('INPut:ATTenuation?', rf'(?P<att>{self._FP})')],
                       'SetAttAuto': [("INPut:ATTenuation:AUTO ON", None)],
                       # SetAttMode wird nicht über die standart SetGetSomething Funktion realisiert, siehe weiter unten
-                      # 'SetAttMode': [("'ATTMode %s'%something", None)],
+                      # 'SetAttMode': [("ATTMode {something}", None)],
                       # 'GetAttMode':  [('ATTMode?', r'ATTMODE (?P<attmode>.*)')],
                       # SetPreAmp wird nicht über die standart SetGetSomething Funktion zur verfügung gestellt,
                       # sondern es wurde ein spezielle definiert, siehe weiter unten.
-                      'SetPreAmp': [("'INPut:GAIN:STATe %s'%something", None)],
-                      'GetPreAmp': [('INPut:GAIN:STATe?', r'(?P<preamp>%s)' % self._FP)],
-                      'SetDetectorAuto': [("'SENSe:DETector%s:Auto On'%self.trace", None)],
-                      'SetDetector': [("'SENSe:DETector%s %s'%(self.trace,something)", None)],
-                      'GetDetector': [("'SENSe:DETector%s?'%self.trace", r'(?P<det>.*)')],
-                      'SetTraceMode': [("'DISPlay:WINDow:TRACe%s:MODE %s'%(self.trace,something)", None)],
-                      'SetTraceModeBlank': [("'DISPlay:WINDow:TRACe%s:STATe OFF'%(self.trace)", None)],
+                      'SetPreAmp': [("INPut:GAIN:STATe {something}", None)],
+                      'GetPreAmp': [('INPut:GAIN:STATe?', rf'(?P<preamp>{self._FP})')],
+                      'SetDetectorAuto': [("'SENSe:DETector{self.trace}:Auto On'", None)],
+                      'SetDetector': [("'SENSe:DETector{self.trace} {something}'", None)],
+                      'GetDetector': [("'SENSe:DETector{self.trace}?'", r'(?P<det>.*)')],
+                      'SetTraceMode': [("'DISPlay:WINDow:TRACe{self.trace}:MODE {something}'", None)],
+                      'SetTraceModeBlank': [("'DISPlay:WINDow:TRACe{self.trace}:STATe OFF'", None)],
                       # GetTraceMode wird über dei standart SetGetSomething Funktion realisiert, siehe weiter unten
-                      'GetTraceMode': [("'DISPlay:WINDow:TRACe%s:MODE?'%self.trace", r'(?P<tmode>.*)')],
-                      'GetTraceModeBlank': [("'DISPlay:WINDow:TRACe%s:STATe?'%(self.trace)", r'(?P<tmodeblank>\d+)')],
+                      'GetTraceMode': [("'DISPlay:WINDow:TRACe{self.trace}:MODE?'", r'(?P<tmode>.*)')],
+                      'GetTraceModeBlank': [("'DISPlay:WINDow:TRACe{self.trace}:STATe?'", r'(?P<tmodeblank>\d+)')],
                       # SetTrace wird über dei standart SetGetSomething Funktion realisiert, siehe weiter unten
-                      # 'SetTrace':  [("'TRACE %d'%trace", None)],
+                      # 'SetTrace':  [("TRACE {trace}", None)],
                       # 'GetTrace':  [('TRACE?', r'TRACE (?P<trace>\d+)')],
-                      'SetSweepCount': [("'SENSe:SWEep:COUNt %d'%something", None)],
+                      'SetSweepCount': [("SENSe:SWEep:COUNt {something}", None)],
                       'GetSweepCount': [('SENSe:SWEep:COUNt?', r'(?P<scount>\d+)')],
                       'SetSweepTimeAuto': [("SENSe:SWEep:TIME:Auto On", None)],
-                      'SetSweepTime': [("'SENSe:SWEep:TIME %s s'%something", None)],
-                      'GetSweepTime': [('SENSe:SWEep:TIME?', r'(?P<stime>%s)' % self._FP)],
-                      'SetSweepPoints': [("'SWEep:POINts %s '%something", None)],
+                      'SetSweepTime': [("SENSe:SWEep:TIME {something} s", None)],
+                      'GetSweepTime': [('SENSe:SWEep:TIME?', rf'(?P<stime>{self._FP})')],
+                      'SetSweepPoints': [("SWEep:POINts {something} ", None)],
                       'GetSweepPoints': [('SWEep:POINts?', r'(?P<spoints>\d+)')],
-                      'GetSpectrum': [("'TRACe:DATA? TRACE%s'%self.trace",
+                      'GetSpectrum': [("'TRACe:DATA? TRACE{self.trace}'",
                                        r'(?P<power>([-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?,?)+)')],
                       # Später:
-                      # 'GetSpectrumNB':  [('DATA?', r'DATA (?P<power>%s)'%self._FP)],
-                      'SetTriggerMode': [("'TRIGger:SOURce %s'%something", None)],
+                      # 'GetSpectrumNB':  [('DATA?', rf'DATA (?P<power>{self._FP})')],
+                      'SetTriggerMode': [("TRIGger:SOURce {something}", None)],
                       'GetTriggerMode': [('TRIGger:SOURce?', r'(?P<trgmode>.*)')],
-                      'SetTriggerDelay': [("'TRIGger:TIME:RINTerval %s s'%something", None)],
-                      'GetTriggerDelay': [('TRIGger:TIME:RINTerval?', r'(?P<tdelay>%s)' % self._FP)],
+                      'SetTriggerDelay': [("TRIGger:TIME:RINTerval {something} s", None)],
+                      'GetTriggerDelay': [('TRIGger:TIME:RINTerval?', rf'(?P<tdelay>{self._FP})')],
                       # 'SetWindow':  [('WINDOW %d'%window, None)],
                       # 'Quit':     [('QUIT', None)],
                       'SetSANMode': [("INSTrument:SELect SAN", None)],
@@ -341,7 +341,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         if channel is None:
             channel = 1
         self.error = SPECTRUMAN.Init(self, ini, channel)
-        sec = 'channel_%d' % channel
+        sec = f'channel_{channel}'
         try:
             self.levelunit = self.conf[sec]['unit']
         except KeyError:
@@ -418,25 +418,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         #    Durch eine if-Anweiseung wird überprüft, welcher der möglichen Optionen in der ini-Datei angegeben wurden.
         #    Wird eine Übereinstimmung gefunden, wird der Befehl in 'self._cmds['Preset']' übertragen.
         # 
-        for k, vals, actions in presets:
-            # print k, vals, actions
-            try:
-                v = self.conf[sec][k]
-
-                if (vals is None):
-                    try:
-                        err, ret = getattr(self, actions)(v)
-                        if err != 0:
-                            self.error = err
-                            return self.error
-                    except (AttributeError):
-                        self._cmds['Preset'].append((eval(actions[0]), actions[1]))
-                else:
-                    for idx, vi in enumerate(vals):
-                        if v.lower() in vi:
-                            self._cmds['Preset'].append(actions[idx])
-            except KeyError:
-                pass
+        self._apply_presets(presets, sec)
 
         #
         # Initialisierung des Signalgenerators über die Methode '._do_cmds' der Klasse DRIVER (driver.py)
@@ -451,50 +433,49 @@ class SPECTRUMANALYZER(SPECTRUMAN):
 # Die Funktion main() wird nur zum Test des Treibers verwendet!
 ###########################################################################
 def main():
+    from PySide6 import QtWidgets
     from mpylab.tools.util import format_block
+    from mpylab.device.spectrumanalyzer_ui import UI as UI
     # from mpylab.device.signalgenerator_ui import UI as UI
     #
     # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
     # 'StringIO' in eine virtuelle Datei umgewandelt.
     #
-    try:
-        ini = sys.argv[1]
-    except IndexError:
-        ini = format_block("""
-                        [DESCRIPTION]
-                        description: 'ZLV-K1'
-                        type:        'SPECTRUMANALYZER'
-                        vendor:      'Rohde&Schwarz'
-                        serialnr:
-                        deviceid:
-                        driver:
+    ini = format_block("""
+                    [DESCRIPTION]
+                    description: 'ZLV-K1'
+                    type:        'SPECTRUMANALYZER'
+                    vendor:      'Rohde&Schwarz'
+                    serialnr:
+                    deviceid:
+                    driver:
 
-                        [Init_Value]
-                        fstart: 100e6
-                        fstop: 6e9
-                        fstep: 1
-                        gpib: 20
-                        virtual: 0
+                    [Init_Value]
+                    fstart: 100e6
+                    fstop: 6e9
+                    fstep: 1
+                    gpib: 20
+                    virtual: 0
 
-                        [Channel_1]
-                        unit: 'dBm'
-                        attenuation: auto
-                        reflevel: -20
-                        rbw: auto
-                        vbw: 10e6
-                        span: 6e9
-                        trace: 1
-                        tracemode: 'WRITe'
-                        detector: 'APEak'
-                        sweepcount: 0
-                        triggermode: 'IMMediate'
-                        attmode: auto
-                        sweeptime: 10e-3
-                        sweeppoints: 500
-                        """)
-        # rbw: 3e6
-        ini = io.StringIO(ini)
+                    [Channel_1]
+                    unit: 'dBm'
+                    attenuation: auto
+                    reflevel: -20
+                    rbw: auto
+                    vbw: 10e6
+                    span: 6e9
+                    trace: 1
+                    tracemode: 'WRITe'
+                    detector: 'APEak'
+                    sweepcount: 0
+                    triggermode: 'IMMediate'
+                    attmode: auto
+                    sweeptime: 10e-3
+                    sweeppoints: 500
+                    """)
+    # rbw: 3e6
+    ini = io.StringIO(ini)
 
     # #
     # # Zum Test des Treibers werden sogenannte Konsistenzabfragen ('assert' Bedingungen) verwendet, welche einen 'AssertationError' liefern,
@@ -503,17 +484,14 @@ def main():
     # #
     # from mpylab.device.spectrumanalyzer_ui import UI as UI
     sp = SPECTRUMANALYZER()
-    try:
-        from mpylab.device.spectrumanalyzer_ui import UI as UI
-    except ImportError:
-        pass
-    else:
-        ui = UI(sp, ini=ini)
-        ui.configure_traits()
-        sys.exit(0)
+    ui = UI(sp, ini=ini)
+    app = QtWidgets.QApplication(sys.argv)
+    ui.show()
+    sys.exit(app.exec())
 
+    ## alternative Tests
     err = sp.Init(ini)
-    assert err == 0, 'Init() fails with error %d' % (err)
+    assert err == 0, f'Init() fails with error {err}'
 
     _assertlist = [("SetTrace", 1, "assert"),
                    ("SetCenterFreq", 200e6, "assert"),
@@ -537,17 +515,17 @@ def main():
 
     for funk, value, test in _assertlist:
         err, ret = getattr(sp, funk)(value)
-        assert err == 0, '%s() fails with error %d' % (funk, err)
+        assert err == 0, f'{funk}() fails with error {err}'
         if value != None:
             if test == "assert":
-                assert ret == value, '%s() returns freq=%s instead of %s' % (funk, ret, value)
+                assert ret == value, f'{funk}() returns freq={ret} instead of {value}'
             else:
-                print(('%s(): Rückgabewert: %s   Sollwert: %s' % (funk, ret, value)))
+                print(f'{funk}(): Rückgabewert: {ret}   Sollwert: {value}')
         else:
-            print(('%s(): Rückgabewert: %s' % (funk, ret)))
+            print(f'{funk}(): Rückgabewert: {ret}')
 
     err, spectrum = sp.GetSpectrum()
-    assert err == 0, 'GetSpectrum() fails with error %d' % (err)
+    assert err == 0, f'GetSpectrum() fails with error {err}'
     print(spectrum)
 
     # err=sp.Quit()

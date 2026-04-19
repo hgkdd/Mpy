@@ -9,20 +9,20 @@ class POWERMETER(PM):
 
     def __init__(self, SearchPaths=None):
         POWERMETER.conftmpl['channel_%d'].setdefault('trg_threshold', float)
-        DRIVER.__init__(self, SearchPaths=SearchPaths)
+        PM.__init__(self, SearchPaths=SearchPaths)
         self.lasttrigger = None
         self.istriggered = False
 
-    def Init(self, ini=None, channel=None):
-        self.error = PM.Init(self, ini=ini, channel=channel)
+    def Init(self, ini=None, channel=None, ignore_bus=False):
+        self.error = PM.Init(self, ini=ini, channel=channel, ignore_bus=ignore_bus)
         self.ch = channel
-        self.trg_threshold = self.conf['channel_%d' % channel]['trg_threshold']
+        self.trg_threshold = self.conf[f'channel_{channel}']['trg_threshold']
         self.gpib = self.conf['init_value']['gpib']
         virtual = self.conf['init_value'].get('virtual', False)
         if self.gpib and not virtual:  # ignore virtual instruments
             key = self._hash()  # here: gbib_ch
             if key in POWERMETER.instances:
-                raise RuntimeWarning("2Ch Powermeter: Instance allready in use: %s" % key)
+                raise RuntimeWarning(f"2Ch Powermeter: Instance allready in use: {key}")
             POWERMETER.instances.setdefault(key, self)  # register this instance
         return self.error
 
@@ -69,7 +69,7 @@ class POWERMETER(PM):
         del POWERMETER.instances[self._hash()]  # remove this instance
 
     def _hash(self):
-        return "%s_%s" % (self.gpib, self.ch)
+        return f"{self.gpib}_{self.ch}"
 
     def _crossref(self):
         """

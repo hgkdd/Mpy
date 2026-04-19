@@ -14,6 +14,7 @@ import pprint
 import shutil
 import sys
 import time
+import ast
 
 # import rpy
 import numpy
@@ -28,6 +29,8 @@ from scuq.ucomponents import Context
 from mpylab.env import Measure
 from mpylab.tools import util, mgraph, spacing, distributions, statistic
 from mpylab.tools.aunits import POWERRATIO, EFIELD, EFIELDPNORM
+from mpylab.tools.distributions import test_for_rayleigh
+
 from mpylab.tools.util import cmp
 
 # from win32com.client import Dispatch
@@ -3031,19 +3034,24 @@ Quit: quit measurement.
 
     @staticmethod
     def stdTPosCmp(t1, t2):
-        # t is a list of tuner pos: ['[0,...]', '[10,...]', ...]
-        # eval strings first..
-        try:
-            t1 = eval(t1)
-        except TypeError:
-            pass
-        try:
-            t2 = eval(t2)
-        except TypeError:
-            pass
+        """
+        Compare tuner positions by sum of coordinates.
+
+        Accepts:
+        - sequence objects
+        - strings like "[0, 5, 10]" or "(1,2)"
+        """
+
+        if isinstance(t1, str):
+            t1 = ast.literal_eval(t1)
+
+        if isinstance(t2, str):
+            t2 = ast.literal_eval(t2)
+
         d1 = sum(t1)
         d2 = sum(t2)
-        return cmp(d1, d2)
+
+        return (d1 > d2) - (d1 < d2)
 
     def Evaluate_AutoCorr(self,
                           description="empty",

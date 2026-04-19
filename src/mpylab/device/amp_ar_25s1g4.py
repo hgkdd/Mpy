@@ -30,6 +30,7 @@ def main():
     import io
 
     from mpylab.tools.util import format_block
+    from mpylab.tools.numeric_eval import safe_numeric_eval
     import scuq
 
     try:
@@ -82,7 +83,7 @@ def main():
     print(amp.GetDescription())
     ctx = scuq.ucomponents.Context()
     while True:
-        freq = float(simple_eval(input("Freq / Hz: ")))
+        freq = safe_numeric_eval(input("Freq / Hz: "))
         if freq < 0:
             break
         amp.SetFreq(freq)

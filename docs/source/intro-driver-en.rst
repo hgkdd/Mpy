@@ -72,7 +72,7 @@ and the signal generator responds with, for example::
 
 Accordingly, the :meth:`GetFreq` entry in the ``_cmds`` dictionary is::
 
-   'GetFreq':  [( 'OPCW', r'(?P<freq>%s)'%self._FP)],
+   'GetFreq':  [( 'OPCW', rf'(?P<freq>{self._FP})')],
 
 Since a response, namely the current frequency, is expected from the signal generator here,
 the template is not ``None``, but corresponds to a specific character string, which will now be explained in more detail

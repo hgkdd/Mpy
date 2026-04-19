@@ -124,14 +124,15 @@ class Meta_Driver(type):
             func_str = {}
             func_str['name'] = cmd_func_name
             func_str['args'] = cmd_func.getParameterStr()
+            args_str = cmd_func.getParameterStr()
 
-            M_code = """def create_Methode(command,function=None):
-                          def %(name)s(self,%(args)s):
-                              return command(self,%(args)s)
-                          m= %(name)s
+            M_code = f"""def create_Methode(command,function=None):
+                          def {cmd_func_name}(self,{args_str}):
+                              return command(self,{args_str})
+                          m= {cmd_func_name}
                           if function:
                               m.commands=function
-                          return m""" % func_str
+                          return m"""
 
             code = compile(M_code, '<string>', 'single')
             evaldict = {}
@@ -150,14 +151,14 @@ class Meta_Driver(type):
             if isinstance(cmd_func, Function):
                 for command_name, command in list(cmd_func.items()):
                     try:
-                        return_map = dct['%s_rmap' % command_name]
+                        return_map = dct[f'{command_name}_rmap']
                         command.setReturn_map(return_map)
                         # print return_map
                     except KeyError:
                         pass
             else:
                 try:
-                    return_map = dct['%s_rmap' % cmd_func_name]
+                    return_map = dct[f'{cmd_func_name}_rmap']
                     cmd_func.setReturn_map(return_map)
                     # print return_map
                 except KeyError:
@@ -166,21 +167,21 @@ class Meta_Driver(type):
             for para_name, para in list(cmd_func.getParameter().items()):
 
                 try:
-                    possib = dct['%s_possib' % para_name]
+                    possib = dct[f'{para_name}_possib']
                     para.setPossibilities(possib)
                     # print possib
                 except KeyError:
                     pass
 
                 try:
-                    possib = getattr(bases[0], '%s_possib' % para_name)
+                    possib = getattr(bases[0], f'{para_name}_possib')
                     para.setPossibilities(possib)
                     # print possib
                 except AttributeError:
                     pass
 
                 try:
-                    possib_map = dct['%s_possib_map' % para_name]
+                    possib_map = dct[f'{para_name}_possib_map']
                     para.setPossibilities_map(possib_map)
                     # print possib_map
                 except KeyError:
@@ -205,8 +206,9 @@ class Meta_Driver(type):
 
                 if args != inspect.getfullargspec(dct[commands_name])[0]:
                     raise DriverImplementedError(
-                        'The function %s is not correct implemented\n            args current: %s      args should be: %s' % (
-                            commands_name, inspect.getfullargspec(dct[commands_name])[0], args))
+                        f'''The function {commands_name} is not correct implemented
+                            args current: {inspect.getfullargspec(dct[commands_name])[0]}
+                            args should be: {args}''')
             except KeyError:
                 if para_command:
                     args = ", ".join(para_command)
@@ -216,13 +218,13 @@ class Meta_Driver(type):
                 func_str = {'name': commands_name,
                             'args': args}
 
-                M_code = """def %(name)s(self,%(args)s): 
-                              raise NotImplementedError('The function %(name)s is not implemented yet')""" % func_str
+                M_code = f"""def {commands_name}(self,{args}): 
+                              raise NotImplementedError('The function {commands_name} is not implemented yet')"""
 
                 code = compile(M_code, '<string>', 'single')
                 evaldict = {}
                 exec(code, evaldict)
-                dct[commands_name] = evaldict["%(name)s" % func_str]
+                dct[commands_name] = evaldict[f"{func_str}"]
 
         return type.__new__(mcs, cls_name, bases, dct)
 
@@ -231,6 +233,7 @@ class Meta_Driver(type):
     #        print "DriverMetaClass:\n NAME: %s \n\n BASES:\n %s\n\n DICT:\n%s"%(name,str(bases),str(dict))
     #        print "\n\n\n"        
     #        super(Meta_Driver, cls).__init__(name, bases, dct)
+
 
 
 class CommandsStorage(dict):
@@ -326,7 +329,7 @@ class Function(dict):
             f=Function('bsp',(
                 Command('command_1','command_str',(Parameter),rtype=float)
                 Command('command_2','command_str',(Parameter),rtype=str)
-                    ),rtmpl='%(command_1)d')
+                    ),rtmpl='{command_1:d}')
  
         Diese Function Objekt würde folgendes zurück geben::
             
@@ -344,7 +347,7 @@ class Function(dict):
             f=Function('bsp',(
                 Command('command_1','command_str',(Parameter),rtype=float)
                 Command('command_2','command_str',(Parameter),rtype=str)
-                    ),rtmpl='%(command_1)d',rtype=float)
+                    ),rtmpl='{command_1:d}',rtype=float)
     
             print f(self,Argument)
                 ->  888
@@ -442,13 +445,11 @@ class Function(dict):
 
         # Prüfen ob das erste Argument auch wircklich ein Instanze von Driver ist:
         if not isinstance(driver, DRIVER):
-            raise TypeError('First argument of Function %s(driver,%s) must be a instance of DRIVER' % (
-            self.name, self.getParameterStr()))
+            raise TypeError(f'First argument of Function {self.name}(driver,{self.getParameterStr()}) must be a instance of DRIVER')
 
             # Anzahl der übergebenen Argumente prüfen
         if len(para) > len(self.parameterTuple) or len(para) < len(self.parameterTuple):
-            raise TypeError('Function %s(driver,%s) takes exactly %d arguments (%d given)' % (
-            self.name, self.getParameterStr(), len(self.parameterTuple) + 1, len(para) + 1))
+            raise TypeError(f'Function {self.name}(driver,{self.getParameterStr()}) takes exactly {(len(self.parameterTuple)+1):d} arguments ({(len(para) + 1):d} given)')
 
         # Eine Kopie der Parameter für jeder Driver Instanz anlegen und die Parameter Initialisieren
         if driver not in self.intance_param:
@@ -471,11 +472,49 @@ class Function(dict):
 
         if self.rtmpl:
             if self.return_class:
-                return self.return_class(self.rtmpl % return_map)
+                rtmpl = self._format_template(self.rtmpl, return_map)
+                return self.return_class(rtmpl)
             else:
-                return self.rtmpl % return_map
+                rtmpl = self._format_template(self.rtmpl, return_map)
+                return rtmpl
 
         return return_map
+
+
+    def _format_template(self, tmpl: str, params: dict):
+        """
+        Unterstützt:
+        - neue {}-Syntax (str.format)
+        - alte %-Syntax mit dict
+        - sichere Behandlung von Regex-Strings (r"...")
+        """
+
+        if tmpl is None:
+            return None
+
+        # --- 1) %-Mapping hat Vorrang ---
+        if "%(" in tmpl:
+            try:
+                return tmpl % params
+            except Exception:
+                pass
+
+        # --- 2) neue {}-Syntax ---
+        if "{" in tmpl and "}" in tmpl:
+            try:
+                return tmpl.format(**params)
+            except Exception:
+                pass
+
+        # --- 3) %-Syntax mit Einzelwert ---
+        if len(params) == 1:
+            try:
+                return tmpl % next(iter(params.values()))
+            except Exception:
+                pass
+
+        # --- 4) Fallback ---
+        return tmpl
 
     def getName(self):
         """Gibt den Namen des Function Objekts zurück
@@ -512,12 +551,12 @@ class Command(object):
         
         Beispiel::
         
-            c = Command('nane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
+            c = Command('nane','SENSe{channel:d}:FREQuency:CENTer {cfreq:s} HZ',(
                         Parameter('channel',class_attr='internChannel'),
                         Parameter('cfreq')  
                         ) )
                          
-        Der VISA-Befehls String ist ein Formatting String. In einen Platzhalter %(name)s wird der 
+        Der VISA-Befehls String ist ein Formatting String. In einen Platzhalter {name:s} wird der 
         aktuelle Werte des Parameters mit gleichen Name eingefügt und so der String vervollständigt. 
         Für jeden Platzhalter im String muss es einen passenden Parameter geben. 
 
@@ -544,7 +583,7 @@ class Command(object):
         
         (Da alle Commands bzw. Functions in _cmds auch zu Methoden werden, können auch diese Verwendet werden)::
 
-            c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
+            c = Command('Setnane','SENSe{channel:d}:FREQuency:CENTer {cfreq:s} HZ',(
                         Parameter('channel',class_attr='internChannel'),
                         Parameter('cfreq')  
                         ),rfunction='Getname')
@@ -559,14 +598,14 @@ class Command(object):
          
         *Mit rtype kann der Rückgabe-Type bestimmt werden*::
 
-            c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
+            c = Command('Setnane','SENSe{channel:d}:FREQuency:CENTer {cfreq:s} HZ',(
                          Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
                          ),rtype=float)
             
             oder gleichbedeutend:
             
-            c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
+            c = Command('Setnane','SENSe{channel:d}:FREQuency:CENTer {cfreq:s} HZ',(
                          Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
                          ),rtype=R_FLOAT())
@@ -587,7 +626,7 @@ class Command(object):
 
         *Mit return_map können Werte, die das Geräte zurückgibt, auf gewünschte Werte gemappt werden*::
 
-            c = Command('Setnane','SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',(
+            c = Command('Setnane','SENSe{channel:d}:FREQuency:CENTer {cfreq:s} HZ',(
                          Parameter('channel',class_attr='internChannel'),
                          Parameter('cfreq')  
                          ),return_map={777:'2000'},rtype=float)
@@ -631,7 +670,7 @@ class Command(object):
         self.rfunction = rfunction
 
         if self.rfunction and not isinstance(self.rfunction, str):
-            raise TypeError('Value for rfunction must be type of String. Command: %s' % self.name)
+            raise TypeError(f'Value for rfunction must be type of String. Command: {self.name}')
 
         self.rtype = rtype
 
@@ -674,8 +713,7 @@ class Command(object):
                 rtype = driver_super._commands[self.name]['returntype']
             except:
                 raise DriverImplementedError(
-                    '%s is not defined in the superclass %s, argument <default> is not allowed' % (
-                    self.name, driver_super))
+                    f'{self.name} is not defined in the superclass {driver_super}, argument <default> is not allowed')
         else:
             rtype = self.rtype
 
@@ -702,13 +740,11 @@ class Command(object):
 
         # Überprüfen, ob das erste Argument eine Instanze von Driver ist
         if not isinstance(driver, DRIVER):
-            raise TypeError('First argument of Command %s(driver,%s) must be a instance of DRIVER' % (
-            self.name, self.getParameterStr()))
+            raise TypeError(f'First argument of Command {self.name}(driver,{self.getParameterStr()}) must be a instance of DRIVER')
 
             # Die Anzahl der Argumente prüfen
         if len(para) > len(self.parameterTuple) or len(para) < len(self.parameterTuple):
-            raise TypeError('Command %s(driver,%s) takes exactly %d arguments (%d given)' % (
-            self.name, self.getParameterStr(), len(self.parameterTuple) + 1, len(para) + 1))
+            raise TypeError(f'Command {self.name}(driver,{self.getParameterStr()}) takes exactly {(len(self.parameterTuple)+1):d} arguments ({(len(para)+1):d} given)')
 
         # Eine Kopie der Parameter für jeder Driver Instanz anlegen und die Parameter Initialisieren
         if driver not in self.intance_param:
@@ -754,23 +790,25 @@ class Command(object):
                 ans = self.tmpl(ans)
 
             elif self.rtype:
-                ans = communication_obj.query(self.command % parameters)
+                cmd = self._format_command(self.command, parameters)
+                ans = communication_obj.query(cmd)
                 ans = self.tmpl(ans)
             else:
-                ans = communication_obj.write(self.command % parameters)
+                cmd = self._format_command(self.command, parameters)
+                ans = communication_obj.write(cmd)
 
         except (TypeError, ValueError) as e:
             if isinstance(e, TypeError):
                 if 'number' in str(e):
-                    raise TypeError("Value of one Parameter of the Command %s can not convert into int." % self.name)
+                    raise TypeError(f"Value of one Parameter of the Command {self.name} can not convert into int.")
                 elif 'float' in str(e):
-                    raise TypeError("Value of one Parameter of the Command %s can not convert into float." % self.name)
+                    raise TypeError(f"Value of one Parameter of the Command {self.name} can not convert into float.")
                 else:
                     raise TypeError(e)
             else:
                 if 'unsupported format character' in str(e):
-                    raise ValueError("""Command string of the Command %s not correct
-                        %s""" % (self.name, e))
+                    raise ValueError(f"""Command string of the Command {self.name} not correct
+                        {e}""")
                 else:
                     raise ValueError(e)
 
@@ -779,7 +817,7 @@ class Command(object):
             try:
                 return getattr(driver, self.rfunction)()
             except AttributeError as e:
-                raise AttributeError("%s\n           Failure at Command: %s  Parameter: rfunction" % (e, self.name))
+                raise AttributeError(f"{e}\n           Failure at Command: {self.name}  Parameter: rfunction")
 
         # Wenn ein return_map definiert wurdeh, mappen:
         if self.return_map:
@@ -789,6 +827,37 @@ class Command(object):
                 pass
 
         return 0, ans
+
+    def _format_command(self, cmd: str, params: dict):
+        """
+        Unterstützt:
+        - neue Syntax: "FREQ {freq} Hz"
+        - alte %-Syntax mit dict: "%(freq).4f"
+        - alte %-Syntax mit Einzelwert (Fallback)
+        """
+
+        # --- 1) %-Mapping hat Vorrang ---
+        if "%(" in cmd:
+            try:
+                return cmd % params
+            except Exception:
+                pass
+
+        # --- 2) neue {}-Syntax ---
+        if "{" in cmd and "}" in cmd:
+            try:
+                return cmd.format(**params)
+            except Exception:
+                pass
+
+        # --- 3) %-Fallback (einzelwert) ---
+        if "%" in cmd and len(params) == 1:
+            try:
+                return cmd % next(iter(params.values()))
+            except Exception:
+                pass
+
+        return cmd
 
     def getName(self):
         """Gibt den Namen des Commands zurück
@@ -833,12 +902,12 @@ class Parameter(object):
             p=Parameter('name')
 
 
-        *Es ist möglich einen Type für diesen Parameter zu definieren*::
+        *Es ist möglich, einen Typ für diesen Parameter zu definieren*::
 
             p=Parameter('name', ptype=float)
 
-        Der Parameter versucht dann, den ihm übergebenen Wert in den angegeben Typ umzuwandeln, klappt das nicht,
-        wird eine Exception geworfen
+        Der Parameter versucht dann, den ihm übergebenen Wert in den angegebenen Typ umzuwandeln, klappt das nicht,
+        wird eine Exception geworfen.
         Alle Python Standard Typen sind erlaubt.
 
 
@@ -847,7 +916,7 @@ class Parameter(object):
             p=Parameter('name', possibilities=('LINEAR','LOGARITHMIC'))
 
         Dies ist eine Liste oder Tuple mit möglichen Werte des Parameters. 
-        Wird dem Parameter keiner der der möglichen Werte übergeben verwendet er einen, 
+        Wird dem Parameter keiner der möglichen Werte übergeben verwendet er einen,
         zu dem übergebenen Wert ähnlichen, aus der Liste. 
         Possibilities ist also kein strickte Prüfung, dies ist aber mit Validatoren möglich 
         (siehe weiter unten).
@@ -946,7 +1015,7 @@ class Parameter(object):
                     value = self.ptype(value)
                 except:
                     raise TypeError(
-                        'Attribute %s of %s must be of type %s' % (self.name, self.command.getName(), str(self.ptype)))
+                        f'Attribute {self.name} of {self.command.getName()} must be of type {str(self.ptype)}')
 
         self._validate(value)
 
@@ -974,8 +1043,8 @@ class Parameter(object):
         try:
             return str(self.getValue())
         except ValueError as e:
-            raise ValueError("""Can not convert the value " %s " from the Parameter %s of the Command %s into str
-                  %s""" % (self.getValue(), self.name, self.command.getName(), e))
+            raise ValueError(f"""Can not convert the value ' {self.getValue()} ' from the Parameter {self.name} of the Command {self.command.getName()} into str
+                  {e}""")
 
     def __int__(self):
         """Dieser Slot wird verwendet wenn der Parameter in ein Int umgewandelt werden soll.
@@ -984,8 +1053,8 @@ class Parameter(object):
         try:
             return int(self.getValue())
         except ValueError as e:
-            raise ValueError("""Can not convert the value " %s " from the Parameter %s of the Command %s into int
-                  %s""" % (self.getValue(), self.name, self.command.getName(), e))
+            raise ValueError(f"""Can not convert the value ' {self.getValue()} ' from the Parameter {self.name} of the Command {self.command.getName()} into str
+                  {e}""")
 
     def __float__(self):
         """Dieser Slot wird verwendet wenn der Parameter in ein Float umgewandelt werden soll.
@@ -994,8 +1063,8 @@ class Parameter(object):
         try:
             return float(self.getValue())
         except ValueError as e:
-            raise ValueError("""Can not convert the value " %s " from the Parameter %s of the Command %s into float
-                  %s""" % (self.getValue(), self.name, self.command.getName(), e))
+            raise ValueError(f"""Can not convert the value ' {self.getValue()} ' from the Parameter {self.name} of the Command {self.command.getName()} into str
+                  {e}""")
 
     def getName(self):
         """Gibt den Namen des Parameters zurück.

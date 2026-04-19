@@ -63,6 +63,7 @@ dependencies = [
     "scipy-stubs~=1.16.1",
     "scuq>=0.9",
     "simpleeval>=0.9.13",
+    "yapps2>=2.2.0",
 ]
 
 [project.urls]

@@ -7,6 +7,9 @@
 """
 
 import re, os
+
+from simpleeval import simple_eval
+
 from mpylab.tools.configuration import Configuration, fstrcmp
 from mpylab.device.device import CONVERT, Device
 
@@ -199,11 +202,11 @@ class Virtual_Communication(object):
 
     def write(self, cmd):
         print("IN write", cmd)
-        print("%s out:" % self.IDN, cmd)
+        print(f"{self.IDN} out: {cmd}")
 
     def read(self):
         print("In read")
-        ans = eval(input('%s -> ' % (self.IDN)))
+        ans = input(f'{self.IDN} -> ')
         return ans
 
     def query(self, cmd):

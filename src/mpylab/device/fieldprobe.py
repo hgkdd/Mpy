@@ -37,13 +37,13 @@ class FIELDPROBE(DRIVER):
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)
-        self._cmds = {'SetFreq': [("'FREQ %s HZ'%freq", None)],
-                      'GetFreq': [("FREQ?", r'FREQ (?P<freq>%s) HZ' % self._FP)],
-                      'Zero': [("'Zero %s'%ZeroState", None)],
+        self._cmds = {'SetFreq': [("FREQ {freq} HZ", None)],
+                      'GetFreq': [("FREQ?", rf'FREQ (?P<freq>{self._FP}) HZ')],
+                      'Zero': [("Zero {ZeroState}", None)],
                       'Trigger': [("Trigger", None)],
                       'GetData': [("Data?", r'(?P<DATA>.*)')],
                       'GetDataNB': [("Data?", r'(?P<DATA>.*)'),
-                                    ("'ReTrigger %s'%RETRIGGER", None)],
+                                    ("ReTrigger {RETRIGGER}", None)],
                       'GetBatteryState': [("Battery?", r'(?P<BATT>\d+)')],
                       'Quit': [('QUIT', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')],
@@ -120,10 +120,10 @@ if __name__ == '__main__':
     # print "Description: %s"%des
 
     for freq in [100]:
-        print(("Set freq to %e Hz" % freq))
+        print(f"Set freq to {freq:e} Hz")
         err, rfreq = dev.SetFreq(freq)
         if err == 0:
-            print(("Freq set to %e Hz" % rfreq))
+            print(f"Freq set to {rfreq:e} Hz")
         else:
             print("Error setting freq")
 

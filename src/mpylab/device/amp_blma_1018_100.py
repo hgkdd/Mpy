@@ -71,7 +71,7 @@ class AMPLIFIER(AMP):
         if sw != swstat:
             self.Standby()
             self._wait(False)
-            self.write('SW01_%d' % sw)
+            self.write(f'SW01_{sw}')
             self.Operate()
             self._wait(True)
             time.sleep(2)
@@ -85,6 +85,7 @@ def main():
     import io
 
     from mpylab.tools.util import format_block
+    from mpylab.tools.numeric_eval import safe_numeric_eval
     import scuq
 
     try:
@@ -140,7 +141,7 @@ def main():
     err = amp.Init(ini)
     ctx = scuq.ucomponents.Context()
     while True:
-        freq = float(eval(input("Freq / Hz: ")))
+        freq = safe_numeric_eval(input("Freq / Hz: "))
         if freq < 0:
             break
         amp.SetFreq(freq)

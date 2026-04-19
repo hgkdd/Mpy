@@ -343,7 +343,7 @@ class MOTORCONTROLLER(MC):
         if channel is None:
             channel = 1
         # self.error=MC.Init(self, ini, channel)
-        sec = 'channel_%d' % channel
+        sec = f'channel_{channel:d}'
         self.conf = {}
         self.conf['init_value'] = {}
         self.conf['init_value']['virtual'] = False
@@ -461,12 +461,12 @@ def main():
         try:
             pos = float(pos)
             err, ang = mc.Goto(pos)
-            print('%.2f -> %.2f' % (pos, ang))
+            print(f'{pos:.2f} -> {ang:.2f}')
         except ValueError:
             pos = pos.lower()
             if pos in dirmap:
                 err, dir = mc.Move(dirmap[pos])
-                print('Direction: %d' % dir)
+                print(f'Direction: {dir:d}')
     mc.Quit()
 
 

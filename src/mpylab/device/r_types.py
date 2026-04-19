@@ -13,6 +13,7 @@
 """
 import re
 
+from device.meta_driver import Command
 from mpylab.device.mpy_exceptions import *
 
 
@@ -53,8 +54,8 @@ class R_DEFAULT(R_TYPES):
         else:
             mess = ''
             if self.command:
-                mess = 'in Command:  %s' % self.command.getName()
-            raise Return_TypesError('Return Type %s not defined in R_DEFAULT \n    %s' % (self.type, mess))
+                mess = f'in Command:  {self.command.getName()}'
+            raise Return_TypesError(f'Return Type {self.type} not defined in R_DEFAULT \n    {mess}')
 
     def __call__(self, value):
         """Mit Hilfe dieses Slots wird das Objekt aufrufbar (callable)
@@ -102,8 +103,8 @@ class R_FLOAT(R_TYPES):
 
         mess = ''
         if self.command:
-            mess = 'in Command:  %s' % self.command.getName()
-        raise Return_TypesError('Can not convert received value to float \n           %s' % mess)
+            mess = f'in Command:  {self.command.getName()}'
+        raise Return_TypesError(f'Can not convert received value to float \n           {mess}')
         return None
 
 
@@ -141,8 +142,8 @@ class R_INT(R_TYPES):
 
         mess = ''
         if self.command:
-            mess = 'Command:  %s' % self.command.getName()
-        raise Return_TypesError('Can not convert received value to int \n           %s' % mess)
+            mess = f'Command:  {self.command.getName()}'
+        raise Return_TypesError(f'Can not convert received value to int \n           {mess}')
         return None
 
 
@@ -183,8 +184,8 @@ class R_STR(R_TYPES):
 
         mess = ''
         if self.command:
-            mess = 'Command:  %s' % self.command.getName()
-        raise Return_TypesError('Can not convert received value to str \n           %s' % mess)
+            mess = f'Command:  {self.command.getName()}'
+        raise Return_TypesError(f'Can not convert received value to str \n           {mess}')
         return None
 
 
@@ -224,8 +225,8 @@ class R_BOOL(R_TYPES):
 
         mess = ''
         if self.command:
-            mess = 'Command:  %s' % self.command.getName()
-        raise Return_TypesError('Can not convert received value to boolean \n           %s' % mess)
+            mess = f'Command:  {self.command.getName()}'
+        raise Return_TypesError(f'Can not convert received value to boolean \n           {mess}')
         return None
 
 
@@ -267,6 +268,6 @@ class TUPLE_OF_FLOAT(R_TYPES):
 
         mess = ''
         if self.command:
-            mess = 'Command:  %s' % self.command.getName()
-        raise Return_TypesError('Can not convert received value to a tuple of float \n           %s' % mess)
-        return None
+            mess = f'Command:  {self.command.getName()}'
+        raise Return_TypesError(f'Can not convert received value to a tuple of float \n           {mess}')
+

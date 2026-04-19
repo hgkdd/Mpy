@@ -47,14 +47,14 @@ class FIELDPROBE(FLDPRB):
             channel = 1
         self.error = 0
         self.error = FLDPRB.Init(self, ini, channel)
-        sec = 'channel_%d' % channel
+        sec = f'channel_{channel}'
         try:
             self.unit = self.conf[sec]['unit']
         except KeyError:
             self.unit = self._internal_unit
 
         self.com = int(self.conf['init_value']['com'])
-        self.dev = serial.Serial(port='COM%d' % self.com,
+        self.dev = serial.Serial(port=f'COM{self.com}',
                                  timeout=1,
                                  baudrate=9600)
 
@@ -80,13 +80,13 @@ class FIELDPROBE(FLDPRB):
         # print des
         m = re.match(r'.*v(.*):(.*) (.*)', des)
         model, fw, date = m.groups()
-        return self.error, "Company: PMM, Model: %s, FW: %s, DATE: %s" % (model, fw, date)
+        return self.error, f"Company: PMM, Model: {model}, FW: {fw}, DATE: {date}"
 
     def SetFreq(self, freq):
         self.error = 0
         rfreq = None
         ifreq = int(freq * 1e-4)
-        cmd = '#00k %d*' % ifreq
+        cmd = f'#00k {ifreq}*'
         # print cmd
         self._write(cmd)
         for i in range(10):

@@ -42,22 +42,49 @@ class SIGNALGENERATOR(SGNLGNRTR):
                       'AMOff': [('SOUR:AM:STAT OFF', None)],
                       'PMOn': [('SOUR:PULM:STAT ON', None)],
                       'PMOff': [('SOUR:PULM:STAT OFF', None)],
-                      'SetFreq': [("'SOUR:FREQ:CW %fHz'%freq", None)],
-                      'GetFreq': [('SOUR:FREQ:CW?', r'(?P<freq>%s)' % self._FP)],
-                      'SetLevel': [(
-                                   "'SOUR:POW:LEVEL:IMM:AMPL %f'%self.convert.scuq2c(unit, self._internal_unit, float(level))[0]",
-                                   None)],
-                      'GetLevel': [('SOUR:POW:LEVEL:IMM:AMPL?', r'(?P<level>%s)' % (self._FP))],
-                      'ConfAM': [("'SOUR:AM:SOUR %s'%source", None),
-                                 ('SOUR:AM:SOUR?', r'(?P<source>\S+)'),
-                                 ("'SOUR:AM:DEPT %d '%(int(depth*100))", None),  # Vorlage enthielt '%d %%' !!!???
-                                 ('SOUR:AM:DEPT?', r'(?P<depth>\d+)'),
-                                 ("'SOUR:LFO:FREQ %s HZ'%freq", None),
-                                 ('SOUR:LFO:FREQ?', r'(?P<freq>%s)' % self._FP),
-                                 ("'SOUR:LFO:SHAP %s'%(waveform)", None),  # waveform --> SINE | SQUare
-                                 ('SOUR:LFO:SHAP?', r'(?P<waveform>\S+)'),
-                                 ("'LFO:STAT %s'%(LFOut)", None),
-                                 ('LFO:STAT?', r'(?P<LFOut>\d+)')],
+                      'SetFreq': [('SOUR:FREQ:CW {freq:f}Hz', None)],
+                      'GetFreq': [('SOUR:FREQ:CW?', rf'(?P<freq>{self._FP})')],
+                      'SetLevel': [
+                          (
+                              lambda self, unit, level, **kwargs:
+                              f"SOUR:POW:LEVEL:IMM:AMPL {self.convert.scuq2c(unit, self._internal_unit, float(level))[0]:f}",
+                              None
+                          )
+                      ],
+                      #'SetLevel': [(
+                      #             "'SOUR:POW:LEVEL:IMM:AMPL %f'%self.convert.scuq2c(unit, self._internal_unit, float(level))[0]",
+                      #             None)],
+                      'GetLevel': [('SOUR:POW:LEVEL:IMM:AMPL?', rf'(?P<level>{self._FP})')],
+                      'ConfAM': [
+                          ("SOUR:AM:SOUR {source}", None),
+                          ('SOUR:AM:SOUR?', r'(?P<source>\S+)'),
+
+                          (
+                              lambda self, depth, **kwargs:
+                              f"SOUR:AM:DEPT {int(depth * 100):d}",
+                              None
+                          ),
+                          ('SOUR:AM:DEPT?', r'(?P<depth>\d+)'),
+
+                          ("SOUR:LFO:FREQ {freq} HZ", None),
+                          ('SOUR:LFO:FREQ?', rf'(?P<freq>{self._FP})'),
+
+                          ("SOUR:LFO:SHAP {waveform}", None),
+                          ('SOUR:LFO:SHAP?', r'(?P<waveform>\S+)'),
+
+                          ("LFO:STAT {LFOut}", None),
+                          ('LFO:STAT?', r'(?P<LFOut>\d+)')
+                      ],
+                      # 'ConfAM': [("SOUR:AM:SOUR {source}", None),
+                      #            ('SOUR:AM:SOUR?', r'(?P<source>\S+)'),
+                      #            ("'SOUR:AM:DEPT %d '%(int(depth*100))", None),  # Vorlage enthielt '%d %%' !!!???
+                      #            ('SOUR:AM:DEPT?', r'(?P<depth>\d+)'),
+                      #            ("SOUR:LFO:FREQ {freq} HZ", None),
+                      #            ('SOUR:LFO:FREQ?', rf'(?P<freq>{self._FP})'),
+                      #            ("'SOUR:LFO:SHAP {waveform}'", None),  # waveform --> SINE | SQUare
+                      #            ('SOUR:LFO:SHAP?', r'(?P<waveform>\S+)'),
+                      #            ("'LFO:STAT {LFOut}}'", None),
+                      #            ('LFO:STAT?', r'(?P<LFOut>\d+)')],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         # 
         #
@@ -66,7 +93,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         if channel is None:
             channel = 1
         self.error = SGNLGNRTR.Init(self, ini, channel)
-        sec = 'channel_%d' % channel
+        sec = f'channel_{channel}'
         try:
             self.levelunit = self.conf[sec]['unit']
         except KeyError:
@@ -81,51 +108,143 @@ class SIGNALGENERATOR(SGNLGNRTR):
         # Optionen inhaltet. 
         #
         self._cmds['Preset'] = []
-        presets = [('attmode',
-                    [('0', 'auto'), ('1', 'fixed')],
-                    [('OUTP:AMOD AUTO', None), ('OUTP:AMOD FIX', None)]),
-                   # ('attenuation',
-                   #     None,
-                   #     ("'OUTP:ATT %f dB'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
-                   ('leveloffset',
-                    None,
-                    ("'SOUR:POW:LEV:IMM:OFFS %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))",
-                     None)),
-                   ('levellimit',
-                    None,
-                    ("'SOUR:POW:LIM:AMPL %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
-                   ('level',
-                    None,
-                    ("'SOUR:POW:LEVEL:IMM:AMPL %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))",
-                     None)),
-                   ('outputstate',
-                    [('1', 'on')],
-                    [('OUTP:STAT ON', None)])]
+
+        # presets = [('attmode',
+        #             [('0', 'auto'), ('1', 'fixed')],
+        #             [('OUTP:AMOD AUTO', None), ('OUTP:AMOD FIX', None)]),
+        #            # ('attenuation',
+        #            #     None,
+        #            #     ("'OUTP:ATT %f dB'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
+        #            ('leveloffset',
+        #             None,
+        #             ("'SOUR:POW:LEV:IMM:OFFS %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))",
+        #              None)),
+        #            ('levellimit',
+        #             None,
+        #             ("'SOUR:POW:LIM:AMPL %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
+        #            ('level',
+        #             None,
+        #             ("'SOUR:POW:LEVEL:IMM:AMPL %f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))",
+        #              None)),
+        #            ('outputstate',
+        #             [('1', 'on')],
+        #             [('OUTP:STAT ON', None)])]
+        # #
+        # # Die zur Initialisierung des Signalgenerators notwendigen Schritte werden durch zeilenweise Betrachtung der Liste 'presets'
+        # # herausgefiltert und in die Befehlsliste (dictionary) 'self._cmds' übertragen und stehen damit stehen auch in 'sg._cmds' zur
+        # # Verfügung.
+        # # Die Klassenvariable '.conf' (dictionary) wurde in der (Unter-)Klasse DRIVER definert.
+        # # -> If / else Anweisung zur Behandlung von Initialisierungsschritten ohne Optionen (if) und mit Optionen (else).
+        # # -> Bei Initialisierungsschritten mit Optionen erfolg die Auswahl der notwendigen Option über...(???)
+        # #
+        # for k, vals, actions in presets:
+        #     # print k, vals, actions
+        #     # print '---------------------------'
+        #     try:
+        #         v = self.conf[sec][k]
+        #         if vals is None:
+        #             # print self.convert.c2c, self.levelunit, self._internal_unit, float(v)
+        #             # print actions[0]
+        #             self._cmds['Preset'].append((eval(actions[0]), actions[1]))
+        #         else:
+        #             for idx, vi in enumerate(vals):
+        #                 if v.lower() in vi:
+        #                     self._cmds['Preset'].append(actions[idx])
+        #     except KeyError:
+        #         pass
+        # #
+        # # Initialisierung des Signalgenerators über die Methode '._do_cmds' der Klasse DRIVER (driver.py)
+        # #
+        # dct = self._do_cmds('Preset', locals())
+        # self._update(dct)
+        presets = [
+            (
+                'attmode',
+                [('0', 'auto'), ('1', 'fixed')],
+                [
+                    ('OUTP:AMOD AUTO', None),
+                    ('OUTP:AMOD FIX', None),
+                ]
+            ),
+            # (
+            #     'attenuation',
+            #     None,
+            #     (
+            #         lambda self, v, **kwargs:
+            #             f"OUTP:ATT {self.convert.c2c(self.levelunit, self._internal_unit, float(v)):f} dB",
+            #         None
+            #     )
+            # ),
+            (
+                'leveloffset',
+                None,
+                (
+                    lambda self, v, **kwargs:
+                    f"SOUR:POW:LEV:IMM:OFFS {self.convert.c2c(self.levelunit, self._internal_unit, float(v)):f}",
+                    None
+                )
+            ),
+            (
+                'levellimit',
+                None,
+                (
+                    lambda self, v, **kwargs:
+                    f"SOUR:POW:LIM:AMPL {self.convert.c2c(self.levelunit, self._internal_unit, float(v)):f}",
+                    None
+                )
+            ),
+            (
+                'level',
+                None,
+                (
+                    lambda self, v, **kwargs:
+                    f"SOUR:POW:LEVEL:IMM:AMPL {self.convert.c2c(self.levelunit, self._internal_unit, float(v)):f}",
+                    None
+                )
+            ),
+            (
+                'outputstate',
+                [('1', 'on')],
+                [
+                    ('OUTP:STAT ON', None)
+                ]
+            )
+        ]
+
         #
-        # Die zur Initialisierung des Signalgenerators notwendigen Schritte werden durch zeilenweise Betrachtung der Liste 'presets'
-        # herausgefiltert und in die Befehlsliste (dictionary) 'self._cmds' übertragen und stehen damit stehen auch in 'sg._cmds' zur
-        # Verfügung.
-        # Die Klassenvariable '.conf' (dictionary) wurde in der (Unter-)Klasse DRIVER definert.
-        # -> If / else Anweisung zur Behandlung von Initialisierungsschritten ohne Optionen (if) und mit Optionen (else).
-        # -> Bei Initialisierungsschritten mit Optionen erfolg die Auswahl der notwendigen Option über...(???)
-        # 
+        # Die zur Initialisierung des Signalgenerators notwendigen Schritte werden
+        # durch zeilenweise Betrachtung der Liste 'presets' herausgefiltert und in
+        # die Befehlsliste 'self._cmds' übernommen.
+        #
         for k, vals, actions in presets:
-            # print k, vals, actions
-            # print '---------------------------'
             try:
                 v = self.conf[sec][k]
+
                 if vals is None:
-                    # print self.convert.c2c, self.levelunit, self._internal_unit, float(v)
-                    # print actions[0]
-                    self._cmds['Preset'].append((eval(actions[0]), actions[1]))
+                    cmd, tmpl = actions
+
+                    if callable(cmd):
+                        self._cmds['Preset'].append(
+                            (
+                                lambda _self, _cmd=cmd, _v=v, **kwargs: _cmd(_self, v=_v, **kwargs),
+                                tmpl
+                            )
+                        )
+                    else:
+                        self._cmds['Preset'].append((cmd, tmpl))
+
                 else:
+                    v_cmp = str(v).lower()
                     for idx, vi in enumerate(vals):
-                        if v.lower() in vi:
+                        if v_cmp in vi:
                             self._cmds['Preset'].append(actions[idx])
+
             except KeyError:
                 pass
+
         #
-        # Initialisierung des Signalgenerators über die Methode '._do_cmds' der Klasse DRIVER (driver.py)
+        # Initialisierung des Signalgenerators über die Methode '._do_cmds'
+        # der Klasse DRIVER.
         #
         dct = self._do_cmds('Preset', locals())
         self._update(dct)

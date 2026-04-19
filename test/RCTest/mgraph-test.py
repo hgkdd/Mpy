@@ -5,6 +5,7 @@ from simpleeval import simple_eval
 
 from mpylab.tools.util import locate
 from mpylab.tools.mgraph import MGraph
+from tools.numeric_eval import safe_numeric_eval
 
 
 def dBm2W(v):
@@ -34,7 +35,7 @@ try:
 
     f = 200e6
     while True:
-        fin = simple_eval(input("Frequenz in Hz [%f]? " % f))
+        fin = safe_numeric_eval(input("Frequenz in Hz [%f]? " % f))
         try:
             f = float(fin)
         except:
@@ -43,8 +44,8 @@ try:
             break
         mg.EvaluateConditions()
         mg.SetFreq_Devices(f)
-        start = simple_eval(input("Start: "))
-        end = simple_eval(input("Ende: "))
+        start = safe_numeric_eval(input("Start: "))
+        end = safe_numeric_eval(input("Ende: "))
         start = mg.get_gname(start)
         end = mg.get_gname(end)
         if start is not None and end is not None:

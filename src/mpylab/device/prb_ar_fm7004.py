@@ -28,11 +28,11 @@ class FIELDPROBE(FLDPRB):
     def SetFreq(self, freq):
         self.error = 0
         if freq >= 1e9:
-            fs = "FREQ,%07.3fG" % (freq * 1e-9)
+            fs = f"FREQ,{(freq * 1e-9):07.3f}G"
         elif freq >= 1e6:
-            fs = "FREQ,%07.3fM" % (freq * 1e-6)
+            fs = f"FREQ,{(freq * 1e-6):07.3f}M"
         else:
-            fs = "FREQ,%07.3fK" % (freq * 1e-3)
+            fs = f"FREQ,{(freq * 1e-3):07.3f}K"
         self.write(fs)
         time.sleep(0.1)
         tmpl = r"FREQ,(?P<f>\d{3}\.\d{3})(?P<u>[KMG])"
@@ -49,8 +49,8 @@ class FIELDPROBE(FLDPRB):
     def GetData(self):
         time.sleep(0.5)
         self.error = 0
-        cmd = "D,%d?" % self.channel
-        tmpl = r"D,%d,(?P<x>[\d.]{5}),(?P<y>[\d.]{5}),(?P<z>[\d.]{5}),(?P<t>[\d.]{5})" % self.channel
+        cmd = f"D,{self.channel}?"
+        tmpl = rf"D,{self.channel},(?P<x>[\d.]{5}),(?P<y>[\d.]{5}),(?P<z>[\d.]{5}),(?P<t>[\d.]{5})"
         for i in range(5):  # 5 tries
             ans = self.query(cmd, tmpl)
             if ans:

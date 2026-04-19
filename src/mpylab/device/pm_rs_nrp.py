@@ -15,13 +15,13 @@ class POWERMETER(PWRMTR):
         self._internal_unit = 'dBm'
         self._data_ = 0
         self.sensor = {}
-        self._cmds = {'SetFreq': [("'SENS%d:FREQ:CW %f '%(self.channel, freq)", None)],
-                      'GetFreq': [("'SENS%d:FREQ:CW?'%(self.channel)", r'(?P<freq>%s)' % self._FP)],
-                      'Trigger': [("'INIT%d:IMM'%(self.channel)", None)],
-                      'ZeroOn': [("'CAL%d:ZERO:AUTO ON'%(self.channel)", None)],
-                      'ZeroOff': [("'CAL%d:ZERO:AUTO OFF'%(self.channel)", None)],
+        self._cmds = {'SetFreq': [(f'SENS{self.channel:d}:FREQ:CW {{freq:f}}', None)],
+                      'GetFreq': [(f'SENS{self.channel:d}:FREQ:CW?', rf'(?P<freq>{self._FP})')],
+                      'Trigger': [(f'INIT{self.channel:d}:IMM', None)],
+                      'ZeroOn': [(f'CAL{self.channel:d}:ZERO:AUTO ON', None)],
+                      'ZeroOff': [(f'CAL{self.channel:d}:ZERO:AUTO OFF', None)],
                       'Quit': [],
-                      'Unit': [("'UNIT%d:POW %s'%(channel,unit)", None)],
+                      'Unit': [('UNIT{channel:d}:POW {unit}', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
     # def Zero(self, state='on'):
@@ -37,37 +37,25 @@ class POWERMETER(PWRMTR):
         self.mask = masks[self.channel - 1]
         self.error = PWRMTR.Init(self, ini, self.channel)
 
-        sec = 'channel_%d' % self.channel
+        sec = f'channel_{self.channel}'
         try:
             self.levelunit = self.conf[sec]['unit']
         except KeyError:
             self.levelunit = self._internal_unit
         self._cmds['Preset'] = [('*RST', None),  # reset of device.
-                                ("INIT%d:CONT OFF" % self.channel, None),  # Selects either single-shot
-                                ("SENS%d:AVER:STAT OFF" % self.channel, None),  # deactivation of filter
-                                ("UNIT%d:POW DBM" % self.channel, None)]
+                                (f"INIT{self.channel}:CONT OFF", None),  # Selects either single-shot
+                                (f"SENS{self.channel}:AVER:STAT OFF", None),  # deactivation of filter
+                                (f"UNIT{self.channel}:POW DBM", None)]
 
         presets = [('filter', [], [])]  # TODO: fill with information from ini-file
-        for k, vals, actions in presets:
-            try:
-                v = self.conf[sec][k]
-                if vals is None:  # no comparision
-                    # print actions[0], self.convert.c2c(self.levelunit, self._internal_unit, float(v)), float(v), self.levelunit
-                    self._cmds['Preset'].append((eval(actions[0]), actions[1]))
-                else:
-                    for idx, vi in enumerate(vals):
-                        if v.lower() in vi:
-                            self._cmds['Preset'].append(actions[idx])
-            except KeyError:
-                pass
-
+        self._apply_presets(presets, sec)
         dct = self._do_cmds('Preset', locals())
         self._update(dct)
         return self.error
 
     def InitSen(self, channel=None):
         channel = channel
-        dct = self.query("SYST:SENS%d:INFO?" % channel, r'(?P<inf>.*)')
+        dct = self.query("SYST:SENS{channel}:INFO?", r'(?P<inf>.*)')
         tmp = dct['inf']
         tmp = tmp.split('","')
         tmpt = tmp[0].split('"')
@@ -98,20 +86,23 @@ class POWERMETER(PWRMTR):
             if not (stat & self.mask):
                 finished = True
 
-        dct = self.query("FETCH%d?" % self.channel, r'(?P<val>%s)' % self._FP)  # The last valid result
+        dct = self.query(f"FETCH{self.channel}?", rf'(?P<val>{self._FP})')  # The last valid result
         v = float(dct['val'])  # is returned.
         swr_err = self.get_standard_mismatch_uncertainty()
         self.power = v
-        dct = self.query("UNIT%d:POW?" % self.channel, r'(?P<unit>.*)')  # Ask for the unit of
+        dct = self.query(f"UNIT{self.channel}:POW?", r'(?P<unit>.*)')  # Ask for the unit of
         self._internal_unit = dct['unit']  # the measured values.
+        power_value = self.power
+        iu = self._internal_unit
+        if isinstance(iu, str):
+            power_value, power_unit = self.convert.c2scuq(iu, power_value)  # iu ist a str 'dbm', ...
+        elif isinstance(iu, units.Unit):  # iu is a scuq unit
+            power_unit = iu
+        else:
+            raise TypeError(f"_internal_unit must be str or scuq Unit, got {type(iu).__name__}: {iu!r}")
 
-        try:
-            obj = quantities.Quantity(eval(self._internal_unit),
-                                      ucomponents.UncertainInput(self.power, self.power * swr_err))
-        except (AssertionError, NameError):
-            self.power, self.unit = self.convert.c2scuq(self._internal_unit, float(self.power))
-            obj = quantities.Quantity(self.unit,
-                                      ucomponents.UncertainInput(self.power, self.power * swr_err))
+        obj = quantities.Quantity(power_unit,
+                                  ucomponents.UncertainInput(power_value, power_value * swr_err))
         return self.error, obj  # TODO: include other uncertainties
 
     def GetDataNB(self, retrigger=None):
@@ -141,20 +132,24 @@ class POWERMETER(PWRMTR):
             dct = self.query("STAT:OPER:MEAS:SUMM:COND?", r'(?P<stat>.*)')
             stat = int(dct['stat'])
             if not (stat & self.mask):
-                dct = self.query("FETCH%d?" % self.channel, r'(?P<val>%s)' % self._FP)  # The last valid result
+                dct = self.query(f"FETCH{self.channel}?", rf'(?P<val>{self._FP})')  # The last valid result
                 v = float(dct['val'])  # is returned.
                 swr_err = self.get_standard_mismatch_uncertainty()
                 self.power = v
-                dct = self.query("UNIT%d:POW?" % self.channel, r'(?P<unit>.*)')  # Ask for the unit of
+                dct = self.query(f"UNIT{self.channel}:POW?", r'(?P<unit>.*)')  # Ask for the unit of
                 self._internal_unit = dct['unit']  # the measured values.
 
-                try:
-                    obj = quantities.Quantity(eval(self._internal_unit),
-                                              ucomponents.UncertainInput(self.power, self.power * swr_err))
-                except (AssertionError, NameError):
-                    self.power, self.unit = self.convert.c2scuq(self._internal_unit, float(self.power))
-                    obj = quantities.Quantity(self.unit,
-                                              ucomponents.UncertainInput(self.power, self.power * swr_err))
+                power_value = self.power
+                iu = self._internal_unit
+                if isinstance(iu, str):
+                    power_value, power_unit = self.convert.c2scuq(iu, power_value)  # iu ist a str 'dbm', ...
+                elif isinstance(iu, units.Unit):  # iu is a scuq unit
+                    power_unit = iu
+                else:
+                    raise TypeError(f"_internal_unit must be str or scuq Unit, got {type(iu).__name__}: {iu!r}")
+
+                obj = quantities.Quantity(power_unit,
+                                          ucomponents.UncertainInput(power_value, power_value * swr_err))
                 if retrigger:
                     self.Trigger()
                     self._data_ = 1
@@ -168,20 +163,25 @@ class POWERMETER(PWRMTR):
                 return self.error, obj
 
         else:
-            dct = self.query("FETCH%d?" % self.channel, r'(?P<val>%s)' % self._FP)  # The last valid result
+            dct = self.query(f"FETCH{self.channel}?", rf'(?P<val>{self._FP})')  # The last valid result
             v = float(dct['val'])  # is returned.
             swr_err = self.get_standard_mismatch_uncertainty()
             self.power = v
-            dct = self.query("UNIT%d:POW?" % self.channel, r'(?P<unit>.*)')  # Ask for the unit of
+            dct = self.query(f"UNIT{self.channel}:POW?", r'(?P<unit>.*)')  # Ask for the unit of
             self._internal_unit = dct['unit']  # the measured values.
 
-        try:
-            obj = quantities.Quantity(eval(self._internal_unit),
-                                      ucomponents.UncertainInput(self.power, self.power * swr_err))
-        except (AssertionError, NameError):
-            self.power, self.unit = self.convert.c2scuq(self._internal_unit, float(self.power))
-            obj = quantities.Quantity(self.unit,
-                                      ucomponents.UncertainInput(self.power, self.power * swr_err))
+        power_value = self.power
+        iu = self._internal_unit
+        if isinstance(iu, str):
+            power_value, power_unit = self.convert.c2scuq(iu, power_value)  # iu ist a str 'dbm', ...
+        elif isinstance(iu, units.Unit):  # iu is a scuq unit
+            power_unit = iu
+        else:
+            raise TypeError(f"_internal_unit must be str or scuq Unit, got {type(iu).__name__}: {iu!r}")
+
+        obj = quantities.Quantity(power_unit,
+                                  ucomponents.UncertainInput(power_value, power_value * swr_err))
+
         if retrigger:
             self.Trigger()
             self._data_ = 1
@@ -218,7 +218,7 @@ class POWERMETER(PWRMTR):
         self.error = 0
         dct = self.query('MEAS?', r'(?P<val>.*)')
         val = float(dct['val'])
-        dct = self.query("UNIT%d:POW?" % self.channel, r'(?P<unit>.*)')
+        dct = self.query(f"UNIT{self.channel}:POW?", r'(?P<unit>.*)')
         self._internal_unit = dct['unit']
         return val, self._internal_unit
 
@@ -227,7 +227,7 @@ class POWERMETER(PWRMTR):
     def Unit(self, ch, unit):  # Selects the output unit          |      DBM, W,
         channel = ch  # for the measured power values.   |      DBUV
         unit = unit  # \
-        self.write("UNIT%d:POW %s" % (channel, unit))
+        self.write("UNIT{channel}:POW {unit}")
         self._internal_unit = unit
         return
 
@@ -278,7 +278,7 @@ def main():
     import io
     import sys
     from mpylab.tools.util import format_block
-    from mpylab.device.powermeter_ui import UI as UI
+    from mpylab.device.powermeter_ui import PowerMeterWidget as UI
 
     try:
         ini = sys.argv[1]

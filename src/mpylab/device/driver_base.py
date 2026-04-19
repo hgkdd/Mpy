@@ -107,7 +107,7 @@ class TCPSocketConnection(object):
         self._termination = termination
 
     def _send(self, socket, value):
-        encoded_value = (('%s' % value) + self._termination).encode('ascii')
+        encoded_value = f'{value}{self._termination}'.encode('ascii')
         sent = socket.sendall(encoded_value)
         return sent
 

@@ -71,7 +71,7 @@ und der Signalgenerator antwortet darauf z.B. mit::
 			
 Dementsprechend lautet der :meth:`GetFreq`-Eintrag im `_cmds`-Wörterbuch::
 			
-   'GetFreq':  [( 'OPCW', r'(?P<freq>%s)'%self._FP)],
+   'GetFreq':  [( 'OPCW', rf'(?P<freq>{self._FP})')],
 			
 Da hier eine Antwort, nämlich die aktuelle Frequenz, vom Signalgenerator erwartet wird, 
 ist das Template nicht `None`, sondern entspricht einer bestimmten Zeichenfolge die nun näher 

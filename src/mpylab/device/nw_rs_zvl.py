@@ -137,7 +137,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         NETWORKAN,
         Command(
             'SetCenterFreq',
-            'SENSe%(channel)d:FREQuency:CENTer %(cfreq)s HZ',
+            'SENSe{channel:d}:FREQuency:CENTer {cfreq:s} HZ',
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('cfreq', ptype=float),
@@ -146,13 +146,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetCenterFreq',
-            'SENSe%(channel)d:FREQuency:CENTer?',
+            'SENSe{channel:d}:FREQuency:CENTer?',
             Parameter('channel', class_attr='internChannel'),
             rtype="<default>"
         ),
         Command(
             'SetSpan',
-            'SENSe%(channel)d:FREQuency:SPAN %(span)s HZ',
+            'SENSe{channel:d}:FREQuency:SPAN {span:s} HZ',
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('span', ptype=float),
@@ -161,13 +161,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetSpan',
-            'SENSe%(channel)d:FREQuency:SPAN?',
+            'SENSe{channel:d}:FREQuency:SPAN?',
             Parameter('channel', class_attr='internChannel'),
             rtype="<default>"
         ),
         Command(
             'SetStartFreq',
-            'SENSe%(channel)d:FREQuency:STARt %(stfreq)s HZ',
+            'SENSe{channel:d}:FREQuency:STARt {stfreq:s} HZ',
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('stfreq', ptype=float)
@@ -176,13 +176,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetStartFreq',
-            'SENSe%(channel)d:FREQuency:STARt?',
+            'SENSe{channel:d}:FREQuency:STARt?',
             Parameter('channel', class_attr='internChannel'),
             rtype="<default>"
         ),
         Command(
             'SetStopFreq',
-            'SENSe%(channel)d:FREQuency:STOP %(spfreq)s HZ',
+            'SENSe{channel:d}:FREQuency:STOP {spfreq:s} HZ',
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('spfreq', ptype=float)
@@ -191,13 +191,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetStopFreq',
-            'SENSe%(channel)d:FREQuency:STOP?',
+            'SENSe{channel:d}:FREQuency:STOP?',
             Parameter('channel', class_attr='internChannel'),
             rtype="<default>"
         ),
         Command(
             'SetRBW',
-            'SENSe%(channel)d:BANDwidth:RESolution %(rbw)s HZ',
+            'SENSe{channel:d}:BANDwidth:RESolution {rbw:s} HZ',
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('rbw', ptype=float)
@@ -206,13 +206,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetRBW',
-            'SENSe%(channel)d:BANDwidth:RESolution?',
+            'SENSe{channel:d}:BANDwidth:RESolution?',
             Parameter('channel', class_attr='internChannel'),
             rtype="<default>"
         ),
         Command(
             'SetRefLevel',
-            'DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:RLEVel %(reflevel)s DBM',
+            'DISPlay:WINDow{WindowName:s}:TRACe{windTraceNumber:s}:Y:SCALe:RLEVel {reflevel:s} DBM',
             (
                 Parameter('WindowName', class_attr='activeWindow_Name'),
                 Parameter('windTraceNumber', class_attr='activeTrace_WinNum'),
@@ -222,7 +222,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetRefLevel',
-            'DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:RLEVel?',
+            'DISPlay:WINDow{WindowName:s}:TRACe{windTraceNumber:s}:Y:SCALe:RLEVel?',
             (
                 Parameter('WindowName', class_attr='activeWindow_Name'),
                 Parameter('windTraceNumber', class_attr='activeTrace_WinNum')
@@ -231,7 +231,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'SetDivisionValue',
-            'DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:PDIVision %(divivalue)s DBM',
+            'DISPlay:WINDow{WindowName:s}:TRACe{windTraceNumber:s}:Y:SCALe:PDIVision {divivalue:s} DBM',
             (
                 Parameter('WindowName', class_attr='activeWindow_Name'),
                 Parameter('windTraceNumber', class_attr='activeTrace_WinNum'),
@@ -241,7 +241,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetDivisionValue',
-            'DISPlay:WINDow%(WindowName)s:TRACe%(windTraceNumber)s:Y:SCALe:PDIVision?',
+            'DISPlay:WINDow{WindowName:s}:TRACe{windTraceNumber:s}:Y:SCALe:PDIVision?',
             (
                 Parameter('WindowName', class_attr='activeWindow_Name'),
                 Parameter('windTraceNumber', class_attr='activeTrace_WinNum')
@@ -251,7 +251,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         Function('CreateTrace', (
             Command(
                 'CreateTrace',
-                "CALCulate%(channel)d:PARameter:SDEFine '%(tracename)s', '%(sparam)s'",
+                "CALCulate{channel:d}:PARameter:SDEFine '{tracename:s}', '{sparam:s}'",
                 (
                     Parameter('channel', class_attr='internChannel'),
                     Parameter('tracename', ptype=str),
@@ -260,7 +260,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
             ),
             Command(
                 'ActivedTrace',
-                "DISPlay:WINDow%(windowName)s:TRACe%(windTraceNumber)d:FEED '%(tracename)s'",
+                "DISPlay:WINDow{windowName:s}:TRACe{windTraceNumber:d}:FEED '{tracename:s}'",
                 (
                     Parameter('windowName', class_attr='activeWindow_Name'),
                     Parameter('windTraceNumber', ptype=int),
@@ -270,7 +270,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         )),
         Command(
             'DelTrace',
-            "CALCulate%(channel)d:PARameter:DELete '%(traceName)s'",
+            "CALCulate{channel:d}:PARameter:DELete '{traceName:s}'",
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('traceName', ptype=str)
@@ -278,13 +278,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetTrace',
-            'CALCulate%(channel)d:PARameter:CATalog?',
+            'CALCulate{channel:d}:PARameter:CATalog?',
             Parameter('channel', class_attr='internChannel'),
             rtype="<default>"
         ),
         Command(
             'SetTrace',
-            "CALCulate%(channel)d:PARameter:SELect '%(traceName)s'",
+            "CALCulate{channel:d}:PARameter:SELect '{traceName:s}'",
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('traceName', ptype=str)
@@ -292,7 +292,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'SetSparameter',
-            "CALCulate%(channel)d:PARameter:MEASure '%(traceName)s' '%(sparam)s'",
+            "CALCulate{channel:d}:PARameter:MEASure '{traceName:s}' '{sparam:s}'",
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('traceName', class_attr='activeTrace_Name'),
@@ -302,7 +302,7 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'SetSweepType',
-            'SENSe%(channel)d:SWEep:TYPE %(sweepType)s',
+            'SENSe{channel:d}:SWEep:TYPE {sweepType:s}',
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('sweepType', ptype=str)
@@ -311,13 +311,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetSweepType',
-            'SENSe%(channel)d:SWEep:TYPE?',
+            'SENSe{channel:d}:SWEep:TYPE?',
             Parameter('channel', class_attr='internChannel'),
             rtype='<default>'
         ),
         Command(
             'SetSweepCount',
-            'SENSe%(channel)d:SWEep:COUNt %(sweepCount)s',
+            'SENSe{channel:d}:SWEep:COUNt {sweepCount:s}',
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('sweepCount', ptype=int)
@@ -326,18 +326,18 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetSweepCount',
-            'SENSe%(channel)d:SWEep:COUNt?',
+            'SENSe{channel:d}:SWEep:COUNt?',
             Parameter('channel', class_attr='internChannel'),
             rtype='<default>'
         ),
         Command(
             'NewSweepCount',
-            'INITiate%(channel)d:IMMediate',
+            'INITiate{channel:d}:IMMediate',
             Parameter('channel', class_attr='internChannel')
         ),
         Command(
             'SetSweepPoints',
-            'SENSe%(channel)d:SWEep:POINts %(spoints)s',
+            'SENSe{channel:d}:SWEep:POINts {spoints:s}',
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('spoints', ptype=int)
@@ -346,13 +346,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetSweepPoints',
-            'SENSe%(channel)d:SWEep:POINts?',
+            'SENSe{channel:d}:SWEep:POINts?',
             Parameter('channel', class_attr='internChannel'),
             rtype='<default>'
         ),
         Command(
             'SetSweepMode',
-            "INITiate%(channel)d:CONTinuous %(sweepMode)s",
+            "INITiate{channel:d}:CONTinuous {sweepMode:s}",
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('sweepMode', ptype=str)
@@ -361,13 +361,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetSweepMode',
-            'INITiate%(channel)d:CONTinuous?',
+            'INITiate{channel:d}:CONTinuous?',
             Parameter('channel', class_attr='internChannel'),
             rtype=str
         ),
         Command(
             'SetTriggerMode',
-            'TRIGger%(channel)d:SEQuence:SOURce %(triggerMode)s',
+            'TRIGger{channel:d}:SEQuence:SOURce {triggerMode:s}',
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('triggerMode', ptype=str)
@@ -376,13 +376,13 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetTriggerMode',
-            'TRIGger%(channel)d:SEQuence:SOURce?',
+            'TRIGger{channel:d}:SEQuence:SOURce?',
             Parameter('channel', class_attr='internChannel'),
             rtype='<default>'
         ),
         Command(
             'SetTriggerDelay',
-            'TRIGger%(channel)d:SEQuence:HOLDoff %(tdelay)s s',
+            'TRIGger{channel:d}:SEQuence:HOLDoff {tdelay:s} s',
             (
                 Parameter('channel', class_attr='internChannel'),
                 Parameter('tdelay', ptype=float)
@@ -391,33 +391,33 @@ class NETWORKANALYZER(NETWORKAN, metaclass=Meta_Driver):
         ),
         Command(
             'GetTriggerDelay',
-            'TRIGger%(channel)d:SEQuence:HOLDoff?',
+            'TRIGger{channel:d}:SEQuence:HOLDoff?',
             Parameter('channel', class_attr='internChannel'),
             rtype='<default>'
         ),
         Command(
             'CreateWindow',
-            'DISPlay:WINDow%(windowName)d:STATe ON',
+            'DISPlay:WINDow{windowName:d}:STATe ON',
             Parameter('windowName', ptype=int),
         ),
         Command(
             'DelWindow',
-            'DISPlay:WINDow%(windowName)d:STATe OFF',
+            'DISPlay:WINDow{windowName:d}:STATe OFF',
             Parameter('windowName', ptype=int),
         ),
         Command(
             'CreateChannel',
-            'CONFigure:CHANnel%(channel)d:STATe ON',
+            'CONFigure:CHANnel{channel:d}:STATe ON',
             Parameter('channel', class_attr='internChannel')
         ),
         Command(
             'DelChannel',
-            'CONFigure:CHANnel%(channel)d:STATe OFF',
+            'CONFigure:CHANnel{channel:d}:STATe OFF',
             Parameter('channel', class_attr='internChannel')
         ),
         Command(
             'GetSpectrum',
-            'CALCulate%(channel)d:DATA? FDAT',
+            'CALCulate{channel:d}:DATA? FDAT',
             Parameter('channel', class_attr='internChannel'),
             rtype=TUPLE_OF_FLOAT()
         ),
@@ -667,12 +667,7 @@ class TRACE:
         self.window = win
         self.sparameter = sparam
         self.traceWindowNumber = self.__gethighestTraceWindowNumber()
-        self.internName = '%s_Ch%dWIN%sTR%d' % (
-            name,
-            self.networkanalyzer.getChannelNumber(),
-            self.window.getInternName(),
-            self.traceWindowNumber
-        )
+        self.internName = f'{name}_Ch{self.networkanalyzer.getChannelNumber()}WIN{self.window.getInternName()}TR{self.traceWindowNumber}'
 
     def __gethighestTraceWindowNumber(self):
         numb = 9

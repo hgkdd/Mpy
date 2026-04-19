@@ -65,7 +65,7 @@ class FIELDPROBE(FLDPRB):
         if self.visa and not self.virtual:  # ignore virtual instruments
             key = self._hash()  # here: visa_ch
             if key in FIELDPROBE.instances:
-                raise RuntimeWarning("Multi Channel Field Probe: Instance already in use: %s" % key)
+                raise RuntimeWarning(f"Multi Channel Field Probe: Instance already in use: {key}")
 
             FIELDPROBE.instances.setdefault(key, self)  # register this instance
         if len(FIELDPROBE.instances.keys()) == 1:
@@ -86,7 +86,7 @@ class FIELDPROBE(FLDPRB):
         return self.error
 
     def _hash(self):
-        return "%s_%s" % (self.visa, self.ch)
+        return "{self.visa}_{self.ch}"
 
     def wait_for_laser_ready(self):
         if not self.is_main_instance:

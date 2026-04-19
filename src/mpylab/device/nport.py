@@ -49,10 +49,11 @@ class NPORT(DRIVER):
         # print self.Configuration.conf
         # self.conf.update(self.Configuration.conf)
         for ch in self.Configuration.channel_list:
-            thename = self._get('channel_%d' % ch, 'name')
-            thefile = self._get('channel_%d' % ch, 'file')
-            theinterpol = self._get('channel_%d' % ch, 'interpolation')
-            theunit = self._get('channel_%d' % ch, 'unit')
+            thech = f'channel_{ch}'
+            thename = self._get(thech, 'name')
+            thefile = self._get(thech, 'file')
+            theinterpol = self._get(thech, 'interpolation')
+            theunit = self._get(thech, 'unit')
             self.data[thename] = {}
             self.data[thename]['unit'] = theunit
             self.data[thename]['datafile'] = DatFile(filename=thefile,

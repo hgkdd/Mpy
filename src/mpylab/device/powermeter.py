@@ -104,10 +104,10 @@ class POWERMETER(DRIVER):
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)
-        self._cmds = {'SetFreq': [("'FREQ %s HZ'%freq", None)],
-                      'GetFreq': [('FREQ?', r'FREQ (?P<freq>%s) HZ' % self._FP)],
-                      'GetData': [('POW?', r'POW (?P<power>%s) (?P<unit>)\S+' % self._FP)],
-                      'GetDataNB': [('POW?', r'POW (?P<power>%s) (?P<unit>)\S+' % self._FP)],
+        self._cmds = {'SetFreq': [("FREQ {freq} HZ", None)],
+                      'GetFreq': [('FREQ?', rf'FREQ (?P<freq>{self._FP}) HZ')],
+                      'GetData': [('POW?', rf'POW (?P<power>{self._FP}) (?P<unit>)\S+')],
+                      'GetDataNB': [('POW?', rf'POW (?P<power>{self._FP}) (?P<unit>)\S+')],
                       'Trigger': [('TRG', None)],
                       'ZeroOn': [('ZERO ON', None)],
                       'ZeroOff': [('ZERO OFF', None)],
@@ -186,13 +186,17 @@ class POWERMETER(DRIVER):
             self.update_internal_unit()
             swr_err = self.get_standard_mismatch_uncertainty()
             self.power = float(self.power)
-            try:
-                obj = quantities.Quantity(eval(self._internal_unit),
-                                          ucomponents.UncertainInput(self.power, self.power * swr_err))
-            except (AssertionError, NameError):
-                self.power, self.unit = self.convert.c2scuq(self._internal_unit, float(self.power))
-                obj = quantities.Quantity(self.unit,
-                                          ucomponents.UncertainInput(self.power, self.power * swr_err))
+            power_value = self.power
+            iu = self._internal_unit
+            if isinstance(iu, str):
+                power_value, power_unit = self.convert.c2scuq(iu, power_value)  # iu ist a str 'dbm', ...
+            elif isinstance(iu, units.Unit):  # iu is a scuq unit
+                power_unit = iu
+            else:
+                raise TypeError(f"_internal_unit must be str or scuq Unit, got {type(iu).__name__}: {iu!r}")
+
+            obj = quantities.Quantity(power_unit,
+                                      ucomponents.UncertainInput(power_value, power_value * swr_err))
         else:
             obj = None
         return self.error, obj
@@ -250,7 +254,7 @@ class POWERMETER(DRIVER):
         The expanded uncertainty is obtained by multiplying with the correct coverage factor. 
         Here, this is 0.997*sqrt(2) approx 1.4 (U-shaped distribution) for 95% coverage.
         """
-        chdict = self.conf['channel_%d' % self.channel]
+        chdict = self.conf[f'channel_{self.channel}']
         vswr1 = chdict.get('swr1', 1.0)
         vswr2 = chdict.get('swr2', 1.0)
         # calculate reflection coefficients from vswr
@@ -278,13 +282,13 @@ if __name__ == '__main__':
         d.SetVirtual(False)
 
     err, des = d.GetDescription()
-    print(("Description: %s" % des))
+    print(f"Description: {des}")
 
     for freq in [100]:
-        print(("Set freq to %e Hz" % freq))
+        print(f"Set freq to {freq:e} Hz")
         err, rfreq = d.SetFreq(freq)
         if err == 0:
-            print(("Freq set to %e Hz" % rfreq))
+            print(f"Freq set to {rfreq:e} Hz")
         else:
             print("Error setting freq")
 

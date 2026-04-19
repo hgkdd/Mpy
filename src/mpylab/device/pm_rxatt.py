@@ -977,14 +977,12 @@ class POWERMETER(PWRMTR):
         for m in methods:
             setattr(self, m, getattr(self.pm_instance, m))
 
-        # sw=imp.load_source('sw', 'c:\\MpyConfig\\LargeRC\\script\\sw_rc_rx.py')
-
         spec = importlib.util.spec_from_file_location('sw', '/opt/share/MpyConfig/LargeRC/script/sw_rc_rx.py')
         # Modul aus der Spezifikation erstellen
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         self.sw_instance = module.SWController()
-        swini = format_block("""
+        swini = format_block(f"""
                         [DESCRIPTION]
                         DESCRIPTION = RC RX Switch
                         TYPE = Custom
@@ -1000,9 +998,9 @@ class POWERMETER(PWRMTR):
                         FSTEP = 0.0
                         GPIB = 2
                         OUTPUT = POWERMETER
-                        SWFREQ = %f
+                        SWFREQ = {self.swfreq}
                         VIRTUAL = 0
-                        """ % (self.swfreq))
+                        """)
         swini = io.StringIO(swini)
         self.sw_instance.Init(swini)
         self.sw_instance.SetAtt(True)
@@ -1046,7 +1044,7 @@ class POWERMETER(PWRMTR):
         else:
             ext = 'H'
         for s in (0, 20):
-            setattr(self, 'np%d' % s, getattr(self, 'np%d%s' % (s, ext)))
+            setattr(self, f'np{s:d}', getattr(self, f'np{s:d}{ext}'))
         self.np20.SetFreq(freq)
         self.np0.SetFreq(freq)
         err, self.att20 = self.np20.GetData(what='S21')
@@ -1138,7 +1136,7 @@ def main():
     import io
     import sys
     from mpylab.tools.util import format_block
-    from mpylab.device.powermeter_ui import UI as UI
+    from mpylab.device.powermeter_ui import PowerMeterWidget as UI
 
     try:
         ini = sys.argv[1]

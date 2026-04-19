@@ -34,15 +34,28 @@ class SIGNALGENERATOR(SGNLGNRTR):
                      ('CW 10 MZ', None),  # set frequency to 10 MHz
                      ('RF 0', None)],  # turn RF output off
             # set a certain continous wave frequecy
-            'SetFreq': [("'CW %.1f HZ'%freq", None)],
+            'SetFreq': [('CW {freq:.1f} HZ', None)],
             # read the continuos wave frequency value
-            'GetFreq': [('OPCW', r'(?P<freq>%s)' % self._FP)],
+            'GetFreq': [('OPCW', rf'(?P<freq>{self._FP})')],
             # set a continous wave power level
-            'SetLevel': [("'PL %f DBM'%self.convert.scuq2c(unit, self._internal_unit, float(level))[0]", None)],
+            'SetLevel': [
+                (
+                    lambda self, unit, level, **kwargs:
+                    f"PL {self.convert.scuq2c(unit, self._internal_unit, float(level))[0]:f} DBM",
+                    None
+                )
+            ],
+            #'SetLevel': [("'PL %f DBM'%self.convert.scuq2c(unit, self._internal_unit, float(level))[0]", None)],
             # read the continous wave power level
-            'GetLevel': [('OPPL', r'(?P<level>%s)' % (self._FP))],
+            'GetLevel': [('OPPL', rf'(?P<level>{self._FP})')],
             # configure amplitude modulation
-            'ConfAM': [("'AD %d'%(min(80,int(depth*100)))", None)],
+            'ConfAM': [
+                (
+                    lambda self, depth, **kwargs: f"AD {min(80, int(depth * 100)):d}",
+                    None
+                )
+            ],
+            # 'ConfAM': [("'AD %d'%(min(80,int(depth*100)))", None)],
             # turn RF output on
             'RFOn': [('RF 1', None)],
             # turn RF output off
@@ -69,7 +82,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         # initialize the parent class of all signal generators
         self.error = SGNLGNRTR.Init(self, ini, channel)
         # string with current channel
-        sec = 'channel_%d' % channel
+        sec = f'channel_{channel}'
         try:
             # set levelunit with the 'unit' of the parent class
             self.levelunit = self.conf[sec]['unit']
@@ -79,36 +92,98 @@ class SIGNALGENERATOR(SGNLGNRTR):
         # delete all presets from the command list
         self._cmds['Preset'] = []
         # key, vals, actions
-        presets = [('attmode',
-                    [('0', 'auto'), ('1', 'fixed')],
-                    [(':SPECIAL_FUNCTION 3', None), (':SPECIAL_FUNCTION 4', None)]),
-                   ('attenuation',
-                    None,
-                    ("':SPECIAL_FUNCTION 23,%f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
-                   ('level',
-                    None,
-                    ("':RF_LEVEL:INTERNAL %f DBM'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))",
-                     None)),
-                   ('outputstate',
-                    [('1', 'on')],
-                    [(':RF_POWER ON', None)])]
-
+        presets = [
+            (
+                'attmode',
+                [('0', 'auto'), ('1', 'fixed')],
+                [
+                    (':SPECIAL_FUNCTION 3', None),
+                    (':SPECIAL_FUNCTION 4', None),
+                ]
+            ),
+            (
+                'attenuation',
+                None,
+                (
+                    lambda self, v, **kwargs:
+                    f":SPECIAL_FUNCTION 23,{self.convert.c2c(self.levelunit, self._internal_unit, float(v)):f}",
+                    None
+                )
+            ),
+            (
+                'level',
+                None,
+                (
+                    lambda self, v, **kwargs:
+                    f":RF_LEVEL:INTERNAL {self.convert.c2c(self.levelunit, self._internal_unit, float(v)):f} DBM",
+                    None
+                )
+            ),
+            (
+                'outputstate',
+                [('1', 'on')],
+                [
+                    (':RF_POWER ON', None)
+                ]
+            ),
+        ]
+        # presets = [('attmode',
+        #             [('0', 'auto'), ('1', 'fixed')],
+        #             [(':SPECIAL_FUNCTION 3', None), (':SPECIAL_FUNCTION 4', None)]),
+        #            ('attenuation',
+        #             None,
+        #             ("':SPECIAL_FUNCTION 23,%f'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))", None)),
+        #            ('level',
+        #             None,
+        #             ("':RF_LEVEL:INTERNAL %f DBM'%self.convert.c2c(self.levelunit, self._internal_unit, float(v))",
+        #              None)),
+        #            ('outputstate',
+        #             [('1', 'on')],
+        #             [(':RF_POWER ON', None)])]
         for k, vals, actions in presets:
-            # print k, vals, actions
             try:
                 v = self.conf[sec][k]
-                # print sec, k, v
-                if (vals is None):  # no comparision
-                    # print actions[0], self.convert.c2c(self.levelunit, self._internal_unit, float(v)), float(v), self.levelunit
-                    # print eval(actions[0])
-                    self._cmds['Preset'].append((eval(actions[0]), actions[1]))
+
+                if vals is None:
+                    cmd, tmpl = actions
+
+                    if callable(cmd):
+                        self._cmds['Preset'].append(
+                            (
+                                lambda _self, _cmd=cmd, _v=v, **kwargs: _cmd(_self, v=_v, **kwargs),
+                                tmpl
+                            )
+                        )
+                    else:
+                        self._cmds['Preset'].append((cmd, tmpl))
+
                 else:
+                    v_cmp = str(v).lower()
                     for idx, vi in enumerate(vals):
-                        if v.lower() in vi:
+                        if v_cmp in vi:
                             self._cmds['Preset'].append(actions[idx])
+
             except KeyError:
                 pass
+
         dct = self._do_cmds('Preset', locals())
+
+        # for k, vals, actions in presets:
+        #     # print k, vals, actions
+        #     try:
+        #         v = self.conf[sec][k]
+        #         # print sec, k, v
+        #         if (vals is None):  # no comparision
+        #             # print actions[0], self.convert.c2c(self.levelunit, self._internal_unit, float(v)), float(v), self.levelunit
+        #             # print eval(actions[0])
+        #             self._cmds['Preset'].append((eval(actions[0]), actions[1]))
+        #         else:
+        #             for idx, vi in enumerate(vals):
+        #                 if v.lower() in vi:
+        #                     self._cmds['Preset'].append(actions[idx])
+        #     except KeyError:
+        #         pass
+        # dct = self._do_cmds('Preset', locals())
         self._update(dct)
         # pprint.pprint(self._cmds)
         return self.error
@@ -154,25 +229,25 @@ def main():
 
     # try to initialize
     err = sg.Init(ini)
-    assert err == 0, 'Init() fails with error %d' % (err)
+    assert err == 0, f'Init() fails with error err'
 
     # try to set frequency
     err, freq = sg.SetFreq(fr)
-    assert err == 0, 'SetFreq() fails with error %d' % (err)
-    assert freq == fr, 'SetFreq() returns freq=%e instead of %e' % (freq, fr)
+    assert err == 0, f'SetFreq() fails with error {err}'
+    assert freq == fr, f'SetFreq() returns freq={freq:e} instead of {fr:e}'
 
     # try to switch RF on
     err, _ = sg.RFOn()
-    assert err == 0, 'RFOn() fails with error %d' % (err)
+    assert err == 0, f'RFOn() fails with error {err}'
 
     # try to set a level
     err, level = sg.SetLevel(lv)
-    assert err == 0, 'SetLevel() fails with error %d' % (err)
-    assert level == lv, 'SetLevel() returns level=%s instead of %s' % (level, lv)
+    assert err == 0, f'SetLevel() fails with error {err}'
+    assert level == lv, f'SetLevel() returns level={level} instead of {lv}'
 
     # try to quit
     err = sg.Quit()
-    assert err == 0, 'Quit() fails with error %d' % (err)
+    assert err == 0, f'Quit() fails with error {err}'
 
 
 if __name__ == '__main__':

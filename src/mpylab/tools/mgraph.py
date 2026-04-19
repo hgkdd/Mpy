@@ -15,10 +15,13 @@ import inspect
 from io import StringIO
 from typing import Any
 from pathlib import Path
+import ast
+import operator as op
 
 import pydot
 import configparser
 from numpy import bool_, sqrt, absolute
+from numpy import bool_
 from scipy.interpolate import interp1d
 
 #import mpylab.device.device as device
@@ -30,6 +33,125 @@ from mpylab.tools.aunits import AMPLITUDERATIO, POWERRATIO
 from mpylab.tools.configuration import fstrcmp
 from mpylab.tools.util import extrap1d, locate, format_block
 
+
+_ALLOWED_BINOPS = {
+    ast.Add: op.add,
+    ast.Sub: op.sub,
+    ast.Mult: op.mul,
+    ast.Div: op.truediv,
+    ast.FloorDiv: op.floordiv,
+    ast.Mod: op.mod,
+    ast.Pow: op.pow,
+}
+
+_ALLOWED_UNARYOPS = {
+    ast.UAdd: op.pos,
+    ast.USub: op.neg,
+    ast.Not: op.not_,
+}
+
+_ALLOWED_CMPOPS = {
+    ast.Lt: op.lt,
+    ast.LtE: op.le,
+    ast.Gt: op.gt,
+    ast.GtE: op.ge,
+    ast.Eq: op.eq,
+    ast.NotEq: op.ne,
+}
+
+_ALLOWED_BOOLOPS = {
+    ast.And: all,
+    ast.Or: any,
+}
+
+
+def safe_action_exec(expr, names):
+    tree = ast.parse(expr, mode="exec")
+
+    if len(tree.body) != 1 or not isinstance(tree.body[0], ast.Expr):
+        raise ValueError("Only one action expression is allowed")
+
+    call = tree.body[0].value
+    if not isinstance(call, ast.Call):
+        raise ValueError("Only calls are allowed")
+
+    if not isinstance(call.func, ast.Attribute):
+        raise ValueError("Only object method calls are allowed")
+
+    if not isinstance(call.func.value, ast.Name):
+        raise ValueError("Only simple object names are allowed")
+
+    obj_name = call.func.value.id
+    method_name = call.func.attr
+
+    obj = names[obj_name]
+    method = getattr(obj, method_name)
+
+    args = [ast.literal_eval(arg) for arg in call.args]
+    kwargs = {kw.arg: ast.literal_eval(kw.value) for kw in call.keywords}
+
+    return method(*args, **kwargs)
+
+def safe_condition_eval(expr, names):
+    """
+    Safe evaluator for graph conditions.
+
+    Supported:
+    - numeric constants, strings, booleans, None
+    - names from `names`
+    - arithmetic: + - * / // % **
+    - unary: + - not
+    - comparisons: < <= > >= == !=
+    - chained comparisons: 10e3 < f <= 1e6
+    - boolean operators: and, or
+    """
+    tree = ast.parse(expr, mode="eval")
+
+    def _eval(node):
+        if isinstance(node, ast.Expression):
+            return _eval(node.body)
+
+        if isinstance(node, ast.Constant):
+            return node.value
+
+        if isinstance(node, ast.Name):
+            if node.id in names:
+                return names[node.id]
+            raise NameError(f"Unknown name in condition: {node.id}")
+
+        if isinstance(node, ast.BinOp):
+            fn = _ALLOWED_BINOPS.get(type(node.op))
+            if fn is None:
+                raise ValueError(f"Operator not allowed: {type(node.op).__name__}")
+            return fn(_eval(node.left), _eval(node.right))
+
+        if isinstance(node, ast.UnaryOp):
+            fn = _ALLOWED_UNARYOPS.get(type(node.op))
+            if fn is None:
+                raise ValueError(f"Unary operator not allowed: {type(node.op).__name__}")
+            return fn(_eval(node.operand))
+
+        if isinstance(node, ast.BoolOp):
+            fn = _ALLOWED_BOOLOPS.get(type(node.op))
+            if fn is None:
+                raise ValueError(f"Boolean operator not allowed: {type(node.op).__name__}")
+            return fn(_eval(v) for v in node.values)
+
+        if isinstance(node, ast.Compare):
+            left = _eval(node.left)
+            for op_node, comparator in zip(node.ops, node.comparators):
+                right = _eval(comparator)
+                fn = _ALLOWED_CMPOPS.get(type(op_node))
+                if fn is None:
+                    raise ValueError(f"Comparison operator not allowed: {type(op_node).__name__}")
+                if not fn(left, right):
+                    return False
+                left = right
+            return True
+
+        raise ValueError(f"Expression element not allowed: {type(node).__name__}")
+
+    return _eval(tree)
 
 def _stripquotes(s: str) -> str:
     """
@@ -256,7 +378,8 @@ class Graph():
             path = []
         allpaths = self.find_all_paths(start, end, path)
         if allpaths:
-            return sorted(allpaths)[0]
+            #return sorted(allpaths)[0]
+            return min(allpaths, key=len)
         else:
             return None
 
@@ -288,7 +411,7 @@ class MGraph(Graph):
             themap = {}
         self.map = themap
         # make map bijective
-        self.bimap = self.map
+        self.bimap = dict(self.map)
         for k, v in list(themap.items()):
             try:
                 self.bimap[v] = k
@@ -476,45 +599,80 @@ class MGraph(Graph):
         # loop all nodes
         for name, act_dct in list(self.nodes.items()):
             node = act_dct['gnode']
-            cond_dct = node.get_attributes()  # dict with node or edge atributs
+            cond_dct = node.get_attributes()
             if 'condition' in cond_dct:
-                stmt = "(%s)" % _stripquotes(str(cond_dct['condition']))
-                # print " Cond:", stmt, " = ",
-                cond = eval(stmt, __caller.f_globals, __caller.f_locals)
-                # print cond
+                stmt = _stripquotes(str(cond_dct['condition']))
+
+                names = {}
+                names.update(__caller.f_globals)
+                names.update(__caller.f_locals)
+
+                cond = safe_condition_eval(stmt, names)
+
                 if (cond is True) or (cond is bool_(True)):
                     act_dct['active'] = True
                     if doAction and 'action' in cond_dct:
                         act = cond_dct['action']
-                        # print str(act)
-                        # print self.CallerLocals['f']
-                        # print act
-                        exec(str(act))  # in self.CallerGlobals, self.CallerLocals
+                        safe_action_exec(act, names)
                 else:
                     act_dct['active'] = False
             else:
                 act_dct['active'] = True
+            # cond_dct = node.get_attributes()  # dict with node or edge atributs
+            # if 'condition' in cond_dct:
+            #     stmt = "(%s)" % _stripquotes(str(cond_dct['condition']))
+            #     # print " Cond:", stmt, " = ",
+            #     cond = eval(stmt, __caller.f_globals, __caller.f_locals)
+            #     # print cond
+            #     if (cond is True) or (cond is bool_(True)):
+            #         act_dct['active'] = True
+            #         if doAction and 'action' in cond_dct:
+            #             act = cond_dct['action']
+            #             # print str(act)
+            #             # print self.CallerLocals['f']
+            #             # print act
+            #             exec(str(act))  # in self.CallerGlobals, self.CallerLocals
+            #     else:
+            #         act_dct['active'] = False
+            # else:
+            #     act_dct['active'] = True
         self.activenodes = [name for name, dct in list(self.nodes.items()) if dct['active']]
         # loop all edges
         for edge in self.edges:
             act_dct = cond_dct = edge.get_attributes()
             if 'condition' in cond_dct:
-                stmt = "(%s)" % _stripquotes(str(cond_dct['condition']))
-                # print " Cond:", stmt, " = ",
-                cond = eval(stmt, __caller.f_globals, __caller.f_locals)
-                # print cond
+                stmt = _stripquotes(str(cond_dct['condition']))
+                cond = safe_condition_eval(stmt, names)
+
                 if (cond is True) or (cond is bool_(True)):
                     act_dct['active'] = True
                     if doAction and 'action' in cond_dct:
                         act = cond_dct['action']
-                        # print str(act)
-                        # print self.CallerLocals['f']
-                        # print act
-                        exec(str(act))  # in self.CallerGlobals, self.CallerLocals
+                        safe_action_exec(act, names)
                 else:
                     act_dct['active'] = False
             else:
                 act_dct['active'] = True
+        # # loop all edges
+        # for edge in self.edges:
+        #     act_dct = cond_dct = edge.get_attributes()
+        #     if 'condition' in cond_dct:
+        #         stmt = "(%s)" % _stripquotes(str(cond_dct['condition']))
+        #         # print " Cond:", stmt, " = ",
+        #         cond = eval(stmt, __caller.f_globals, __caller.f_locals)
+        #         # print cond
+        #         if (cond is True) or (cond is bool_(True)):
+        #             act_dct['active'] = True
+        #             if doAction and 'action' in cond_dct:
+        #                 act = cond_dct['action']
+        #                 # print str(act)
+        #                 # print self.CallerLocals['f']
+        #                 # print act
+        #                 exec(str(act))  # in self.CallerGlobals, self.CallerLocals
+        #         else:
+        #             act_dct['active'] = False
+        #     else:
+        #         act_dct['active'] = True
 
         del __caller
         del __outerframes
@@ -578,7 +736,7 @@ class MGraph(Graph):
             d = None
             try:
                 # fuzzy type matching...
-                best_type_guess = fstrcmp(typetxt, devs, n=1, cutoff=0, ignorecase=True)[0]
+                best_type_guess = fstrcmp(typetxt, devs, cutoff=0, ignorecase=True)[0]
             except IndexError:
                 raise IndexError(
                     'Instrument type %s from file %s not in list of valid instrument types: %r' % (typetxt, ini, devs))
@@ -868,7 +1026,7 @@ class MGraph(Graph):
                     val = conf[par]
                 else:
                     val = None
-                if hasattr(dev, set_names[index]) and val:
+                if hasattr(dev, set_names[index]) and val is not None:
                     try:
                         err, val = getattr(dev, set_names[index])(val)
                     except TypeError:
@@ -1145,6 +1303,11 @@ class Leveler(object):
         """
         if min_actor is None:
             self.min_actor = Quantity(WATT, 1e-13)  # -100 dBm
+        else:
+            if isinstance(min_actor, Quantity):
+                self.min_actor = min_actor
+            else:
+                self.min_actor = Quantity(WATT, min_actor)
         self.mg = mg
         self.actor = actor
         self.sg = getattr(mg, actor)
@@ -1228,19 +1391,21 @@ class Leveler(object):
 
 
 if __name__ == '__main__':
+
     dotstr = """digraph {
-                a -> b
-                b -> c
-                c -> d
-                d -> e
-                e -> f
-                a -> g
-}"""
-    names = {v: v for v in 'abcdefg'}
+        a -> b
+        b -> d
+        a -> c
+        c -> e
+        e -> d
+    }"""
+    names = {v: v for v in 'abcde'}
     mg = MGraph(fname_or_data=dotstr, themap=names)
-    p = mg.find_all_paths2('a', 'd')
-    corr = mg.get_path_correction('a', 'b')
-    print(corr)
 
+    print("all paths a->d:", mg.find_all_paths('a', 'd'))
 
-
+    try:
+        sp = mg.find_shortest_path('a', 'd')
+        print("shortest path a->d:", sp)
+    except Exception as e:
+        print("find_shortest_path failed:", e)

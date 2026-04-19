@@ -33,11 +33,11 @@ class MOTORCONTROLLER(DRIVER):
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)
-        self._cmds = {'Goto': [("'GOTO %s DEG'%to", None)],
-                      'GetState': [('STATE?', r'POS (?P<pos>%s) DEG, DIR (?P<dir>\d+)' % (self._FP))],
-                      'SetSpeed': [("'SPEED %s'%(speed)", None)],
-                      'GetSpeed': [('SPEED?', r'SPEED (?P<speed>%s)' % (self._FP))],
-                      'Move': [("'MOVE %d'%direction", None)],
+        self._cmds = {'Goto': [("GOTO {to} DEG", None)],
+                      'GetState': [('STATE?', rf'POS (?P<pos>{self._FP}) DEG, DIR (?P<dir>\d+)')],
+                      'SetSpeed': [("'SPEED {speed}'", None)],
+                      'GetSpeed': [('SPEED?', rf'SPEED (?P<speed>{self._FP})')],
+                      'Move': [("MOVE {direction}", None)],
                       'Quit': [('QUIT', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         self.unit = None
@@ -61,10 +61,10 @@ if __name__ == '__main__':
     # print "Description: %s"%des
 
     for pos in [100]:
-        print(("Set pos to %e" % pos))
+        print(f"Set pos to {pos}")
         err, rpos = dev.SetPos(pos)
         if err == 0:
-            print(("Pos set to %e" % rpos))
+            print(f"Pos set to {rpos}")
         else:
             print("Error setting pos")
 

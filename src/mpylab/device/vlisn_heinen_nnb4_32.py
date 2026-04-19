@@ -88,7 +88,7 @@ class VLISN(VL):
         #self.filter = None
         super().Init(ini=ini, channel=channel, ignore_bus=ignore_bus)
 
-        sec = 'channel_%d' % self.channel
+        sec = f'channel_{channel}'
         self.ip = self.conf['init_value']['ip']
         #self.filter = bool(self.conf['init_value']['filter'])
 

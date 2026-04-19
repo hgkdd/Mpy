@@ -5,6 +5,7 @@ from simpleeval import simple_eval
 
 from mpylab.device import sg_rs_swm, amp_ifi_smx25
 from mpylab.tools.util import format_block
+from tools.numeric_eval import safe_numeric_eval
 
 amp_ini = format_block("""
                          [description]
@@ -81,7 +82,7 @@ err = amp.Init(amp_ini)
 err, _ = sg.RFOn()
 err, level = sg.SetLevel(lv)
 while True:
-    fr = float(simple_eval(input("Freq / Hz: ")))
+    fr = safe_numeric_eval(input("Freq / Hz: "))
     if fr < 0:
         break
     sg.SetFreq(fr)

@@ -10,6 +10,9 @@ from scuq.quantities import Quantity
 from scuq.ucomponents import UncertainInput
 from scuq.si import WATT
 
+from tools.numeric_eval import safe_numeric_eval
+
+
 class POWERMETER(PMMTR):
     conftmpl = PMMTR.conftmpl
     conftmpl['init_value']['visa'] = str
@@ -35,7 +38,7 @@ class POWERMETER(PMMTR):
         else:
             self.channel = channel
         self.error = PMMTR.Init(self, ini, self.channel, ignore_bus=True)  # run init from parent class
-        sec = 'channel_%d' % self.channel
+        sec = f'channel_{self.channel}'
         try:
             self.levelunit = self.conf[sec]['unit']
         except KeyError:
@@ -62,9 +65,9 @@ class POWERMETER(PMMTR):
 
     def GetData(self):
         f = self.freq
-        mpower = eval(self.value)
+        mpower = safe_numeric_eval(self.value)
         mpower_watt = 10**(mpower*0.1)*0.001
-        unc = eval(self.uncertainty)
+        unc = safe_numeric_eval(self.uncertainty)
         unc_watt = 10**((mpower+unc)*0.1)*0.001
         power = Quantity(WATT, UncertainInput(mpower_watt ,unc_watt))
         return 0, power

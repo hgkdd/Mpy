@@ -48,10 +48,10 @@ class VLISN(DRIVER):
         super().Init(ini=ini, channel=channel, ignore_bus=ignore_bus)
         self.path = self.conf['init_value']['path'].upper()
         for ch in self.Configuration.channel_list:
-            thename = self._get('channel_%d' % ch, 'name')
-            thefile = self._get('channel_%d' % ch, 'file')
-            theinterpol = self._get('channel_%d' % ch, 'interpolation')
-            theunit = self._get('channel_%d' % ch, 'unit')
+            thename = self._get(f'channel_{ch}', 'name')
+            thefile = self._get(f'channel_{ch}', 'file')
+            theinterpol = self._get(f'channel_{ch}', 'interpolation')
+            theunit = self._get(f'channel_{ch}', 'unit')
             self.data[thename] = {}
             self.data[thename]['unit'] = theunit
             self.data[thename]['datafile'] = DatFile(filename=thefile,

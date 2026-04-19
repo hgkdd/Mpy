@@ -19,22 +19,22 @@ class RECEIVER(REC):
     def __init__(self, **kw):
         REC.__init__(self, **kw)
         self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
-                      'GetFreq': [('FREQUENCY?', r'FREQUENCY (?P<freq>%s)' % self._FP)],
-                      'GetData': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<level>%s)' % self._FP)],
-                      'GetDataNB': [('LEVEL:LASTVALUE?', r'LEVEL:LASTVALUE (?P<level>%s)' % self._FP)],
+                      'GetFreq': [('FREQUENCY?', rf'FREQUENCY (?P<freq>{self._FP})')],
+                      'GetData': [('LEVEL:LASTVALUE?', rf'LEVEL:LASTVALUE (?P<level>{self._FP})')],
+                      'GetDataNB': [('LEVEL:LASTVALUE?', rf'LEVEL:LASTVALUE (?P<level>{self._FP})')],
                       'Trigger': [('*TRG;*WAI', None)],
                       'SetAttenuation': [('ATTENUATION:AUTO OFF', None), ("f'ATTENUATION {attenuation} DB'", None)],
-                      'GetAttenuation': [('ATTENUATION?', r'ATTENUATION (?P<attenuation>%s)' % self._FP)],
+                      'GetAttenuation': [('ATTENUATION?', rf'ATTENUATION (?P<attenuation>{self._FP})')],
                       #'SetMinAttenuation': [("f'MIN:ATTENUATION {min_attenuation} DB'", None)],
-                      #'GetMinAttenuation': [('MIN:ATTENUATION?', r'MIN:ATTENUATION (?P<min_attenuation>%s)' % self._FP)],
+                      #'GetMinAttenuation': [('MIN:ATTENUATION?', rf'MIN:ATTENUATION (?P<min_attenuation>{self._FP})')],
                       'SetMeasTime': [("f'MEASUREMENT:TIME {meas_time} s'", None)],
-                      'GetMeasTime': [('MEASUREMENT:TIME?', r'MEASUREMENT:TIME (?P<meas_time>%s)' % self._FP)],
+                      'GetMeasTime': [('MEASUREMENT:TIME?', rf'MEASUREMENT:TIME (?P<meas_time>{self._FP})')],
                       'SetDetector': [("f'DETECTOR {detector}'", None)],
                       'GetDetector': [('DETECTOR?', r'DETECTOR (?P<detector>.*)')],
                       'SetPreamplifier': [("f'PREAMPLIFIER {preamplifier}'", None)],
                       'GetPreamplifier': [('PREAMPLIFIER?', r'PREAMPLIFIER (?P<preamplifier>.*)')],
                       'SetResolutionBandwidth': [("SPECIALFUNC 1,OFF", None), ("f'BANDWIDTH:IF {rbw} HZ'", None)],
-                      'GetResolutionBandwidth': [('BANDWIDTH:IF?', r'BANDWIDTH:IF (?P<rbw>%s)' % self._FP)],
+                      'GetResolutionBandwidth': [('BANDWIDTH:IF?', rf'BANDWIDTH:IF (?P<rbw>{self._FP})')],
                       'Quit': [('*CLS', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         self.error = 0
@@ -50,7 +50,7 @@ class RECEIVER(REC):
             channel = 1
         self.error = super().Init(ini=ini, channel=channel)
 
-        sec = 'channel_%d' % channel
+        sec = f'channel_{channel}'
         try:
             self.unit = self.conf[sec]['unit']
             if case_insensitive_string_compare(self.unit, 'Watt'):
@@ -58,7 +58,7 @@ class RECEIVER(REC):
             elif case_insensitive_string_compare(self.unit, 'Volt'):
                 self.unit = VOLT
             else:
-                raise RuntimeError('Unrecognized unit: %s' % self.unit)
+                raise RuntimeError(f'Unrecognized unit: {self.unit}')
         except KeyError:
             self.unit = VOLT
         # Preset
@@ -89,7 +89,7 @@ class RECEIVER(REC):
                 mW = value * value / Z * 1e3
                 dBval = 10 * np.log10(mW)
             else:
-                raise RuntimeError('Unrecognized unit: %s' % self._internal_unit)
+                raise RuntimeError(f'Unrecognized unit: {self._internal_unit}')
         elif unit is WATT:
             if case_insensitive_string_compare(self._internal_unit, 'dBuV'):
                 uV = np.sqrt(value * Z) * 1e6
@@ -97,9 +97,9 @@ class RECEIVER(REC):
             elif case_insensitive_string_compare(self._internal_unit, 'dBm'):
                 dBval = 10 * np.log10(value * 1e3)
             else:
-                raise RuntimeError('Unrecognized unit: %s' % self._internal_unit)
+                raise RuntimeError(f'Unrecognized unit: {self._internal_unit}')
         else:
-            raise RuntimeError('Unrecognized unit: %s' % self.unit)
+            raise RuntimeError(f'Unrecognized unit: {self.unit}')
         return dBval
 
     def _get_bool_from_specialfunc(self, number):
@@ -111,7 +111,7 @@ class RECEIVER(REC):
             dct = {lst[i]: lst[i+1] for i in range(0, len(lst), 2)}
             status = (dct[key] == 'ON')  # True if 'ON'
         except (IndexError, KeyError):
-            raise RuntimeWarning('Unable to val for from SPECIALFUNC %s' % number)
+            raise RuntimeWarning(f'Unable to val for from SPECIALFUNC {number}')
         return status
 
     def _get_internal_unit(self):
@@ -133,7 +133,7 @@ class RECEIVER(REC):
                 lev = lev + 90 + 10*np.log10(Z)   # dBuV
                 lev = np.pow(10, (0.05*lev)) * 1e-6   # Volt
             else:
-                raise RuntimeError('Unrecognized unit: %s' % self.unit)
+                raise RuntimeError(f'Unrecognized unit: {self.unit}')
         elif self._internal_unit == 'dBuV':
             if self.unit is WATT:
                 lev = lev - 90 - 10*np.log10(Z)   # dBm
@@ -141,9 +141,9 @@ class RECEIVER(REC):
             elif self.unit is VOLT:
                 lev = np.power(10, (0.05*lev)) * 1e-6   # Volt
             else:
-                raise RuntimeError('Unrecognized unit: %s' % self.unit)
+                raise RuntimeError(f'Unrecognized unit: {self.unit}')
         else:
-            raise RuntimeError('Unrecognized internal unit: %s' % self._internal_unit)
+            raise RuntimeError(f'Unrecognized internal unit: {self._internal_unit}')
         return lev
 
 
@@ -318,7 +318,7 @@ def main():
         rec.SetVirtual(False)
 
     err, des = rec.GetDescription()
-    print("Description: %s" % des)
+    print(f"Description: {des}")
 
     for freq in [9e3, 100e3, 500e3, 1e6, 10e6, 30e6]:
         print(f"Set freq to {freq} Hz")
