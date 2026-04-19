@@ -9,6 +9,7 @@ import numpy as np
 from PySide6 import QtCore, QtWidgets
 
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
 from mpylab.tools.util import format_block
@@ -45,8 +46,7 @@ std_ini_text = format_block("""
 class DriverTask(QtCore.QObject):
     """Execute one driver-related callable inside a dedicated Qt thread."""
 
-    succeeded = QtCore.Signal(object)
-    failed = QtCore.Signal(object)
+    completed = QtCore.Signal(object, object)
     finished = QtCore.Signal()
 
     def __init__(self, func):
@@ -55,13 +55,14 @@ class DriverTask(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        result = None
+        error = None
         try:
             result = self._func()
         except Exception as exc:
-            self.failed.emit(exc)
-        else:
-            self.succeeded.emit(result)
+            error = exc
         finally:
+            self.completed.emit(result, error)
             self.finished.emit()
 
 
@@ -69,16 +70,57 @@ class MplCanvas(FigureCanvas):
     """Matplotlib canvas used to display the currently acquired spectrum."""
 
     def __init__(self, parent=None):
-        self.figure = Figure()
+        self.figure = Figure(facecolor="#f3f4f6")
         self.ax = self.figure.add_subplot(111)
+        self._plot_title = "Trace Data"
+        self._y_label = "Amplitude"
+        self._grid_enabled = False
         super().__init__(self.figure)
         self.setParent(parent)
-        self._configure_axes()
+        self.ax.set_facecolor("#ffffff")
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+        )
+        self.updateGeometry()
+        self._configure_axes(show_placeholder=True)
+        self.draw()
 
-    def _configure_axes(self):
-        self.ax.set_title("Trace Data")
+    def _configure_axes(self, show_placeholder=False):
+        self.ax.set_title(self._plot_title)
         self.ax.set_xlabel("Frequency in Hz")
-        self.ax.set_ylabel("Amplitude")
+        self.ax.set_ylabel(self._y_label)
+        self.ax.grid(self._grid_enabled)
+        for spine in self.ax.spines.values():
+            spine.set_color("#666666")
+        if show_placeholder:
+            self.ax.text(
+                0.5,
+                0.5,
+                "No spectrum acquired",
+                transform=self.ax.transAxes,
+                ha="center",
+                va="center",
+                color="#666666",
+            )
+
+    def set_plot_title(self, title):
+        """Update the plot title and redraw the canvas."""
+        self._plot_title = title or "Trace Data"
+        self._configure_axes()
+        self.draw_idle()
+
+    def set_y_label(self, label):
+        """Update the Y-axis label and redraw the canvas."""
+        self._y_label = label or "Amplitude"
+        self._configure_axes()
+        self.draw_idle()
+
+    def set_grid_enabled(self, enabled):
+        """Enable or disable the plot grid."""
+        self._grid_enabled = bool(enabled)
+        self._configure_axes()
+        self.draw_idle()
 
     def update_spectrum(self, x, y, logarithmic=False):
         """Redraw the spectrum plot with the provided x/y arrays."""
@@ -93,7 +135,7 @@ class MplCanvas(FigureCanvas):
     def clear_plot(self):
         """Clear the current plot contents."""
         self.ax.clear()
-        self._configure_axes()
+        self._configure_axes(show_placeholder=True)
         self.draw()
 
 
@@ -116,6 +158,15 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._busy = False
         self._active_thread = None
         self._active_task = None
+        self._task_label = None
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = None
+        self._task_on_error = None
+        self._task_on_finished = None
+        self._is_initialized = False
+        self._last_error_text = "none"
+        self._default_plot_title = "Trace Data"
 
         self.setWindowTitle("Network Analyzer Test Utility")
         self.resize(1280, 900)
@@ -137,6 +188,19 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._build_log_tab()
 
         bottom_bar = QtWidgets.QHBoxLayout()
+        self.state_label = QtWidgets.QLabel()
+        self.init_state_label = QtWidgets.QLabel()
+        self.driver_label = QtWidgets.QLabel()
+        self.last_error_label = QtWidgets.QLabel()
+        self.last_error_label.setMinimumWidth(280)
+        self.last_error_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        bottom_bar.addWidget(self.state_label)
+        bottom_bar.addSpacing(12)
+        bottom_bar.addWidget(self.init_state_label)
+        bottom_bar.addSpacing(12)
+        bottom_bar.addWidget(self.driver_label)
+        bottom_bar.addSpacing(12)
+        bottom_bar.addWidget(self.last_error_label, 1)
         bottom_bar.addStretch()
 
         self.refresh_all_button = QtWidgets.QPushButton("Refresh All")
@@ -147,10 +211,8 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.close_button.clicked.connect(self.close)
         bottom_bar.addWidget(self.close_button)
 
-        self.busy_label = QtWidgets.QLabel("Idle")
-        bottom_bar.addWidget(self.busy_label)
-
         main_layout.addLayout(bottom_bar)
+        self._refresh_status_bar()
 
     def _build_connection_tab(self):
         tab = QtWidgets.QWidget()
@@ -305,22 +367,39 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.export_csv_button = QtWidgets.QPushButton("Export CSV")
         self.export_csv_button.clicked.connect(self.on_export_csv_clicked)
         toolbar.addWidget(self.export_csv_button)
+
+        self.grid_toggle_button = QtWidgets.QPushButton("Grid Off")
+        self.grid_toggle_button.setCheckable(True)
+        self.grid_toggle_button.toggled.connect(self.on_grid_toggled)
+        toolbar.addWidget(self.grid_toggle_button)
         toolbar.addStretch()
+
+        title_row = QtWidgets.QHBoxLayout()
+        title_row.addWidget(QtWidgets.QLabel("Plot Title"))
+        self.plot_title_edit = QtWidgets.QLineEdit(self._default_plot_title)
+        self.plot_title_edit.editingFinished.connect(self.on_plot_title_changed)
+        title_row.addWidget(self.plot_title_edit)
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         self.canvas = MplCanvas()
+        self.canvas.setMinimumHeight(280)
+        self.canvas_toolbar = NavigationToolbar(self.canvas, tab)
         splitter.addWidget(self.canvas)
 
         self.spectrum_edit = QtWidgets.QPlainTextEdit()
         self.spectrum_edit.setReadOnly(True)
+        self.spectrum_edit.setMinimumHeight(120)
         splitter.addWidget(self.spectrum_edit)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
+        splitter.setSizes([520, 180])
 
         self.spectrum_summary_label = QtWidgets.QLabel("No spectrum acquired.")
         self.spectrum_summary_label.setWordWrap(True)
 
         layout.addLayout(toolbar)
+        layout.addLayout(title_row)
+        layout.addWidget(self.canvas_toolbar)
         layout.addWidget(splitter)
         layout.addWidget(self.spectrum_summary_label)
         self.tabs.addTab(tab, "Spectrum")
@@ -366,12 +445,35 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.log_edit.appendPlainText(f"[{timestamp}] {message}")
 
+    def _driver_display_name(self):
+        """Return a short driver identity string for the status bar."""
+        driver_type = type(self.dv).__name__
+        idn = getattr(self.dv, "IDN", "") or ""
+        if idn:
+            return f"Driver: {driver_type} | {idn}"
+        return f"Driver: {driver_type}"
+
+    def _refresh_status_bar(self, state_text=None):
+        """Update the bottom status bar labels."""
+        if state_text is None:
+            state_text = "Busy" if self._busy else "Ready"
+        self.state_label.setText(f"State: {state_text}")
+        self.init_state_label.setText(
+            f"Init: {'initialized' if self._is_initialized else 'not initialized'}"
+        )
+        self.driver_label.setText(self._driver_display_name())
+        self.last_error_label.setText(f"Last error: {self._last_error_text}")
+
     def _set_busy(self, busy, message=None):
         self._busy = busy
         self.tabs.setEnabled(not busy)
         self.refresh_all_button.setEnabled(not busy)
         self.close_button.setEnabled(not busy)
-        self.busy_label.setText(message if message is not None else ("Busy" if busy else "Idle"))
+        if busy:
+            state_text = f"Busy: {message}" if message else "Busy"
+        else:
+            state_text = message if message is not None else "Ready"
+        self._refresh_status_bar(state_text)
 
     def _start_task(
         self,
@@ -391,42 +493,68 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
 
         self.log_message(f"{label} started.")
         self._set_busy(True, label)
+        self._task_label = label
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = on_success
+        self._task_on_error = on_error
+        self._task_on_finished = on_finished
 
         thread = QtCore.QThread(self)
         task = DriverTask(func)
         task.moveToThread(thread)
         thread.started.connect(task.run)
-
-        def handle_success(result):
-            self.log_message(f"{label} succeeded.")
-            if on_success is not None:
-                on_success(result)
-
-        def handle_error(exc):
-            self.log_message(f"{label} failed: {type(exc).__name__}: {exc}")
-            if on_error is not None:
-                on_error(exc)
-            else:
-                self._show_error(f"{label} Error", exc)
-
-        def cleanup():
-            if on_finished is not None:
-                on_finished()
-            self._set_busy(False, "Idle")
-            task.deleteLater()
-            thread.deleteLater()
-            self._active_task = None
-            self._active_thread = None
-
-        task.succeeded.connect(handle_success)
-        task.failed.connect(handle_error)
+        task.completed.connect(self._handle_task_completed, QtCore.Qt.QueuedConnection)
         task.finished.connect(thread.quit)
-        thread.finished.connect(cleanup)
+        task.finished.connect(task.deleteLater)
+        thread.finished.connect(self._handle_task_thread_finished, QtCore.Qt.QueuedConnection)
+        thread.finished.connect(thread.deleteLater)
         thread.start()
 
         self._active_thread = thread
         self._active_task = task
         return True
+
+    @QtCore.Slot(object, object)
+    def _handle_task_completed(self, result, error):
+        self._task_result = result
+        self._task_error = error
+
+    @QtCore.Slot()
+    def _handle_task_thread_finished(self):
+        label = self._task_label or "Task"
+        result = self._task_result
+        error = self._task_error
+        on_success = self._task_on_success
+        on_error = self._task_on_error
+        on_finished = self._task_on_finished
+
+        self._active_task = None
+        self._active_thread = None
+        self._set_busy(False, "Idle")
+
+        self._task_label = None
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = None
+        self._task_on_error = None
+        self._task_on_finished = None
+
+        if error is None:
+            self.log_message(f"{label} succeeded.")
+            if on_success is not None:
+                on_success(result)
+        else:
+            if label == "Init":
+                self._is_initialized = False
+            self.log_message(f"{label} failed: {type(error).__name__}: {error}")
+            if on_error is not None:
+                on_error(error)
+            else:
+                self._show_error(f"{label} Error", error)
+
+        if on_finished is not None:
+            on_finished()
 
     def _display_value(self, value):
         if isinstance(value, tuple):
@@ -440,6 +568,8 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         return method(*args, **kwargs)
 
     def _show_error(self, title, error):
+        self._last_error_text = str(error)
+        self._refresh_status_bar()
         QtWidgets.QMessageBox.critical(self, title, str(error))
 
     def _set_status_field(self, key, text):
@@ -450,6 +580,13 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
     def _status_value(self, getter):
         widget = self._status_fields.get(getter)
         return widget.text().strip() if widget is not None else ""
+
+    def _active_sparameter_label(self):
+        """Return the best available Y-axis label derived from the active S-parameter."""
+        raw_sparam = self._status_raw.get("GetSparameter")
+        if isinstance(raw_sparam, str) and raw_sparam.strip():
+            return raw_sparam.strip()
+        return "Amplitude"
 
     def on_load_ini_clicked(self):
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(
@@ -494,6 +631,10 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             return self._driver_method("Init", ini=io.StringIO(ini_text), channel=channel)
 
         def success(err):
+            self._is_initialized = (err == 0)
+            if err == 0:
+                self._last_error_text = "none"
+            self._refresh_status_bar()
             self.log_message(f"Init returned: {err}")
             self.refresh_all()
 
@@ -540,6 +681,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             self._set_status_field(getter, text)
             self._status_raw[getter] = info["value"] if info["err"] == 0 else None
         self._update_control_indicators()
+        self.canvas.set_y_label(self._active_sparameter_label())
 
     def refresh_status(self, on_complete=None):
         def success(snapshot):
@@ -752,6 +894,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         y = np.asarray(power[1], dtype=float)
         logarithmic = sweep_type == "LOGARITHMIC"
 
+        self.canvas.set_y_label(self._active_sparameter_label())
         self.canvas.update_spectrum(x, y, logarithmic=logarithmic)
 
         preview = [
@@ -810,6 +953,13 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._last_spectrum_summary = None
         self.spectrum_summary_label.setText("No spectrum acquired.")
         self.log_message("Spectrum plot cleared.")
+
+    def on_plot_title_changed(self):
+        self.canvas.set_plot_title(self.plot_title_edit.text().strip() or self._default_plot_title)
+
+    def on_grid_toggled(self, checked):
+        self.canvas.set_grid_enabled(checked)
+        self.grid_toggle_button.setText("Grid On" if checked else "Grid Off")
 
     def on_export_csv_clicked(self):
         if self._last_trace_data is None:

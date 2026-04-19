@@ -653,7 +653,6 @@ class TRACE:
 
     def __init__(self, nw, name, win, sparam):
         """Create a trace object and assign a unique instrument trace name."""
-        TRACE.TRACES.append(self)
         self.networkanalyzer = nw
         self.name = name
         self.window = win
@@ -663,6 +662,7 @@ class TRACE:
             f'{name}_Ch{self.networkanalyzer.getChannelNumber()}'
             f'WIN{self.window.getInternName()}TR{self.traceWindowNumber}'
         )
+        TRACE.TRACES.append(self)
 
     def __gethighestTraceWindowNumber(self):
         """Return the next free trace number used within display windows."""
@@ -700,9 +700,9 @@ class WINDOW:
 
     def __init__(self, name):
         """Create a window object and assign a unique instrument window number."""
-        WINDOW.WINDOWS.append(self)
         self.name = name
         self.internNumber = self.__gethighestWindowNumber()
+        WINDOW.WINDOWS.append(self)
 
     def __gethighestWindowNumber(self):
         """Return the next free display window number."""

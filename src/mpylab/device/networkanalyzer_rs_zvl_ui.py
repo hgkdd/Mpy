@@ -2,6 +2,7 @@
 #
 """ZVL-specific graphical test utility."""
 
+import argparse
 import io
 import sys
 
@@ -9,6 +10,7 @@ from PySide6 import QtCore, QtWidgets
 
 from mpylab.device.networkanalyzer_ui import NetworkAnalyzerWidget
 from mpylab.device.nw_rs_zvl import NETWORKANALYZER
+from mpylab.device.nw_rs_zvl_virtual import NETWORKANALYZER as VIRTUAL_NETWORKANALYZER
 
 
 class UI(NetworkAnalyzerWidget):
@@ -202,9 +204,16 @@ class UI(NetworkAnalyzerWidget):
 if __name__ == "__main__":
     from mpylab.tools.util import format_block
 
-    try:
-        ini = sys.argv[1]
-    except IndexError:
+    parser = argparse.ArgumentParser(description="Start the ZVL test utility.")
+    parser.add_argument("ini", nargs="?", help="Optional path to the INI file.")
+    parser.add_argument(
+        "--virtual",
+        action="store_true",
+        help="Use the virtual ZVL driver instead of the hardware-backed driver.",
+    )
+    args = parser.parse_args()
+
+    if args.ini is None:
         ini_text = format_block("""
                         [DESCRIPTION]
                         description: 'ZLV-K1'
@@ -219,7 +228,7 @@ if __name__ == "__main__":
                         fstop: 6e9
                         fstep: 1
                         gpib: 18
-                        virtual: 0
+                        virtual: {virtual}
                         nr_of_channels: 2
 
                         [Channel_1]
@@ -232,17 +241,17 @@ if __name__ == "__main__":
                         SetSweepCount: 1
                         SetSweepPoints: 401
                         SetSweepType: 'LINEAR'
-                        """)
+                        """.format(virtual=1 if args.virtual else 0))
         ini = io.StringIO(ini_text)
     else:
         try:
-            with open(ini, "r", encoding="utf-8") as f:
+            with open(args.ini, "r", encoding="utf-8") as f:
                 ini = io.StringIO(f.read())
         except OSError as exc:
             print(f"INI file could not be read: {exc}")
             sys.exit(1)
 
-    nw = NETWORKANALYZER()
+    nw = VIRTUAL_NETWORKANALYZER() if args.virtual else NETWORKANALYZER()
     app = QtWidgets.QApplication(sys.argv)
     ui = UI(nw, ini=ini)
     ui.show()
