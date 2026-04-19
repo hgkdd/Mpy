@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import csv
 import io
 import sys
 from datetime import datetime
@@ -109,7 +110,9 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._status_fields = {}
         self._status_raw = {}
         self._control_widgets = {}
+        self._control_specs = {}
         self._last_trace_data = None
+        self._last_spectrum_summary = None
         self._busy = False
         self._active_thread = None
         self._active_task = None
@@ -253,10 +256,15 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
                 widget.setMinimum(0)
             button = QtWidgets.QPushButton("Apply")
             button.clicked.connect(handler)
+            indicator = QtWidgets.QLabel("unknown")
+            indicator.setMinimumWidth(72)
             self._control_widgets[key] = widget
+            self._control_specs[key] = {"indicator": indicator}
             controls_grid.addWidget(QtWidgets.QLabel(label), idx, 0)
             controls_grid.addWidget(widget, idx, 1)
             controls_grid.addWidget(button, idx, 2)
+            controls_grid.addWidget(indicator, idx, 3)
+            self._set_indicator_state(key, "unknown")
 
         quick_row = QtWidgets.QHBoxLayout()
         self.pull_from_device_button = QtWidgets.QPushButton("Populate Controls From Device")
@@ -266,6 +274,10 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.single_sweep_button = QtWidgets.QPushButton("Start Single Sweep")
         self.single_sweep_button.clicked.connect(self.on_single_sweep_clicked)
         quick_row.addWidget(self.single_sweep_button)
+
+        self.smoke_test_button = QtWidgets.QPushButton("Run Smoke Test")
+        self.smoke_test_button.clicked.connect(self.on_run_smoke_test_clicked)
+        quick_row.addWidget(self.smoke_test_button)
         quick_row.addStretch()
 
         layout.addLayout(controls_grid)
@@ -289,6 +301,10 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.clear_plot_button = QtWidgets.QPushButton("Clear Plot")
         self.clear_plot_button.clicked.connect(self.on_clear_plot_clicked)
         toolbar.addWidget(self.clear_plot_button)
+
+        self.export_csv_button = QtWidgets.QPushButton("Export CSV")
+        self.export_csv_button.clicked.connect(self.on_export_csv_clicked)
+        toolbar.addWidget(self.export_csv_button)
         toolbar.addStretch()
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
@@ -301,8 +317,12 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 1)
 
+        self.spectrum_summary_label = QtWidgets.QLabel("No spectrum acquired.")
+        self.spectrum_summary_label.setWordWrap(True)
+
         layout.addLayout(toolbar)
         layout.addWidget(splitter)
+        layout.addWidget(self.spectrum_summary_label)
         self.tabs.addTab(tab, "Spectrum")
 
     def _build_log_tab(self):
@@ -519,6 +539,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             text = info["text"]
             self._set_status_field(getter, text)
             self._status_raw[getter] = info["value"] if info["err"] == 0 else None
+        self._update_control_indicators()
 
     def refresh_status(self, on_complete=None):
         def success(snapshot):
@@ -559,6 +580,71 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
                     widget.setText(str(raw_value))
             except Exception:
                 self.log_message(f"Could not populate control {control_key} from {getter}='{raw_value}'")
+        self._update_control_indicators()
+
+    def _set_indicator_state(self, key, state, message=None):
+        spec = self._control_specs.get(key)
+        if spec is None:
+            return
+        indicator = spec["indicator"]
+        styles = {
+            "unknown": ("unknown", "#777777"),
+            "pending": ("pending", "#d98c00"),
+            "ok": ("match", "#2e8b57"),
+            "mismatch": ("mismatch", "#b22222"),
+        }
+        text, color = styles.get(state, styles["unknown"])
+        indicator.setText(text)
+        indicator.setStyleSheet(f"color: {color}; font-weight: bold;")
+        indicator.setToolTip(message or "")
+
+    def _control_current_value(self, key):
+        widget = self._control_widgets[key]
+        if isinstance(widget, QtWidgets.QComboBox):
+            return widget.currentText().strip()
+        if isinstance(widget, QtWidgets.QSpinBox):
+            return int(widget.value())
+        return widget.text().strip()
+
+    def _update_control_indicators(self):
+        mapping = {
+            "center_freq": "GetCenterFreq",
+            "span": "GetSpan",
+            "rbw": "GetRBW",
+            "ref_level": "GetRefLevel",
+            "division_value": "GetDivisionValue",
+            "sweep_type": "GetSweepType",
+            "sweep_mode": "GetSweepMode",
+            "sweep_count": "GetSweepCount",
+            "sweep_points": "GetSweepPoints",
+            "trigger_mode": "GetTriggerMode",
+            "trigger_delay": "GetTriggerDelay",
+        }
+
+        for key, getter in mapping.items():
+            readback = self._status_raw.get(getter)
+            if readback is None:
+                self._set_indicator_state(key, "unknown", "No valid readback available.")
+                continue
+            current = self._control_current_value(key)
+            try:
+                if isinstance(current, int):
+                    matches = current == int(float(readback))
+                elif key in {"sweep_type", "sweep_mode", "trigger_mode"}:
+                    matches = str(current).strip().upper() == str(readback).strip().upper()
+                else:
+                    matches = abs(float(current) - float(readback)) <= max(1e-12, abs(float(readback)) * 1e-9)
+            except Exception:
+                matches = str(current).strip() == str(readback).strip()
+
+            if matches:
+                self._set_indicator_state(key, "ok", f"Readback matches device value {readback!r}.")
+            else:
+                self._set_indicator_state(
+                    key,
+                    "mismatch",
+                    f"Control value {current!r} differs from device value {readback!r}.",
+                )
 
     def _line_edit_float(self, key):
         text = self._control_widgets[key].text().strip()
@@ -580,36 +666,47 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._start_task(label, callable_, on_success=success)
 
     def on_set_center_freq_clicked(self):
+        self._set_indicator_state("center_freq", "pending", "Write in progress.")
         self._apply_and_refresh("SetCenterFreq", lambda: self._driver_method("SetCenterFreq", self._line_edit_float("center_freq")))
 
     def on_set_span_clicked(self):
+        self._set_indicator_state("span", "pending", "Write in progress.")
         self._apply_and_refresh("SetSpan", lambda: self._driver_method("SetSpan", self._line_edit_float("span")))
 
     def on_set_rbw_clicked(self):
+        self._set_indicator_state("rbw", "pending", "Write in progress.")
         self._apply_and_refresh("SetRBW", lambda: self._driver_method("SetRBW", self._line_edit_float("rbw")))
 
     def on_set_ref_level_clicked(self):
+        self._set_indicator_state("ref_level", "pending", "Write in progress.")
         self._apply_and_refresh("SetRefLevel", lambda: self._driver_method("SetRefLevel", self._line_edit_float("ref_level")))
 
     def on_set_division_clicked(self):
+        self._set_indicator_state("division_value", "pending", "Write in progress.")
         self._apply_and_refresh("SetDivisionValue", lambda: self._driver_method("SetDivisionValue", self._line_edit_float("division_value")))
 
     def on_set_sweep_type_clicked(self):
+        self._set_indicator_state("sweep_type", "pending", "Write in progress.")
         self._apply_and_refresh("SetSweepType", lambda: self._driver_method("SetSweepType", self._combo_value("sweep_type")))
 
     def on_set_sweep_mode_clicked(self):
+        self._set_indicator_state("sweep_mode", "pending", "Write in progress.")
         self._apply_and_refresh("SetSweepMode", lambda: self._driver_method("SetSweepMode", self._combo_value("sweep_mode")))
 
     def on_set_sweep_count_clicked(self):
+        self._set_indicator_state("sweep_count", "pending", "Write in progress.")
         self._apply_and_refresh("SetSweepCount", lambda: self._driver_method("SetSweepCount", self._spin_value("sweep_count")))
 
     def on_set_sweep_points_clicked(self):
+        self._set_indicator_state("sweep_points", "pending", "Write in progress.")
         self._apply_and_refresh("SetSweepPoints", lambda: self._driver_method("SetSweepPoints", self._spin_value("sweep_points")))
 
     def on_set_trigger_mode_clicked(self):
+        self._set_indicator_state("trigger_mode", "pending", "Write in progress.")
         self._apply_and_refresh("SetTriggerMode", lambda: self._driver_method("SetTriggerMode", self._combo_value("trigger_mode")))
 
     def on_set_trigger_delay_clicked(self):
+        self._set_indicator_state("trigger_delay", "pending", "Write in progress.")
         self._apply_and_refresh("SetTriggerDelay", lambda: self._driver_method("SetTriggerDelay", self._line_edit_float("trigger_delay")))
 
     def on_single_sweep_clicked(self):
@@ -636,7 +733,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             err, power = self._driver_method("GetSpectrum")
             if err != 0:
                 raise RuntimeError(f"GetSpectrum returned error code {err}")
-            return {"sweep_type": sweep_type, "power": power}
+            return {"sweep_type": sweep_type, "power": power, "source": "single sweep"}
 
         self._start_task(
             "Single Sweep + Spectrum",
@@ -647,6 +744,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
     def _handle_spectrum_result(self, result):
         sweep_type = result.get("sweep_type")
         power = result.get("power")
+        source = result.get("source", "acquire")
 
         self.power = power
         self._last_trace_data = power
@@ -670,7 +768,25 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         preview.append("Y values:")
         preview.append(", ".join(f"{value:.6e}" for value in y[:50]))
         self.spectrum_edit.setPlainText("\n".join(preview))
-        self.log_message(f"Spectrum acquired: {len(x)} points")
+        y_min = float(np.min(y)) if len(y) else float("nan")
+        y_max = float(np.max(y)) if len(y) else float("nan")
+        self._last_spectrum_summary = {
+            "points": len(x),
+            "source": source,
+            "sweep_type": sweep_type,
+            "y_min": y_min,
+            "y_max": y_max,
+        }
+        summary_parts = [
+            f"Last acquisition: {len(x)} points",
+            f"source: {source}",
+        ]
+        if sweep_type:
+            summary_parts.append(f"sweep: {sweep_type}")
+        if len(y):
+            summary_parts.append(f"y-range: {y_min:.6e} .. {y_max:.6e}")
+        self.spectrum_summary_label.setText(", ".join(summary_parts))
+        self.log_message(f"Spectrum acquired: {len(x)} points ({source})")
         self.refresh_all()
 
     def on_get_spectrum_clicked(self):
@@ -683,7 +799,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             err, power = self._driver_method("GetSpectrum")
             if err != 0:
                 raise RuntimeError(f"GetSpectrum returned error code {err}")
-            return {"sweep_type": sweep_type, "power": power}
+            return {"sweep_type": sweep_type, "power": power, "source": "acquire"}
 
         self._start_task("Acquire Spectrum", task, on_success=self._handle_spectrum_result)
 
@@ -691,7 +807,87 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.canvas.clear_plot()
         self.spectrum_edit.clear()
         self._last_trace_data = None
+        self._last_spectrum_summary = None
+        self.spectrum_summary_label.setText("No spectrum acquired.")
         self.log_message("Spectrum plot cleared.")
+
+    def on_export_csv_clicked(self):
+        if self._last_trace_data is None:
+            self._show_error("Export CSV Error", ValueError("No spectrum data available."))
+            return
+
+        default_name = f"spectrum_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Export Spectrum CSV",
+            default_name,
+            "CSV Files (*.csv);;All Files (*)",
+        )
+        if not path:
+            return
+
+        x_values, y_values = self._last_trace_data
+        try:
+            with open(path, "w", encoding="utf-8", newline="") as handle:
+                writer = csv.writer(handle)
+                writer.writerow(["frequency_hz", "amplitude"])
+                for x_value, y_value in zip(x_values, y_values):
+                    writer.writerow([f"{float(x_value):.16e}", f"{float(y_value):.16e}"])
+        except OSError as exc:
+            self._show_error("Export CSV Error", exc)
+            return
+
+        self.log_message(f"Spectrum exported to {path}")
+
+    def _run_smoke_test(self):
+        checks = [
+            ("GetDescription", ()),
+            ("GetChannel", ()),
+            ("GetSweepType", ()),
+            ("GetSweepMode", ()),
+            ("GetSweepCount", ()),
+            ("GetSweepPoints", ()),
+            ("GetCenterFreq", ()),
+            ("GetSpan", ()),
+            ("GetRBW", ()),
+            ("GetTriggerMode", ()),
+        ]
+        results = []
+        for method_name, args in checks:
+            if not hasattr(self.dv, method_name):
+                results.append(f"{method_name}: skipped")
+                continue
+            err, value = self._driver_method(method_name, *args)
+            if err != 0:
+                raise RuntimeError(f"{method_name} returned error code {err}")
+            results.append(f"{method_name}: {value!r}")
+
+        if hasattr(self.dv, "SetSweepMode"):
+            err, value = self._driver_method("SetSweepMode", "SINGLE")
+            if err != 0:
+                raise RuntimeError(f"SetSweepMode returned error code {err}")
+            results.append(f"SetSweepMode('SINGLE'): {value!r}")
+        if hasattr(self.dv, "NewSweepCount"):
+            err, value = self._driver_method("NewSweepCount")
+            if err != 0:
+                raise RuntimeError(f"NewSweepCount returned error code {err}")
+            results.append(f"NewSweepCount: {value!r}")
+        if hasattr(self.dv, "GetSpectrum"):
+            err, power = self._driver_method("GetSpectrum")
+            if err != 0:
+                raise RuntimeError(f"GetSpectrum returned error code {err}")
+            x_values, y_values = power
+            results.append(f"GetSpectrum: {len(x_values)} x-points, {len(y_values)} y-points")
+        return results
+
+    def on_run_smoke_test_clicked(self):
+        def success(lines):
+            self.log_message("Smoke test completed.")
+            for line in lines:
+                self.log_message(f"  {line}")
+            self.refresh_all()
+
+        self._start_task("Smoke Test", self._run_smoke_test, on_success=success)
 
     def refresh_all(self):
         def complete():

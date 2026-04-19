@@ -162,7 +162,7 @@ class UI(NetworkAnalyzerWidget):
         if not name:
             self._show_error("Create Window Error", ValueError("Window name is empty"))
             return
-        self._apply_and_refresh("CreateWindow", lambda: self._call_driver("CreateWindow", name))
+        self._apply_and_refresh("CreateWindow", lambda: self._driver_method("CreateWindow", name))
 
     def on_select_window_clicked(self):
         try:
@@ -170,10 +170,10 @@ class UI(NetworkAnalyzerWidget):
         except Exception as exc:
             self._show_error("Select Window Error", exc)
             return
-        self._apply_and_refresh("SetWindow", lambda: self._call_driver("SetWindow", name))
+        self._apply_and_refresh("SetWindow", lambda: self._driver_method("SetWindow", name))
 
     def on_delete_window_clicked(self):
-        self._apply_and_refresh("DelWindow", lambda: self._call_driver("DelWindow"))
+        self._apply_and_refresh("DelWindow", lambda: self._driver_method("DelWindow"))
 
     def on_create_trace_clicked(self):
         trace_name = self.trace_name_edit.text().strip()
@@ -181,7 +181,7 @@ class UI(NetworkAnalyzerWidget):
         if not trace_name:
             self._show_error("Create Trace Error", ValueError("Trace name is empty"))
             return
-        self._apply_and_refresh("CreateTrace", lambda: self._call_driver("CreateTrace", trace_name, sparam))
+        self._apply_and_refresh("CreateTrace", lambda: self._driver_method("CreateTrace", trace_name, sparam))
 
     def on_select_trace_clicked(self):
         try:
@@ -189,14 +189,14 @@ class UI(NetworkAnalyzerWidget):
         except Exception as exc:
             self._show_error("Select Trace Error", exc)
             return
-        self._apply_and_refresh("SetTrace", lambda: self._call_driver("SetTrace", trace_name))
+        self._apply_and_refresh("SetTrace", lambda: self._driver_method("SetTrace", trace_name))
 
     def on_delete_trace_clicked(self):
-        self._apply_and_refresh("DelTrace", lambda: self._call_driver("DelTrace"))
+        self._apply_and_refresh("DelTrace", lambda: self._driver_method("DelTrace"))
 
     def on_set_sparameter_clicked(self):
         sparam = self.sparam_combo.currentText().strip()
-        self._apply_and_refresh("SetSparameter", lambda: self._call_driver("SetSparameter", sparam))
+        self._apply_and_refresh("SetSparameter", lambda: self._driver_method("SetSparameter", sparam))
 
 
 if __name__ == "__main__":
