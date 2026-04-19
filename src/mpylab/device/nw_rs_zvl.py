@@ -726,11 +726,42 @@ class WINDOW:
 
 
 if __name__ == "__main__":
+    import argparse
     from mpylab.tools.util import format_block
 
-    try:
-        ini = sys.argv[1]
-    except IndexError:
+    parser = argparse.ArgumentParser(
+        description="Run a smoke test for the R&S ZVL network analyzer driver."
+    )
+    parser.add_argument(
+        "ini",
+        nargs="?",
+        help="Path to the INI file used for initialization. If omitted, an embedded sample INI is used.",
+    )
+    parser.add_argument(
+        "--channel",
+        type=int,
+        default=1,
+        help="Logical channel section to initialize from the INI file.",
+    )
+    parser.add_argument(
+        "--skip-spectrum",
+        action="store_true",
+        help="Skip the final spectrum acquisition step.",
+    )
+    parser.add_argument(
+        "--single-sweep",
+        action="store_true",
+        help="Trigger a fresh single sweep before reading spectrum data.",
+    )
+    parser.add_argument(
+        "--expected-points",
+        type=int,
+        default=None,
+        help="Optional expected number of spectrum points for an additional assertion.",
+    )
+    args = parser.parse_args()
+
+    if args.ini is None:
         ini_text = format_block("""
                         [DESCRIPTION]
                         description: 'ZLV-K1'
@@ -761,8 +792,181 @@ if __name__ == "__main__":
 
                     """)
         ini = io.StringIO(ini_text)
+        ini_origin = "<embedded sample ini>"
+    else:
+        with open(args.ini, "r", encoding="utf-8") as f:
+            ini = io.StringIO(f.read())
+        ini_origin = args.ini
+
+    def log_result(label, result, formatter=None):
+        err, value = result
+        status = "OK" if err == 0 else f"ERR {err}"
+        if formatter is not None and err == 0:
+            value = formatter(value)
+        print(f"[{status}] {label}: {value}")
+        return err, value
+
+    def expect(condition, message):
+        if not condition:
+            raise AssertionError(message)
+
+    print("=== R&S ZVL Hardware Smoke Test ===")
+    print(f"INI source: {ini_origin}")
+    print(f"Channel section: channel_{args.channel}")
+    print(f"Acquire spectrum: {not args.skip_spectrum}")
+    print(f"Trigger fresh single sweep: {args.single_sweep}")
 
     d = NETWORKANALYZER()
-    d.Init(ini)
-    err, des = d.GetDescription()
-    print(err, des)
+
+    try:
+        print("\n-- Initialization --")
+        init_err = d.Init(ini=ini, channel=args.channel)
+        print(f"Init returned: {init_err}")
+        expect(init_err == 0, f"Init failed with error code {init_err}")
+
+        print("\n-- Identity and topology --")
+        err, description = log_result("GetDescription()", d.GetDescription())
+        expect(err == 0, "GetDescription() failed")
+        expect(isinstance(description, str) and description.strip(), "Instrument description is empty")
+
+        err, channel_no = log_result("GetChannel()", d.GetChannel())
+        expect(err == 0, "GetChannel() failed")
+
+        err, window_name = log_result("GetWindow()", d.GetWindow())
+        expect(err == 0, "GetWindow() failed")
+
+        err, trace_info = log_result("GetTrace()", d.GetTrace())
+        expect(err == 0, "GetTrace() failed")
+
+        err, sparam = log_result("GetSparameter()", d.GetSparameter())
+        expect(err == 0, "GetSparameter() failed")
+
+        print("\n-- Round-trip settings --")
+        err, start_freq = log_result("GetStartFreq()", d.GetStartFreq(), lambda v: f"{v:.6e} Hz")
+        expect(err == 0, "GetStartFreq() failed")
+
+        err, stop_freq = log_result("GetStopFreq()", d.GetStopFreq(), lambda v: f"{v:.6e} Hz")
+        expect(err == 0, "GetStopFreq() failed")
+        expect(stop_freq > start_freq, "Stop frequency must be greater than start frequency")
+
+        err, span = log_result("GetSpan()", d.GetSpan(), lambda v: f"{v:.6e} Hz")
+        expect(err == 0, "GetSpan() failed")
+        expect(span > 0, "Span must be positive")
+
+        err, rbw = log_result("GetRBW()", d.GetRBW(), lambda v: f"{v:.6e} Hz")
+        expect(err == 0, "GetRBW() failed")
+        expect(rbw > 0, "RBW must be positive")
+
+        err, sweep_type = log_result("GetSweepType()", d.GetSweepType())
+        expect(err == 0, "GetSweepType() failed")
+        expect(sweep_type in ("LINEAR", "LOGARITHMIC", "SEGMENT"), "Unexpected sweep type")
+
+        err, sweep_mode = log_result("GetSweepMode()", d.GetSweepMode())
+        expect(err == 0, "GetSweepMode() failed")
+        expect(sweep_mode in ("CONTINUOUS", "SINGLE"), "Unexpected sweep mode")
+
+        err, sweep_count = log_result("GetSweepCount()", d.GetSweepCount())
+        expect(err == 0, "GetSweepCount() failed")
+        expect(sweep_count >= 0, "Sweep count must not be negative")
+
+        err, sweep_points = log_result("GetSweepPoints()", d.GetSweepPoints())
+        expect(err == 0, "GetSweepPoints() failed")
+        expect(sweep_points >= 2, "Sweep points must be at least 2")
+
+        err, trigger_mode = log_result("GetTriggerMode()", d.GetTriggerMode())
+        expect(err == 0, "GetTriggerMode() failed")
+
+        err, trigger_delay = log_result("GetTriggerDelay()", d.GetTriggerDelay(), lambda v: f"{v:.6e} s")
+        expect(err == 0, "GetTriggerDelay() failed")
+        expect(trigger_delay >= 0, "Trigger delay must not be negative")
+
+        err, ref_level = log_result("GetRefLevel()", d.GetRefLevel())
+        expect(err == 0, "GetRefLevel() failed")
+
+        err, division_value = log_result("GetDivisionValue()", d.GetDivisionValue())
+        expect(err == 0, "GetDivisionValue() failed")
+
+        print("\n-- Non-destructive set/get verification --")
+        err, center_freq = d.GetCenterFreq()
+        expect(err == 0, "GetCenterFreq() failed")
+        err, center_freq_after = log_result(
+            "SetCenterFreq(current)",
+            d.SetCenterFreq(center_freq),
+            lambda v: f"{v:.6e} Hz",
+        )
+        expect(err == 0, "SetCenterFreq(current) failed")
+        expect(abs(center_freq_after - center_freq) <= max(1.0, abs(center_freq) * 1e-9), "Center frequency round-trip mismatch")
+
+        err, span_after = log_result(
+            "SetSpan(current)",
+            d.SetSpan(span),
+            lambda v: f"{v:.6e} Hz",
+        )
+        expect(err == 0, "SetSpan(current) failed")
+        expect(abs(span_after - span) <= max(1.0, abs(span) * 1e-9), "Span round-trip mismatch")
+
+        err, rbw_after = log_result(
+            "SetRBW(current)",
+            d.SetRBW(rbw),
+            lambda v: f"{v:.6e} Hz",
+        )
+        expect(err == 0, "SetRBW(current) failed")
+        expect(abs(rbw_after - rbw) <= max(1.0, abs(rbw) * 1e-9), "RBW round-trip mismatch")
+
+        err, sweep_points_after = log_result("SetSweepPoints(current)", d.SetSweepPoints(sweep_points))
+        expect(err == 0, "SetSweepPoints(current) failed")
+        expect(sweep_points_after == sweep_points, "Sweep points round-trip mismatch")
+
+        err, sweep_type_after = log_result("SetSweepType(current)", d.SetSweepType(sweep_type))
+        expect(err == 0, "SetSweepType(current) failed")
+        expect(sweep_type_after == sweep_type, "Sweep type round-trip mismatch")
+
+        err, trigger_mode_after = log_result("SetTriggerMode(current)", d.SetTriggerMode(trigger_mode))
+        expect(err == 0, "SetTriggerMode(current) failed")
+        expect(trigger_mode_after == trigger_mode, "Trigger mode round-trip mismatch")
+
+        err, trigger_delay_after = log_result(
+            "SetTriggerDelay(current)",
+            d.SetTriggerDelay(trigger_delay),
+            lambda v: f"{v:.6e} s",
+        )
+        expect(err == 0, "SetTriggerDelay(current) failed")
+        expect(abs(trigger_delay_after - trigger_delay) <= max(1e-9, abs(trigger_delay) * 1e-9), "Trigger delay round-trip mismatch")
+
+        if not args.skip_spectrum:
+            print("\n-- Spectrum acquisition --")
+            if args.single_sweep:
+                if sweep_mode != "SINGLE":
+                    err, sweep_mode = log_result("SetSweepMode('SINGLE')", d.SetSweepMode("SINGLE"))
+                    expect(err == 0 and sweep_mode == "SINGLE", "Failed to switch to single sweep mode")
+                err, _value = log_result("NewSweepCount()", d.NewSweepCount())
+                expect(err == 0, "NewSweepCount() failed")
+
+            err, spectrum = log_result(
+                "GetSpectrum()",
+                d.GetSpectrum(),
+                lambda value: f"{len(value[0])} x-points, {len(value[1])} y-points",
+            )
+            expect(err == 0, "GetSpectrum() failed")
+
+            x_values, y_values = spectrum
+            expect(len(x_values) == len(y_values), "Spectrum x/y lengths differ")
+            expect(len(x_values) > 0, "Spectrum is empty")
+            expect(all(x_values[i] <= x_values[i + 1] for i in range(len(x_values) - 1)), "Stimulus values are not monotonic")
+            if args.expected_points is not None:
+                expect(len(x_values) == args.expected_points, "Spectrum length does not match --expected-points")
+
+            print(f"First point: x={x_values[0]:.6e}, y={y_values[0]:.6e}")
+            print(f"Last point:  x={x_values[-1]:.6e}, y={y_values[-1]:.6e}")
+
+        print("\nSmoke test completed successfully.")
+
+    except Exception as exc:
+        print(f"\nSmoke test failed: {type(exc).__name__}: {exc}")
+        raise
+    finally:
+        try:
+            d.close()
+            print("\nCleanup completed.")
+        except Exception as exc:
+            print(f"\nCleanup failed: {type(exc).__name__}: {exc}")
