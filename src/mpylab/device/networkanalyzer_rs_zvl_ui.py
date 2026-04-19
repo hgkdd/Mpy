@@ -1,85 +1,205 @@
 # -*- coding: utf-8 -*-
 #
-"""This is :mod:`mpylab.device.networkanalyzer_rs_zvl_ui`:
+"""ZVL-specific graphical test utility."""
 
-   :author: Christian Albrecht, Hans Georg Krauthäuser
+import io
+import sys
 
-   :license: GPL-3 or higher
-"""
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from mpylab.device.networkanalyzer_ui import NetworkAnalyzerWidget
-from nw_rs_zvl import NETWORKANALYZER
+from mpylab.device.nw_rs_zvl import NETWORKANALYZER
 
 
 class UI(NetworkAnalyzerWidget):
-    """
-    PySide6-Version der UI für den R&S ZVL.
-
-    Gegenüber ``NetworkAnalyzerWidget`` ergänzt diese Klasse den Zusatzbereich
-    ``Main_Rest`` um:
-        - SetWindow-Button
-        - Anzeige des aktuellen Window-Werts
-        - Eingabefeld für ein neues Window
-    """
+    """ZVL-specific extension of the generic network analyzer test utility."""
 
     def __init__(self, instance, ini=None, parent=None):
         super().__init__(instance, ini=ini, parent=parent)
-        self.setWindowTitle("R&S ZVL Network Analyzer")
-        self._build_zlv_tab()
+        self.setWindowTitle("R&S ZVL Test Utility")
+        self._build_zvl_topology_tab()
+        self.refresh_all()
 
-    def _build_zlv_tab(self):
+    def _build_zvl_topology_tab(self):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(tab)
 
-        group = QtWidgets.QGroupBox("Main_Rest")
-        group_layout = QtWidgets.QHBoxLayout(group)
+        toolbar = QtWidgets.QHBoxLayout()
+        self.refresh_topology_button = QtWidgets.QPushButton("Refresh Topology")
+        self.refresh_topology_button.clicked.connect(self.refresh_topology)
+        toolbar.addWidget(self.refresh_topology_button)
+        toolbar.addStretch()
+        layout.addLayout(toolbar)
 
-        self.set_window_button = QtWidgets.QPushButton("SetWindow")
-        self.set_window_button.clicked.connect(self.on_set_window_clicked)
+        splitter = QtWidgets.QSplitter()
+        layout.addWidget(splitter)
 
-        self.setwindow_value = QtWidgets.QLineEdit()
-        self.setwindow_value.setReadOnly(True)
-        self.setwindow_value.setPlaceholderText("Wert")
-        self.setwindow_value.setMinimumWidth(160)
+        window_group = QtWidgets.QGroupBox("Windows")
+        window_layout = QtWidgets.QVBoxLayout(window_group)
+        self.window_list = QtWidgets.QListWidget()
+        self.window_list.itemSelectionChanged.connect(self.on_window_selected_in_list)
+        window_layout.addWidget(self.window_list)
 
-        self.new_setwindow_edit = QtWidgets.QLineEdit()
-        self.new_setwindow_edit.setPlaceholderText("windowName")
-        self.new_setwindow_edit.setMinimumWidth(160)
+        window_input_row = QtWidgets.QHBoxLayout()
+        self.window_name_edit = QtWidgets.QLineEdit()
+        self.window_name_edit.setPlaceholderText("window name")
+        window_input_row.addWidget(self.window_name_edit)
+        window_layout.addLayout(window_input_row)
 
-        group_layout.addWidget(self.set_window_button)
-        group_layout.addWidget(QtWidgets.QLabel("Wert"))
-        group_layout.addWidget(self.setwindow_value)
-        group_layout.addWidget(QtWidgets.QLabel("windowName"))
-        group_layout.addWidget(self.new_setwindow_edit)
-        group_layout.addStretch()
+        window_button_row = QtWidgets.QHBoxLayout()
+        self.create_window_button = QtWidgets.QPushButton("Create")
+        self.create_window_button.clicked.connect(self.on_create_window_clicked)
+        self.select_window_button = QtWidgets.QPushButton("Select")
+        self.select_window_button.clicked.connect(self.on_select_window_clicked)
+        self.delete_window_button = QtWidgets.QPushButton("Delete Active")
+        self.delete_window_button.clicked.connect(self.on_delete_window_clicked)
+        window_button_row.addWidget(self.create_window_button)
+        window_button_row.addWidget(self.select_window_button)
+        window_button_row.addWidget(self.delete_window_button)
+        window_layout.addLayout(window_button_row)
 
-        layout.addWidget(group)
-        layout.addStretch()
+        trace_group = QtWidgets.QGroupBox("Traces")
+        trace_layout = QtWidgets.QVBoxLayout(trace_group)
+        self.trace_list = QtWidgets.QListWidget()
+        self.trace_list.itemSelectionChanged.connect(self.on_trace_selected_in_list)
+        trace_layout.addWidget(self.trace_list)
 
-        self.tabs.addTab(tab, "Main_Rest")
+        trace_form = QtWidgets.QFormLayout()
+        self.trace_name_edit = QtWidgets.QLineEdit()
+        self.trace_name_edit.setPlaceholderText("trace name")
+        self.sparam_combo = QtWidgets.QComboBox()
+        self.sparam_combo.addItems(["S11", "S12", "S21", "S22"])
+        trace_form.addRow("Trace Name", self.trace_name_edit)
+        trace_form.addRow("S-Parameter", self.sparam_combo)
+        trace_layout.addLayout(trace_form)
 
-    def on_set_window_clicked(self):
+        trace_button_row = QtWidgets.QHBoxLayout()
+        self.create_trace_button = QtWidgets.QPushButton("Create")
+        self.create_trace_button.clicked.connect(self.on_create_trace_clicked)
+        self.select_trace_button = QtWidgets.QPushButton("Select")
+        self.select_trace_button.clicked.connect(self.on_select_trace_clicked)
+        self.delete_trace_button = QtWidgets.QPushButton("Delete Active")
+        self.delete_trace_button.clicked.connect(self.on_delete_trace_clicked)
+        trace_button_row.addWidget(self.create_trace_button)
+        trace_button_row.addWidget(self.select_trace_button)
+        trace_button_row.addWidget(self.delete_trace_button)
+        trace_layout.addLayout(trace_button_row)
+
+        active_group = QtWidgets.QGroupBox("Active Objects")
+        active_layout = QtWidgets.QFormLayout(active_group)
+        self.active_window_field = QtWidgets.QLineEdit()
+        self.active_window_field.setReadOnly(True)
+        self.active_trace_field = QtWidgets.QLineEdit()
+        self.active_trace_field.setReadOnly(True)
+        self.active_sparam_field = QtWidgets.QLineEdit()
+        self.active_sparam_field.setReadOnly(True)
+        self.set_sparam_button = QtWidgets.QPushButton("Apply to Active Trace")
+        self.set_sparam_button.clicked.connect(self.on_set_sparameter_clicked)
+        active_layout.addRow("Active Window", self.active_window_field)
+        active_layout.addRow("Active Trace", self.active_trace_field)
+        active_layout.addRow("Current S-Parameter", self.active_sparam_field)
+        active_layout.addRow("Set S-Parameter", self.set_sparam_button)
+
+        splitter.addWidget(window_group)
+        splitter.addWidget(trace_group)
+        splitter.addWidget(active_group)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
+        splitter.setStretchFactor(2, 1)
+
+        self.tabs.insertTab(2, tab, "Topology")
+
+    def after_refresh_all(self):
+        self.refresh_topology()
+
+    def refresh_topology(self):
+        self.window_list.clear()
+        self.trace_list.clear()
+
+        windows = getattr(self.dv, "windows", {})
+        traces = getattr(self.dv, "traces", {})
+
+        for name, win in sorted(windows.items(), key=lambda item: item[1].getInternNumber()):
+            item = QtWidgets.QListWidgetItem(f"{name}  [#{win.getInternNumber()}]")
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, name)
+            self.window_list.addItem(item)
+
+        for name, trace in sorted(traces.items(), key=lambda item: item[1].getTraceWindowNumber()):
+            item = QtWidgets.QListWidgetItem(
+                f"{name}  [{trace.getsparameter()} | {trace.getInternName()}]"
+            )
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, name)
+            self.trace_list.addItem(item)
+
+        self.active_window_field.setText(self._status_value("GetWindow"))
+        self.active_trace_field.setText(self._status_value("GetTrace"))
+        self.active_sparam_field.setText(self._status_value("GetSparameter"))
+
+    def _selected_window_name(self):
+        item = self.window_list.currentItem()
+        if item is None:
+            raise ValueError("No window selected")
+        return item.data(QtCore.Qt.ItemDataRole.UserRole)
+
+    def _selected_trace_name(self):
+        item = self.trace_list.currentItem()
+        if item is None:
+            raise ValueError("No trace selected")
+        return item.data(QtCore.Qt.ItemDataRole.UserRole)
+
+    def on_window_selected_in_list(self):
+        item = self.window_list.currentItem()
+        if item is not None:
+            self.window_name_edit.setText(item.data(QtCore.Qt.ItemDataRole.UserRole))
+
+    def on_trace_selected_in_list(self):
+        item = self.trace_list.currentItem()
+        if item is not None:
+            self.trace_name_edit.setText(item.data(QtCore.Qt.ItemDataRole.UserRole))
+
+    def on_create_window_clicked(self):
+        name = self.window_name_edit.text().strip()
+        if not name:
+            self._show_error("Create Window Error", ValueError("Window name is empty"))
+            return
+        self._apply_and_refresh("CreateWindow", lambda: self._call_driver("CreateWindow", name))
+
+    def on_select_window_clicked(self):
         try:
-            window_name = self.new_setwindow_edit.text().strip()
-            if not window_name:
-                QtWidgets.QMessageBox.warning(
-                    self,
-                    "Eingabe fehlt",
-                    "Bitte einen Window-Namen eingeben."
-                )
-                return
+            name = self.window_name_edit.text().strip() or self._selected_window_name()
+        except Exception as exc:
+            self._show_error("Select Window Error", exc)
+            return
+        self._apply_and_refresh("SetWindow", lambda: self._call_driver("SetWindow", name))
 
-            err, value = self.dv.SetWindow(window_name)
-            self.setwindow_value.setText(str(value))
+    def on_delete_window_clicked(self):
+        self._apply_and_refresh("DelWindow", lambda: self._call_driver("DelWindow"))
 
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "SetWindow-Fehler", str(e))
+    def on_create_trace_clicked(self):
+        trace_name = self.trace_name_edit.text().strip()
+        sparam = self.sparam_combo.currentText().strip()
+        if not trace_name:
+            self._show_error("Create Trace Error", ValueError("Trace name is empty"))
+            return
+        self._apply_and_refresh("CreateTrace", lambda: self._call_driver("CreateTrace", trace_name, sparam))
+
+    def on_select_trace_clicked(self):
+        try:
+            trace_name = self.trace_name_edit.text().strip() or self._selected_trace_name()
+        except Exception as exc:
+            self._show_error("Select Trace Error", exc)
+            return
+        self._apply_and_refresh("SetTrace", lambda: self._call_driver("SetTrace", trace_name))
+
+    def on_delete_trace_clicked(self):
+        self._apply_and_refresh("DelTrace", lambda: self._call_driver("DelTrace"))
+
+    def on_set_sparameter_clicked(self):
+        sparam = self.sparam_combo.currentText().strip()
+        self._apply_and_refresh("SetSparameter", lambda: self._call_driver("SetSparameter", sparam))
 
 
 if __name__ == "__main__":
-    import sys
-    import io
     from mpylab.tools.util import format_block
 
     try:
@@ -109,17 +229,17 @@ if __name__ == "__main__":
                         SetSpan: 5999991000
                         CreateWindow: 'default'
                         CreateTrace: 'default','S22'
-                        SetSweepCount: 0
-                        SetSweepPoints: 100
-                        SetSweepType: 'Log'
+                        SetSweepCount: 1
+                        SetSweepPoints: 401
+                        SetSweepType: 'LINEAR'
                         """)
         ini = io.StringIO(ini_text)
     else:
         try:
             with open(ini, "r", encoding="utf-8") as f:
                 ini = io.StringIO(f.read())
-        except OSError as e:
-            print(f"INI-Datei konnte nicht gelesen werden: {e}")
+        except OSError as exc:
+            print(f"INI file could not be read: {exc}")
             sys.exit(1)
 
     nw = NETWORKANALYZER()
