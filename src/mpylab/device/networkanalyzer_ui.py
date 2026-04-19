@@ -41,6 +41,29 @@ std_ini_text = format_block("""
                 """).strip()
 
 
+class DriverTask(QtCore.QObject):
+    """Execute one driver-related callable inside a dedicated Qt thread."""
+
+    succeeded = QtCore.Signal(object)
+    failed = QtCore.Signal(object)
+    finished = QtCore.Signal()
+
+    def __init__(self, func):
+        super().__init__()
+        self._func = func
+
+    @QtCore.Slot()
+    def run(self):
+        try:
+            result = self._func()
+        except Exception as exc:
+            self.failed.emit(exc)
+        else:
+            self.succeeded.emit(result)
+        finally:
+            self.finished.emit()
+
+
 class MplCanvas(FigureCanvas):
     """Matplotlib canvas used to display the currently acquired spectrum."""
 
@@ -84,8 +107,12 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.power = ()
         self._last_ini_text = ""
         self._status_fields = {}
+        self._status_raw = {}
         self._control_widgets = {}
         self._last_trace_data = None
+        self._busy = False
+        self._active_thread = None
+        self._active_task = None
 
         self.setWindowTitle("Network Analyzer Test Utility")
         self.resize(1280, 900)
@@ -116,6 +143,9 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.close_button = QtWidgets.QPushButton("Close")
         self.close_button.clicked.connect(self.close)
         bottom_bar.addWidget(self.close_button)
+
+        self.busy_label = QtWidgets.QLabel("Idle")
+        bottom_bar.addWidget(self.busy_label)
 
         main_layout.addLayout(bottom_bar)
 
@@ -316,22 +346,80 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.log_edit.appendPlainText(f"[{timestamp}] {message}")
 
+    def _set_busy(self, busy, message=None):
+        self._busy = busy
+        self.tabs.setEnabled(not busy)
+        self.refresh_all_button.setEnabled(not busy)
+        self.close_button.setEnabled(not busy)
+        self.busy_label.setText(message if message is not None else ("Busy" if busy else "Idle"))
+
+    def _start_task(
+        self,
+        label,
+        func,
+        on_success=None,
+        on_error=None,
+        on_finished=None,
+    ):
+        if self._busy:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Operation in progress",
+                "Another device operation is still running.",
+            )
+            return False
+
+        self.log_message(f"{label} started.")
+        self._set_busy(True, label)
+
+        thread = QtCore.QThread(self)
+        task = DriverTask(func)
+        task.moveToThread(thread)
+        thread.started.connect(task.run)
+
+        def handle_success(result):
+            self.log_message(f"{label} succeeded.")
+            if on_success is not None:
+                on_success(result)
+
+        def handle_error(exc):
+            self.log_message(f"{label} failed: {type(exc).__name__}: {exc}")
+            if on_error is not None:
+                on_error(exc)
+            else:
+                self._show_error(f"{label} Error", exc)
+
+        def cleanup():
+            if on_finished is not None:
+                on_finished()
+            self._set_busy(False, "Idle")
+            task.deleteLater()
+            thread.deleteLater()
+            self._active_task = None
+            self._active_thread = None
+
+        task.succeeded.connect(handle_success)
+        task.failed.connect(handle_error)
+        task.finished.connect(thread.quit)
+        thread.finished.connect(cleanup)
+        thread.start()
+
+        self._active_thread = thread
+        self._active_task = task
+        return True
+
     def _display_value(self, value):
         if isinstance(value, tuple):
             return ", ".join(str(item) for item in value)
         return str(value)
 
-    def _call_driver(self, method_name, *args):
+    def _driver_method(self, method_name, *args, **kwargs):
         method = getattr(self.dv, method_name, None)
         if method is None:
             raise AttributeError(f"Driver does not implement {method_name}()")
-        self.log_message(f"{method_name}({', '.join(repr(arg) for arg in args)})")
-        result = method(*args)
-        self.log_message(f"{method_name} -> {result!r}")
-        return result
+        return method(*args, **kwargs)
 
     def _show_error(self, title, error):
-        self.log_message(f"{title}: {type(error).__name__}: {error}")
         QtWidgets.QMessageBox.critical(self, title, str(error))
 
     def _set_status_field(self, key, text):
@@ -378,18 +466,20 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             self._show_error("INI Save Error", exc)
 
     def on_init_clicked(self):
-        try:
-            ini_text = self.ini_edit.toPlainText()
-            self._last_ini_text = ini_text
-            ini = io.StringIO(ini_text)
-            channel = self.channel_spin.value()
-            err = self.dv.Init(ini=ini, channel=channel)
+        ini_text = self.ini_edit.toPlainText()
+        self._last_ini_text = ini_text
+        channel = self.channel_spin.value()
+
+        def task():
+            return self._driver_method("Init", ini=io.StringIO(ini_text), channel=channel)
+
+        def success(err):
             self.log_message(f"Init returned: {err}")
             self.refresh_all()
-        except Exception as exc:
-            self._show_error("Init Error", exc)
 
-    def refresh_status(self):
+        self._start_task("Init", task, on_success=success)
+
+    def _collect_status_snapshot(self):
         getter_specs = [
             "GetDescription",
             "GetChannel",
@@ -411,16 +501,32 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             "GetTriggerDelay",
         ]
 
+        snapshot = {}
         for getter in getter_specs:
             if not hasattr(self.dv, getter):
                 continue
             try:
-                err, value = self._call_driver(getter)
+                err, value = self._driver_method(getter)
                 text = self._display_value(value) if err == 0 else f"ERR {err}"
+                snapshot[getter] = {"text": text, "value": value, "err": err}
             except Exception as exc:
-                text = f"{type(exc).__name__}: {exc}"
-                self.log_message(f"{getter} failed: {text}")
+                snapshot[getter] = {"text": f"{type(exc).__name__}: {exc}", "value": None, "err": None}
+        return snapshot
+
+    def _apply_status_snapshot(self, snapshot):
+        self._status_raw = {}
+        for getter, info in snapshot.items():
+            text = info["text"]
             self._set_status_field(getter, text)
+            self._status_raw[getter] = info["value"] if info["err"] == 0 else None
+
+    def refresh_status(self, on_complete=None):
+        def success(snapshot):
+            self._apply_status_snapshot(snapshot)
+            if on_complete is not None:
+                on_complete()
+
+        self._start_task("Refresh Status", self._collect_status_snapshot, on_success=success)
 
     def populate_controls_from_status(self):
         mapping = {
@@ -439,20 +545,20 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
 
         for control_key, getter in mapping.items():
             widget = self._control_widgets[control_key]
-            value = self._status_value(getter)
-            if not value or value.startswith("ERR") or ":" in value:
+            raw_value = self._status_raw.get(getter)
+            if raw_value is None:
                 continue
             try:
                 if isinstance(widget, QtWidgets.QComboBox):
-                    idx = widget.findText(value)
+                    idx = widget.findText(str(raw_value))
                     if idx >= 0:
                         widget.setCurrentIndex(idx)
                 elif isinstance(widget, QtWidgets.QSpinBox):
-                    widget.setValue(int(float(value)))
+                    widget.setValue(int(float(raw_value)))
                 else:
-                    widget.setText(value)
+                    widget.setText(str(raw_value))
             except Exception:
-                self.log_message(f"Could not populate control {control_key} from {getter}='{value}'")
+                self.log_message(f"Could not populate control {control_key} from {getter}='{raw_value}'")
 
     def _line_edit_float(self, key):
         text = self._control_widgets[key].text().strip()
@@ -467,102 +573,119 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         return int(self._control_widgets[key].value())
 
     def _apply_and_refresh(self, label, callable_):
-        try:
-            result = callable_()
+        def success(result):
             self.log_message(f"{label}: {result!r}")
             self.refresh_all()
-            return result
-        except Exception as exc:
-            self._show_error(f"{label} Error", exc)
-            return None
+
+        self._start_task(label, callable_, on_success=success)
 
     def on_set_center_freq_clicked(self):
-        self._apply_and_refresh("SetCenterFreq", lambda: self._call_driver("SetCenterFreq", self._line_edit_float("center_freq")))
+        self._apply_and_refresh("SetCenterFreq", lambda: self._driver_method("SetCenterFreq", self._line_edit_float("center_freq")))
 
     def on_set_span_clicked(self):
-        self._apply_and_refresh("SetSpan", lambda: self._call_driver("SetSpan", self._line_edit_float("span")))
+        self._apply_and_refresh("SetSpan", lambda: self._driver_method("SetSpan", self._line_edit_float("span")))
 
     def on_set_rbw_clicked(self):
-        self._apply_and_refresh("SetRBW", lambda: self._call_driver("SetRBW", self._line_edit_float("rbw")))
+        self._apply_and_refresh("SetRBW", lambda: self._driver_method("SetRBW", self._line_edit_float("rbw")))
 
     def on_set_ref_level_clicked(self):
-        self._apply_and_refresh("SetRefLevel", lambda: self._call_driver("SetRefLevel", self._line_edit_float("ref_level")))
+        self._apply_and_refresh("SetRefLevel", lambda: self._driver_method("SetRefLevel", self._line_edit_float("ref_level")))
 
     def on_set_division_clicked(self):
-        self._apply_and_refresh("SetDivisionValue", lambda: self._call_driver("SetDivisionValue", self._line_edit_float("division_value")))
+        self._apply_and_refresh("SetDivisionValue", lambda: self._driver_method("SetDivisionValue", self._line_edit_float("division_value")))
 
     def on_set_sweep_type_clicked(self):
-        self._apply_and_refresh("SetSweepType", lambda: self._call_driver("SetSweepType", self._combo_value("sweep_type")))
+        self._apply_and_refresh("SetSweepType", lambda: self._driver_method("SetSweepType", self._combo_value("sweep_type")))
 
     def on_set_sweep_mode_clicked(self):
-        self._apply_and_refresh("SetSweepMode", lambda: self._call_driver("SetSweepMode", self._combo_value("sweep_mode")))
+        self._apply_and_refresh("SetSweepMode", lambda: self._driver_method("SetSweepMode", self._combo_value("sweep_mode")))
 
     def on_set_sweep_count_clicked(self):
-        self._apply_and_refresh("SetSweepCount", lambda: self._call_driver("SetSweepCount", self._spin_value("sweep_count")))
+        self._apply_and_refresh("SetSweepCount", lambda: self._driver_method("SetSweepCount", self._spin_value("sweep_count")))
 
     def on_set_sweep_points_clicked(self):
-        self._apply_and_refresh("SetSweepPoints", lambda: self._call_driver("SetSweepPoints", self._spin_value("sweep_points")))
+        self._apply_and_refresh("SetSweepPoints", lambda: self._driver_method("SetSweepPoints", self._spin_value("sweep_points")))
 
     def on_set_trigger_mode_clicked(self):
-        self._apply_and_refresh("SetTriggerMode", lambda: self._call_driver("SetTriggerMode", self._combo_value("trigger_mode")))
+        self._apply_and_refresh("SetTriggerMode", lambda: self._driver_method("SetTriggerMode", self._combo_value("trigger_mode")))
 
     def on_set_trigger_delay_clicked(self):
-        self._apply_and_refresh("SetTriggerDelay", lambda: self._call_driver("SetTriggerDelay", self._line_edit_float("trigger_delay")))
+        self._apply_and_refresh("SetTriggerDelay", lambda: self._driver_method("SetTriggerDelay", self._line_edit_float("trigger_delay")))
 
     def on_single_sweep_clicked(self):
         def action():
             if hasattr(self.dv, "SetSweepMode"):
-                self._call_driver("SetSweepMode", "SINGLE")
+                self._driver_method("SetSweepMode", "SINGLE")
             if hasattr(self.dv, "NewSweepCount"):
-                return self._call_driver("NewSweepCount")
+                return self._driver_method("NewSweepCount")
             raise AttributeError("Driver does not support NewSweepCount()")
 
         self._apply_and_refresh("Single Sweep", action)
 
     def on_single_sweep_and_get_spectrum_clicked(self):
-        try:
-            self.on_single_sweep_clicked()
-            self.on_get_spectrum_clicked()
-        except Exception as exc:
-            self._show_error("Single Sweep + Spectrum Error", exc)
-
-    def on_get_spectrum_clicked(self):
-        try:
+        def task():
+            if hasattr(self.dv, "SetSweepMode"):
+                self._driver_method("SetSweepMode", "SINGLE")
+            if hasattr(self.dv, "NewSweepCount"):
+                self._driver_method("NewSweepCount")
             sweep_type = None
             if hasattr(self.dv, "GetSweepType"):
-                err, sweep_type = self._call_driver("GetSweepType")
+                err, sweep_type = self._driver_method("GetSweepType")
                 if err != 0:
                     sweep_type = None
-
-            err, power = self._call_driver("GetSpectrum")
+            err, power = self._driver_method("GetSpectrum")
             if err != 0:
                 raise RuntimeError(f"GetSpectrum returned error code {err}")
+            return {"sweep_type": sweep_type, "power": power}
 
-            self.power = power
-            self._last_trace_data = power
-            x = np.asarray(power[0], dtype=float)
-            y = np.asarray(power[1], dtype=float)
-            logarithmic = sweep_type == "LOGARITHMIC"
+        self._start_task(
+            "Single Sweep + Spectrum",
+            task,
+            on_success=self._handle_spectrum_result,
+        )
 
-            self.canvas.update_spectrum(x, y, logarithmic=logarithmic)
+    def _handle_spectrum_result(self, result):
+        sweep_type = result.get("sweep_type")
+        power = result.get("power")
 
-            preview = [
-                f"x-points: {len(x)}",
-                f"y-points: {len(y)}",
-            ]
-            if len(x) > 0:
-                preview.append(f"first point: x={x[0]:.6e}, y={y[0]:.6e}")
-                preview.append(f"last point:  x={x[-1]:.6e}, y={y[-1]:.6e}")
-            preview.append("")
-            preview.append("X values:")
-            preview.append(", ".join(f"{value:.6e}" for value in x[:50]))
-            preview.append("")
-            preview.append("Y values:")
-            preview.append(", ".join(f"{value:.6e}" for value in y[:50]))
-            self.spectrum_edit.setPlainText("\n".join(preview))
-            self.log_message(f"Spectrum acquired: {len(x)} points")
-        except Exception as exc:
-            self._show_error("Spectrum Error", exc)
+        self.power = power
+        self._last_trace_data = power
+        x = np.asarray(power[0], dtype=float)
+        y = np.asarray(power[1], dtype=float)
+        logarithmic = sweep_type == "LOGARITHMIC"
+
+        self.canvas.update_spectrum(x, y, logarithmic=logarithmic)
+
+        preview = [
+            f"x-points: {len(x)}",
+            f"y-points: {len(y)}",
+        ]
+        if len(x) > 0:
+            preview.append(f"first point: x={x[0]:.6e}, y={y[0]:.6e}")
+            preview.append(f"last point:  x={x[-1]:.6e}, y={y[-1]:.6e}")
+        preview.append("")
+        preview.append("X values:")
+        preview.append(", ".join(f"{value:.6e}" for value in x[:50]))
+        preview.append("")
+        preview.append("Y values:")
+        preview.append(", ".join(f"{value:.6e}" for value in y[:50]))
+        self.spectrum_edit.setPlainText("\n".join(preview))
+        self.log_message(f"Spectrum acquired: {len(x)} points")
+        self.refresh_all()
+
+    def on_get_spectrum_clicked(self):
+        def task():
+            sweep_type = None
+            if hasattr(self.dv, "GetSweepType"):
+                err, sweep_type = self._driver_method("GetSweepType")
+                if err != 0:
+                    sweep_type = None
+            err, power = self._driver_method("GetSpectrum")
+            if err != 0:
+                raise RuntimeError(f"GetSpectrum returned error code {err}")
+            return {"sweep_type": sweep_type, "power": power}
+
+        self._start_task("Acquire Spectrum", task, on_success=self._handle_spectrum_result)
 
     def on_clear_plot_clicked(self):
         self.canvas.clear_plot()
@@ -571,14 +694,24 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.log_message("Spectrum plot cleared.")
 
     def refresh_all(self):
-        self.refresh_status()
-        self.populate_controls_from_status()
-        self.after_refresh_all()
+        def complete():
+            self.populate_controls_from_status()
+            self.after_refresh_all()
+
+        self.refresh_status(on_complete=complete)
 
     def after_refresh_all(self):
         """Hook for subclasses that need to update additional UI state."""
 
     def closeEvent(self, event):
+        if self._busy and self._active_thread is not None:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Operation in progress",
+                "Please wait until the current device operation has finished.",
+            )
+            event.ignore()
+            return
         try:
             if hasattr(self.dv, "close"):
                 self.dv.close()
