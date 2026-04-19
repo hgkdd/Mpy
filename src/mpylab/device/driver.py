@@ -74,6 +74,7 @@ class DRIVER:
         self.convert = CONVERT()
         self.errors = Device._Errors
         self.dev = None
+        self.bus_ready = False
         self.CommunicationClass = None
 
     def _init_bus(self, timeout=5,
@@ -83,6 +84,8 @@ class DRIVER:
                   send_end=True,
                   delay=0,
                   lock=None):
+        self.bus_ready = False
+        self.dev = None
         gpib = None
         visa = None
         prologix = None
@@ -102,7 +105,7 @@ class DRIVER:
             self.write = self.CommunicationClass.write
             self.read = self.CommunicationClass.read
             self.query = self.CommunicationClass.query
-            self.dev = None
+            self.bus_ready = True
         elif prologix:   # prologix mode
             # prologix looks like: PROLOGIX::192.168.7.206::1234::SOCKET::17
             # we have to extract ip-addr and port
@@ -122,7 +125,7 @@ class DRIVER:
             self.write = self.CommunicationClass.write
             self.read = self.CommunicationClass.read
             self.query = self.CommunicationClass.query
-            self.dev = True
+            self.bus_ready = True
         else:  # pyvisa mode
             if visa:
                 res_name = visa
@@ -140,6 +143,7 @@ class DRIVER:
             self.read = self.CommunicationClass.read
             self.query = self.CommunicationClass.query
             self.dev = self.CommunicationClass.dev
+            self.bus_ready = True
         return self.dev
 
     def get_config(self, ini, channel):
@@ -186,7 +190,7 @@ class DRIVER:
                     pass
 
         self.dev = self._init_bus(**buspars)
-        if self.dev is not None:
+        if self.bus_ready:
             dct = self._do_cmds('Init', locals())
             self._update(dct)
         # print self.error
@@ -442,7 +446,7 @@ class DRIVER:
                 try:
                     resolved = self._resolve_expr(expr, callerdict)
                 except TypeError:
-                    if self.ALLOW_LEGACY_EXEC and isinstance(expr, str):
+                    if ALLOW_LEGACY_EXEC and isinstance(expr, str):
                         try:
                             exec(expr, callerdict)
                             continue
@@ -452,7 +456,7 @@ class DRIVER:
                     raise
                 kind = resolved[0]
                 if kind == "write":
-                    self.write(resolved[1], send_opc=send_opc)
+                    self.write(resolved[1])
                 elif kind == "call":
                     _method, _args, _kwargs = resolved[1], resolved[2], resolved[3]
                     _method(*_args, **_kwargs)
