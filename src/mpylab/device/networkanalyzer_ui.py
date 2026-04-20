@@ -748,6 +748,39 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             return int(widget.value())
         return widget.text().strip()
 
+    def _normalize_indicator_value(self, key, value):
+        """Normalize control/readback values to the public API vocabulary."""
+        if value is None:
+            return None
+
+        if key == "sweep_mode":
+            mapping = {
+                "1": "CONTINUOUS",
+                "ON": "CONTINUOUS",
+                "0": "SINGLE",
+                "OFF": "SINGLE",
+                "CONTINUOUS": "CONTINUOUS",
+                "SINGLE": "SINGLE",
+                "SINGEL": "SINGLE",
+            }
+            return mapping.get(str(value).strip().upper(), str(value).strip().upper())
+
+        if key == "sweep_type":
+            mapping = {
+                "LIN": "LINEAR",
+                "LINEAR": "LINEAR",
+                "LOG": "LOGARITHMIC",
+                "LOGARITHMIC": "LOGARITHMIC",
+                "SEGM": "SEGMENT",
+                "SEGMENT": "SEGMENT",
+            }
+            return mapping.get(str(value).strip().upper(), str(value).strip().upper())
+
+        if key == "trigger_mode":
+            return str(value).strip().upper()
+
+        return value
+
     def _update_control_indicators(self):
         mapping = {
             "center_freq": "GetCenterFreq",
@@ -768,7 +801,8 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             if readback is None:
                 self._set_indicator_state(key, "unknown", "No valid readback available.")
                 continue
-            current = self._control_current_value(key)
+            current = self._normalize_indicator_value(key, self._control_current_value(key))
+            readback = self._normalize_indicator_value(key, readback)
             try:
                 if isinstance(current, int):
                     matches = current == int(float(readback))
