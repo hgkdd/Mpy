@@ -229,9 +229,10 @@ class SIGNALGENERATOR(SGNLGNRTR):
             ),
             (
                 'outputstate',
-                [('1', 'on')],
+                [('1', 'on'), ('0', 'off')],
                 [
-                    ('OUTP:STAT ON', None)
+                    ('OUTP:STAT ON', None),
+                    ('OUTP:STAT OFF', None)
                 ]
             )
         ]
@@ -286,7 +287,7 @@ def main():
                         name: RFOut
                         level: -100.0
                         unit: dBm
-                        outpoutstate: 0
+                        outputstate: 0
                         """)
         ini = io.StringIO(ini)
     sg = SIGNALGENERATOR()
