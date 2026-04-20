@@ -155,33 +155,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
             )
         ]
 
-        for k, vals, actions in presets:
-            print((k, vals, actions))
-            try:
-                v = self.conf[sec][k]
-
-                if vals is None:
-                    cmd, tmpl = actions
-
-                    if callable(cmd):
-                        self._cmds['Preset'].append(
-                            (
-                                lambda _self, _cmd=cmd, _v=v, **kwargs:
-                                _cmd(_self, v=_v, **kwargs),
-                                tmpl
-                            )
-                        )
-                    else:
-                        self._cmds['Preset'].append((cmd, tmpl))
-
-                else:
-                    v_cmp = str(v).lower()
-                    for idx, vi in enumerate(vals):
-                        if v_cmp in vi:
-                            self._cmds['Preset'].append(actions[idx])
-
-            except KeyError:
-                pass
+        self._apply_presets(presets, sec)
 
         dct = self._do_cmds('Preset', locals())
         self._update(dct)

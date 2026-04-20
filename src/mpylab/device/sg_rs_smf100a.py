@@ -241,32 +241,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         # durch zeilenweise Betrachtung der Liste 'presets' herausgefiltert und in
         # die Befehlsliste 'self._cmds' übernommen.
         #
-        for k, vals, actions in presets:
-            try:
-                v = self.conf[sec][k]
-
-                if vals is None:
-                    cmd, tmpl = actions
-
-                    if callable(cmd):
-                        self._cmds['Preset'].append(
-                            (
-                                lambda _self, _cmd=cmd, _v=v, **kwargs:
-                                _cmd(_self, v=_v, **kwargs),
-                                tmpl
-                            )
-                        )
-                    else:
-                        self._cmds['Preset'].append((cmd, tmpl))
-
-                else:
-                    v_cmp = str(v).lower()
-                    for idx, vi in enumerate(vals):
-                        if v_cmp in vi:
-                            self._cmds['Preset'].append(actions[idx])
-
-            except KeyError:
-                pass
+        self._apply_presets(presets, sec)
 
         #
         # Initialisierung des Signalgenerators über die Methode '._do_cmds'
@@ -370,4 +345,3 @@ if __name__ == '__main__':
     #main()
     sg = test()
     print(sg.GetDescription())
-

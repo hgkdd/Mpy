@@ -322,6 +322,53 @@ class DRIVER:
 
         return (cmd, tmpl)
 
+    def _is_action_tuple(self, value):
+        """Return True if value looks like one low-level (cmd, tmpl) action."""
+        if not isinstance(value, (tuple, list)) or len(value) != 2:
+            return False
+        cmd, _tmpl = value
+        return cmd is None or isinstance(cmd, (str, MethodCall)) or callable(cmd)
+
+    def _normalize_preset_actions(self, actions, value, extra_kwargs=None):
+        """Normalize preset action definitions into a flat list of (cmd, tmpl) tuples."""
+        if extra_kwargs is None:
+            extra_kwargs = {}
+
+        if isinstance(actions, str):
+            return [(MethodCall(actions, args=(value,)), None)]
+
+        if self._is_action_tuple(actions):
+            return [self._bind_preset_action(tuple(actions), value, extra_kwargs=extra_kwargs)]
+
+        if isinstance(actions, (tuple, list)):
+            normalized = []
+            for action in actions:
+                normalized.extend(
+                    self._normalize_preset_actions(action, value, extra_kwargs=extra_kwargs)
+                )
+            return normalized
+
+        raise TypeError(
+            f"Unsupported preset action type {type(actions).__name__} for value {value!r}"
+        )
+
+    def _normalize_cmd_actions(self, actions):
+        """Flatten one _cmds action list into a validated sequence of (cmd, tmpl) tuples."""
+        normalized = []
+        for action in actions:
+            if self._is_action_tuple(action):
+                normalized.append(tuple(action))
+            elif isinstance(action, (tuple, list)):
+                for sub_action in action:
+                    if not self._is_action_tuple(sub_action):
+                        raise TypeError(
+                            f"Malformed command action entry in _cmds: {sub_action!r}"
+                        )
+                    normalized.append(tuple(sub_action))
+            else:
+                raise TypeError(f"Malformed command action entry in _cmds: {action!r}")
+        return normalized
+
     def _apply_presets(self, presets, sec, extra_kwargs=None, preset_key='Preset'):
         """
         Apply preset definitions from self.conf[sec] and append resulting actions
@@ -336,12 +383,13 @@ class DRIVER:
         with the following semantics:
 
         1. vals is None
-           actions is either:
+           actions is one of:
              - a method name as str
              - one action tuple: (cmd, tmpl)
+             - a sequence of action tuples / method names
 
         2. vals is not None
-           actions is a list of action tuples. The entry selected by vals is used.
+           actions is a list whose selected item is normalized like case 1.
 
         Matching for vals is case-insensitive.
 
@@ -378,23 +426,8 @@ class DRIVER:
 
             # Case 1: no selection list, direct action
             if vals is None:
-                # actions is method name
-                if isinstance(actions, str):
-                    try:
-                        err, _ret = getattr(self, actions)(v)
-                    except AttributeError as exc:
-                        raise AttributeError(
-                            f"Preset action method not found: {actions!r}"
-                        ) from exc
-
-                    if err != 0:
-                        self.error = err
-                        return self.error
-
-                # actions is one (cmd, tmpl) tuple
-                else:
-                    bound_action = self._bind_preset_action(actions, v, extra_kwargs=extra_kwargs)
-                    self._cmds[preset_key].append(bound_action)
+                bound_actions = self._normalize_preset_actions(actions, v, extra_kwargs=extra_kwargs)
+                self._cmds[preset_key].extend(bound_actions)
 
             # Case 2: selection list
             else:
@@ -403,8 +436,12 @@ class DRIVER:
                 for idx, vi in enumerate(vals):
                     allowed = tuple(str(item).lower() for item in vi)
                     if v_cmp in allowed:
-                        bound_action = self._bind_preset_action(actions[idx], v, extra_kwargs=extra_kwargs)
-                        self._cmds[preset_key].append(bound_action)
+                        bound_actions = self._normalize_preset_actions(
+                            actions[idx],
+                            v,
+                            extra_kwargs=extra_kwargs,
+                        )
+                        self._cmds[preset_key].extend(bound_actions)
                         break
 
         return self.error
@@ -422,7 +459,7 @@ class DRIVER:
         if key not in self._cmds:
             return dct
 
-        for cmd, tmpl in self._cmds[key]:
+        for cmd, tmpl in self._normalize_cmd_actions(self._cmds[key]):
             # --- cmd rendern ---
             if callable(cmd):
                 callargs = dict(callerdict or {})
@@ -1233,6 +1270,90 @@ def test_presets_hybrid():
     assert len(fake.writes) == 3
 
     print("test_presets_hybrid passed")
+
+def test_apply_presets_sequences_and_method_calls():
+    class FakeCommunication:
+        def __init__(self):
+            self.writes = []
+
+        def write(self, cmd, *args, **kwargs):
+            self.writes.append(cmd)
+            return len(cmd)
+
+        def read(self, tmpl=None, *args, **kwargs):
+            return None
+
+        def query(self, cmd, tmpl=None, *args, **kwargs):
+            self.write(cmd)
+            return None
+
+    class TestDriver(DRIVER):
+        def __init__(self):
+            super().__init__()
+            self._cmds = {"Preset": []}
+            self.mode_calls = []
+
+        def SetMode(self, value):
+            self.mode_calls.append(value)
+            return 0, value
+
+    drv = TestDriver()
+    fake = FakeCommunication()
+    drv.write = fake.write
+    drv.read = fake.read
+    drv.query = fake.query
+
+    sec = "channel_1"
+    drv.conf = {
+        sec: {
+            "mode": "SAFE",
+            "startup": "on",
+            "shape": "log",
+        }
+    }
+
+    presets = [
+        ("mode", None, "SetMode"),
+        (
+            "startup",
+            None,
+            [
+                (":OUTP OFF", None),
+                (":INIT:CONT OFF", None),
+            ],
+        ),
+        (
+            "shape",
+            [("lin",), ("log",)],
+            [
+                [(":SWE:TYPE LIN", None)],
+                [(":SWE:TYPE LOG", None), (":DISP:TRACE ON", None)],
+            ],
+        ),
+    ]
+
+    drv._apply_presets(presets, sec)
+    result = drv._do_cmds("Preset", {"self": drv})
+
+    assert result == {}
+    assert drv.mode_calls == ["SAFE"]
+    assert fake.writes == [
+        ":OUTP OFF",
+        ":INIT:CONT OFF",
+        ":SWE:TYPE LOG",
+        ":DISP:TRACE ON",
+    ]
+
+    drv._cmds["Nested"] = [
+        [
+            (":A", None),
+            (":B", None),
+        ]
+    ]
+    drv._do_cmds("Nested", {"self": drv})
+    assert fake.writes[-2:] == [":A", ":B"]
+
+    print("test_apply_presets_sequences_and_method_calls passed")
 
 def test_apply_presets_equivalence():
     class FakeCommunication:

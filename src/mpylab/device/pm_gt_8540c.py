@@ -94,22 +94,7 @@ class POWERMETER(PWRMTR):
             # key, vals, actions
             presets = [('filter', [], [])]  # TODO: fill with information from ini-file
 
-            for k, vals, actions in presets:
-                try:
-                    v = self.conf[sec][k]
-                    if vals is None:  # no comparison
-                        method_name = actions[0] # or: actions[0].split('.')[-1]
-                        try:
-                            method = getattr(self, method_name)
-                        except AttributeError as exc:
-                            raise ValueError(f"Unknown preset method '{actions[0]}' for key '{k}'") from exc
-                        self._cmds['Preset'].append((method, actions[1]))
-                    else:
-                        for idx, vi in enumerate(vals):
-                            if v.lower() in vi:
-                                self._cmds['Preset'].append(actions[idx])
-                except KeyError:
-                    pass
+            self._apply_presets(presets, sec)
 
             dct = self._do_cmds('Preset', locals())
             self._update(dct)
