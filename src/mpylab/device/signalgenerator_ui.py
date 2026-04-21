@@ -1,15 +1,21 @@
 # -*- coding: utf-8 -*-
+"""Graphical test utility for signal generator drivers."""
 
+import argparse
 import io
 import sys
+from datetime import datetime
 
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtCore, QtWidgets
 
 from scuq.quantities import Quantity
-from mpylab.tools.util import format_block
+
 from mpylab.device.device import CONVERT
+from mpylab.tools.util import format_block
+
 
 conv = CONVERT()
+
 
 std_ini_text = format_block("""
                 [DESCRIPTION]
@@ -31,48 +37,69 @@ std_ini_text = format_block("""
                 name: RFOut
                 level: -100
                 unit: 'dBm'
-                outpoutstate: 0
+                outputstate: 0
                 """).strip()
 
 
+class DriverTask(QtCore.QObject):
+    """Execute a driver callable in a dedicated worker thread."""
+
+    completed = QtCore.Signal(object, object)
+    finished = QtCore.Signal()
+
+    def __init__(self, func):
+        super().__init__()
+        self._func = func
+
+    @QtCore.Slot()
+    def run(self):
+        result = None
+        error = None
+        try:
+            result = self._func()
+        except Exception as exc:
+            error = exc
+        finally:
+            self.completed.emit(result, error)
+            self.finished.emit()
+
+
 class SignalGeneratorWidget(QtWidgets.QWidget):
+    """Threaded test UI for the common signal generator driver API."""
+
     def __init__(self, instance, ini=None, parent=None):
         super().__init__(parent)
 
         self.sg = instance
         self.ini_source = ini if ini is not None else io.StringIO(std_ini_text)
+        self._last_ini_text = ""
+        self._status_fields = {}
+        self._status_raw = {}
+        self._control_specs = {}
+        self._busy = False
+        self._is_initialized = False
+        self._rf_state = "unknown"
+        self._am_state = "unknown"
+        self._pm_state = "unknown"
+        self._last_error_text = "none"
+
+        self._active_thread = None
+        self._active_task = None
+        self._task_label = None
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = None
+        self._task_on_error = None
+        self._task_on_finished = None
 
         self.int_unit = "dBm"
 
-        self.RF_is_on = False
-        self.AM_is_on = False
-        self.PM_is_on = False
-
-        self.level = -100.0
-        self.unit = "dBm"
-
-        self.amfreq = 1e3
-        self.amdepth = 0.8
-        self.amwave = "SINE"
-        self.amsource = "INT1"
-        self.lfout = "OFF"
-
-        self.pmfreq = 1000.0
-        self.pmwidth = 100e-6
-        self.pmdelay = 0.0
-        self.pmpol = "NORMAL"
-        self.pmsource = "INT"
-
-        self.setWindowTitle("Signalgenerator")
-        self.resize(900, 700)
+        self.setWindowTitle("Signal Generator Test Utility")
+        self.resize(1180, 850)
 
         self._build_ui()
         self._load_ini()
-        self._connect_signals()
-
-    # ---------------------------------------------------------
-    # UI
-    # ---------------------------------------------------------
+        self.log_message("UI ready. RF is forced off on close.")
 
     def _build_ui(self):
         main_layout = QtWidgets.QVBoxLayout(self)
@@ -80,194 +107,317 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self.tabs = QtWidgets.QTabWidget()
         main_layout.addWidget(self.tabs)
 
-        self._build_ini_tab()
-        self._build_freq_tab()
-        self._build_level_tab()
+        self._build_connection_tab()
+        self._build_status_tab()
+        self._build_rf_level_tab()
         self._build_am_tab()
         self._build_pm_tab()
+        self._build_smoke_tab()
+        self._build_log_tab()
 
-        rf_group = QtWidgets.QGroupBox("RF")
-        rf_layout = QtWidgets.QVBoxLayout(rf_group)
+        bottom_bar = QtWidgets.QHBoxLayout()
+        self.state_label = QtWidgets.QLabel()
+        self.init_state_label = QtWidgets.QLabel()
+        self.driver_label = QtWidgets.QLabel()
+        self.rf_state_label = QtWidgets.QLabel()
+        self.last_error_label = QtWidgets.QLabel()
+        self.last_error_label.setMinimumWidth(260)
+        self.last_error_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
-        self.rf_status = QtWidgets.QLineEdit("RF unknown")
-        self.rf_status.setReadOnly(True)
+        bottom_bar.addWidget(self.state_label)
+        bottom_bar.addSpacing(10)
+        bottom_bar.addWidget(self.init_state_label)
+        bottom_bar.addSpacing(10)
+        bottom_bar.addWidget(self.rf_state_label)
+        bottom_bar.addSpacing(10)
+        bottom_bar.addWidget(self.driver_label)
+        bottom_bar.addSpacing(10)
+        bottom_bar.addWidget(self.last_error_label, 1)
 
-        self.rf_button = QtWidgets.QPushButton("RF On/Off")
+        self.refresh_all_button = QtWidgets.QPushButton("Refresh All")
+        self.refresh_all_button.clicked.connect(self.refresh_all)
+        bottom_bar.addWidget(self.refresh_all_button)
 
-        rf_layout.addWidget(self.rf_status)
-        rf_layout.addWidget(self.rf_button)
-
-        main_layout.addWidget(rf_group)
-
-        button_row = QtWidgets.QHBoxLayout()
-        button_row.addStretch()
-
-        self.close_button = QtWidgets.QPushButton("Schließen")
+        self.close_button = QtWidgets.QPushButton("Close")
         self.close_button.clicked.connect(self.close)
-        button_row.addWidget(self.close_button)
+        bottom_bar.addWidget(self.close_button)
 
-        main_layout.addLayout(button_row)
+        main_layout.addLayout(bottom_bar)
+        self._refresh_status_bar()
 
-    def _build_ini_tab(self):
+    def _build_connection_tab(self):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(tab)
 
+        top_row = QtWidgets.QHBoxLayout()
+        self.channel_spin = QtWidgets.QSpinBox()
+        self.channel_spin.setMinimum(1)
+        self.channel_spin.setMaximum(128)
+        self.channel_spin.setValue(1)
+
+        self.init_button = QtWidgets.QPushButton("Init / Re-Init")
+        self.init_button.clicked.connect(self.on_init_clicked)
+
+        self.load_ini_button = QtWidgets.QPushButton("Load INI File")
+        self.load_ini_button.clicked.connect(self.on_load_ini_clicked)
+
+        self.save_ini_button = QtWidgets.QPushButton("Save INI File")
+        self.save_ini_button.clicked.connect(self.on_save_ini_clicked)
+
+        top_row.addWidget(QtWidgets.QLabel("Channel"))
+        top_row.addWidget(self.channel_spin)
+        top_row.addWidget(self.init_button)
+        top_row.addWidget(self.load_ini_button)
+        top_row.addWidget(self.save_ini_button)
+        top_row.addStretch()
+
         self.ini_edit = QtWidgets.QPlainTextEdit()
-        self.ini_edit.setMinimumHeight(220)
+        self.ini_edit.setMinimumHeight(340)
 
-        self.init_button = QtWidgets.QPushButton("Init")
-
+        layout.addLayout(top_row)
         layout.addWidget(self.ini_edit)
-        layout.addWidget(self.init_button)
-        layout.addStretch()
+        self.tabs.addTab(tab, "Connection")
 
-        self.tabs.addTab(tab, "Ini")
-
-    def _build_freq_tab(self):
+    def _build_status_tab(self):
         tab = QtWidgets.QWidget()
-        layout = QtWidgets.QFormLayout(tab)
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        top_row = QtWidgets.QHBoxLayout()
+        self.refresh_status_button = QtWidgets.QPushButton("Refresh Status")
+        self.refresh_status_button.clicked.connect(self.refresh_status)
+        top_row.addWidget(self.refresh_status_button)
+        top_row.addStretch()
+        layout.addLayout(top_row)
+
+        grid = QtWidgets.QGridLayout()
+        status_specs = [
+            ("Description", "GetDescription"),
+            ("Frequency", "GetFreq"),
+            ("Level", "GetLevel"),
+            ("Virtual", "GetVirtual"),
+            ("RF State", "_local_rf_state"),
+            ("AM State", "_local_am_state"),
+            ("PM State", "_local_pm_state"),
+            ("Internal Unit", "_internal_unit"),
+        ]
+
+        for idx, (label, key) in enumerate(status_specs):
+            value = QtWidgets.QLineEdit()
+            value.setReadOnly(True)
+            self._status_fields[key] = value
+            row = idx // 2
+            col = (idx % 2) * 2
+            grid.addWidget(QtWidgets.QLabel(label), row, col)
+            grid.addWidget(value, row, col + 1)
+
+        layout.addLayout(grid)
+        layout.addStretch()
+        self.tabs.addTab(tab, "Status")
+
+    def _build_rf_level_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        grid = QtWidgets.QGridLayout()
 
         self.freq_spin = QtWidgets.QDoubleSpinBox()
         self.freq_spin.setDecimals(3)
         self.freq_spin.setRange(0.0, 1e12)
-        self.freq_spin.setValue(0.0)
         self.freq_spin.setSingleStep(1e6)
         self.freq_spin.setSuffix(" Hz")
+        self.apply_freq_button = QtWidgets.QPushButton("Apply")
+        self.apply_freq_button.clicked.connect(self.on_apply_freq_clicked)
+        self.read_freq_button = QtWidgets.QPushButton("Readback")
+        self.read_freq_button.clicked.connect(self.on_read_freq_clicked)
+        self.freq_indicator = QtWidgets.QLabel("unknown")
+        self._control_specs["freq"] = {"indicator": self.freq_indicator}
 
-        layout.addRow("FREQ", self.freq_spin)
-        self.tabs.addTab(tab, "Freq")
-
-    def _build_level_tab(self):
-        tab = QtWidgets.QWidget()
-        layout = QtWidgets.QFormLayout(tab)
-
-        self.level_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.level_slider.setMinimum(-1000)   # -100.0 dBm
-        self.level_slider.setMaximum(0)       #   0.0 dBm
-        self.level_slider.setValue(-1000)
+        grid.addWidget(QtWidgets.QLabel("Frequency"), 0, 0)
+        grid.addWidget(self.freq_spin, 0, 1)
+        grid.addWidget(self.apply_freq_button, 0, 2)
+        grid.addWidget(self.read_freq_button, 0, 3)
+        grid.addWidget(self.freq_indicator, 0, 4)
 
         self.level_spin = QtWidgets.QDoubleSpinBox()
-        self.level_spin.setDecimals(1)
-        self.level_spin.setRange(-100.0, 0.0)
+        self.level_spin.setDecimals(2)
+        self.level_spin.setRange(-200.0, 50.0)
         self.level_spin.setSingleStep(0.1)
         self.level_spin.setValue(-100.0)
-        self.level_spin.setSuffix(" dBm")
 
-        row = QtWidgets.QHBoxLayout()
-        row.addWidget(self.level_slider)
-        row.addWidget(self.level_spin)
+        self.level_unit_combo = QtWidgets.QComboBox()
+        self.level_unit_combo.addItems(["dBm", "dBuV", "W", "V"])
 
-        container = QtWidgets.QWidget()
-        container.setLayout(row)
+        self.apply_level_button = QtWidgets.QPushButton("Apply")
+        self.apply_level_button.clicked.connect(self.on_apply_level_clicked)
+        self.read_level_button = QtWidgets.QPushButton("Readback")
+        self.read_level_button.clicked.connect(self.on_read_level_clicked)
+        self.level_indicator = QtWidgets.QLabel("unknown")
+        self._control_specs["level"] = {"indicator": self.level_indicator}
 
-        layout.addRow("LEVEL", container)
-        self.tabs.addTab(tab, "Level")
+        level_box = QtWidgets.QHBoxLayout()
+        level_box.addWidget(self.level_spin)
+        level_box.addWidget(self.level_unit_combo)
+        level_widget = QtWidgets.QWidget()
+        level_widget.setLayout(level_box)
+
+        grid.addWidget(QtWidgets.QLabel("Level"), 1, 0)
+        grid.addWidget(level_widget, 1, 1)
+        grid.addWidget(self.apply_level_button, 1, 2)
+        grid.addWidget(self.read_level_button, 1, 3)
+        grid.addWidget(self.level_indicator, 1, 4)
+
+        rf_row = QtWidgets.QHBoxLayout()
+        self.rf_on_button = QtWidgets.QPushButton("RF On")
+        self.rf_on_button.clicked.connect(self.on_rf_on_clicked)
+        self.rf_off_button = QtWidgets.QPushButton("RF Off")
+        self.rf_off_button.clicked.connect(self.on_rf_off_clicked)
+        self.rf_status = QtWidgets.QLineEdit("RF unknown")
+        self.rf_status.setReadOnly(True)
+        rf_row.addWidget(self.rf_on_button)
+        rf_row.addWidget(self.rf_off_button)
+        rf_row.addWidget(self.rf_status)
+        rf_row.addStretch()
+
+        layout.addLayout(grid)
+        layout.addLayout(rf_row)
+        layout.addStretch()
+        self._set_indicator_state("freq", "unknown")
+        self._set_indicator_state("level", "unknown")
+        self.tabs.addTab(tab, "RF / Level")
 
     def _build_am_tab(self):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QFormLayout(tab)
 
-        self.amsource_combo = QtWidgets.QComboBox()
-        self.amsource_combo.addItems(["INT1", "INT2", "EXT1", "EXT2"])
-
+        self.amsource_combo = self._build_combo_from_driver("AM_sources", ["INT1", "INT2", "EXT1", "EXT2", "OFF"])
         self.amfreq_spin = QtWidgets.QDoubleSpinBox()
         self.amfreq_spin.setDecimals(3)
         self.amfreq_spin.setRange(0.0, 1e9)
         self.amfreq_spin.setValue(1000.0)
         self.amfreq_spin.setSuffix(" Hz")
-
         self.amdepth_spin = QtWidgets.QDoubleSpinBox()
         self.amdepth_spin.setDecimals(3)
         self.amdepth_spin.setRange(0.0, 1.0)
-        self.amdepth_spin.setValue(0.8)
         self.amdepth_spin.setSingleStep(0.01)
+        self.amdepth_spin.setValue(0.8)
+        self.amwave_combo = self._build_combo_from_driver("AM_waveforms", ["SINE", "SQUARE", "TRIANGLE"])
+        self.lfout_combo = self._build_combo_from_driver("AM_LFOut", ["OFF", "ON"])
 
-        self.amwave_combo = QtWidgets.QComboBox()
-        self.amwave_combo.addItems(["SINE", "SQUARE", "TRIANGLE"])
-
-        self.lfout_combo = QtWidgets.QComboBox()
-        self.lfout_combo.addItems(["OFF", "ON"])
-
-        self.am_status = QtWidgets.QLineEdit("AM is Off")
+        self.conf_am_button = QtWidgets.QPushButton("Configure AM")
+        self.conf_am_button.clicked.connect(self.on_conf_am_clicked)
+        self.am_on_button = QtWidgets.QPushButton("AM On")
+        self.am_on_button.clicked.connect(self.on_am_on_clicked)
+        self.am_off_button = QtWidgets.QPushButton("AM Off")
+        self.am_off_button.clicked.connect(self.on_am_off_clicked)
+        self.am_status = QtWidgets.QLineEdit("AM unknown")
         self.am_status.setReadOnly(True)
 
-        self.am_button = QtWidgets.QPushButton("AM On/Off")
+        button_row = QtWidgets.QHBoxLayout()
+        button_row.addWidget(self.conf_am_button)
+        button_row.addWidget(self.am_on_button)
+        button_row.addWidget(self.am_off_button)
+        button_row.addStretch()
+        button_widget = QtWidgets.QWidget()
+        button_widget.setLayout(button_row)
 
-        layout.addRow("AMSOURCE", self.amsource_combo)
-        layout.addRow("AMFREQ", self.amfreq_spin)
-        layout.addRow("AMDEPTH", self.amdepth_spin)
-        layout.addRow("AMWAVE", self.amwave_combo)
-        layout.addRow("LFOUT", self.lfout_combo)
-        layout.addRow("", self.am_status)
-        layout.addRow("", self.am_button)
-
+        layout.addRow("Source", self.amsource_combo)
+        layout.addRow("Frequency", self.amfreq_spin)
+        layout.addRow("Depth", self.amdepth_spin)
+        layout.addRow("Waveform", self.amwave_combo)
+        layout.addRow("LF Out", self.lfout_combo)
+        layout.addRow("State", self.am_status)
+        layout.addRow("", button_widget)
         self.tabs.addTab(tab, "AM")
 
     def _build_pm_tab(self):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QFormLayout(tab)
 
-        self.pmsource_combo = QtWidgets.QComboBox()
-        self.pmsource_combo.addItems(["INT", "EXT1", "EXT2"])
-
+        self.pmsource_combo = self._build_combo_from_driver("PM_sources", ["INT", "EXT1", "EXT2", "OFF"])
         self.pmfreq_spin = QtWidgets.QDoubleSpinBox()
         self.pmfreq_spin.setDecimals(3)
         self.pmfreq_spin.setRange(0.0, 1e9)
         self.pmfreq_spin.setValue(1000.0)
         self.pmfreq_spin.setSuffix(" Hz")
-
         self.pmwidth_spin = QtWidgets.QDoubleSpinBox()
         self.pmwidth_spin.setDecimals(9)
         self.pmwidth_spin.setRange(0.0, 1.0)
         self.pmwidth_spin.setValue(100e-6)
         self.pmwidth_spin.setSuffix(" s")
-
         self.pmdelay_spin = QtWidgets.QDoubleSpinBox()
         self.pmdelay_spin.setDecimals(9)
         self.pmdelay_spin.setRange(0.0, 10.0)
         self.pmdelay_spin.setValue(0.0)
         self.pmdelay_spin.setSuffix(" s")
+        self.pmpol_combo = self._build_combo_from_driver("PM_pol", ["NORMAL", "INVERTED"])
 
-        self.pmpol_combo = QtWidgets.QComboBox()
-        self.pmpol_combo.addItems(["NORMAL", "INVERTED"])
-
-        self.pm_status = QtWidgets.QLineEdit("PM is Off")
+        self.conf_pm_button = QtWidgets.QPushButton("Configure PM")
+        self.conf_pm_button.clicked.connect(self.on_conf_pm_clicked)
+        self.pm_on_button = QtWidgets.QPushButton("PM On")
+        self.pm_on_button.clicked.connect(self.on_pm_on_clicked)
+        self.pm_off_button = QtWidgets.QPushButton("PM Off")
+        self.pm_off_button.clicked.connect(self.on_pm_off_clicked)
+        self.pm_status = QtWidgets.QLineEdit("PM unknown")
         self.pm_status.setReadOnly(True)
 
-        self.pm_button = QtWidgets.QPushButton("PM On/Off")
+        button_row = QtWidgets.QHBoxLayout()
+        button_row.addWidget(self.conf_pm_button)
+        button_row.addWidget(self.pm_on_button)
+        button_row.addWidget(self.pm_off_button)
+        button_row.addStretch()
+        button_widget = QtWidgets.QWidget()
+        button_widget.setLayout(button_row)
 
-        layout.addRow("PMSOURCE", self.pmsource_combo)
-        layout.addRow("PMFREQ", self.pmfreq_spin)
-        layout.addRow("PMWIDTH", self.pmwidth_spin)
-        layout.addRow("PMDELAY", self.pmdelay_spin)
-        layout.addRow("PMPOL", self.pmpol_combo)
-        layout.addRow("", self.pm_status)
-        layout.addRow("", self.pm_button)
-
+        layout.addRow("Source", self.pmsource_combo)
+        layout.addRow("Frequency", self.pmfreq_spin)
+        layout.addRow("Width", self.pmwidth_spin)
+        layout.addRow("Delay", self.pmdelay_spin)
+        layout.addRow("Polarity", self.pmpol_combo)
+        layout.addRow("State", self.pm_status)
+        layout.addRow("", button_widget)
         self.tabs.addTab(tab, "PM")
 
-    def _connect_signals(self):
-        self.init_button.clicked.connect(self.on_init_clicked)
-        self.rf_button.clicked.connect(self.on_rf_clicked)
-        self.am_button.clicked.connect(self.on_am_clicked)
-        self.pm_button.clicked.connect(self.on_pm_clicked)
+    def _build_smoke_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
 
-        self.freq_spin.valueChanged.connect(self.on_freq_changed)
+        self.smoke_include_rf_on = QtWidgets.QCheckBox("Include RF On pulse")
+        self.smoke_include_rf_on.setToolTip("Disabled by default. The smoke test otherwise keeps RF off.")
 
-        self.level_slider.valueChanged.connect(self.on_level_slider_changed)
-        self.level_spin.valueChanged.connect(self.on_level_spin_changed)
+        self.run_smoke_button = QtWidgets.QPushButton("Run Smoke Test")
+        self.run_smoke_button.clicked.connect(self.on_run_smoke_test_clicked)
 
-        self.amfreq_spin.valueChanged.connect(self.on_am_config_changed)
-        self.amdepth_spin.valueChanged.connect(self.on_am_config_changed)
-        self.amwave_combo.currentTextChanged.connect(self.on_am_config_changed)
-        self.amsource_combo.currentTextChanged.connect(self.on_am_config_changed)
-        self.lfout_combo.currentTextChanged.connect(self.on_am_config_changed)
+        self.smoke_result_edit = QtWidgets.QPlainTextEdit()
+        self.smoke_result_edit.setReadOnly(True)
 
-        self.pmfreq_spin.valueChanged.connect(self.on_pm_config_changed)
-        self.pmsource_combo.currentTextChanged.connect(self.on_pm_config_changed)
-        self.pmwidth_spin.valueChanged.connect(self.on_pm_config_changed)
-        self.pmpol_combo.currentTextChanged.connect(self.on_pm_config_changed)
-        self.pmdelay_spin.valueChanged.connect(self.on_pm_config_changed)
+        layout.addWidget(QtWidgets.QLabel("The smoke test is conservative and sends RFOff at the end."))
+        layout.addWidget(self.smoke_include_rf_on)
+        layout.addWidget(self.run_smoke_button)
+        layout.addWidget(self.smoke_result_edit)
+        self.tabs.addTab(tab, "Smoke Test")
+
+    def _build_log_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        toolbar = QtWidgets.QHBoxLayout()
+        self.clear_log_button = QtWidgets.QPushButton("Clear Log")
+        self.clear_log_button.clicked.connect(self.log_edit_clear)
+        toolbar.addWidget(self.clear_log_button)
+        toolbar.addStretch()
+
+        self.log_edit = QtWidgets.QPlainTextEdit()
+        self.log_edit.setReadOnly(True)
+
+        layout.addLayout(toolbar)
+        layout.addWidget(self.log_edit)
+        self.tabs.addTab(tab, "Log")
+
+    def _build_combo_from_driver(self, attr, fallback):
+        combo = QtWidgets.QComboBox()
+        values = getattr(self.sg, attr, fallback)
+        combo.addItems([str(value) for value in values])
+        return combo
 
     def _load_ini(self):
         if hasattr(self.ini_source, "read"):
@@ -277,232 +427,532 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
                 content = std_ini_text
         else:
             content = str(self.ini_source)
-
+        self._last_ini_text = content
         self.ini_edit.setPlainText(content)
 
-    # ---------------------------------------------------------
-    # Logik
-    # ---------------------------------------------------------
+    def log_edit_clear(self):
+        self.log_edit.clear()
+
+    def log_message(self, message):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.log_edit.appendPlainText(f"[{timestamp}] {message}")
+
+    def _driver_display_name(self):
+        driver_type = type(self.sg).__name__
+        idn = getattr(self.sg, "IDN", "") or ""
+        return f"Driver: {driver_type}" + (f" | {idn}" if idn else "")
+
+    def _refresh_status_bar(self, state_text=None):
+        if state_text is None:
+            state_text = "Busy" if self._busy else "Ready"
+        self.state_label.setText(f"State: {state_text}")
+        self.init_state_label.setText(f"Init: {'initialized' if self._is_initialized else 'not initialized'}")
+        self.rf_state_label.setText(f"RF: {self._rf_state}")
+        self.driver_label.setText(self._driver_display_name())
+        self.last_error_label.setText(f"Last error: {self._last_error_text}")
+
+    def _set_busy(self, busy, message=None):
+        self._busy = busy
+        self.tabs.setEnabled(not busy)
+        self.refresh_all_button.setEnabled(not busy)
+        self.close_button.setEnabled(not busy)
+        state_text = f"Busy: {message}" if busy and message else ("Ready" if not busy else "Busy")
+        self._refresh_status_bar(state_text)
+
+    def _start_task(self, label, func, on_success=None, on_error=None, on_finished=None):
+        if self._busy:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Operation in progress",
+                "Another device operation is still running.",
+            )
+            return False
+
+        self.log_message(f"{label} started.")
+        self._set_busy(True, label)
+        self._task_label = label
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = on_success
+        self._task_on_error = on_error
+        self._task_on_finished = on_finished
+
+        thread = QtCore.QThread(self)
+        task = DriverTask(func)
+        task.moveToThread(thread)
+        thread.started.connect(task.run)
+        task.completed.connect(self._handle_task_completed, QtCore.Qt.QueuedConnection)
+        task.finished.connect(thread.quit)
+        task.finished.connect(task.deleteLater)
+        thread.finished.connect(self._handle_task_thread_finished, QtCore.Qt.QueuedConnection)
+        thread.finished.connect(thread.deleteLater)
+        thread.start()
+
+        self._active_thread = thread
+        self._active_task = task
+        return True
+
+    @QtCore.Slot(object, object)
+    def _handle_task_completed(self, result, error):
+        self._task_result = result
+        self._task_error = error
+
+    @QtCore.Slot()
+    def _handle_task_thread_finished(self):
+        label = self._task_label or "Task"
+        result = self._task_result
+        error = self._task_error
+        on_success = self._task_on_success
+        on_error = self._task_on_error
+        on_finished = self._task_on_finished
+
+        self._active_task = None
+        self._active_thread = None
+        self._set_busy(False, "Ready")
+
+        self._task_label = None
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = None
+        self._task_on_error = None
+        self._task_on_finished = None
+
+        if error is None:
+            self.log_message(f"{label} succeeded.")
+            if on_success is not None:
+                on_success(result)
+        else:
+            if label == "Init":
+                self._is_initialized = False
+            self.log_message(f"{label} failed: {type(error).__name__}: {error}")
+            if on_error is not None:
+                on_error(error)
+            else:
+                self._show_error(f"{label} Error", error)
+
+        if on_finished is not None:
+            on_finished()
+
+    def _show_error(self, title, error):
+        self._last_error_text = str(error)
+        self._refresh_status_bar()
+        QtWidgets.QMessageBox.critical(self, title, str(error))
+
+    def _driver_method(self, method_name, *args, **kwargs):
+        method = getattr(self.sg, method_name, None)
+        if method is None:
+            raise AttributeError(f"Driver does not implement {method_name}()")
+        return method(*args, **kwargs)
+
+    def _display_value(self, value):
+        if isinstance(value, tuple):
+            return ", ".join(str(item) for item in value)
+        return str(value)
+
+    def _set_status_field(self, key, text):
+        widget = self._status_fields.get(key)
+        if widget is not None:
+            widget.setText(text)
+
+    def _set_indicator_state(self, key, state, message=None):
+        spec = self._control_specs.get(key)
+        if spec is None:
+            return
+        indicator = spec["indicator"]
+        styles = {
+            "unknown": ("unknown", "#777777"),
+            "pending": ("pending", "#d98c00"),
+            "ok": ("match", "#2e8b57"),
+            "mismatch": ("mismatch", "#b22222"),
+        }
+        text, color = styles.get(state, styles["unknown"])
+        indicator.setText(text)
+        indicator.setStyleSheet(f"color: {color}; font-weight: bold;")
+        indicator.setToolTip(message or "")
+
+    def on_load_ini_clicked(self):
+        path, _filter = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Open INI File",
+            "",
+            "INI Files (*.ini *.txt);;All Files (*)",
+        )
+        if not path:
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                content = handle.read()
+            self.ini_edit.setPlainText(content)
+            self._last_ini_text = content
+            self.log_message(f"Loaded INI file: {path}")
+        except OSError as exc:
+            self._show_error("INI Load Error", exc)
+
+    def on_save_ini_clicked(self):
+        path, _filter = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save INI File",
+            "",
+            "INI Files (*.ini *.txt);;All Files (*)",
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(self.ini_edit.toPlainText())
+            self.log_message(f"Saved INI file: {path}")
+        except OSError as exc:
+            self._show_error("INI Save Error", exc)
 
     def on_init_clicked(self):
+        ini_text = self.ini_edit.toPlainText()
+        self._last_ini_text = ini_text
+        channel = self.channel_spin.value()
+
+        def task():
+            return self._driver_method("Init", ini=io.StringIO(ini_text), channel=channel)
+
+        def success(err):
+            self._is_initialized = (err == 0)
+            self._last_error_text = "none" if err == 0 else self._last_error_text
+            if err == 0:
+                self._sync_local_states_from_driver()
+            self._refresh_status_bar()
+            self.log_message(f"Init returned: {err}")
+            self.refresh_status(on_complete=self.populate_controls_from_status)
+
+        self._start_task("Init", task, on_success=success)
+
+    def _collect_status_snapshot(self):
+        snapshot = {}
+        for getter in ("GetDescription", "GetFreq", "GetLevel", "GetVirtual"):
+            if not hasattr(self.sg, getter):
+                continue
+            try:
+                err, value = self._driver_method(getter)
+                snapshot[getter] = {
+                    "text": self._display_value(value) if err == 0 else f"ERR {err}",
+                    "value": value,
+                    "err": err,
+                }
+            except Exception as exc:
+                snapshot[getter] = {
+                    "text": f"{type(exc).__name__}: {exc}",
+                    "value": None,
+                    "err": None,
+                }
+
+        rf_state = self._state_from_driver("rf_state", self._rf_state)
+        am_state = self._state_from_driver("am_state", self._am_state)
+        pm_state = self._state_from_driver("pm_state", self._pm_state)
+        snapshot["_local_rf_state"] = {"text": rf_state, "value": rf_state, "err": 0}
+        snapshot["_local_am_state"] = {"text": am_state, "value": am_state, "err": 0}
+        snapshot["_local_pm_state"] = {"text": pm_state, "value": pm_state, "err": 0}
+        snapshot["_internal_unit"] = {
+            "text": str(getattr(self.sg, "_internal_unit", "")),
+            "value": getattr(self.sg, "_internal_unit", None),
+            "err": 0,
+        }
+        return snapshot
+
+    def _apply_status_snapshot(self, snapshot):
+        self._status_raw = {}
+        for getter, info in snapshot.items():
+            self._set_status_field(getter, info["text"])
+            self._status_raw[getter] = info["value"] if info["err"] == 0 else None
+        self._rf_state = str(self._status_raw.get("_local_rf_state", self._rf_state)).lower()
+        self._am_state = str(self._status_raw.get("_local_am_state", self._am_state)).lower()
+        self._pm_state = str(self._status_raw.get("_local_pm_state", self._pm_state)).lower()
+        self._update_readback_indicators()
+        self._refresh_state_fields()
+
+    def refresh_status(self, on_complete=None):
+        def success(snapshot):
+            self._apply_status_snapshot(snapshot)
+            if on_complete is not None:
+                on_complete()
+
+        self._start_task("Refresh Status", self._collect_status_snapshot, on_success=success)
+
+    def refresh_all(self):
+        self.refresh_status()
+
+    def _state_from_driver(self, attr, fallback):
+        value = getattr(self.sg, attr, fallback)
+        if value is None:
+            return "unknown"
+        return str(value).strip().lower()
+
+    def _sync_local_states_from_driver(self):
+        self._rf_state = self._state_from_driver("rf_state", self._rf_state)
+        self._am_state = self._state_from_driver("am_state", self._am_state)
+        self._pm_state = self._state_from_driver("pm_state", self._pm_state)
+
+    def populate_controls_from_status(self):
+        freq = self._status_raw.get("GetFreq")
+        if freq is not None:
+            try:
+                self.freq_spin.setValue(float(freq))
+            except (TypeError, ValueError):
+                self.log_message(f"Could not populate frequency from {freq!r}")
+
+        level = self._status_raw.get("GetLevel")
+        if level is not None:
+            try:
+                numeric = float(level.get_value(level._unit))
+                unit = str(level._unit)
+                self.level_spin.setValue(numeric)
+                idx = self.level_unit_combo.findText(unit)
+                if idx >= 0:
+                    self.level_unit_combo.setCurrentIndex(idx)
+            except Exception as exc:
+                self.log_message(f"Could not populate level: {type(exc).__name__}: {exc}")
+        self._update_readback_indicators()
+
+    def _refresh_state_fields(self):
+        self.rf_status.setText(f"RF is {self._rf_state}")
+        self.am_status.setText(f"AM is {self._am_state}")
+        self.pm_status.setText(f"PM is {self._pm_state}")
+        self._refresh_status_bar()
+
+    def _update_readback_indicators(self):
+        freq = self._status_raw.get("GetFreq")
+        if freq is None:
+            self._set_indicator_state("freq", "unknown", "No frequency readback available.")
+        else:
+            try:
+                current = float(self.freq_spin.value())
+                readback = float(freq)
+                matches = abs(current - readback) <= max(1e-6, abs(readback) * 1e-9)
+            except Exception:
+                matches = str(self.freq_spin.value()) == str(freq)
+            self._set_indicator_state("freq", "ok" if matches else "mismatch", f"Readback: {freq!r}")
+
+        level = self._status_raw.get("GetLevel")
+        if level is None:
+            self._set_indicator_state("level", "unknown", "No level readback available.")
+        else:
+            self._set_indicator_state("level", "ok", f"Readback: {level!r}")
+            try:
+                numeric = float(level.get_value(level._unit))
+                unit = str(level._unit)
+                self.level_spin.blockSignals(True)
+                self.level_unit_combo.blockSignals(True)
+                self.level_spin.setValue(numeric)
+                idx = self.level_unit_combo.findText(unit)
+                if idx >= 0:
+                    self.level_unit_combo.setCurrentIndex(idx)
+                self.level_spin.blockSignals(False)
+                self.level_unit_combo.blockSignals(False)
+            except Exception:
+                pass
+
+    def on_apply_freq_clicked(self):
+        self._set_indicator_state("freq", "pending", "Write in progress.")
+        value = self.freq_spin.value()
+
+        def task():
+            return self._driver_method("SetFreq", value)
+
+        def success(result):
+            self.log_message(f"SetFreq({value}) -> {result!r}")
+            self.refresh_all()
+
+        self._start_task("Set Frequency", task, on_success=success)
+
+    def on_read_freq_clicked(self):
+        self.refresh_status()
+
+    def on_apply_level_clicked(self):
+        self._set_indicator_state("level", "pending", "Write in progress.")
+        value = self.level_spin.value()
+        unit = self.level_unit_combo.currentText().strip()
+        scuq_value, scuq_unit = conv.c2scuq(unit, value)
+        quantity = Quantity(scuq_unit, scuq_value)
+
+        def task():
+            return self._driver_method("SetLevel", quantity)
+
+        def success(result):
+            self.log_message(f"SetLevel({quantity}) -> {result!r}")
+            self.refresh_all()
+
+        self._start_task("Set Level", task, on_success=success)
+
+    def on_read_level_clicked(self):
+        self.refresh_status()
+
+    def on_rf_on_clicked(self):
+        self._start_task("RF On", lambda: self._driver_method("RFOn"), on_success=self._rf_on_success)
+
+    def on_rf_off_clicked(self):
+        self._start_task("RF Off", lambda: self._driver_method("RFOff"), on_success=self._rf_off_success)
+
+    def _rf_on_success(self, result):
+        self._rf_state = "on"
+        self.log_message(f"RFOn -> {result!r}")
+        self._refresh_state_fields()
+
+    def _rf_off_success(self, result):
+        self._rf_state = "off"
+        self.log_message(f"RFOff -> {result!r}")
+        self._refresh_state_fields()
+
+    def on_conf_am_clicked(self):
+        source = self.amsource_combo.currentText()
+        freq = self.amfreq_spin.value()
+        depth = self.amdepth_spin.value()
+        waveform = self.amwave_combo.currentText()
+        lfout = self.lfout_combo.currentText()
+
+        def task():
+            return self._driver_method("ConfAM", source, freq, depth, waveform, lfout)
+
+        def success(result):
+            self.log_message(f"ConfAM({source}, {freq}, {depth}, {waveform}, {lfout}) -> {result!r}")
+            self.refresh_all()
+
+        self._start_task("Configure AM", task, on_success=success)
+
+    def on_am_on_clicked(self):
+        self._start_task("AM On", lambda: self._driver_method("AMOn"), on_success=self._am_on_success)
+
+    def on_am_off_clicked(self):
+        self._start_task("AM Off", lambda: self._driver_method("AMOff"), on_success=self._am_off_success)
+
+    def _am_on_success(self, result):
+        self._am_state = "on"
+        self.log_message(f"AMOn -> {result!r}")
+        self._refresh_state_fields()
+
+    def _am_off_success(self, result):
+        self._am_state = "off"
+        self.log_message(f"AMOff -> {result!r}")
+        self._refresh_state_fields()
+
+    def on_conf_pm_clicked(self):
+        source = self.pmsource_combo.currentText()
+        freq = self.pmfreq_spin.value()
+        pol = self.pmpol_combo.currentText()
+        width = self.pmwidth_spin.value()
+        delay = self.pmdelay_spin.value()
+
+        def task():
+            return self._driver_method("ConfPM", source, freq, pol, width, delay)
+
+        def success(result):
+            self.log_message(f"ConfPM({source}, {freq}, {pol}, {width}, {delay}) -> {result!r}")
+            self.refresh_all()
+
+        self._start_task("Configure PM", task, on_success=success)
+
+    def on_pm_on_clicked(self):
+        self._start_task("PM On", lambda: self._driver_method("PMOn"), on_success=self._pm_on_success)
+
+    def on_pm_off_clicked(self):
+        self._start_task("PM Off", lambda: self._driver_method("PMOff"), on_success=self._pm_off_success)
+
+    def _pm_on_success(self, result):
+        self._pm_state = "on"
+        self.log_message(f"PMOn -> {result!r}")
+        self._refresh_state_fields()
+
+    def _pm_off_success(self, result):
+        self._pm_state = "off"
+        self.log_message(f"PMOff -> {result!r}")
+        self._refresh_state_fields()
+
+    def _run_smoke_test(self):
+        results = []
+        if hasattr(self.sg, "GetDescription"):
+            results.append(f"GetDescription: {self._driver_method('GetDescription')!r}")
+        if hasattr(self.sg, "GetFreq"):
+            results.append(f"GetFreq: {self._driver_method('GetFreq')!r}")
+        if hasattr(self.sg, "GetLevel"):
+            results.append(f"GetLevel: {self._driver_method('GetLevel')!r}")
+
+        freq = self.freq_spin.value()
+        if hasattr(self.sg, "SetFreq"):
+            results.append(f"SetFreq({freq!r}): {self._driver_method('SetFreq', freq)!r}")
+
+        if self.smoke_include_rf_on.isChecked():
+            results.append(f"RFOn: {self._driver_method('RFOn')!r}")
+        results.append(f"RFOff: {self._driver_method('RFOff')!r}")
+        return results
+
+    def on_run_smoke_test_clicked(self):
+        def success(lines):
+            self._rf_state = "off"
+            text = "\n".join(lines)
+            self.smoke_result_edit.setPlainText(text)
+            self.log_message("Smoke test completed.")
+            for line in lines:
+                self.log_message(f"  {line}")
+            self.refresh_all()
+
+        self._start_task("Smoke Test", self._run_smoke_test, on_success=success)
+
+    def _shutdown_driver_safely(self):
+        """Always try to turn RF off before closing the UI."""
         try:
-            ini = io.StringIO(self.ini_edit.toPlainText())
-            self.sg.Init(ini)
-
-            # Achtung: im Original steht einmal "outpoutstate" im INI,
-            # später aber "outputstate" in conf.
-            self.RF_is_on = self.sg.conf["channel_1"]["outputstate"] in ("1", "on", "ON", True)
-
-            self.AM_is_on = False
-            self.PM_is_on = False
-
-            self.level = self.sg.conf["channel_1"]["level"]
-            self.unit = self.sg.conf["channel_1"]["unit"]
-            self.level = conv.c2c(self.unit, self.int_unit, self.level)
-
-            self._set_level_ui(float(self.level))
-
-            self.amfreq = 1e3
-            self.amdepth = 0.8
-            self.amwave = "SINE"
-            self.amsource = "INT1"
-            self.lfout = "OFF"
-
-            self.pmfreq = 1000.0
-            self.pmwidth = 100e-6
-            self.pmdelay = 0.0
-            self.pmsource = "INT"
-            self.pmpol = "NORMAL"
-
-            self.amfreq_spin.setValue(self.amfreq)
-            self.amdepth_spin.setValue(self.amdepth)
-            self.amwave_combo.setCurrentText(self.amwave)
-            self.amsource_combo.setCurrentText(self.amsource)
-            self.lfout_combo.setCurrentText(self.lfout)
-
-            self.pmfreq_spin.setValue(self.pmfreq)
-            self.pmwidth_spin.setValue(self.pmwidth)
-            self.pmdelay_spin.setValue(self.pmdelay)
-            self.pmsource_combo.setCurrentText(self.pmsource)
-            self.pmpol_combo.setCurrentText(self.pmpol)
-
-            self.update_rf()
-            self.update_am()
-            self.update_pm()
-
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "Init-Fehler", str(e))
-
-    def on_rf_clicked(self):
-        try:
-            self.RF_is_on = not self.RF_is_on
-            if self.RF_is_on:
-                self.sg.RFOn()
-            else:
+            if hasattr(self.sg, "RFOff"):
                 self.sg.RFOff()
-            self.update_rf()
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "RF-Fehler", str(e))
-
-    def on_am_clicked(self):
-        try:
-            self.AM_is_on = not self.AM_is_on
-            if self.AM_is_on:
-                self.sg.AMOn()
-            else:
-                self.sg.AMOff()
-            self.update_am()
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "AM-Fehler", str(e))
-
-    def on_pm_clicked(self):
-        try:
-            self.PM_is_on = not self.PM_is_on
-            if self.PM_is_on:
-                self.sg.PMOn()
-            else:
-                self.sg.PMOff()
-            self.update_pm()
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "PM-Fehler", str(e))
-
-    def on_freq_changed(self, value):
-        try:
-            self.sg.SetFreq(value)
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "FREQ-Fehler", str(e))
-
-    def on_level_slider_changed(self, value):
-        dbm_value = value / 10.0
-        if abs(self.level_spin.value() - dbm_value) > 1e-9:
-            self.level_spin.blockSignals(True)
-            self.level_spin.setValue(dbm_value)
-            self.level_spin.blockSignals(False)
-        self._apply_level(dbm_value)
-
-    def on_level_spin_changed(self, value):
-        slider_value = int(round(value * 10))
-        if self.level_slider.value() != slider_value:
-            self.level_slider.blockSignals(True)
-            self.level_slider.setValue(slider_value)
-            self.level_slider.blockSignals(False)
-        self._apply_level(value)
-
-    def _apply_level(self, value):
-        try:
-            self.level = value
-            lv, unit = conv.c2scuq(self.int_unit, self.level)
-            self.sg.SetLevel(Quantity(unit, lv))
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "LEVEL-Fehler", str(e))
-
-    def _set_level_ui(self, value):
-        self.level_spin.blockSignals(True)
-        self.level_slider.blockSignals(True)
-
-        self.level_spin.setValue(value)
-        self.level_slider.setValue(int(round(value * 10)))
-
-        self.level_spin.blockSignals(False)
-        self.level_slider.blockSignals(False)
-
-    def on_am_config_changed(self, *args):
-        try:
-            self.amfreq = self.amfreq_spin.value()
-            self.amdepth = self.amdepth_spin.value()
-            self.amwave = self.amwave_combo.currentText()
-            self.amsource = self.amsource_combo.currentText()
-            self.lfout = self.lfout_combo.currentText()
-
-            self.sg.ConfAM(self.amsource, self.amfreq, self.amdepth, self.amwave, self.lfout)
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "AM-Konfigurationsfehler", str(e))
-
-    def on_pm_config_changed(self, *args):
-        try:
-            self.pmfreq = self.pmfreq_spin.value()
-            self.pmsource = self.pmsource_combo.currentText()
-            self.pmwidth = self.pmwidth_spin.value()
-            self.pmpol = self.pmpol_combo.currentText()
-            self.pmdelay = self.pmdelay_spin.value()
-
-            self.sg.ConfPM(self.pmsource, self.pmfreq, self.pmpol, self.pmwidth, self.pmdelay)
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "PM-Konfigurationsfehler", str(e))
-
-    def update_rf(self):
-        self.rf_status.setText("RF is On" if self.RF_is_on else "RF is Off")
-
-    def update_am(self):
-        self.am_status.setText("AM is On" if self.AM_is_on else "AM is Off")
-
-    def update_pm(self):
-        self.pm_status.setText("PM is On" if self.PM_is_on else "PM is Off")
-
-    def closeEvent(self, event):
+                self._rf_state = "off"
+                self.log_message("Safety shutdown: RFOff sent.")
+        except Exception as exc:
+            self.log_message(f"Safety shutdown RFOff failed: {type(exc).__name__}: {exc}")
         try:
             if hasattr(self.sg, "Quit"):
                 self.sg.Quit()
-        except Exception:
-            pass
+                self.log_message("Driver Quit sent.")
+        except Exception as exc:
+            self.log_message(f"Driver Quit failed: {type(exc).__name__}: {exc}")
+
+    def closeEvent(self, event):
+        if self._busy and self._active_thread is not None:
+            QtWidgets.QMessageBox.information(
+                self,
+                "Operation in progress",
+                "Please wait until the current device operation has finished.",
+            )
+            event.ignore()
+            return
+        self._shutdown_driver_safely()
         super().closeEvent(event)
 
 
-# ---------------------------------------------------------
-# Beispielstart mit Dummy-Generator
-# ---------------------------------------------------------
+UI = SignalGeneratorWidget
+
 
 if __name__ == "__main__":
-    class DummySG:
-        def __init__(self):
-            self.conf = {
-                "channel_1": {
-                    "outputstate": "0",
-                    "level": -20,
-                    "unit": "dBm",
-                }
-            }
+    parser = argparse.ArgumentParser(description="Start the signal generator test utility.")
+    parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
+    parser.add_argument(
+        "--virtual",
+        action="store_true",
+        help="Use the virtual signal generator driver.",
+    )
+    args = parser.parse_args()
 
-        def Init(self, ini):
-            print("Init called")
-            print(ini.read())
+    if args.ini:
+        try:
+            with open(args.ini, "r", encoding="utf-8") as handle:
+                ini = io.StringIO(handle.read())
+        except OSError as exc:
+            print(f"INI file could not be read: {exc}")
+            sys.exit(1)
+    else:
+        ini = io.StringIO(std_ini_text.replace("virtual: 0", "virtual: 1" if args.virtual else "virtual: 0"))
 
-        def RFOn(self):
-            self.conf["channel_1"]["outputstate"] = "1"
-            print("RFOn")
-
-        def RFOff(self):
-            self.conf["channel_1"]["outputstate"] = "0"
-            print("RFOff")
-
-        def AMOn(self):
-            print("AMOn")
-
-        def AMOff(self):
-            print("AMOff")
-
-        def PMOn(self):
-            print("PMOn")
-
-        def PMOff(self):
-            print("PMOff")
-
-        def SetFreq(self, value):
-            print("SetFreq", value)
-
-        def SetLevel(self, quantity):
-            print("SetLevel", quantity)
-
-        def ConfAM(self, source, freq, depth, wave, lfout):
-            print("ConfAM", source, freq, depth, wave, lfout)
-
-        def ConfPM(self, source, freq, pol, width, delay):
-            print("ConfPM", source, freq, pol, width, delay)
-
-        def Quit(self):
-            print("Quit")
+    if args.virtual:
+        from mpylab.device.sg_virtual import SIGNALGENERATOR
+        sg = SIGNALGENERATOR()
+    else:
+        from mpylab.device.sg_virtual import SIGNALGENERATOR
+        sg = SIGNALGENERATOR()
+        print("No hardware driver selected; using virtual signal generator. Pass a specific sg_*.py main for hardware.")
 
     app = QtWidgets.QApplication(sys.argv)
-    window = SignalGeneratorWidget(DummySG())
+    window = SignalGeneratorWidget(sg, ini=ini)
     window.show()
     sys.exit(app.exec())

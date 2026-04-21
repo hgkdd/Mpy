@@ -136,12 +136,18 @@ class SIGNALGENERATOR(SGNLGNRTR):
 
 
 def main():
+    import argparse
+    from PySide6 import QtWidgets
     from mpylab.tools.util import format_block
     from mpylab.device.signalgenerator_ui import SignalGeneratorWidget as UI
+    from mpylab.device.sg_virtual import SIGNALGENERATOR as VIRTUAL_SIGNALGENERATOR
 
-    try:
-        ini = sys.argv[1]
-    except IndexError:
+    parser = argparse.ArgumentParser(description="Start the SWM signal generator UI.")
+    parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
+    parser.add_argument("--virtual", action="store_true", help="Use the virtual signal generator driver.")
+    args = parser.parse_args()
+
+    if args.ini is None:
         ini = format_block("""
                         [DESCRIPTION]
                         description: 'SWM'
@@ -156,19 +162,24 @@ def main():
                         fstop: 18e9
                         fstep: 1
                         gpib: 15
-                        virtual: 0
+                        virtual: {virtual}
 
                         [Channel_1]
                         name: RFOut
                         level: -100
                         unit: 'dBm'
-                        outpoutstate: 0
-                        """)
+                        outputstate: 0
+                        """.format(virtual=1 if args.virtual else 0))
         ini = io.StringIO(ini)
+    else:
+        with open(args.ini, "r", encoding="utf-8") as handle:
+            ini = io.StringIO(handle.read())
 
-    sg = SIGNALGENERATOR()
+    sg = VIRTUAL_SIGNALGENERATOR() if args.virtual else SIGNALGENERATOR()
+    app = QtWidgets.QApplication(sys.argv)
     ui = UI(sg, ini=ini)
-    ui.configure_traits()
+    ui.show()
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

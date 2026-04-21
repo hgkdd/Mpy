@@ -257,16 +257,22 @@ class SIGNALGENERATOR(SGNLGNRTR):
 # Die Funktion main() wird nur zum Test des Treibers verwendet!
 #
 def main():
+    import argparse
+    from PySide6 import QtWidgets
     from mpylab.tools.util import format_block
     from mpylab.device.signalgenerator_ui import SignalGeneratorWidget as UI
+    from mpylab.device.sg_virtual import SIGNALGENERATOR as VIRTUAL_SIGNALGENERATOR
     #
     # Wird für den Test des Treibers keine ini-Datei über die Kommnadoweile eingegebnen, dann muss eine virtuelle Standard-ini-Datei erzeugt
     # werden. Dazu wird der hinterlegte ini-Block mit Hilfe der Methode 'format_block' formatiert und der Ergebnis-String mit Hilfe des Modules
     # 'StringIO' in eine virtuelle Datei umgewandelt.
     #
-    try:
-        ini = sys.argv[1]
-    except IndexError:
+    parser = argparse.ArgumentParser(description="Start the SMF100A signal generator UI.")
+    parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
+    parser.add_argument("--virtual", action="store_true", help="Use the virtual signal generator driver.")
+    args = parser.parse_args()
+
+    if args.ini is None:
         ini = format_block("""
                         [DESCRIPTION]
                         description: 'SMF100A'
@@ -281,18 +287,23 @@ def main():
                         fstop: 22e9
                         fstep: 1
                         visa: TCPIP::192.168.88.248::INSTR
-                        virtual: 0
+                        virtual: {virtual}
 
                         [Channel_1]
                         name: RFOut
                         level: -100.0
                         unit: dBm
                         outputstate: 0
-                        """)
+                        """.format(virtual=1 if args.virtual else 0))
         ini = io.StringIO(ini)
-    sg = SIGNALGENERATOR()
+    else:
+        with open(args.ini, "r", encoding="utf-8") as handle:
+            ini = io.StringIO(handle.read())
+    sg = VIRTUAL_SIGNALGENERATOR() if args.virtual else SIGNALGENERATOR()
+    app = QtWidgets.QApplication(sys.argv)
     ui = UI(sg, ini=ini)
-    ui.configure_traits()
+    ui.show()
+    sys.exit(app.exec())
 
 
 def test():
