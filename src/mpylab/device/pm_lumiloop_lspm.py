@@ -4,6 +4,7 @@ import io
 import time
 import struct
 import itertools
+from copy import deepcopy
 
 from scuq import si, quantities, ucomponents
 import numpy as np
@@ -16,7 +17,7 @@ def dBm2W(vals):
     return watts
 
 class POWERMETER(PMMTR):
-    conftmpl = PMMTR.conftmpl
+    conftmpl = deepcopy(PMMTR.conftmpl)
     conftmpl['init_value']['visa'] = str
     conftmpl['init_value']['mode'] = str
     conftmpl['init_value']['mfreq'] = float

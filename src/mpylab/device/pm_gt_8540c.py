@@ -2,6 +2,7 @@
 
 import numpy as np
 from scuq import *
+from copy import deepcopy
 
 from mpylab.device.powermeter import POWERMETER as PWRMTR
 
@@ -32,21 +33,29 @@ class POWERMETER(PWRMTR):
     """
     Driver for the Gigatronics 854X powermeter
     """
+    conftmpl = deepcopy(PWRMTR.conftmpl)
 
     def __init__(self, **kw):
         PWRMTR.__init__(self, **kw)
         self._internal_unit = 'dBm'
         self.linav = linav_dB
         self.ch_tup = ('', 'A', 'B')
-        prefix = f"{self.ch_tup[self.channel]}E"
+        self.chsel = "AP"
         self._cmds = {
-            'SetFreq': [(f"{prefix} FR {{freq}} HZ", None)],
+            'SetFreq': [],
             'GetFreq': [],
-            'ZeroOn': [(f"{prefix} ZE", None)],
+            'ZeroOn': [],
             'ZeroOff': [],
             'Quit': [],
             'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]
         }
+
+    def _build_channel_cmds(self):
+        prefix = f"{self.ch_tup[self.channel]}E"
+        self._cmds.update({
+            'SetFreq': [(f"{prefix} FR {{freq}} HZ", None)],
+            'ZeroOn': [(f"{prefix} ZE", None)],
+        })
 
     def _get_sensor_type(self):
         """
@@ -75,6 +84,7 @@ class POWERMETER(PWRMTR):
         if self.channel != 1:
             self.chsel = "BP"
             self.channel = 2
+        self._build_channel_cmds()
 
         try:
             # read gpib address fom ini-file to register instance

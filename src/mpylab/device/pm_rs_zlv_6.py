@@ -2,6 +2,7 @@
 #
 import io
 import sys
+from copy import deepcopy
 
 import mpylab.tools.spacing
 from mpylab.device.powermeter import POWERMETER as PMMTR
@@ -10,7 +11,7 @@ from scuq.ucomponents import UncertainInput
 from scuq.si import WATT
 
 class POWERMETER(PMMTR):
-    conftmpl = PMMTR.conftmpl
+    conftmpl = deepcopy(PMMTR.conftmpl)
     conftmpl['init_value']['visa'] = str
 
     def __init__(self, **kw):
@@ -33,6 +34,7 @@ class POWERMETER(PMMTR):
     def Init(self, ini=None, channel=None):
         if channel is None:
             channel = 1
+        self.channel = channel
         self.error = PMMTR.Init(self, ini, self.channel)  # run init from parent class
         sec = f'channel_{channel}'
         try:

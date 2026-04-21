@@ -5,6 +5,7 @@
 import ast
 import io
 import math
+import re
 import sys
 
 from mpylab.device.networkanalyzer import NETWORKANALYZER as NETWORKAN
@@ -22,6 +23,7 @@ class NETWORKANALYZER(REAL_ZVL):
         self._nwa_mode = "NWA"
         self._channel_enabled = False
         self._sweep_generation = 0
+        self._last_response = ""
         self._virtual_reset()
 
     def _virtual_reset(self):
@@ -250,6 +252,51 @@ class NETWORKANALYZER(REAL_ZVL):
     def GetDescription(self):
         """Return the virtual instrument identification without bus access."""
         return 0, self.IDN
+
+    def write(self, cmd):
+        """Handle a small SCPI-like command subset without a hardware bus."""
+        cmd = str(cmd).strip()
+        upper = cmd.upper()
+        self._last_response = ""
+        if upper == "*IDN?":
+            self._last_response = self.IDN
+        elif upper in {"FREQ:CENT?", "SENS:FREQ:CENT?", f"SENS{self.internChannel}:FREQ:CENT?"}:
+            self._last_response = str(self.center_freq)
+        elif upper in {"FREQ:SPAN?", "SENS:FREQ:SPAN?", f"SENS{self.internChannel}:FREQ:SPAN?"}:
+            self._last_response = str(self.span)
+        elif upper in {"FREQ:STAR?", "SENS:FREQ:STAR?", f"SENS{self.internChannel}:FREQ:STAR?"}:
+            self._last_response = str(self.start_freq)
+        elif upper in {"FREQ:STOP?", "SENS:FREQ:STOP?", f"SENS{self.internChannel}:FREQ:STOP?"}:
+            self._last_response = str(self.stop_freq)
+        elif upper in {"SWE:POIN?", "SENS:SWE:POIN?", f"SENS{self.internChannel}:SWE:POIN?"}:
+            self._last_response = str(self.spoints)
+        elif upper in {"SWE:TYPE?", "SENS:SWE:TYPE?", f"SENS{self.internChannel}:SWE:TYPE?"}:
+            self._last_response = self.sweepType
+        elif upper in {"INIT:CONT?", f"INIT{self.internChannel}:CONT?"}:
+            self._last_response = "1" if self.sweepMode == "CONTINUOUS" else "0"
+        elif upper.startswith("*RST"):
+            self._virtual_reset()
+        elif upper.startswith("INIT"):
+            self._sweep_generation += 1
+        elif upper in {"QUIT", "SYST:LOC"}:
+            pass
+        else:
+            self._last_response = f"OK {cmd}"
+        return 0
+
+    def read(self, tmpl=None):
+        """Return or parse the last virtual SCPI response."""
+        if tmpl is None:
+            return self._last_response
+        match = re.match(tmpl, self._last_response)
+        if match is None:
+            return {}
+        return match.groupdict()
+
+    def query(self, cmd, tmpl=None):
+        """Write a virtual SCPI query and return the raw or parsed response."""
+        self.write(cmd)
+        return self.read(tmpl)
 
     def Init(self, ini=None, channel=None):
         """Initialize the virtual analyzer from the INI file without opening any bus."""

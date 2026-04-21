@@ -3,6 +3,7 @@
 
 import argparse
 import io
+import re
 import sys
 
 from scuq.quantities import Quantity
@@ -19,6 +20,7 @@ class SIGNALGENERATOR(SIGNALGEN):
         super().__init__(SearchPaths=SearchPaths)
         self.IDN = "Virtual,SignalGenerator,000000,1.0"
         self._internal_unit = "dBm"
+        self._last_response = ""
         self._reset_state()
 
     def _reset_state(self):
@@ -81,6 +83,52 @@ class SIGNALGENERATOR(SIGNALGEN):
     def GetDescription(self):
         """Return the virtual device identification."""
         return 0, self.IDN
+
+    def write(self, cmd):
+        """Handle a small SCPI-like command subset without a hardware bus."""
+        cmd = str(cmd).strip()
+        upper = cmd.upper()
+        self._last_response = ""
+        if upper == "*IDN?":
+            self._last_response = self.IDN
+        elif upper == "FREQ?":
+            self._last_response = str(self.freq)
+        elif upper.startswith("FREQ "):
+            self.freq = float(cmd.split()[1])
+        elif upper in {"POW?", "SOUR:POW?", "POWER?"}:
+            self._last_response = str(self.level)
+        elif upper.startswith(("POW ", "SOUR:POW ", "POWER ")):
+            self.level = float(cmd.split()[1])
+        elif upper in {"OUTP?", "OUTPUT?"}:
+            self._last_response = "1" if self.rf_state == "ON" else "0"
+        elif upper.startswith(("OUTP ", "OUTPUT ")):
+            state = cmd.split(maxsplit=1)[1]
+            self.SetState("ON" if state.strip().upper() in {"1", "ON", "TRUE"} else "OFF")
+        elif upper in {"AM?", "AM:STAT?", "SOUR:AM:STAT?"}:
+            self._last_response = "1" if self.am_state == "ON" else "0"
+        elif upper in {"PULM?", "PULM:STAT?", "SOUR:PULM:STAT?"}:
+            self._last_response = "1" if self.pm_state == "ON" else "0"
+        elif upper in {"*RST", "RST"}:
+            self._reset_state()
+        elif upper in {"QUIT", "SYST:LOC"}:
+            self.Quit()
+        else:
+            self._last_response = f"OK {cmd}"
+        return 0
+
+    def read(self, tmpl=None):
+        """Return or parse the last virtual SCPI response."""
+        if tmpl is None:
+            return self._last_response
+        match = re.match(tmpl, self._last_response)
+        if match is None:
+            return {}
+        return match.groupdict()
+
+    def query(self, cmd, tmpl=None):
+        """Write a virtual SCPI query and return the raw or parsed response."""
+        self.write(cmd)
+        return self.read(tmpl)
 
     def SetFreq(self, freq):
         """Set and return the simulated RF frequency."""

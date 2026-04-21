@@ -106,12 +106,13 @@ class POWERMETER(DRIVER):
         DRIVER.__init__(self, SearchPaths=SearchPaths)
         self._cmds = {'SetFreq': [("FREQ {freq} HZ", None)],
                       'GetFreq': [('FREQ?', rf'FREQ (?P<freq>{self._FP}) HZ')],
-                      'GetData': [('POW?', rf'POW (?P<power>{self._FP}) (?P<unit>)\S+')],
-                      'GetDataNB': [('POW?', rf'POW (?P<power>{self._FP}) (?P<unit>)\S+')],
+                      'GetData': [('POW?', rf'POW (?P<power>{self._FP}) (?P<unit>\S+)')],
+                      'GetDataNB': [('POW?', rf'POW (?P<power>{self._FP}) (?P<unit>\S+)')],
                       'Trigger': [('TRG', None)],
                       'ZeroOn': [('ZERO ON', None)],
                       'ZeroOff': [('ZERO OFF', None)],
                       'Quit': [('QUIT', None)],
+                      'Unit': [('UNIT{channel:d}:POW {unit}', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         self.freq = None
         self.power = None

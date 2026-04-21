@@ -3,6 +3,7 @@
 import importlib.util
 import io
 import time
+from copy import deepcopy
 
 from scuq import *
 
@@ -927,7 +928,7 @@ ini0dBLF = format_block("""
 
 
 class POWERMETER(PWRMTR):
-    conftmpl = PWRMTR.conftmpl
+    conftmpl = deepcopy(PWRMTR.conftmpl)
     conftmpl['description']['pmini'] = str
 
     _FP = r'[-+]?(\d+(\.\d*)?|\d*\.\d+)([eE][-+]?\d+)?'

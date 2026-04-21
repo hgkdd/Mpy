@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import time
+from copy import deepcopy
 from scuq import *
 from mpylab.device.powermeter import POWERMETER as PWRMTR
 
@@ -9,20 +10,30 @@ class POWERMETER(PWRMTR):
     """
     Driver for the R&S NRP
     """
+    conftmpl = deepcopy(PWRMTR.conftmpl)
 
     def __init__(self, **kw):
         PWRMTR.__init__(self, **kw)
         self._internal_unit = 'dBm'
         self._data_ = 0
         self.sensor = {}
-        self._cmds = {'SetFreq': [(f'SENS{self.channel:d}:FREQ:CW {{freq:f}}', None)],
-                      'GetFreq': [(f'SENS{self.channel:d}:FREQ:CW?', rf'(?P<freq>{self._FP})')],
-                      'Trigger': [(f'INIT{self.channel:d}:IMM', None)],
-                      'ZeroOn': [(f'CAL{self.channel:d}:ZERO:AUTO ON', None)],
-                      'ZeroOff': [(f'CAL{self.channel:d}:ZERO:AUTO OFF', None)],
+        self._cmds = {'SetFreq': [],
+                      'GetFreq': [],
+                      'Trigger': [],
+                      'ZeroOn': [],
+                      'ZeroOff': [],
                       'Quit': [],
                       'Unit': [('UNIT{channel:d}:POW {unit}', None)],
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
+
+    def _build_channel_cmds(self):
+        self._cmds.update({
+            'SetFreq': [(f'SENS{self.channel:d}:FREQ:CW {{freq:f}}', None)],
+            'GetFreq': [(f'SENS{self.channel:d}:FREQ:CW?', rf'(?P<freq>{self._FP})')],
+            'Trigger': [(f'INIT{self.channel:d}:IMM', None)],
+            'ZeroOn': [(f'CAL{self.channel:d}:ZERO:AUTO ON', None)],
+            'ZeroOff': [(f'CAL{self.channel:d}:ZERO:AUTO OFF', None)],
+        })
 
     # def Zero(self, state='on'):
     # self.error=0
@@ -33,6 +44,7 @@ class POWERMETER(PWRMTR):
             self.channel = 1
         else:
             self.channel = channel
+        self._build_channel_cmds()
         masks = (2, 4, 8, 16)
         self.mask = masks[self.channel - 1]
         self.error = PWRMTR.Init(self, ini, self.channel)
