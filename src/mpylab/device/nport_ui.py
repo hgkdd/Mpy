@@ -9,7 +9,7 @@ from datetime import datetime
 
 from PySide6 import QtCore, QtWidgets
 
-from matplotlib.backends.backend_qtagg import FigureCanvas
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from scuq.ucomponents import Context
