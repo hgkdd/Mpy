@@ -337,7 +337,7 @@ def test():
                         name: RFOut
                         level: -100.0
                         unit: dBm
-                        outpoutstate: 0
+                        outpotstate: 0
                         """)
         ini = io.StringIO(ini)
     sg = SIGNALGENERATOR()
