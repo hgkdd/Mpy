@@ -25,7 +25,7 @@ def generic_write(write_fn, cmd):
 
 
 def generic_read(read_fn, tmpl=None):
-    """
+    r"""
     :param read_fn: device read function
     :param tmpl: *str*, a re pattern for re.match or None
 

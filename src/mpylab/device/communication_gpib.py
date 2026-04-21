@@ -62,7 +62,7 @@ class CommunicationGpib:
         return generic_write(self.dev.write, cmd)
 
     def read(self, tmpl=None):
-        """
+        r"""
         :param tmpl: *str*, a re pattern for re.match or None
 
         :return: *str or dict or None*: dict with the parsed result

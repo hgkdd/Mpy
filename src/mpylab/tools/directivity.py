@@ -30,7 +30,7 @@ class UnintentionalRad():
         return UnintentionalRad.twopi * f * self.a / UnintentionalRad.cvacuum
 
     def chisq2fac(self, n):
-        """
+        r"""
         returns \sum_{i=0}^n 1/i \aprox 0.577 + ln(n) + 1/2n
         see: https://ieeexplore.ieee.org/document/5715864
         """

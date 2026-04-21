@@ -17,7 +17,7 @@ from mpylab.device.device import CONVERT, Device
 # from tools import *
 
 class DRIVER:
-    """
+    r"""
     Parent class for all py-drivers.
     
     Beside the common API method for all drivers (see below) this class
