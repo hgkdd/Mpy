@@ -16,6 +16,10 @@ from scuq.ucomponents import Context
 
 from mpylab.device.nport import ANTENNA, CABLE, NPORT
 from mpylab.tools.util import format_block
+from mpylab.device.ui_ini_draft import clear_ini_draft, load_ini_with_draft
+
+
+SETTINGS_APP = "nport_ui"
 
 
 def demo_ini(kind="nport"):
@@ -147,6 +151,7 @@ class NPortWidget(QtWidgets.QWidget):
         self._task_result = None
         self._task_error = None
         self._task_on_success = None
+        self._use_worker_threads = False
 
         self.setWindowTitle(f"{kind.upper()} Passive Data Test Utility")
         self.resize(1150, 820)
@@ -320,12 +325,14 @@ class NPortWidget(QtWidgets.QWidget):
         self.tabs.addTab(tab, "Log")
 
     def _load_ini(self):
-        if hasattr(self.ini_source, "read"):
-            content = self.ini_source.read()
-        else:
-            content = str(self.ini_source)
+        content = load_ini_with_draft(
+            self,
+            self.ini_edit,
+            self.ini_source,
+            demo_ini(self.kind),
+            f"{SETTINGS_APP}_{self.kind}",
+        )
         self._last_ini_text = content
-        self.ini_edit.setPlainText(content)
 
     def log_message(self, message):
         self.log_edit.appendPlainText(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
@@ -350,6 +357,30 @@ class NPortWidget(QtWidgets.QWidget):
             return
         self.log_message(f"{label} started.")
         self._set_busy(True, label)
+
+        if not self._use_worker_threads:
+            result = None
+            error = None
+            try:
+                QtWidgets.QApplication.processEvents()
+                result = func()
+            except Exception as exc:
+                error = exc
+            finally:
+                self._set_busy(False)
+
+            if error is None:
+                self.log_message(f"{label} succeeded.")
+                self._last_error_text = "none"
+                if on_success is not None:
+                    on_success(result)
+            else:
+                self._last_error_text = str(error)
+                self.log_message(f"{label} failed: {type(error).__name__}: {error}")
+                if label == "Init":
+                    self._is_initialized = False
+            return True
+
         self._task_label = label
         self._task_result = None
         self._task_error = None
@@ -409,6 +440,7 @@ class NPortWidget(QtWidgets.QWidget):
             return
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(self.ini_edit.toPlainText())
+        clear_ini_draft(self)
 
     def on_init_clicked(self):
         ini_text = self.ini_edit.toPlainText()
@@ -581,6 +613,11 @@ def main(argv=None):
     parser.add_argument("--kind", choices=("nport", "cable", "antenna"), default="nport")
     parser.add_argument("--ini", help="Path to an INI file to preload")
     parser.add_argument("--virtual", action="store_true", help="Use built-in demo data; accepted for consistency")
+    parser.add_argument(
+        "--threaded",
+        action="store_true",
+        help="Run driver calls in worker threads. Disabled by default for backend stability.",
+    )
     args = parser.parse_args(argv)
 
     ini = args.ini
@@ -589,6 +626,7 @@ def main(argv=None):
 
     app = QtWidgets.QApplication(sys.argv if argv is None else [sys.argv[0], *argv])
     window = NPortWidget(make_instance(args.kind), ini=ini, kind=args.kind)
+    window._use_worker_threads = args.threaded
     window.show()
     return app.exec()
 

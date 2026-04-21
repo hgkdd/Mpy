@@ -2,19 +2,27 @@
 """Graphical test utility for signal generator drivers."""
 
 import argparse
+import configparser
+import importlib
 import io
 import sys
 from datetime import datetime
+from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
 
 from scuq.quantities import Quantity
 
 from mpylab.device.device import CONVERT
+from mpylab.tools.configuration import parse_ini_value, strbool
 from mpylab.tools.util import format_block
+from mpylab.device.ui_ini_draft import clear_ini_draft, load_ini_with_draft
 
 
 conv = CONVERT()
+SETTINGS_ORG = "mpylab"
+SETTINGS_APP = "signalgenerator_ui"
+LAST_INI_PATH_KEY = "last_ini_path"
 
 
 std_ini_text = format_block("""
@@ -72,6 +80,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
 
         self.sg = instance
         self.ini_source = ini if ini is not None else io.StringIO(std_ini_text)
+        self.ini_path = None
         self._last_ini_text = ""
         self._status_fields = {}
         self._status_raw = {}
@@ -91,6 +100,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._task_on_success = None
         self._task_on_error = None
         self._task_on_finished = None
+        self._use_worker_threads = False
 
         self.int_unit = "dBm"
 
@@ -419,16 +429,40 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         combo.addItems([str(value) for value in values])
         return combo
 
+    def _refresh_driver_dependent_controls(self):
+        combo_specs = [
+            (self.amsource_combo, "AM_sources", ["INT1", "INT2", "EXT1", "EXT2", "OFF"]),
+            (self.amwave_combo, "AM_waveforms", ["SINE", "SQUARE", "TRIANGLE"]),
+            (self.lfout_combo, "AM_LFOut", ["OFF", "ON"]),
+            (self.pmsource_combo, "PM_sources", ["INT", "EXT1", "EXT2", "OFF"]),
+            (self.pmpol_combo, "PM_pol", ["NORMAL", "INVERTED"]),
+        ]
+        for combo, attr, fallback in combo_specs:
+            current = combo.currentText()
+            combo.clear()
+            combo.addItems([str(value) for value in getattr(self.sg, attr, fallback)])
+            index = combo.findText(current)
+            if index >= 0:
+                combo.setCurrentIndex(index)
+
     def _load_ini(self):
-        if hasattr(self.ini_source, "read"):
-            try:
-                content = self.ini_source.read()
-            except Exception:
-                content = std_ini_text
-        else:
-            content = str(self.ini_source)
+        content = load_ini_with_draft(
+            self,
+            self.ini_edit,
+            self.ini_source,
+            std_ini_text,
+            SETTINGS_APP,
+        )
         self._last_ini_text = content
-        self.ini_edit.setPlainText(content)
+
+    def _settings(self):
+        return QtCore.QSettings(SETTINGS_ORG, SETTINGS_APP)
+
+    def _remember_ini_path(self, path):
+        if not path:
+            return
+        self.ini_path = str(path)
+        self._settings().setValue(LAST_INI_PATH_KEY, self.ini_path)
 
     def log_edit_clear(self):
         self.log_edit.clear()
@@ -438,9 +472,62 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self.log_edit.appendPlainText(f"[{timestamp}] {message}")
 
     def _driver_display_name(self):
-        driver_type = type(self.sg).__name__
+        driver_type = f"{type(self.sg).__module__}.{type(self.sg).__name__}"
         idn = getattr(self.sg, "IDN", "") or ""
         return f"Driver: {driver_type}" + (f" | {idn}" if idn else "")
+
+    def _ini_driver_settings(self, ini_text):
+        config = configparser.ConfigParser()
+        config.read_file(io.StringIO(ini_text))
+
+        description = {}
+        init_value = {}
+        for section in config.sections():
+            section_key = section.strip().lower()
+            if section_key == "description":
+                description = {key.lower(): parse_ini_value(value) for key, value in config.items(section)}
+            elif section_key == "init_value":
+                init_value = {key.lower(): parse_ini_value(value) for key, value in config.items(section)}
+
+        driver = str(description.get("driver", "") or "").strip()
+        virtual = strbool(init_value.get("virtual", False))
+        return driver, virtual
+
+    def _module_name_from_driver(self, driver, virtual):
+        if virtual or not driver or Path(driver).with_suffix("").name.lower() == "dummy":
+            return "sg_virtual"
+        return Path(driver).with_suffix("").name.lower()
+
+    def _instantiate_driver(self, module_name):
+        module = importlib.import_module(f"mpylab.device.{module_name}")
+        driver_cls = getattr(module, "SIGNALGENERATOR")
+        search_paths = getattr(self.sg, "SearchPaths", None)
+        if search_paths is not None:
+            try:
+                return driver_cls(SearchPaths=search_paths)
+            except TypeError:
+                pass
+        return driver_cls()
+
+    def _select_driver_from_ini(self, ini_text):
+        driver, virtual = self._ini_driver_settings(ini_text)
+        module_name = self._module_name_from_driver(driver, virtual)
+        current_module = type(self.sg).__module__.split(".")[-1]
+        if current_module == module_name:
+            return
+
+        old_driver = self.sg
+        self.sg = self._instantiate_driver(module_name)
+        self._is_initialized = False
+        self._rf_state = "unknown"
+        self._am_state = "unknown"
+        self._pm_state = "unknown"
+        self._status_raw = {}
+        self._refresh_driver_dependent_controls()
+        self._refresh_status_bar()
+        self.log_message(
+            f"Driver switched from {type(old_driver).__module__} to {type(self.sg).__module__}."
+        )
 
     def _refresh_status_bar(self, state_text=None):
         if state_text is None:
@@ -470,6 +557,35 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
 
         self.log_message(f"{label} started.")
         self._set_busy(True, label)
+
+        if not self._use_worker_threads:
+            result = None
+            error = None
+            try:
+                QtWidgets.QApplication.processEvents()
+                result = func()
+            except Exception as exc:
+                error = exc
+            finally:
+                self._set_busy(False, "Ready")
+
+            if error is None:
+                self.log_message(f"{label} succeeded.")
+                if on_success is not None:
+                    on_success(result)
+            else:
+                if label == "Init":
+                    self._is_initialized = False
+                self.log_message(f"{label} failed: {type(error).__name__}: {error}")
+                if on_error is not None:
+                    on_error(error)
+                else:
+                    self._show_error(f"{label} Error", error)
+
+            if on_finished is not None:
+                on_finished()
+            return True
+
         self._task_label = label
         self._task_result = None
         self._task_error = None
@@ -584,6 +700,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
                 content = handle.read()
             self.ini_edit.setPlainText(content)
             self._last_ini_text = content
+            self._remember_ini_path(path)
             self.log_message(f"Loaded INI file: {path}")
         except OSError as exc:
             self._show_error("INI Load Error", exc)
@@ -600,6 +717,8 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         try:
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write(self.ini_edit.toPlainText())
+            self._remember_ini_path(path)
+            clear_ini_draft(self)
             self.log_message(f"Saved INI file: {path}")
         except OSError as exc:
             self._show_error("INI Save Error", exc)
@@ -608,6 +727,11 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         ini_text = self.ini_edit.toPlainText()
         self._last_ini_text = ini_text
         channel = self.channel_spin.value()
+        try:
+            self._select_driver_from_ini(ini_text)
+        except Exception as exc:
+            self._show_error("Driver Selection Error", exc)
+            return
 
         def task():
             return self._driver_method("Init", ini=io.StringIO(ini_text), channel=channel)
@@ -642,9 +766,9 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
                     "err": None,
                 }
 
-        rf_state = self._state_from_driver("rf_state", self._rf_state)
-        am_state = self._state_from_driver("am_state", self._am_state)
-        pm_state = self._state_from_driver("pm_state", self._pm_state)
+        rf_state = self._read_driver_state("GetRFState", "rf_state", self._rf_state)
+        am_state = self._read_driver_state("GetAMState", "am_state", self._am_state)
+        pm_state = self._read_driver_state("GetPMState", "pm_state", self._pm_state)
         snapshot["_local_rf_state"] = {"text": rf_state, "value": rf_state, "err": 0}
         snapshot["_local_am_state"] = {"text": am_state, "value": am_state, "err": 0}
         snapshot["_local_pm_state"] = {"text": pm_state, "value": pm_state, "err": 0}
@@ -676,6 +800,17 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
 
     def refresh_all(self):
         self.refresh_status()
+
+    def _read_driver_state(self, getter, attr, fallback):
+        if hasattr(self.sg, getter):
+            try:
+                err, value = self._driver_method(getter)
+                if err == 0:
+                    return str(value).strip().lower()
+                return f"ERR {err}"
+            except Exception as exc:
+                return f"{type(exc).__name__}: {exc}"
+        return self._state_from_driver(attr, fallback)
 
     def _state_from_driver(self, attr, fallback):
         value = getattr(self.sg, attr, fallback)
@@ -932,15 +1067,40 @@ if __name__ == "__main__":
         action="store_true",
         help="Use the virtual signal generator driver.",
     )
+    parser.add_argument(
+        "--threaded",
+        action="store_true",
+        help="Run driver calls in worker threads. Disabled by default for VISA backend stability.",
+    )
     args = parser.parse_args()
 
+    app = QtWidgets.QApplication(sys.argv)
+    QtCore.QCoreApplication.setOrganizationName(SETTINGS_ORG)
+    QtCore.QCoreApplication.setApplicationName(SETTINGS_APP)
+
+    ini_path = None
     if args.ini:
+        ini_path = args.ini
         try:
             with open(args.ini, "r", encoding="utf-8") as handle:
                 ini = io.StringIO(handle.read())
         except OSError as exc:
             print(f"INI file could not be read: {exc}")
             sys.exit(1)
+    elif not args.virtual:
+        settings = QtCore.QSettings(SETTINGS_ORG, SETTINGS_APP)
+        last_ini_path = settings.value(LAST_INI_PATH_KEY, "", str)
+        if last_ini_path:
+            try:
+                with open(last_ini_path, "r", encoding="utf-8") as handle:
+                    ini = io.StringIO(handle.read())
+                ini_path = last_ini_path
+                print(f"Loaded last INI file: {last_ini_path}")
+            except OSError as exc:
+                print(f"Last INI file could not be read: {exc}")
+                ini = io.StringIO(std_ini_text)
+        else:
+            ini = io.StringIO(std_ini_text)
     else:
         ini = io.StringIO(std_ini_text.replace("virtual: 0", "virtual: 1" if args.virtual else "virtual: 0"))
 
@@ -950,9 +1110,11 @@ if __name__ == "__main__":
     else:
         from mpylab.device.sg_virtual import SIGNALGENERATOR
         sg = SIGNALGENERATOR()
-        print("No hardware driver selected; using virtual signal generator. Pass a specific sg_*.py main for hardware.")
+        print("Driver will be selected from the INI file on Init. Using virtual signal generator until then.")
 
-    app = QtWidgets.QApplication(sys.argv)
     window = SignalGeneratorWidget(sg, ini=ini)
+    if ini_path is not None:
+        window._remember_ini_path(ini_path)
+    window._use_worker_threads = args.threaded
     window.show()
     sys.exit(app.exec())

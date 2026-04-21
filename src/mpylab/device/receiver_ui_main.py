@@ -13,6 +13,7 @@ from receiver_ui import Ui_MainWindow
 from mpylab.device.receiver import RECEIVER
 from mpylab.tools.util import format_block, case_insensitive_string_compare
 from mpylab.tools.configuration import Configuration
+from mpylab.device.ui_ini_draft import load_ini_with_draft
 
 def map_to_1000(value):
     n = 0
@@ -32,6 +33,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        load_ini_with_draft(
+            self,
+            self.plainTextEdit_ini,
+            io.StringIO(self.plainTextEdit_ini.toPlainText()),
+            self.plainTextEdit_ini.toPlainText(),
+            "receiver_ui",
+        )
         self.conftmpl = RECEIVER().conftmpl
         self.after_init = False
         self.conf = None

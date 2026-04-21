@@ -13,6 +13,7 @@ from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as Navigation
 from matplotlib.figure import Figure
 
 from mpylab.tools.util import format_block
+from mpylab.device.ui_ini_draft import clear_ini_draft, load_ini_with_draft
 
 std_ini_text = format_block("""
                 [DESCRIPTION]
@@ -41,6 +42,7 @@ std_ini_text = format_block("""
                 SetSweepPoints: 50
                 SetSweepType: 'LINEAR'
                 """).strip()
+SETTINGS_APP = "networkanalyzer_ui"
 
 
 class DriverTask(QtCore.QObject):
@@ -164,6 +166,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._task_on_success = None
         self._task_on_error = None
         self._task_on_finished = None
+        self._use_worker_threads = False
         self._is_initialized = False
         self._last_error_text = "none"
         self._default_plot_title = "Trace Data"
@@ -427,16 +430,14 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         return combo
 
     def _load_ini(self):
-        if hasattr(self.ini_source, "read"):
-            try:
-                content = self.ini_source.read()
-            except Exception:
-                content = std_ini_text
-        else:
-            content = str(self.ini_source)
-
+        content = load_ini_with_draft(
+            self,
+            self.ini_edit,
+            self.ini_source,
+            std_ini_text,
+            SETTINGS_APP,
+        )
         self._last_ini_text = content
-        self.ini_edit.setPlainText(content)
 
     def log_edit_clear(self):
         self.log_edit.clear()
@@ -493,6 +494,35 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
 
         self.log_message(f"{label} started.")
         self._set_busy(True, label)
+
+        if not self._use_worker_threads:
+            result = None
+            error = None
+            try:
+                QtWidgets.QApplication.processEvents()
+                result = func()
+            except Exception as exc:
+                error = exc
+            finally:
+                self._set_busy(False, "Idle")
+
+            if error is None:
+                self.log_message(f"{label} succeeded.")
+                if on_success is not None:
+                    on_success(result)
+            else:
+                if label == "Init":
+                    self._is_initialized = False
+                self.log_message(f"{label} failed: {type(error).__name__}: {error}")
+                if on_error is not None:
+                    on_error(error)
+                else:
+                    self._show_error(f"{label} Error", error)
+
+            if on_finished is not None:
+                on_finished()
+            return True
+
         self._task_label = label
         self._task_result = None
         self._task_error = None
@@ -618,6 +648,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(self.ini_edit.toPlainText())
+            clear_ini_draft(self)
             self.log_message(f"Saved INI file: {path}")
         except Exception as exc:
             self._show_error("INI Save Error", exc)
@@ -1103,6 +1134,10 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
 
 
 if __name__ == "__main__":
+    threaded = "--threaded" in sys.argv
+    if threaded:
+        sys.argv.remove("--threaded")
+
     class DummyNetworkDriver:
         def Init(self, ini=None, channel=1):
             print("Init called")
@@ -1159,5 +1194,6 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     w = NetworkAnalyzerWidget(DummyNetworkDriver())
+    w._use_worker_threads = threaded
     w.show()
     sys.exit(app.exec())

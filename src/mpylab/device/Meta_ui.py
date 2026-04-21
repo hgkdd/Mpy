@@ -13,6 +13,8 @@ from functools import partial
 
 from PySide6 import QtWidgets, QtCore
 
+from mpylab.device.ui_ini_draft import load_ini_with_draft
+
 """ Verwendung der Klasse:
 
 class MyDriverUI(DriverUIWidget):
@@ -190,7 +192,13 @@ class DriverUIWidget(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(tab)
 
         self.ini_edit = QtWidgets.QPlainTextEdit()
-        self.ini_edit.setPlainText(ini_text or "")
+        load_ini_with_draft(
+            self,
+            self.ini_edit,
+            io.StringIO(ini_text or ""),
+            ini_text or "",
+            f"Meta_ui_{type(self).__name__}",
+        )
         self.ini_edit.setMinimumHeight(220)
 
         self.init_button = QtWidgets.QPushButton("Init")

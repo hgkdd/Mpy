@@ -130,6 +130,14 @@ class SIGNALGENERATOR(DRIVER):
             self.freq = float(self.freq)
         return self.error, self.freq
 
+    def GetFreq(self):
+        self.error = 0
+        dct = self._do_cmds('GetFreq', locals())
+        self._update(dct)
+        if self.error == 0 and self.freq is not None:
+            self.freq = float(self.freq)
+        return self.error, self.freq
+
     def SetLevel(self, lv):
         self.error = 0
 
@@ -149,6 +157,20 @@ class SIGNALGENERATOR(DRIVER):
 
         dct = self._do_cmds('SetLevel', locals())  # conversion to self._internal_unit is done inside _do_cmd
         self._update(dct)
+        dct = self._do_cmds('GetLevel', locals())
+        self._update(dct)
+
+        if self.error == 0 and self.level is not None:
+            self.level = float(self.level)
+            self.level, self.unit = self.convert.c2scuq(self._internal_unit, self.level)
+            obj = quantities.Quantity(self.unit, self.level)
+        else:
+            obj = None
+
+        return self.error, obj
+
+    def GetLevel(self):
+        self.error = 0
         dct = self._do_cmds('GetLevel', locals())
         self._update(dct)
 

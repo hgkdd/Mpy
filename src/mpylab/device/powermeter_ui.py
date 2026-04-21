@@ -2,14 +2,19 @@
 """Graphical test utility for powermeter drivers."""
 
 import argparse
+import configparser
 import inspect
+import importlib
 import io
 import sys
 from datetime import datetime
+from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
 
+from mpylab.tools.configuration import parse_ini_value, strbool
 from mpylab.tools.util import format_block
+from mpylab.device.ui_ini_draft import clear_ini_draft, load_ini_with_draft
 
 
 std_ini_text = format_block("""
@@ -45,6 +50,7 @@ std_ini_text = format_block("""
                 value: -30
                 uncertainty: 0.2
                 """).strip()
+SETTINGS_APP = "powermeter_ui"
 
 
 class DriverTask(QtCore.QObject):
@@ -94,6 +100,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self._task_on_success = None
         self._task_on_error = None
         self._task_on_finished = None
+        self._use_worker_threads = False
 
         self.setWindowTitle("Powermeter Test Utility")
         self.resize(1050, 760)
@@ -340,15 +347,14 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self.tabs.addTab(tab, "Log")
 
     def _load_ini(self):
-        if hasattr(self.ini_source, "read"):
-            try:
-                content = self.ini_source.read()
-            except Exception:
-                content = std_ini_text
-        else:
-            content = str(self.ini_source)
+        content = load_ini_with_draft(
+            self,
+            self.ini_edit,
+            self.ini_source,
+            std_ini_text,
+            SETTINGS_APP,
+        )
         self._last_ini_text = content
-        self.ini_edit.setPlainText(content)
 
     def log_edit_clear(self):
         self.log_edit.clear()
@@ -358,9 +364,58 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self.log_edit.appendPlainText(f"[{timestamp}] {message}")
 
     def _driver_display_name(self):
-        driver_type = type(self.pm).__name__
+        driver_type = f"{type(self.pm).__module__}.{type(self.pm).__name__}"
         idn = getattr(self.pm, "IDN", "") or ""
         return f"Driver: {driver_type}" + (f" | {idn}" if idn else "")
+
+    def _ini_driver_settings(self, ini_text):
+        config = configparser.ConfigParser()
+        config.read_file(io.StringIO(ini_text))
+
+        description = {}
+        init_value = {}
+        for section in config.sections():
+            section_key = section.strip().lower()
+            if section_key == "description":
+                description = {key.lower(): parse_ini_value(value) for key, value in config.items(section)}
+            elif section_key == "init_value":
+                init_value = {key.lower(): parse_ini_value(value) for key, value in config.items(section)}
+
+        driver = str(description.get("driver", "") or "").strip()
+        virtual = strbool(init_value.get("virtual", False))
+        return driver, virtual
+
+    def _module_name_from_driver(self, driver, virtual):
+        if virtual or not driver or Path(driver).with_suffix("").name.lower() == "dummy":
+            return "pm_virtual"
+        return Path(driver).with_suffix("").name.lower()
+
+    def _instantiate_driver(self, module_name):
+        module = importlib.import_module(f"mpylab.device.{module_name}")
+        driver_cls = getattr(module, "POWERMETER")
+        search_paths = getattr(self.pm, "SearchPaths", None)
+        if search_paths is not None:
+            try:
+                return driver_cls(SearchPaths=search_paths)
+            except TypeError:
+                pass
+        return driver_cls()
+
+    def _select_driver_from_ini(self, ini_text):
+        driver, virtual = self._ini_driver_settings(ini_text)
+        module_name = self._module_name_from_driver(driver, virtual)
+        current_module = type(self.pm).__module__.split(".")[-1]
+        if current_module == module_name:
+            return
+
+        old_driver = self.pm
+        self.pm = self._instantiate_driver(module_name)
+        self._is_initialized = False
+        self._status_raw = {}
+        self._refresh_status_bar()
+        self.log_message(
+            f"Driver switched from {type(old_driver).__module__} to {type(self.pm).__module__}."
+        )
 
     def _refresh_status_bar(self, state_text=None):
         if state_text is None:
@@ -389,6 +444,35 @@ class PowerMeterWidget(QtWidgets.QWidget):
 
         self.log_message(f"{label} started.")
         self._set_busy(True, label)
+
+        if not self._use_worker_threads:
+            result = None
+            error = None
+            try:
+                QtWidgets.QApplication.processEvents()
+                result = func()
+            except Exception as exc:
+                error = exc
+            finally:
+                self._set_busy(False, "Ready")
+
+            if error is None:
+                self.log_message(f"{label} succeeded.")
+                if on_success is not None:
+                    on_success(result)
+            else:
+                if label == "Init":
+                    self._is_initialized = False
+                self.log_message(f"{label} failed: {type(error).__name__}: {error}")
+                if on_error is not None:
+                    on_error(error)
+                else:
+                    self._show_error(f"{label} Error", error)
+
+            if on_finished is not None:
+                on_finished()
+            return True
+
         self._task_label = label
         self._task_result = None
         self._task_error = None
@@ -515,6 +599,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         try:
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write(self.ini_edit.toPlainText())
+            clear_ini_draft(self)
             self.log_message(f"Saved INI file: {path}")
         except OSError as exc:
             self._show_error("INI Save Error", exc)
@@ -523,6 +608,11 @@ class PowerMeterWidget(QtWidgets.QWidget):
         ini_text = self.ini_edit.toPlainText()
         self._last_ini_text = ini_text
         channel = self.channel_spin.value()
+        try:
+            self._select_driver_from_ini(ini_text)
+        except Exception as exc:
+            self._show_error("Driver Selection Error", exc)
+            return
 
         def task():
             return self._driver_method("Init", ini=io.StringIO(ini_text), channel=channel)
@@ -786,6 +876,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Powermeter driver test utility")
     parser.add_argument("--virtual", action="store_true", help="Use the virtual powermeter driver")
     parser.add_argument("--ini", help="Path to an INI file to preload")
+    parser.add_argument(
+        "--threaded",
+        action="store_true",
+        help="Run driver calls in worker threads. Disabled by default for VISA backend stability.",
+    )
     args = parser.parse_args(argv)
 
     pm, ini = _make_default_instance(args)
@@ -794,6 +889,7 @@ def main(argv=None):
 
     app = QtWidgets.QApplication(sys.argv if argv is None else [sys.argv[0], *argv])
     window = PowerMeterWidget(pm, ini=ini)
+    window._use_worker_threads = args.threaded
     window.show()
     return app.exec()
 

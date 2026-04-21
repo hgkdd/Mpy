@@ -164,6 +164,10 @@ class SIGNALGENERATOR(SIGNALGEN):
         self.rf_state = "ON" if str(state).strip().lower() == "on" else "OFF"
         return 0, 0
 
+    def GetRFState(self):
+        """Return the simulated RF output state."""
+        return 0, self.rf_state.lower()
+
     def RFOn(self):
         """Enable simulated RF output."""
         return self.SetState("ON")
@@ -186,6 +190,10 @@ class SIGNALGENERATOR(SIGNALGEN):
         self.am_state = "ON" if str(state).strip().lower() == "on" else "OFF"
         return 0, 0
 
+    def GetAMState(self):
+        """Return the simulated AM output state."""
+        return 0, self.am_state.lower()
+
     def AMOn(self):
         """Enable simulated AM."""
         return self.SetAM("ON")
@@ -207,6 +215,10 @@ class SIGNALGENERATOR(SIGNALGEN):
         """Set simulated PM output state."""
         self.pm_state = "ON" if str(state).strip().lower() == "on" else "OFF"
         return 0, 0
+
+    def GetPMState(self):
+        """Return the simulated PM output state."""
+        return 0, self.pm_state.lower()
 
     def PMOn(self):
         """Enable simulated PM."""

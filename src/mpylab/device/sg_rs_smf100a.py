@@ -49,7 +49,10 @@ class SIGNALGENERATOR(SGNLGNRTR):
                                ('MOD:STAT ON', None)],
                       'PMOff': [('PULM:STAT OFF', None),
                                 ('MOD:STAT OFF', None)],
-                      'SetFreq': [("'SOUR:FREQ:CW {freq:f}Hz'", None)],
+                      'GetRFState': [('OUTP:ALL:STAT?', r'(?P<rf_state>.*)')],
+                      'GetAMState': [('AM:STAT?', r'(?P<am_state>.*)')],
+                      'GetPMState': [('PULM:STAT?', r'(?P<pm_state>.*)')],
+                      'SetFreq': [("SOUR:FREQ:CW {freq:f} Hz", None)],
                       'GetFreq': [('SOUR:FREQ:CW?', rf'(?P<freq>{self._FP})')],
                       'SetLevel': [(
                                     lambda self, unit, level, **kwargs:
@@ -59,6 +62,35 @@ class SIGNALGENERATOR(SGNLGNRTR):
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
         # 
         #
+
+    def _state_text(self, value):
+        text = str(value).strip().upper()
+        if text in ("1", "ON", "TRUE"):
+            return "on"
+        if text in ("0", "OFF", "FALSE"):
+            return "off"
+        return text.lower() or "unknown"
+
+    def GetRFState(self):
+        self.error = 0
+        dct = self._do_cmds('GetRFState', locals())
+        self._update(dct)
+        self.rf_state = self._state_text(getattr(self, 'rf_state', 'unknown'))
+        return self.error, self.rf_state
+
+    def GetAMState(self):
+        self.error = 0
+        dct = self._do_cmds('GetAMState', locals())
+        self._update(dct)
+        self.am_state = self._state_text(getattr(self, 'am_state', 'unknown'))
+        return self.error, self.am_state
+
+    def GetPMState(self):
+        self.error = 0
+        dct = self._do_cmds('GetPMState', locals())
+        self._update(dct)
+        self.pm_state = self._state_text(getattr(self, 'pm_state', 'unknown'))
+        return self.error, self.pm_state
 
     def ConfAM(self, source, freq, depth, waveform, LFOut):
         source = fstrcmp(source, self.AM_sources, cutoff=0, ignorecase=True)[0]
@@ -77,17 +109,17 @@ class SIGNALGENERATOR(SGNLGNRTR):
                                 ('SOUR:AM:SOUR?', r'(?P<source>\S+)'),
                                 (
                                     lambda self, depth, **kwargs:
-                                    f"SOUR:AM:DEPT {int(depth * 100):d}PCT",
+                                    f"SOUR:AM:DEPT {int(depth * 100):d} PCT",
                                     None
                                 ),
                                 # Vorlage enthielt '%d %%' !!!???
                                 ('SOUR:AM:DEPT?', r'(?P<depth>\d+)'),
-                                ('SOUR:LFO{lfo:d}:FREQ {freq} HZ', None),
-                                ('SOUR:LFO{lfo:d}:FREQ?', r'(?P<freq>{self._FP})'),
-                                ('SOUR:LFO{lfo:d}:SHAP {waveform}', None),  # waveform --> SINE | SQUare
-                                ('SOUR:LFO{lfo:d}:SHAP?', r'(?P<waveform>\S+)'),
-                                ('SOUR:LFO{lfo:d} {LFOut}', None),
-                                ('SOUR:LFO{lfo:d}?', r'(?P<LFOut>\S+)')]
+                                (f'SOUR:LFO{lfo:d}:FREQ {{freq}} HZ', None),
+                                (f'SOUR:LFO{lfo:d}:FREQ?', rf'(?P<freq>{self._FP})'),
+                                (f'SOUR:LFO{lfo:d}:SHAP {{waveform}}', None),  # waveform --> SINE | SQUare
+                                (f'SOUR:LFO{lfo:d}:SHAP?', r'(?P<waveform>\S+)'),
+                                (f'SOUR:LFO{lfo:d} {{LFOut}}', None),
+                                (f'SOUR:LFO{lfo:d}?', r'(?P<LFOut>\S+)')]
         return SGNLGNRTR.ConfAM(self, source, freq, depth, waveform, LFOut)
 
     def ConfPM(self, source, freq, pol, width, delay):
@@ -100,16 +132,16 @@ class SIGNALGENERATOR(SGNLGNRTR):
                                 ('PULM:SOUR?', r'(?P<source>\S+)'),
                                 ("PULM:POL {pol}", None),
                                 ('PULM:POL?', r'(?P<pol>\S+)'),
-                                ("'PULM:WIDT {width} s'", None),
-                                ('PULM:WIDT?', '(?P<width>{self._FP})'),
-                                ("'PULM:DEL {delay:f} s'", None),
-                                ('PULM:DEL?', '(?P<delay>{self._FP})'),
+                                ("PULM:WIDT {width:f} s", None),
+                                ('PULM:WIDT?', rf'(?P<width>{self._FP})'),
+                                ("PULM:DEL {delay:f} s", None),
+                                ('PULM:DEL?', rf'(?P<delay>{self._FP})'),
                                 (
                                     lambda self, freq, **kwargs:
                                     f"PULM:PER {1.0 / freq:f} s",
                                     None
                                 ),
-                                ('PULM:PER?', '(?P<period>{self._FP})')]
+                                ('PULM:PER?', rf'(?P<period>{self._FP})')]
 
         self.error = SGNLGNRTR.ConfPM(self, source, freq, pol, width, delay)
 
@@ -196,7 +228,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
                 None,
                 (
                     lambda self, v, **kwargs:
-                    f"SOUR:POW:ATT {self.convert.c2c(self.levelunit, self._internal_unit, float(v)):f}dB",
+                    f"SOUR:POW:ATT {self.convert.c2c(self.levelunit, self._internal_unit, float(v)):f} dB",
                     None
                 )
             ),

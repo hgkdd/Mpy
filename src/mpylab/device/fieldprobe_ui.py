@@ -7,8 +7,10 @@ from PySide6 import QtWidgets, QtCore
 
 from mpylab.tools.util import format_block
 from mpylab.device.device import CONVERT
+from mpylab.device.ui_ini_draft import load_ini_with_draft
 
 conv = CONVERT()
+SETTINGS_APP = "fieldprobe_ui"
 
 std_ini_text = format_block("""
                 [DESCRIPTION]
@@ -122,15 +124,7 @@ class UI(QtWidgets.QWidget):
         self.channel_spin.valueChanged.connect(self._CHANNEL_changed)
 
     def _load_ini(self):
-        if hasattr(self.ini_source, "read"):
-            try:
-                content = self.ini_source.read()
-            except Exception:
-                content = std_ini_text
-        else:
-            content = str(self.ini_source)
-
-        self.ini_edit.setPlainText(content)
+        load_ini_with_draft(self, self.ini_edit, self.ini_source, std_ini_text, SETTINGS_APP)
 
     # ---------------------------------------------------------
     # Logik
