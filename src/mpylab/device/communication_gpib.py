@@ -43,7 +43,10 @@ class CommunicationGpib:
             raise ValueError("query_delay_s must be >= 0")
 
         self.rm = pyvisa.ResourceManager()  # configure backend in .pyvisarc in your home dir
-        self.dev = self.rm.open_resource(res_name, access_mode=lock, send_end=send_end)
+        open_kwargs = {"access_mode": lock}
+        if not res_name.upper().endswith("::SOCKET"):
+            open_kwargs["send_end"] = send_end
+        self.dev = self.rm.open_resource(res_name, **open_kwargs)
         self.dev.timeout = int(timeout_s * 1000)
         self.dev.chunk_size = int(chunk_size)
         self.dev.query_delay = float(query_delay_s)

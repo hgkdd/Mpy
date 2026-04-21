@@ -91,6 +91,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self._is_initialized = False
         self._last_error_text = "none"
         self._last_power = None
+        self._channel_drivers = {}
 
         self._active_thread = None
         self._active_task = None
@@ -158,6 +159,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self.channel_spin.setMinimum(1)
         self.channel_spin.setMaximum(128)
         self.channel_spin.setValue(1)
+        self.channel_spin.valueChanged.connect(self.on_channel_changed)
 
         self.init_button = QtWidgets.QPushButton("Init / Re-Init")
         self.init_button.clicked.connect(self.on_init_clicked)
@@ -409,13 +411,24 @@ class PowerMeterWidget(QtWidgets.QWidget):
             return
 
         old_driver = self.pm
+        self._reset_driver_class_state(module_name)
         self.pm = self._instantiate_driver(module_name)
+        self._channel_drivers = {}
         self._is_initialized = False
         self._status_raw = {}
         self._refresh_status_bar()
         self.log_message(
             f"Driver switched from {type(old_driver).__module__} to {type(self.pm).__module__}."
         )
+
+    def _reset_driver_class_state(self, module_name):
+        if module_name != "pm_lumiloop_lspm":
+            return
+        module = importlib.import_module("mpylab.device.pm_lumiloop_lspm")
+        driver_cls = getattr(module, "POWERMETER")
+        driver_cls.instances = {}
+        driver_cls.main_instance = None
+        driver_cls.data = []
 
     def _refresh_status_bar(self, state_text=None):
         if state_text is None:
@@ -613,9 +626,14 @@ class PowerMeterWidget(QtWidgets.QWidget):
         except Exception as exc:
             self._show_error("Driver Selection Error", exc)
             return
+        current_module = type(self.pm).__module__.split(".")[-1]
+        if current_module == "pm_lumiloop_lspm":
+            self._reset_driver_class_state(current_module)
+            self._channel_drivers = {}
+            self.pm = self._instantiate_driver(current_module)
 
         def task():
-            return self._driver_method("Init", ini=io.StringIO(ini_text), channel=channel)
+            return self._init_channel_driver(ini_text, channel)
 
         def success(err):
             self._is_initialized = (err == 0)
@@ -626,13 +644,65 @@ class PowerMeterWidget(QtWidgets.QWidget):
 
         self._start_task("Init", task, on_success=success)
 
+    def _init_channel_driver(self, ini_text, channel):
+        self._ensure_lumiloop_main_channel(ini_text, channel)
+        driver = self._channel_drivers.get(channel)
+        current_module = type(self.pm).__module__.split(".")[-1]
+        if driver is None or type(driver).__module__.split(".")[-1] != current_module:
+            driver = self._instantiate_driver(current_module)
+            self._channel_drivers[channel] = driver
+        self.pm = driver
+        err = self._driver_method("Init", ini=io.StringIO(ini_text), channel=channel)
+        self._init_remaining_lumiloop_channels(ini_text)
+        self.pm = self._channel_drivers.get(channel, self.pm)
+        return err
+
+    def _configured_channel_count(self, ini_text):
+        try:
+            config = configparser.ConfigParser()
+            config.read_file(io.StringIO(ini_text))
+            init_value = {key.lower(): parse_ini_value(value) for key, value in config.items("Init_Value")}
+            return int(init_value.get("channels", init_value.get("nr_of_channels", 1)))
+        except Exception:
+            return 1
+
+    def _ensure_lumiloop_main_channel(self, ini_text, requested_channel):
+        current_module = type(self.pm).__module__.split(".")[-1]
+        if current_module != "pm_lumiloop_lspm" or requested_channel == 1 or 1 in self._channel_drivers:
+            return
+        main_driver = self._instantiate_driver(current_module)
+        self._channel_drivers[1] = main_driver
+        self.pm = main_driver
+        main_driver.Init(ini=io.StringIO(ini_text), channel=1)
+
+    def _init_remaining_lumiloop_channels(self, ini_text):
+        current_module = type(self.pm).__module__.split(".")[-1]
+        if current_module != "pm_lumiloop_lspm":
+            return
+        channel_count = self._configured_channel_count(ini_text)
+        for channel in range(1, channel_count + 1):
+            if channel in self._channel_drivers:
+                continue
+            driver = self._instantiate_driver(current_module)
+            self._channel_drivers[channel] = driver
+            driver.Init(ini=io.StringIO(ini_text), channel=channel)
+
     def on_quit_clicked(self):
         def success(result):
             self._is_initialized = False
+            self._channel_drivers = {}
             self._refresh_status_bar()
             self.log_message(f"Quit returned: {result}")
 
         self._start_task("Quit", lambda: self._driver_method("Quit"), on_success=success)
+
+    def on_channel_changed(self, channel):
+        driver = self._channel_drivers.get(channel)
+        if driver is not None:
+            self.pm = driver
+            self._last_power = None
+            self._refresh_status_bar()
+            self.refresh_status()
 
     def on_apply_freq_clicked(self):
         freq = self.freq_spin.value()

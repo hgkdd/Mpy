@@ -136,7 +136,7 @@ class DRIVER:
                                                         timeout_s=timeout,
                                                         chunk_size=chunk_size,
                                                         query_delay_s=delay,
-                                                        send_end=True,
+                                                        send_end=send_end,
                                                         read_term=term_chars,
                                                         write_term=term_chars)
             self.write = self.CommunicationClass.write

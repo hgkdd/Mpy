@@ -4,6 +4,7 @@ import io
 import time
 import struct
 import itertools
+import re
 from copy import deepcopy
 
 from scuq import si, quantities, ucomponents
@@ -15,6 +16,14 @@ from mpylab.tools.statistic import linstat_lin
 def dBm2W(vals):
     watts = np.power(10, 0.1*np.asarray(vals))*0.001
     return watts
+
+def _parse_mode_pair(mode):
+    if isinstance(mode, (tuple, list)) and len(mode) >= 2:
+        return str(int(mode[0])), str(int(mode[1]))
+    values = re.findall(r'-?\d+', str(mode))
+    if len(values) < 2:
+        raise ValueError(f"mode must contain two integers, got {mode!r}")
+    return values[0], values[1]
 
 class POWERMETER(PMMTR):
     conftmpl = deepcopy(PMMTR.conftmpl)
@@ -50,8 +59,7 @@ class POWERMETER(PMMTR):
             self.error = PMMTR.Init(self, ini, channel)
             self.visa = self.conf['init_value']['visa']
             self.mfreq = self.conf['init_value']['mfreq']
-            self.lmode = self.conf['init_value']['mode'].split(',')[0]
-            self.hmode = self.conf['init_value']['mode'].split(',')[1]
+            self.lmode, self.hmode = _parse_mode_pair(self.conf['init_value']['mode'])
             self.virtual = self.conf['init_value'].get('virtual', False)
             POWERMETER.conf = self.conf.copy()   # make a copy of conf dict for the whole class
         else:  # copy from main instance
