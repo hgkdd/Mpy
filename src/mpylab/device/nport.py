@@ -7,6 +7,10 @@ from mpylab.tools.interpol import UQ_interpol
 from mpylab.tools.regular_expressions import FP
 
 
+def _file_source(value):
+    """Keep inline file-like data sources intact while accepting path strings."""
+    return value
+
 
 class NPORT(DRIVER):
     """
@@ -33,7 +37,7 @@ class NPORT(DRIVER):
                     {'name': str,
                      'unit': str,
                      'interpolation': str,
-                     'file': str}}
+                     'file': _file_source}}
 
     def __init__(self, SearchPaths=None):
         DRIVER.__init__(self, SearchPaths=SearchPaths)
@@ -41,6 +45,7 @@ class NPORT(DRIVER):
         self.error = 0
         self.conf = {'init_value': {'virtual': False}}
         self.data = {}
+        self.freq = None
 
     def Init(self, ini=None, channel=None, ignore_bus=True):
         super().Init(ini=ini, channel=channel, ignore_bus=ignore_bus)
@@ -96,6 +101,14 @@ class NPORT(DRIVER):
         self.freq = freq
         return self.error, freq
 
+    def GetFreq(self):
+        self.error = 0
+        return self.error, self.freq
+
+    def GetChannels(self):
+        self.error = 0
+        return self.error, tuple(self.data.keys())
+
     def GetData(self, what):
         self.error = 0
         allwhat = list(self.data.keys())
@@ -112,7 +125,12 @@ class NPORT(DRIVER):
         return self.error, obj
 
 
-ANTENNA = CABLE = NPORT
+class CABLE(NPORT):
+    """Passive cable model based on interpolated n-port data."""
+
+
+class ANTENNA(NPORT):
+    """Passive antenna model based on interpolated n-port data."""
 
 
 def main():
