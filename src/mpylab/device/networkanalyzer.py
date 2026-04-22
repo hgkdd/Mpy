@@ -95,9 +95,11 @@ class NETWORKANALYZER(DRIVER):
                                      'returntype': Standard_Pthon-Typ oder r_type},
                     ......
                    
-    Für r_type siehe auch: :mod:`mpylab.device.r_types`
+    Historischer Hinweis: r_types und Meta_Driver liegen inzwischen im
+    Legacy-Bereich :mod:`mpylab.device.legacy` und werden von den aktiven
+    Treibern nicht mehr verwendet.
     
-    Siehe auch :class:`mpylab.device.tools.Meta_Driver`
+    Siehe historisch auch :class:`mpylab.device.legacy.meta_driver.Meta_Driver`
     
     Die Driver Metaklasse prüft anhand von _commands ob Funktionen, deren Name im Dict vorhanden ist, die gleich 
     Parameter-Liste besitzen, das heißt: gleiche Anzahl und gleiche Reihenfolge der Parameter. Fehlt in einer 
@@ -117,7 +119,7 @@ class NETWORKANALYZER(DRIVER):
     Superklasse definiert werden. Es wird geraten die Definition immer in der Super-Klasse vorzunehmen, damit die 
     Possibilities für alle Driver gleich sind.
         
-    Für eine genau beschreibung siehe: :class:`mpylab.device.tools.Meta_Driver`
+    Historisch siehe: :class:`mpylab.device.legacy.meta_driver.Meta_Driver`
 
     .. rubric:: Methods:
     .. method:: SetCenterFreq(cfreq):

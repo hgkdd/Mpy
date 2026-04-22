@@ -1,41 +1,22 @@
 .. -*-coding: utf-8 -*-
 
-:mod:`mpylab.device.tools`
+:mod:`mpylab.device.legacy`
 ============================
--------------------------------------------
-`mpylab.device.tools.Meta_Driver`
--------------------------------------------
-.. autoclass:: mpylab.device.tools.Meta_Driver
-               :members:
-               :undoc-members:
 
--------------------------------------------
-`mpylab.device.tools.CommandsStorage`
--------------------------------------------
-.. autoclass:: mpylab.device.tools.CommandsStorage
-               :members:
-               :undoc-members:
+The former metaclass based driver framework and generated Qt UI helper have
+been archived under ``mpylab.device.legacy``. They are not used by the active
+device drivers or test UIs. The current drivers use the regular
+``mpylab.device.driver.DRIVER`` command dictionary implementation instead.
 
--------------------------------------------
-`mpylab.device.tools.Function`
--------------------------------------------
-.. autoclass:: mpylab.device.tools.Function
-               :members:
-               :undoc-members:
+Archived modules:
 
--------------------------------------------
-`mpylab.device.tools.Command`
--------------------------------------------
-.. autoclass:: mpylab.device.tools.Command
-               :members:
-               :undoc-members:
+* ``mpylab.device.legacy.meta_driver``
+* ``mpylab.device.legacy.r_types``
+* ``mpylab.device.legacy.nw_rs_zvl_metaclass``
+* ``mpylab.device.legacy.Meta_ui``
 
--------------------------------------------
-`mpylab.device.tools.Parameter`
--------------------------------------------
-.. autoclass:: mpylab.device.tools.Parameter
-               :members:
-               :undoc-members:
+These modules are kept for reference only. New drivers should not be based on
+them.
 
 
 
@@ -46,21 +27,8 @@
                :undoc-members: 
 
 
-:mod:`mpylab.device.r_types`
-===================================
-.. automodule:: mpylab.device.r_types
-               :members:
-               :undoc-members:
-
-
 :mod:`mpylab.device.mpy_exceptions`
 ===================================
 .. automodule:: mpylab.device.mpy_exceptions
-               :members:
-               :undoc-members:
-               
-:mod:`mpylab.device.Meta_ui`
-===================================
-.. automodule:: mpylab.device.Meta_ui
                :members:
                :undoc-members:

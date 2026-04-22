@@ -3,7 +3,16 @@
 Implementierung eines Treibers mit dem Driver-Framework
 ========================================================
 
-Dieses Dokument beschreibt an Hand eines Beispiels die 
+Dieses Dokument beschreibt das alte metaklassenbasierte Driver Framework.
+Dieser Ansatz ist inzwischen archiviert und wird von den aktiven Treibern
+nicht mehr verwendet. Die zugehörigen Module liegen unter
+``mpylab.device.legacy`` und bleiben nur als Referenz erhalten.
+
+Neue Treiber sollten nicht mehr auf ``Meta_Driver``/``Command``/``r_types``
+basieren, sondern die aktuelle Driver-Basis ``mpylab.device.driver.DRIVER``
+und die jeweiligen Geräte-Basisklassen verwenden.
+
+Historisch beschrieb dieses Dokument an Hand eines Beispiels die
 Implementierung eines eigenen Treibers in Mpy mit Hilfe des 
 Driver Framework.
 
