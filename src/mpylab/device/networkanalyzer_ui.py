@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import argparse
+import configparser
 import csv
+import importlib
 import io
 import sys
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 from PySide6 import QtCore, QtWidgets
@@ -12,9 +16,10 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
-from mpylab.tools.util import format_block
 from mpylab.device.ui_frequency import FrequencyControl
 from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
+from mpylab.tools.configuration import parse_ini_value, strbool
+from mpylab.tools.util import format_block
 
 std_ini_text = format_block("""
                 [DESCRIPTION]
@@ -30,7 +35,9 @@ std_ini_text = format_block("""
                 fstop: 6e9
                 fstep: 1
                 gpib: 18
+                visa:
                 virtual: 0
+                nr_of_channels: 1
 
                 [Channel_1]
                 unit: 'dBm'
@@ -189,6 +196,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._build_connection_tab()
         self._build_status_tab()
         self._build_controls_tab()
+        self._build_topology_tab()
         self._build_spectrum_tab()
         self._build_log_tab()
 
@@ -357,6 +365,94 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         layout.addStretch()
         self.tabs.addTab(tab, "Controls")
 
+    def _build_topology_tab(self):
+        """Build an optional topology tab for analyzers exposing window/trace methods."""
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        toolbar = QtWidgets.QHBoxLayout()
+        self.refresh_topology_button = QtWidgets.QPushButton("Refresh Topology")
+        self.refresh_topology_button.clicked.connect(self.refresh_topology)
+        toolbar.addWidget(self.refresh_topology_button)
+        toolbar.addStretch()
+        layout.addLayout(toolbar)
+
+        splitter = QtWidgets.QSplitter()
+        layout.addWidget(splitter)
+
+        window_group = QtWidgets.QGroupBox("Windows")
+        window_layout = QtWidgets.QVBoxLayout(window_group)
+        self.window_list = QtWidgets.QListWidget()
+        self.window_list.itemSelectionChanged.connect(self.on_window_selected_in_list)
+        window_layout.addWidget(self.window_list)
+
+        self.window_name_edit = QtWidgets.QLineEdit()
+        self.window_name_edit.setPlaceholderText("window name")
+        window_layout.addWidget(self.window_name_edit)
+
+        window_button_row = QtWidgets.QHBoxLayout()
+        self.create_window_button = QtWidgets.QPushButton("Create")
+        self.create_window_button.clicked.connect(self.on_create_window_clicked)
+        self.select_window_button = QtWidgets.QPushButton("Select")
+        self.select_window_button.clicked.connect(self.on_select_window_clicked)
+        self.delete_window_button = QtWidgets.QPushButton("Delete Active")
+        self.delete_window_button.clicked.connect(self.on_delete_window_clicked)
+        window_button_row.addWidget(self.create_window_button)
+        window_button_row.addWidget(self.select_window_button)
+        window_button_row.addWidget(self.delete_window_button)
+        window_layout.addLayout(window_button_row)
+
+        trace_group = QtWidgets.QGroupBox("Traces")
+        trace_layout = QtWidgets.QVBoxLayout(trace_group)
+        self.trace_list = QtWidgets.QListWidget()
+        self.trace_list.itemSelectionChanged.connect(self.on_trace_selected_in_list)
+        trace_layout.addWidget(self.trace_list)
+
+        trace_form = QtWidgets.QFormLayout()
+        self.trace_name_edit = QtWidgets.QLineEdit()
+        self.trace_name_edit.setPlaceholderText("trace name")
+        self.sparam_combo = QtWidgets.QComboBox()
+        self.sparam_combo.addItems(["S11", "S12", "S21", "S22"])
+        trace_form.addRow("Trace Name", self.trace_name_edit)
+        trace_form.addRow("S-Parameter", self.sparam_combo)
+        trace_layout.addLayout(trace_form)
+
+        trace_button_row = QtWidgets.QHBoxLayout()
+        self.create_trace_button = QtWidgets.QPushButton("Create")
+        self.create_trace_button.clicked.connect(self.on_create_trace_clicked)
+        self.select_trace_button = QtWidgets.QPushButton("Select")
+        self.select_trace_button.clicked.connect(self.on_select_trace_clicked)
+        self.delete_trace_button = QtWidgets.QPushButton("Delete Active")
+        self.delete_trace_button.clicked.connect(self.on_delete_trace_clicked)
+        trace_button_row.addWidget(self.create_trace_button)
+        trace_button_row.addWidget(self.select_trace_button)
+        trace_button_row.addWidget(self.delete_trace_button)
+        trace_layout.addLayout(trace_button_row)
+
+        active_group = QtWidgets.QGroupBox("Active Objects")
+        active_layout = QtWidgets.QFormLayout(active_group)
+        self.active_window_field = QtWidgets.QLineEdit()
+        self.active_window_field.setReadOnly(True)
+        self.active_trace_field = QtWidgets.QLineEdit()
+        self.active_trace_field.setReadOnly(True)
+        self.active_sparam_field = QtWidgets.QLineEdit()
+        self.active_sparam_field.setReadOnly(True)
+        self.set_sparam_button = QtWidgets.QPushButton("Apply to Active Trace")
+        self.set_sparam_button.clicked.connect(self.on_set_sparameter_clicked)
+        active_layout.addRow("Active Window", self.active_window_field)
+        active_layout.addRow("Active Trace", self.active_trace_field)
+        active_layout.addRow("Current S-Parameter", self.active_sparam_field)
+        active_layout.addRow("Set S-Parameter", self.set_sparam_button)
+
+        splitter.addWidget(window_group)
+        splitter.addWidget(trace_group)
+        splitter.addWidget(active_group)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 1)
+        splitter.setStretchFactor(2, 1)
+
+        self.tabs.addTab(tab, "Topology")
+
     def _build_spectrum_tab(self):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(tab)
@@ -456,11 +552,64 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
 
     def _driver_display_name(self):
         """Return a short driver identity string for the status bar."""
-        driver_type = type(self.dv).__name__
+        driver_type = f"{type(self.dv).__module__}.{type(self.dv).__name__}"
         idn = getattr(self.dv, "IDN", "") or ""
         if idn:
             return f"Driver: {driver_type} | {idn}"
         return f"Driver: {driver_type}"
+
+    def _ini_driver_settings(self, ini_text):
+        """Return the driver module from DESCRIPTION and virtual flag from INIT_VALUE."""
+        config = configparser.ConfigParser()
+        config.read_file(io.StringIO(ini_text))
+
+        description = {}
+        init_value = {}
+        for section in config.sections():
+            section_key = section.strip().lower()
+            if section_key == "description":
+                description = {key.lower(): parse_ini_value(value) for key, value in config.items(section)}
+            elif section_key == "init_value":
+                init_value = {key.lower(): parse_ini_value(value) for key, value in config.items(section)}
+
+        driver = str(description.get("driver", "") or "").strip()
+        virtual = strbool(init_value.get("virtual", False))
+        return driver, virtual
+
+    def _module_name_from_driver(self, driver, virtual):
+        """Map INI driver settings to the importable network analyzer module."""
+        if virtual or not driver or Path(driver).with_suffix("").name.lower() == "dummy":
+            return "nw_rs_zvl_virtual"
+        return Path(driver).with_suffix("").name.lower()
+
+    def _instantiate_driver(self, module_name):
+        module = importlib.import_module(f"mpylab.device.{module_name}")
+        driver_cls = getattr(module, "NETWORKANALYZER")
+        search_paths = getattr(self.dv, "SearchPaths", None)
+        if search_paths is not None:
+            try:
+                return driver_cls(SearchPaths=search_paths)
+            except TypeError:
+                pass
+        return driver_cls()
+
+    def _select_driver_from_ini(self, ini_text):
+        """Switch the active driver to the module selected by the current INI text."""
+        driver, virtual = self._ini_driver_settings(ini_text)
+        module_name = self._module_name_from_driver(driver, virtual)
+        current_module = type(self.dv).__module__.split(".")[-1]
+        if current_module == module_name:
+            return
+
+        old_driver = self.dv
+        self.dv = self._instantiate_driver(module_name)
+        self._is_initialized = False
+        self._status_raw = {}
+        self._last_trace_data = None
+        self._refresh_status_bar()
+        self.log_message(
+            f"Driver switched from {type(old_driver).__module__} to {type(self.dv).__module__}."
+        )
 
     def _refresh_status_bar(self, state_text=None):
         """Update the bottom status bar labels."""
@@ -665,6 +814,11 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         ini_text = self.ini_edit.toPlainText()
         self._last_ini_text = ini_text
         channel = self.channel_spin.value()
+        try:
+            self._select_driver_from_ini(ini_text)
+        except Exception as exc:
+            self._show_error("Driver Selection Error", exc)
+            return
 
         def task():
             return self._driver_method("Init", ini=io.StringIO(ini_text), channel=channel)
@@ -1127,7 +1281,98 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.refresh_status(on_complete=complete)
 
     def after_refresh_all(self):
-        """Hook for subclasses that need to update additional UI state."""
+        """Refresh optional UI state that depends on the active driver."""
+        self.refresh_topology()
+
+    def refresh_topology(self):
+        """Refresh window/trace state if the active driver exposes it."""
+        if not hasattr(self, "window_list"):
+            return
+
+        self.window_list.clear()
+        self.trace_list.clear()
+
+        windows = getattr(self.dv, "windows", {}) or {}
+        traces = getattr(self.dv, "traces", {}) or {}
+
+        for name, win in sorted(windows.items(), key=lambda item: item[1].getInternNumber()):
+            item = QtWidgets.QListWidgetItem(f"{name}  [#{win.getInternNumber()}]")
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, name)
+            self.window_list.addItem(item)
+
+        for name, trace in sorted(traces.items(), key=lambda item: item[1].getTraceWindowNumber()):
+            item = QtWidgets.QListWidgetItem(
+                f"{name}  [{trace.getsparameter()} | {trace.getInternName()}]"
+            )
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, name)
+            self.trace_list.addItem(item)
+
+        self.active_window_field.setText(self._status_value("GetWindow"))
+        self.active_trace_field.setText(self._status_value("GetTrace"))
+        self.active_sparam_field.setText(self._status_value("GetSparameter"))
+
+    def _selected_window_name(self):
+        item = self.window_list.currentItem()
+        if item is None:
+            raise ValueError("No window selected")
+        return item.data(QtCore.Qt.ItemDataRole.UserRole)
+
+    def _selected_trace_name(self):
+        item = self.trace_list.currentItem()
+        if item is None:
+            raise ValueError("No trace selected")
+        return item.data(QtCore.Qt.ItemDataRole.UserRole)
+
+    def on_window_selected_in_list(self):
+        item = self.window_list.currentItem()
+        if item is not None:
+            self.window_name_edit.setText(item.data(QtCore.Qt.ItemDataRole.UserRole))
+
+    def on_trace_selected_in_list(self):
+        item = self.trace_list.currentItem()
+        if item is not None:
+            self.trace_name_edit.setText(item.data(QtCore.Qt.ItemDataRole.UserRole))
+
+    def on_create_window_clicked(self):
+        name = self.window_name_edit.text().strip()
+        if not name:
+            self._show_error("Create Window Error", ValueError("Window name is empty"))
+            return
+        self._apply_and_refresh("CreateWindow", lambda: self._driver_method("CreateWindow", name))
+
+    def on_select_window_clicked(self):
+        try:
+            name = self.window_name_edit.text().strip() or self._selected_window_name()
+        except Exception as exc:
+            self._show_error("Select Window Error", exc)
+            return
+        self._apply_and_refresh("SetWindow", lambda: self._driver_method("SetWindow", name))
+
+    def on_delete_window_clicked(self):
+        self._apply_and_refresh("DelWindow", lambda: self._driver_method("DelWindow"))
+
+    def on_create_trace_clicked(self):
+        trace_name = self.trace_name_edit.text().strip()
+        sparam = self.sparam_combo.currentText().strip()
+        if not trace_name:
+            self._show_error("Create Trace Error", ValueError("Trace name is empty"))
+            return
+        self._apply_and_refresh("CreateTrace", lambda: self._driver_method("CreateTrace", trace_name, sparam))
+
+    def on_select_trace_clicked(self):
+        try:
+            trace_name = self.trace_name_edit.text().strip() or self._selected_trace_name()
+        except Exception as exc:
+            self._show_error("Select Trace Error", exc)
+            return
+        self._apply_and_refresh("SetTrace", lambda: self._driver_method("SetTrace", trace_name))
+
+    def on_delete_trace_clicked(self):
+        self._apply_and_refresh("DelTrace", lambda: self._driver_method("DelTrace"))
+
+    def on_set_sparameter_clicked(self):
+        sparam = self.sparam_combo.currentText().strip()
+        self._apply_and_refresh("SetSparameter", lambda: self._driver_method("SetSparameter", sparam))
 
     def closeEvent(self, event):
         if self._busy and self._active_thread is not None:
@@ -1148,67 +1393,44 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         super().closeEvent(event)
 
 
+UI = NetworkAnalyzerWidget
+
+
+def _make_default_instance(args):
+    from mpylab.device.nw_rs_zvl_virtual import NETWORKANALYZER
+
+    ini = io.StringIO(std_ini_text.replace("virtual: 0", "virtual: 1" if args.virtual else "virtual: 0"))
+    if not args.virtual:
+        print("Driver will be selected from the INI file on Init. Using virtual network analyzer until then.")
+    return NETWORKANALYZER(), ini
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Network analyzer driver test utility")
+    parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
+    parser.add_argument("--virtual", action="store_true", help="Use the virtual network analyzer driver.")
+    parser.add_argument(
+        "--threaded",
+        action="store_true",
+        help="Run driver calls in worker threads. Disabled by default for VISA backend stability.",
+    )
+    args = parser.parse_args(argv)
+
+    nw, ini = _make_default_instance(args)
+    if args.ini:
+        try:
+            with open(args.ini, "r", encoding="utf-8") as handle:
+                ini = io.StringIO(handle.read())
+        except OSError as exc:
+            print(f"INI file could not be read: {exc}")
+            return 1
+
+    app = QtWidgets.QApplication(sys.argv if argv is None else [sys.argv[0], *argv])
+    window = NetworkAnalyzerWidget(nw, ini=ini, use_ini_draft=not args.virtual)
+    window._use_worker_threads = args.threaded
+    window.show()
+    return app.exec()
+
+
 if __name__ == "__main__":
-    threaded = "--threaded" in sys.argv
-    if threaded:
-        sys.argv.remove("--threaded")
-
-    class DummyNetworkDriver:
-        def Init(self, ini=None, channel=1):
-            print("Init called")
-            if ini is not None:
-                print(ini.read())
-            return 0
-
-        def GetDescription(self):
-            return 0, "Dummy network analyzer"
-
-        def GetChannel(self):
-            return 0, 1
-
-        def GetSweepType(self):
-            return 0, "LINEAR"
-
-        def GetSweepMode(self):
-            return 0, "CONTINUOUS"
-
-        def GetSweepCount(self):
-            return 0, 1
-
-        def GetSweepPoints(self):
-            return 0, 200
-
-        def GetCenterFreq(self):
-            return 0, 3.05e9
-
-        def GetStartFreq(self):
-            return 0, 1e8
-
-        def GetStopFreq(self):
-            return 0, 6e9
-
-        def GetSpan(self):
-            return 0, 5.9e9
-
-        def GetRBW(self):
-            return 0, 10e3
-
-        def GetTriggerMode(self):
-            return 0, "IMMEDIATE"
-
-        def GetTriggerDelay(self):
-            return 0, 0.0
-
-        def GetSpectrum(self):
-            x = np.linspace(1e8, 6e9, 200)
-            y = -40 + 10 * np.sin(np.linspace(0, 8 * np.pi, 200))
-            return 0, (x.tolist(), y.tolist())
-
-        def Quit(self):
-            print("Quit called")
-
-    app = QtWidgets.QApplication(sys.argv)
-    w = NetworkAnalyzerWidget(DummyNetworkDriver())
-    w._use_worker_threads = threaded
-    w.show()
-    sys.exit(app.exec())
+    sys.exit(main())
