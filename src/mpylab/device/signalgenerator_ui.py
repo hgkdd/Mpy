@@ -16,7 +16,7 @@ from scuq.quantities import Quantity
 from mpylab.device.device import CONVERT
 from mpylab.tools.configuration import parse_ini_value, strbool
 from mpylab.tools.util import format_block
-from mpylab.device.ui_ini_draft import clear_ini_draft, load_ini_with_draft
+from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
 
 
 conv = CONVERT()
@@ -75,11 +75,12 @@ class DriverTask(QtCore.QObject):
 class SignalGeneratorWidget(QtWidgets.QWidget):
     """Threaded test UI for the common signal generator driver API."""
 
-    def __init__(self, instance, ini=None, parent=None):
+    def __init__(self, instance, ini=None, parent=None, use_ini_draft=True):
         super().__init__(parent)
 
         self.sg = instance
         self.ini_source = ini if ini is not None else io.StringIO(std_ini_text)
+        self.use_ini_draft = use_ini_draft
         self.ini_path = None
         self._last_ini_text = ""
         self._status_fields = {}
@@ -181,7 +182,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         top_row.addWidget(self.save_ini_button)
         top_row.addStretch()
 
-        self.ini_edit = QtWidgets.QPlainTextEdit()
+        self.ini_edit = IniPlainTextEdit()
         self.ini_edit.setMinimumHeight(340)
 
         layout.addLayout(top_row)
@@ -452,6 +453,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
             self.ini_source,
             std_ini_text,
             SETTINGS_APP,
+            use_draft=self.use_ini_draft,
         )
         self._last_ini_text = content
 
@@ -1112,7 +1114,7 @@ if __name__ == "__main__":
         sg = SIGNALGENERATOR()
         print("Driver will be selected from the INI file on Init. Using virtual signal generator until then.")
 
-    window = SignalGeneratorWidget(sg, ini=ini)
+    window = SignalGeneratorWidget(sg, ini=ini, use_ini_draft=not args.virtual)
     if ini_path is not None:
         window._remember_ini_path(ini_path)
     window._use_worker_threads = args.threaded

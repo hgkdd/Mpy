@@ -11,7 +11,7 @@ from matplotlib.figure import Figure
 
 from mpylab.tools.util import format_block
 from mpylab.device.device import CONVERT
-from mpylab.device.ui_ini_draft import load_ini_with_draft
+from mpylab.device.ui_ini_draft import IniPlainTextEdit, load_ini_with_draft
 
 conv = CONVERT()
 SETTINGS_APP = "spectrumanalyzer_ui"
@@ -148,7 +148,7 @@ class UI(QtWidgets.QWidget):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(tab)
 
-        self.ini_edit = QtWidgets.QPlainTextEdit()
+        self.ini_edit = IniPlainTextEdit()
         self.ini_edit.setMinimumHeight(220)
 
         self.init_button = QtWidgets.QPushButton("Init")

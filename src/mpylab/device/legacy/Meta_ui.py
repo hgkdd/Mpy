@@ -16,7 +16,7 @@ from functools import partial
 
 from PySide6 import QtWidgets, QtCore
 
-from mpylab.device.ui_ini_draft import load_ini_with_draft
+from mpylab.device.ui_ini_draft import IniPlainTextEdit, load_ini_with_draft
 
 """ Verwendung der Klasse:
 
@@ -194,7 +194,7 @@ class DriverUIWidget(QtWidgets.QWidget):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(tab)
 
-        self.ini_edit = QtWidgets.QPlainTextEdit()
+        self.ini_edit = IniPlainTextEdit()
         load_ini_with_draft(
             self,
             self.ini_edit,

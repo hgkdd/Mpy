@@ -1,12 +1,41 @@
 # -*- coding: utf-8 -*-
 """Shared autosave support for editable INI tabs in device UIs."""
 
-from PySide6 import QtCore
+import textwrap
+
+from PySide6 import QtCore, QtGui, QtWidgets
 
 
 SETTINGS_ORG = "mpylab"
 INI_DRAFT_KEY = "ini_draft"
 INI_DRAFT_DIRTY_KEY = "ini_draft_dirty"
+
+
+class IniPlainTextEdit(QtWidgets.QPlainTextEdit):
+    """Plain-text INI editor that normalizes pasted indented blocks."""
+
+    def _insert_dedented_text(self, text):
+        self.insertPlainText(textwrap.dedent(text).strip("\n"))
+
+    def insertFromMimeData(self, source):
+        if source.hasText():
+            self._insert_dedented_text(source.text())
+            return
+        super().insertFromMimeData(source)
+
+    def paste(self):
+        clipboard = QtWidgets.QApplication.clipboard()
+        text = clipboard.text()
+        if text:
+            self._insert_dedented_text(text)
+            return
+        super().paste()
+
+    def keyPressEvent(self, event):
+        if event.matches(QtGui.QKeySequence.StandardKey.Paste):
+            self.paste()
+            return
+        super().keyPressEvent(event)
 
 
 def _read_ini_source(ini_source, default_text=""):
@@ -27,11 +56,11 @@ def _is_dirty(settings):
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
-def load_ini_with_draft(owner, editor, ini_source, default_text, settings_app):
+def load_ini_with_draft(owner, editor, ini_source, default_text, settings_app, use_draft=True):
     """Load INI text, preferring an unsaved draft stored in QSettings."""
     settings = QtCore.QSettings(SETTINGS_ORG, settings_app)
     draft = settings.value(INI_DRAFT_KEY, "", str)
-    content = draft if _is_dirty(settings) and draft else _read_ini_source(ini_source, default_text)
+    content = draft if use_draft and _is_dirty(settings) and draft else _read_ini_source(ini_source, default_text)
 
     editor.blockSignals(True)
     editor.setPlainText(content)

@@ -16,7 +16,7 @@ from scuq.ucomponents import Context
 
 from mpylab.device.nport import ANTENNA, CABLE, NPORT
 from mpylab.tools.util import format_block
-from mpylab.device.ui_ini_draft import clear_ini_draft, load_ini_with_draft
+from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
 
 
 SETTINGS_APP = "nport_ui"
@@ -133,11 +133,12 @@ class MplCanvas(FigureCanvas):
 class NPortWidget(QtWidgets.QWidget):
     """Threaded test UI for NPORT/CABLE/ANTENNA passive data drivers."""
 
-    def __init__(self, instance, ini=None, kind="nport", parent=None):
+    def __init__(self, instance, ini=None, kind="nport", parent=None, use_ini_draft=True):
         super().__init__(parent)
         self.dev = instance
         self.kind = kind
         self.ini_source = ini if ini is not None else io.StringIO(demo_ini(kind))
+        self.use_ini_draft = use_ini_draft
         self._last_ini_text = ""
         self._busy = False
         self._is_initialized = False
@@ -212,7 +213,7 @@ class NPortWidget(QtWidgets.QWidget):
         row.addWidget(self.load_button)
         row.addWidget(self.save_button)
         row.addStretch()
-        self.ini_edit = QtWidgets.QPlainTextEdit()
+        self.ini_edit = IniPlainTextEdit()
         layout.addLayout(row)
         layout.addWidget(self.ini_edit)
         self.tabs.addTab(tab, "Connection")
@@ -331,6 +332,7 @@ class NPortWidget(QtWidgets.QWidget):
             self.ini_source,
             demo_ini(self.kind),
             f"{SETTINGS_APP}_{self.kind}",
+            use_draft=self.use_ini_draft,
         )
         self._last_ini_text = content
 
@@ -625,7 +627,7 @@ def main(argv=None):
         ini = io.StringIO(demo_ini(args.kind))
 
     app = QtWidgets.QApplication(sys.argv if argv is None else [sys.argv[0], *argv])
-    window = NPortWidget(make_instance(args.kind), ini=ini, kind=args.kind)
+    window = NPortWidget(make_instance(args.kind), ini=ini, kind=args.kind, use_ini_draft=not args.virtual)
     window._use_worker_threads = args.threaded
     window.show()
     return app.exec()

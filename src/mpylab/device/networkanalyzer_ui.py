@@ -13,7 +13,7 @@ from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as Navigation
 from matplotlib.figure import Figure
 
 from mpylab.tools.util import format_block
-from mpylab.device.ui_ini_draft import clear_ini_draft, load_ini_with_draft
+from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
 
 std_ini_text = format_block("""
                 [DESCRIPTION]
@@ -144,11 +144,12 @@ class MplCanvas(FigureCanvas):
 class NetworkAnalyzerWidget(QtWidgets.QWidget):
     """Generic graphical test utility for network analyzer style drivers."""
 
-    def __init__(self, instance, ini=None, parent=None):
+    def __init__(self, instance, ini=None, parent=None, use_ini_draft=True):
         super().__init__(parent)
 
         self.dv = instance
         self.ini_source = ini if ini is not None else io.StringIO(std_ini_text)
+        self.use_ini_draft = use_ini_draft
         self.power = ()
         self._last_ini_text = ""
         self._status_fields = {}
@@ -243,7 +244,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         top_row.addWidget(self.save_ini_button)
         top_row.addStretch()
 
-        self.ini_edit = QtWidgets.QPlainTextEdit()
+        self.ini_edit = IniPlainTextEdit()
         self.ini_edit.setMinimumHeight(320)
 
         layout.addLayout(top_row)
@@ -436,6 +437,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             self.ini_source,
             std_ini_text,
             SETTINGS_APP,
+            use_draft=self.use_ini_draft,
         )
         self._last_ini_text = content
 

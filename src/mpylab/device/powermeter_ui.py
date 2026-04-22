@@ -14,7 +14,7 @@ from PySide6 import QtCore, QtWidgets
 
 from mpylab.tools.configuration import parse_ini_value, strbool
 from mpylab.tools.util import format_block
-from mpylab.device.ui_ini_draft import clear_ini_draft, load_ini_with_draft
+from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
 
 
 std_ini_text = format_block("""
@@ -79,11 +79,12 @@ class DriverTask(QtCore.QObject):
 class PowerMeterWidget(QtWidgets.QWidget):
     """Threaded test UI for the common powermeter driver API."""
 
-    def __init__(self, instance, ini=None, parent=None):
+    def __init__(self, instance, ini=None, parent=None, use_ini_draft=True):
         super().__init__(parent)
 
         self.pm = instance
         self.ini_source = ini if ini is not None else io.StringIO(std_ini_text)
+        self.use_ini_draft = use_ini_draft
         self._last_ini_text = ""
         self._status_fields = {}
         self._status_raw = {}
@@ -181,7 +182,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         top_row.addWidget(self.save_ini_button)
         top_row.addStretch()
 
-        self.ini_edit = QtWidgets.QPlainTextEdit()
+        self.ini_edit = IniPlainTextEdit()
         self.ini_edit.setMinimumHeight(360)
 
         layout.addLayout(top_row)
@@ -355,6 +356,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
             self.ini_source,
             std_ini_text,
             SETTINGS_APP,
+            use_draft=self.use_ini_draft,
         )
         self._last_ini_text = content
 
@@ -958,7 +960,7 @@ def main(argv=None):
         ini = args.ini
 
     app = QtWidgets.QApplication(sys.argv if argv is None else [sys.argv[0], *argv])
-    window = PowerMeterWidget(pm, ini=ini)
+    window = PowerMeterWidget(pm, ini=ini, use_ini_draft=not args.virtual)
     window._use_worker_threads = args.threaded
     window.show()
     return app.exec()

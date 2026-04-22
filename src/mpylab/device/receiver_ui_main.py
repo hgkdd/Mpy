@@ -13,7 +13,7 @@ from receiver_ui import Ui_MainWindow
 from mpylab.device.receiver import RECEIVER
 from mpylab.tools.util import format_block, case_insensitive_string_compare
 from mpylab.tools.configuration import Configuration
-from mpylab.device.ui_ini_draft import load_ini_with_draft
+from mpylab.device.ui_ini_draft import IniPlainTextEdit, load_ini_with_draft
 
 def map_to_1000(value):
     n = 0
@@ -33,6 +33,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self._replace_ini_editor()
         load_ini_with_draft(
             self,
             self.plainTextEdit_ini,
@@ -106,6 +107,19 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
         self.update_from_ini()
+
+    def _replace_ini_editor(self):
+        old_editor = self.plainTextEdit_ini
+        editor = IniPlainTextEdit(old_editor.parent())
+        editor.setObjectName(old_editor.objectName())
+        editor.setPlainText(old_editor.toPlainText())
+        editor.setGeometry(old_editor.geometry())
+        editor.setMinimumSize(old_editor.minimumSize())
+        editor.setMaximumSize(old_editor.maximumSize())
+        editor.setSizePolicy(old_editor.sizePolicy())
+        self.gridLayout_2.replaceWidget(old_editor, editor)
+        old_editor.deleteLater()
+        self.plainTextEdit_ini = editor
 
     def update_level(self):
         obj = None

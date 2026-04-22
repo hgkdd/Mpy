@@ -16,8 +16,8 @@ from mpylab.device.nw_rs_zvl_virtual import NETWORKANALYZER as VIRTUAL_NETWORKAN
 class UI(NetworkAnalyzerWidget):
     """ZVL-specific extension of the generic network analyzer test utility."""
 
-    def __init__(self, instance, ini=None, parent=None):
-        super().__init__(instance, ini=ini, parent=parent)
+    def __init__(self, instance, ini=None, parent=None, use_ini_draft=True):
+        super().__init__(instance, ini=ini, parent=parent, use_ini_draft=use_ini_draft)
         self.setWindowTitle("R&S ZVL Test Utility")
         self._build_zvl_topology_tab()
         self.refresh_all()
@@ -253,6 +253,6 @@ if __name__ == "__main__":
 
     nw = VIRTUAL_NETWORKANALYZER() if args.virtual else NETWORKANALYZER()
     app = QtWidgets.QApplication(sys.argv)
-    ui = UI(nw, ini=ini)
+    ui = UI(nw, ini=ini, use_ini_draft=not args.virtual)
     ui.show()
     sys.exit(app.exec())
