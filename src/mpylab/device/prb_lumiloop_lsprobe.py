@@ -4,6 +4,8 @@ import io
 import time
 import struct
 import itertools
+import re
+from copy import deepcopy
 
 
 from scuq import si, quantities, ucomponents
@@ -14,8 +16,17 @@ from mpylab.tools.statistic import linstat_lin
 # from test.test_interpol import freqs
 
 
+def _parse_mode_pair(mode):
+    if isinstance(mode, (tuple, list)) and len(mode) >= 2:
+        return str(int(mode[0])), str(int(mode[1]))
+    values = re.findall(r'-?\d+', str(mode))
+    if len(values) < 2:
+        raise ValueError(f"mode must contain two integers, got {mode!r}")
+    return values[0], values[1]
+
+
 class FIELDPROBE(FLDPRB):
-    conftmpl = FLDPRB.conftmpl
+    conftmpl = deepcopy(FLDPRB.conftmpl)
     conftmpl['init_value']['visa'] = str
     conftmpl['init_value']['mode'] = str
     conftmpl['init_value']['mfreq'] = float
@@ -48,8 +59,7 @@ class FIELDPROBE(FLDPRB):
             self.error = FLDPRB.Init(self, ini, channel)
             self.visa = self.conf['init_value']['visa']
             self.mfreq = self.conf['init_value']['mfreq']
-            self.lmode = self.conf['init_value']['mode'].split(',')[0]
-            self.hmode = self.conf['init_value']['mode'].split(',')[1]
+            self.lmode, self.hmode = _parse_mode_pair(self.conf['init_value']['mode'])
             self.virtual = self.conf['init_value'].get('virtual', False)
             FIELDPROBE.conf = self.conf.copy()   # make a copy of conf dict for the whole class
         else:  # copy from main instance
@@ -86,7 +96,7 @@ class FIELDPROBE(FLDPRB):
         return self.error
 
     def _hash(self):
-        return "{self.visa}_{self.ch}"
+        return f"{self.visa}_{self.ch}"
 
     def wait_for_laser_ready(self):
         if not self.is_main_instance:

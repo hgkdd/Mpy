@@ -63,6 +63,14 @@ class FIELDPROBE(DRIVER):
             self.freq = float(self.freq)
         return self.error, self.freq
 
+    def GetFreq(self):
+        self.error = 0
+        dct = self._do_cmds('GetFreq', locals())
+        self._update(dct)
+        if self.error == 0 and self.freq is not None:
+            self.freq = float(self.freq)
+        return self.error, self.freq
+
     def Zero(self, state):
         self.error = 0
         self.ZeroState = 'off'

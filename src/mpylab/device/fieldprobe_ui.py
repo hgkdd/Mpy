@@ -1,173 +1,667 @@
 # -*- coding: utf-8 -*-
+"""Graphical test utility for field probe drivers."""
 
+import argparse
+import configparser
+import importlib
 import io
+import math
 import sys
+from datetime import datetime
+from pathlib import Path
 
-from PySide6 import QtWidgets, QtCore
+from PySide6 import QtCore, QtWidgets
 
+from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
+from mpylab.tools.configuration import parse_ini_value, strbool
 from mpylab.tools.util import format_block
-from mpylab.device.device import CONVERT
-from mpylab.device.ui_ini_draft import load_ini_with_draft
 
-conv = CONVERT()
+
 SETTINGS_APP = "fieldprobe_ui"
+
 
 std_ini_text = format_block("""
                 [DESCRIPTION]
-                description: 'FP TEMPLATE'
+                description: 'Virtual FieldProbe'
                 type:        'FIELDPROBE'
-                vendor:      'Some Vendor'
+                vendor:      'mpylab'
                 serialnr:
                 deviceid:
-                driver:
+                driver: prb_virtual.py
 
                 [Init_Value]
                 fstart: 3e6
                 fstop: 18e9
                 fstep: 0
-                gpib: 4
-                virtual: 0
+                virtual: 1
 
                 [Channel_1]
                 name: EField
                 unit: Voverm
+                x: 1 + f/1e9
+                y: 2
+                z: 3
+                uncertainty: 0.1
                 """).strip()
 
 
-class UI(QtWidgets.QWidget):
-    def __init__(self, instance, ini=None, parent=None):
-        super().__init__(parent)
+class DriverTask(QtCore.QObject):
+    completed = QtCore.Signal(object, object)
+    finished = QtCore.Signal()
 
+    def __init__(self, func):
+        super().__init__()
+        self._func = func
+
+    @QtCore.Slot()
+    def run(self):
+        result = None
+        error = None
+        try:
+            result = self._func()
+        except Exception as exc:
+            error = exc
+        finally:
+            self.completed.emit(result, error)
+            self.finished.emit()
+
+
+class UI(QtWidgets.QWidget):
+    def __init__(self, instance, ini=None, parent=None, use_ini_draft=True):
+        super().__init__(parent)
         self.dev = instance
         self.ini_source = ini if ini is not None else io.StringIO(std_ini_text)
+        self.use_ini_draft = use_ini_draft
+        self._channel_drivers = {}
+        self._status_fields = {}
+        self._busy = False
+        self._is_initialized = False
+        self._last_error_text = "none"
+        self._last_data = None
+        self._use_worker_threads = False
+        self._active_thread = None
+        self._active_task = None
+        self._task_label = None
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = None
+        self._task_on_error = None
+        self._task_on_finished = None
 
-        self.ch = 1
-        self.unit = ""
-        self.setWindowTitle("Fieldprobe")
-        self.resize(750, 500)
-
+        self.setWindowTitle("FieldProbe Test Utility")
+        self.resize(1050, 780)
         self._build_ui()
         self._load_ini()
-        self._connect_signals()
-
-    # ---------------------------------------------------------
-    # UI
-    # ---------------------------------------------------------
+        self.log_message("UI ready.")
 
     def _build_ui(self):
-        main_layout = QtWidgets.QVBoxLayout(self)
+        main = QtWidgets.QVBoxLayout(self)
+        self.tabs = QtWidgets.QTabWidget()
+        main.addWidget(self.tabs)
+        self._build_connection_tab()
+        self._build_status_tab()
+        self._build_measurement_tab()
+        self._build_smoke_tab()
+        self._build_log_tab()
 
-        tabs = QtWidgets.QTabWidget()
-        main_layout.addWidget(tabs)
+        bottom = QtWidgets.QHBoxLayout()
+        self.state_label = QtWidgets.QLabel()
+        self.init_label = QtWidgets.QLabel()
+        self.driver_label = QtWidgets.QLabel()
+        self.error_label = QtWidgets.QLabel()
+        self.error_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        bottom.addWidget(self.state_label)
+        bottom.addSpacing(10)
+        bottom.addWidget(self.init_label)
+        bottom.addSpacing(10)
+        bottom.addWidget(self.driver_label)
+        bottom.addSpacing(10)
+        bottom.addWidget(self.error_label, 1)
+        self.refresh_button = QtWidgets.QPushButton("Refresh All")
+        self.refresh_button.clicked.connect(self.refresh_status)
+        bottom.addWidget(self.refresh_button)
+        self.close_button = QtWidgets.QPushButton("Close")
+        self.close_button.clicked.connect(self.close)
+        bottom.addWidget(self.close_button)
+        main.addLayout(bottom)
+        self._refresh_status_bar()
 
-        # Ini-Tab
-        ini_tab = QtWidgets.QWidget()
-        ini_layout = QtWidgets.QVBoxLayout(ini_tab)
-
-        self.ini_edit = QtWidgets.QPlainTextEdit()
-        self.ini_edit.setMinimumHeight(220)
-
-        form = QtWidgets.QFormLayout()
+    def _build_connection_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        row = QtWidgets.QHBoxLayout()
         self.channel_spin = QtWidgets.QSpinBox()
         self.channel_spin.setMinimum(1)
+        self.channel_spin.setMaximum(128)
         self.channel_spin.setValue(1)
-        form.addRow("CHANNEL", self.channel_spin)
+        self.channel_spin.valueChanged.connect(self.on_channel_changed)
+        self.init_button = QtWidgets.QPushButton("Init / Re-Init")
+        self.init_button.clicked.connect(self.on_init_clicked)
+        self.quit_button = QtWidgets.QPushButton("Quit")
+        self.quit_button.clicked.connect(self.on_quit_clicked)
+        self.load_ini_button = QtWidgets.QPushButton("Load INI File")
+        self.load_ini_button.clicked.connect(self.on_load_ini_clicked)
+        self.save_ini_button = QtWidgets.QPushButton("Save INI File")
+        self.save_ini_button.clicked.connect(self.on_save_ini_clicked)
+        row.addWidget(QtWidgets.QLabel("Channel"))
+        row.addWidget(self.channel_spin)
+        row.addWidget(self.init_button)
+        row.addWidget(self.quit_button)
+        row.addWidget(self.load_ini_button)
+        row.addWidget(self.save_ini_button)
+        row.addStretch()
+        self.ini_edit = IniPlainTextEdit()
+        self.ini_edit.setMinimumHeight(360)
+        layout.addLayout(row)
+        layout.addWidget(self.ini_edit)
+        self.tabs.addTab(tab, "Connection")
 
-        self.init_button = QtWidgets.QPushButton("Init")
+    def _build_status_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        grid = QtWidgets.QGridLayout()
+        specs = [
+            ("Description", "GetDescription"),
+            ("Frequency", "GetFreq"),
+            ("Virtual", "GetVirtual"),
+            ("Battery", "GetBatteryState"),
+            ("Channel", "_channel"),
+            ("Internal Unit", "_internal_unit"),
+            ("Bus Ready", "_bus_ready"),
+            ("Last Data", "_last_data"),
+        ]
+        for idx, (label, key) in enumerate(specs):
+            field = QtWidgets.QLineEdit()
+            field.setReadOnly(True)
+            self._status_fields[key] = field
+            row = idx // 2
+            col = (idx % 2) * 2
+            grid.addWidget(QtWidgets.QLabel(label), row, col)
+            grid.addWidget(field, row, col + 1)
+        layout.addLayout(grid)
+        layout.addStretch()
+        self.tabs.addTab(tab, "Status")
 
-        ini_layout.addWidget(self.ini_edit)
-        ini_layout.addLayout(form)
-        ini_layout.addWidget(self.init_button)
-        ini_layout.addStretch()
-
-        # Freq-Tab
-        freq_tab = QtWidgets.QWidget()
-        freq_layout = QtWidgets.QFormLayout(freq_tab)
-
+    def _build_measurement_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        freq_row = QtWidgets.QHBoxLayout()
         self.freq_spin = QtWidgets.QDoubleSpinBox()
         self.freq_spin.setDecimals(3)
         self.freq_spin.setRange(0.0, 1e12)
+        self.freq_spin.setSingleStep(1e6)
         self.freq_spin.setValue(1e6)
-        self.freq_spin.setSingleStep(1e3)
         self.freq_spin.setSuffix(" Hz")
+        self.set_freq_button = QtWidgets.QPushButton("Set Frequency")
+        self.set_freq_button.clicked.connect(self.on_set_freq_clicked)
+        self.read_freq_button = QtWidgets.QPushButton("Read Frequency")
+        self.read_freq_button.clicked.connect(self.on_read_freq_clicked)
+        freq_row.addWidget(QtWidgets.QLabel("Frequency"))
+        freq_row.addWidget(self.freq_spin)
+        freq_row.addWidget(self.set_freq_button)
+        freq_row.addWidget(self.read_freq_button)
+        layout.addLayout(freq_row)
 
-        freq_layout.addRow("FREQ", self.freq_spin)
-
-        tabs.addTab(ini_tab, "Ini")
-        tabs.addTab(freq_tab, "Freq")
-
+        button_row = QtWidgets.QHBoxLayout()
         self.trigger_button = QtWidgets.QPushButton("Trigger")
-        main_layout.addWidget(self.trigger_button)
+        self.trigger_button.clicked.connect(self.on_trigger_clicked)
+        self.measure_button = QtWidgets.QPushButton("GetData")
+        self.measure_button.clicked.connect(self.on_measure_clicked)
+        self.measure_nb_button = QtWidgets.QPushButton("GetDataNB")
+        self.measure_nb_button.clicked.connect(self.on_measure_nb_clicked)
+        self.retrigger_check = QtWidgets.QCheckBox("Retrigger")
+        self.zero_on_button = QtWidgets.QPushButton("Zero On")
+        self.zero_on_button.clicked.connect(lambda: self.on_zero_clicked("on"))
+        self.zero_off_button = QtWidgets.QPushButton("Zero Off")
+        self.zero_off_button.clicked.connect(lambda: self.on_zero_clicked("off"))
+        for widget in (
+            self.trigger_button, self.measure_button, self.measure_nb_button,
+            self.retrigger_check, self.zero_on_button, self.zero_off_button,
+        ):
+            button_row.addWidget(widget)
+        button_row.addStretch()
+        layout.addLayout(button_row)
 
-        power_group = QtWidgets.QGroupBox("Power")
-        power_layout = QtWidgets.QVBoxLayout(power_group)
+        grid = QtWidgets.QGridLayout()
+        self.component_fields = {}
+        for row, key in enumerate(("Ex", "Ey", "Ez", "|E|")):
+            field = QtWidgets.QLineEdit()
+            field.setReadOnly(True)
+            self.component_fields[key] = field
+            grid.addWidget(QtWidgets.QLabel(key), row, 0)
+            grid.addWidget(field, row, 1)
+        layout.addLayout(grid)
+        self.detail_edit = QtWidgets.QPlainTextEdit()
+        self.detail_edit.setReadOnly(True)
+        layout.addWidget(self.detail_edit)
+        self.tabs.addTab(tab, "Measurement")
 
-        self.power_edit = QtWidgets.QLineEdit()
-        self.power_edit.setReadOnly(True)
+    def _build_smoke_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        self.smoke_button = QtWidgets.QPushButton("Run Smoke Test")
+        self.smoke_button.clicked.connect(self.on_smoke_clicked)
+        self.smoke_result = QtWidgets.QPlainTextEdit()
+        self.smoke_result.setReadOnly(True)
+        layout.addWidget(self.smoke_button)
+        layout.addWidget(self.smoke_result)
+        self.tabs.addTab(tab, "Smoke Test")
 
-        power_layout.addWidget(self.power_edit)
-        main_layout.addWidget(power_group)
-
-        bottom = QtWidgets.QHBoxLayout()
-        bottom.addStretch()
-
-        self.close_button = QtWidgets.QPushButton("Schließen")
-        self.close_button.clicked.connect(self.close)
-        bottom.addWidget(self.close_button)
-
-        main_layout.addLayout(bottom)
-
-    def _connect_signals(self):
-        self.init_button.clicked.connect(self._Init_fired)
-        self.trigger_button.clicked.connect(self._TRIGGER_fired)
-        self.freq_spin.valueChanged.connect(self._FREQ_changed)
-        self.channel_spin.valueChanged.connect(self._CHANNEL_changed)
+    def _build_log_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        self.log_edit = QtWidgets.QPlainTextEdit()
+        self.log_edit.setReadOnly(True)
+        layout.addWidget(self.log_edit)
+        self.tabs.addTab(tab, "Log")
 
     def _load_ini(self):
-        load_ini_with_draft(self, self.ini_edit, self.ini_source, std_ini_text, SETTINGS_APP)
+        load_ini_with_draft(
+            self,
+            self.ini_edit,
+            self.ini_source,
+            std_ini_text,
+            SETTINGS_APP,
+            use_draft=self.use_ini_draft,
+        )
 
-    # ---------------------------------------------------------
-    # Logik
-    # ---------------------------------------------------------
+    def log_message(self, message):
+        self.log_edit.appendPlainText(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
 
-    def _Init_fired(self):
+    def _driver_display_name(self):
+        return f"Driver: {type(self.dev).__module__}.{type(self.dev).__name__}"
+
+    def _refresh_status_bar(self, state_text=None):
+        if state_text is None:
+            state_text = "Busy" if self._busy else "Ready"
+        self.state_label.setText(f"State: {state_text}")
+        self.init_label.setText(f"Init: {'initialized' if self._is_initialized else 'not initialized'}")
+        self.driver_label.setText(self._driver_display_name())
+        self.error_label.setText(f"Last error: {self._last_error_text}")
+
+    def _set_busy(self, busy, label=None):
+        self._busy = busy
+        self.tabs.setEnabled(not busy)
+        self.refresh_button.setEnabled(not busy)
+        self.close_button.setEnabled(not busy)
+        self._refresh_status_bar(f"Busy: {label}" if busy and label else None)
+
+    def _start_task(self, label, func, on_success=None, on_error=None, on_finished=None):
+        if self._busy:
+            QtWidgets.QMessageBox.information(self, "Operation in progress", "Another operation is still running.")
+            return False
+        self.log_message(f"{label} started.")
+        self._set_busy(True, label)
+        if not self._use_worker_threads:
+            result = None
+            error = None
+            try:
+                QtWidgets.QApplication.processEvents()
+                result = func()
+            except Exception as exc:
+                error = exc
+            finally:
+                self._set_busy(False)
+            if error is None:
+                self._last_error_text = "none"
+                self.log_message(f"{label} succeeded.")
+                if on_success is not None:
+                    on_success(result)
+            else:
+                self._last_error_text = str(error)
+                if label == "Init":
+                    self._is_initialized = False
+                self.log_message(f"{label} failed: {type(error).__name__}: {error}")
+                if on_error is not None:
+                    on_error(error)
+                else:
+                    self._show_error(f"{label} Error", error)
+            if on_finished is not None:
+                on_finished()
+            return True
+        self._task_label = label
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = on_success
+        self._task_on_error = on_error
+        self._task_on_finished = on_finished
+        thread = QtCore.QThread(self)
+        task = DriverTask(func)
+        task.moveToThread(thread)
+        thread.started.connect(task.run)
+        task.completed.connect(self._task_completed, QtCore.Qt.QueuedConnection)
+        task.finished.connect(thread.quit)
+        task.finished.connect(task.deleteLater)
+        thread.finished.connect(self._task_finished, QtCore.Qt.QueuedConnection)
+        thread.finished.connect(thread.deleteLater)
+        self._active_thread = thread
+        self._active_task = task
+        thread.start()
+        return True
+
+    @QtCore.Slot(object, object)
+    def _task_completed(self, result, error):
+        self._task_result = result
+        self._task_error = error
+
+    @QtCore.Slot()
+    def _task_finished(self):
+        label = self._task_label or "Task"
+        result = self._task_result
+        error = self._task_error
+        on_success = self._task_on_success
+        on_error = self._task_on_error
+        on_finished = self._task_on_finished
+        self._active_thread = None
+        self._active_task = None
+        self._task_label = None
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = None
+        self._task_on_error = None
+        self._task_on_finished = None
+        self._set_busy(False)
+        if error is None:
+            self._last_error_text = "none"
+            self.log_message(f"{label} succeeded.")
+            if on_success is not None:
+                on_success(result)
+        else:
+            self._last_error_text = str(error)
+            self.log_message(f"{label} failed: {type(error).__name__}: {error}")
+            if on_error is not None:
+                on_error(error)
+            else:
+                self._show_error(f"{label} Error", error)
+        if on_finished is not None:
+            on_finished()
+
+    def _show_error(self, title, error):
+        self._refresh_status_bar()
+        QtWidgets.QMessageBox.critical(self, title, str(error))
+
+    def _driver_method(self, method_name, *args, **kwargs):
+        method = getattr(self.dev, method_name, None)
+        if method is None:
+            raise AttributeError(f"Driver does not implement {method_name}()")
+        return method(*args, **kwargs)
+
+    def _ini_driver_settings(self, ini_text):
+        config = configparser.ConfigParser()
+        config.read_file(io.StringIO(ini_text))
+        description = {}
+        init_value = {}
+        for section in config.sections():
+            section_key = section.strip().lower()
+            if section_key == "description":
+                description = {key.lower(): parse_ini_value(value) for key, value in config.items(section)}
+            elif section_key == "init_value":
+                init_value = {key.lower(): parse_ini_value(value) for key, value in config.items(section)}
+        driver = str(description.get("driver", "") or "").strip()
+        virtual = strbool(init_value.get("virtual", False))
+        return driver, virtual
+
+    def _module_name_from_driver(self, driver, virtual):
+        if virtual or not driver or Path(driver).with_suffix("").name.lower() == "dummy":
+            return "prb_virtual"
+        return Path(driver).with_suffix("").name.lower()
+
+    def _instantiate_driver(self, module_name):
+        module = importlib.import_module(f"mpylab.device.{module_name}")
+        driver_cls = getattr(module, "FIELDPROBE")
+        search_paths = getattr(self.dev, "SearchPaths", None)
+        if search_paths is not None:
+            try:
+                return driver_cls(SearchPaths=search_paths)
+            except TypeError:
+                pass
+        return driver_cls()
+
+    def _reset_driver_class_state(self, module_name):
+        if module_name != "prb_lumiloop_lsprobe":
+            return
+        module = importlib.import_module("mpylab.device.prb_lumiloop_lsprobe")
+        driver_cls = getattr(module, "FIELDPROBE")
+        driver_cls.instances = {}
+        driver_cls.main_instance = None
+        driver_cls.nprb = 1
+        driver_cls.data = []
+
+    def _select_driver_from_ini(self, ini_text):
+        driver, virtual = self._ini_driver_settings(ini_text)
+        module_name = self._module_name_from_driver(driver, virtual)
+        current_module = type(self.dev).__module__.split(".")[-1]
+        if current_module == module_name:
+            return
+        old_driver = self.dev
+        self._reset_driver_class_state(module_name)
+        self.dev = self._instantiate_driver(module_name)
+        self._channel_drivers = {}
+        self._is_initialized = False
+        self._refresh_status_bar()
+        self.log_message(f"Driver switched from {type(old_driver).__module__} to {type(self.dev).__module__}.")
+
+    def _configured_channel_count(self, ini_text):
         try:
-            ini = io.StringIO(self.ini_edit.toPlainText())
-            self.ch = self.channel_spin.value()
-            self.dev.Init(ini, self.ch)
+            config = configparser.ConfigParser()
+            config.read_file(io.StringIO(ini_text))
+            init_value = {key.lower(): parse_ini_value(value) for key, value in config.items("Init_Value")}
+            return int(init_value.get("channels", init_value.get("nr_of_channels", 1)))
+        except Exception:
+            return 1
 
-            self.unit = self.dev.conf[f"channel_{self.ch}"]["unit"]
-            self._FREQ_changed(self.freq_spin.value())
+    def _init_channel_driver(self, ini_text, channel):
+        current_module = type(self.dev).__module__.split(".")[-1]
+        if current_module == "prb_lumiloop_lsprobe":
+            self._reset_driver_class_state(current_module)
+            self._channel_drivers = {}
+            self.dev = self._instantiate_driver(current_module)
+        if current_module == "prb_lumiloop_lsprobe" and channel != 1:
+            main_driver = self._instantiate_driver(current_module)
+            self._channel_drivers[1] = main_driver
+            main_driver.Init(ini=io.StringIO(ini_text), channel=1)
+        driver = self._channel_drivers.get(channel)
+        if driver is None:
+            driver = self._instantiate_driver(current_module)
+            self._channel_drivers[channel] = driver
+        self.dev = driver
+        err = self._driver_method("Init", io.StringIO(ini_text), channel)
+        if current_module == "prb_lumiloop_lsprobe":
+            for ch in range(1, self._configured_channel_count(ini_text) + 1):
+                if ch not in self._channel_drivers:
+                    other = self._instantiate_driver(current_module)
+                    self._channel_drivers[ch] = other
+                    other.Init(ini=io.StringIO(ini_text), channel=ch)
+            self.dev = self._channel_drivers.get(channel, self.dev)
+        return err
 
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "Init-Fehler", str(e))
+    def _split_error_value(self, result):
+        if isinstance(result, tuple) and len(result) == 2:
+            return result
+        return 0, result
 
-    def _TRIGGER_fired(self):
+    def _display_value(self, value):
+        return str(value)
+
+    def _numeric_value(self, value):
+        for name in ("get_expectation_value_as_float", "get_value"):
+            method = getattr(value, name, None)
+            if method is not None:
+                try:
+                    return float(method() if name != "get_value" else method(value._unit))
+                except Exception:
+                    pass
         try:
-            self.dev.Trigger()
-            err, data = self.dev.GetData()
-            self.power_edit.setText(str(data))
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "Trigger-Fehler", str(e))
-
-    def _FREQ_changed(self, value=None):
-        try:
-            if value is None:
-                value = self.freq_spin.value()
-            self.dev.SetFreq(value)
-        except Exception as e:
-            QtWidgets.QMessageBox.critical(self, "FREQ-Fehler", str(e))
-
-    def _CHANNEL_changed(self, value):
-        try:
-            if hasattr(self.dev, "Quit"):
-                self.dev.Quit()
+            expectation = getattr(value, "_value", value)
+            if hasattr(expectation, "get_expectation_value_as_float"):
+                return float(expectation.get_expectation_value_as_float())
         except Exception:
             pass
+        return float(value)
 
-        self._Init_fired()
+    def _handle_data_result(self, result):
+        err, data = self._split_error_value(result)
+        if err == -1 and data is None:
+            self.detail_edit.setPlainText("measurement pending")
+            return
+        if data is None or len(data) != 3:
+            raise ValueError(f"GetData must return three components, got {data!r}")
+        self._last_data = data
+        labels = ("Ex", "Ey", "Ez")
+        for label, value in zip(labels, data):
+            self.component_fields[label].setText(str(value))
+        nums = [self._numeric_value(value) for value in data]
+        magnitude = math.sqrt(sum(value * value for value in nums))
+        unit = getattr(data[0], "_unit", "")
+        self.component_fields["|E|"].setText(f"{magnitude:g} {unit}".strip())
+        self.detail_edit.setPlainText(self._display_value(result))
+        self._status_fields["_last_data"].setText(str(data))
+        self.log_message(f"Field read: Ex={data[0]}, Ey={data[1]}, Ez={data[2]}, |E|={magnitude:g}")
+
+    def _set_status_field(self, key, value):
+        field = self._status_fields.get(key)
+        if field is not None:
+            field.setText(str(value))
+
+    def on_load_ini_clicked(self):
+        path, _filter = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Open INI File", "", "INI Files (*.ini *.txt);;All Files (*)"
+        )
+        if not path:
+            return
+        with open(path, "r", encoding="utf-8") as handle:
+            self.ini_edit.setPlainText(handle.read())
+        self.log_message(f"Loaded INI file: {path}")
+
+    def on_save_ini_clicked(self):
+        path, _filter = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save INI File", "", "INI Files (*.ini *.txt);;All Files (*)"
+        )
+        if not path:
+            return
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(self.ini_edit.toPlainText())
+        clear_ini_draft(self)
+        self.log_message(f"Saved INI file: {path}")
+
+    def on_init_clicked(self):
+        ini_text = self.ini_edit.toPlainText()
+        channel = self.channel_spin.value()
+        try:
+            self._select_driver_from_ini(ini_text)
+        except Exception as exc:
+            self._show_error("Driver Selection Error", exc)
+            return
+
+        def success(err):
+            self._is_initialized = (err == 0)
+            self._last_error_text = "none" if err == 0 else self._last_error_text
+            self._refresh_status_bar()
+            self.refresh_status()
+
+        self._start_task("Init", lambda: self._init_channel_driver(ini_text, channel), on_success=success)
+
+    def on_quit_clicked(self):
+        def success(result):
+            self._is_initialized = False
+            self._channel_drivers = {}
+            self._refresh_status_bar()
+            self.log_message(f"Quit returned: {result}")
+
+        self._start_task("Quit", lambda: self._driver_method("Quit"), on_success=success)
+
+    def on_channel_changed(self, channel):
+        driver = self._channel_drivers.get(channel)
+        if driver is not None:
+            self.dev = driver
+            self._last_data = None
+            self._refresh_status_bar()
+            self.refresh_status()
+
+    def on_set_freq_clicked(self):
+        freq = self.freq_spin.value()
+        self._start_task("Set Frequency", lambda: self._driver_method("SetFreq", freq), on_success=self._handle_freq)
+
+    def on_read_freq_clicked(self):
+        self._start_task("Read Frequency", lambda: self._driver_method("GetFreq"), on_success=self._handle_freq)
+
+    def _handle_freq(self, result):
+        err, value = self._split_error_value(result)
+        if err == 0 and value is not None:
+            self.freq_spin.blockSignals(True)
+            self.freq_spin.setValue(float(value))
+            self.freq_spin.blockSignals(False)
+        self._set_status_field("GetFreq", self._display_value(result))
+
+    def on_trigger_clicked(self):
+        self._start_task("Trigger", lambda: self._driver_method("Trigger"))
+
+    def on_measure_clicked(self):
+        self._start_task("GetData", lambda: self._driver_method("GetData"), on_success=self._handle_data_result)
+
+    def on_measure_nb_clicked(self):
+        retrigger = "on" if self.retrigger_check.isChecked() else "off"
+        self._start_task(
+            "GetDataNB",
+            lambda: self._driver_method("GetDataNB", retrigger),
+            on_success=self._handle_data_result,
+        )
+
+    def on_zero_clicked(self, state):
+        self._start_task(f"Zero {state.upper()}", lambda: self._driver_method("Zero", state))
+
+    def refresh_status(self):
+        def task():
+            snapshot = {}
+            for method_name in ("GetDescription", "GetFreq", "GetVirtual", "GetBatteryState"):
+                method = getattr(self.dev, method_name, None)
+                if method is None:
+                    snapshot[method_name] = "not implemented"
+                    continue
+                try:
+                    snapshot[method_name] = self._display_value(method())
+                except Exception as exc:
+                    snapshot[method_name] = f"{type(exc).__name__}: {exc}"
+            channel = getattr(self.dev, "channel", getattr(self.dev, "ch", None))
+            snapshot["_channel"] = channel
+            snapshot["_internal_unit"] = getattr(self.dev, "_internal_unit", "")
+            snapshot["_bus_ready"] = getattr(self.dev, "bus_ready", "")
+            snapshot["_last_data"] = self._last_data
+            return snapshot
+
+        def success(snapshot):
+            for key, value in snapshot.items():
+                self._set_status_field(key, value)
+            self._refresh_status_bar()
+
+        self._start_task("Refresh Status", task, on_success=success)
+
+    def on_smoke_clicked(self):
+        ini_text = self.ini_edit.toPlainText()
+        channel = self.channel_spin.value()
+        freq = self.freq_spin.value()
+
+        def task():
+            lines = []
+            lines.append(f"Init: {self._init_channel_driver(ini_text, channel)}")
+            if hasattr(self.dev, "GetDescription"):
+                lines.append(f"GetDescription: {self.dev.GetDescription()}")
+            lines.append(f"SetFreq({freq}): {self.dev.SetFreq(freq)}")
+            lines.append(f"Trigger: {self.dev.Trigger()}")
+            lines.append(f"GetData: {self.dev.GetData()}")
+            if hasattr(self.dev, "GetBatteryState"):
+                lines.append(f"Battery: {self.dev.GetBatteryState()}")
+            if hasattr(self.dev, "Quit"):
+                lines.append(f"Quit: {self.dev.Quit()}")
+            return "\n".join(lines)
+
+        self._start_task("Smoke Test", task, on_success=self.smoke_result.setPlainText)
 
     def closeEvent(self, event):
+        if self._active_thread is not None and self._active_thread.isRunning():
+            event.ignore()
+            QtWidgets.QMessageBox.information(self, "Operation in progress", "Close after current operation.")
+            return
         try:
             if hasattr(self.dev, "Quit"):
                 self.dev.Quit()
@@ -176,35 +670,29 @@ class UI(QtWidgets.QWidget):
         super().closeEvent(event)
 
 
-def main():
-    class DummyFieldProbe:
-        def __init__(self):
-            self.conf = {
-                "channel_1": {"unit": "Voverm"},
-                "channel_2": {"unit": "Voverm"},
-            }
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="FieldProbe driver test utility")
+    parser.add_argument("--virtual", action="store_true", help="Use the virtual field probe driver")
+    parser.add_argument("--ini", help="Path to an INI file to preload")
+    parser.add_argument("--threaded", action="store_true", help="Run driver calls in worker threads")
+    args = parser.parse_args(argv)
 
-        def Init(self, ini, ch):
-            print("Init called, channel:", ch)
-            print(ini.read())
+    if args.virtual:
+        from mpylab.device.prb_virtual import FIELDPROBE
+        dev = FIELDPROBE()
+        ini = io.StringIO(std_ini_text)
+    else:
+        from mpylab.device.prb_virtual import FIELDPROBE
+        dev = FIELDPROBE()
+        ini = args.ini if args.ini else io.StringIO(std_ini_text)
+        print("Driver will be selected from the INI file on Init. Using virtual field probe until then.")
 
-        def Trigger(self):
-            print("Trigger called")
-
-        def GetData(self):
-            return 0, 12.34
-
-        def SetFreq(self, value):
-            print("SetFreq:", value)
-
-        def Quit(self):
-            print("Quit called")
-
-    app = QtWidgets.QApplication(sys.argv)
-    ui = UI(DummyFieldProbe())
+    app = QtWidgets.QApplication(sys.argv if argv is None else [sys.argv[0], *argv])
+    ui = UI(dev, ini=ini, use_ini_draft=not args.virtual)
+    ui._use_worker_threads = args.threaded
     ui.show()
-    sys.exit(app.exec())
+    return app.exec()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
