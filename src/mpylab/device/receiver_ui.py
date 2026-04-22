@@ -1,477 +1,923 @@
 # -*- coding: utf-8 -*-
+"""Graphical test utility for receiver drivers."""
 
-################################################################################
-## Form generated from reading UI file 'receiver_ui.ui'
-##
-## Created by: Qt User Interface Compiler version 6.10.0
-##
-## WARNING! All changes made in this file will be lost when recompiling UI file!
-################################################################################
+import argparse
+import configparser
+import importlib
+import io
+import sys
+from datetime import datetime
+from pathlib import Path
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
-    QCursor, QFont, QFontDatabase, QGradient,
-    QIcon, QImage, QKeySequence, QLinearGradient,
-    QPainter, QPalette, QPixmap, QRadialGradient,
-    QTransform)
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBox,
-    QFrame, QGridLayout, QGroupBox, QHBoxLayout,
-    QLabel, QMainWindow, QMenu, QMenuBar,
-    QPlainTextEdit, QPushButton, QRadioButton, QScrollArea,
-    QSizePolicy, QSpacerItem, QStatusBar, QVBoxLayout,
-    QWidget)
+from PySide6 import QtCore, QtWidgets
 
-class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
-        if not MainWindow.objectName():
-            MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(954, 654)
-        self.actionInfo = QAction(MainWindow)
-        self.actionInfo.setObjectName(u"actionInfo")
-        self.actionQuit = QAction(MainWindow)
-        self.actionQuit.setObjectName(u"actionQuit")
-        self.actionOpen_Ini_File = QAction(MainWindow)
-        self.actionOpen_Ini_File.setObjectName(u"actionOpen_Ini_File")
-        self.centralwidget = QWidget(MainWindow)
-        self.centralwidget.setObjectName(u"centralwidget")
-        self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.frame_3 = QFrame(self.centralwidget)
-        self.frame_3.setObjectName(u"frame_3")
-        self.frame_3.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_3.setFrameShadow(QFrame.Shadow.Raised)
-        self.horizontalLayout_6 = QHBoxLayout(self.frame_3)
-        self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+from mpylab.device.ui_frequency import FrequencyControl
+from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
+from mpylab.tools.configuration import parse_ini_value, strbool
+from mpylab.tools.util import format_block
 
-        self.horizontalLayout_6.addItem(self.horizontalSpacer)
 
-        self.pushButton_trigger = QPushButton(self.frame_3)
-        self.pushButton_trigger.setObjectName(u"pushButton_trigger")
+std_ini_text = format_block("""
+                [DESCRIPTION]
+                description: Virtual Receiver
+                type:        RECEIVER
+                vendor:      mpylab
+                serialnr:    VIRTUAL
+                deviceid:    receiver_virtual
+                driver:      receiver_virtual.py
 
-        self.horizontalLayout_6.addWidget(self.pushButton_trigger)
+                [Init_Value]
+                fstart: 9e3
+                fstop: 30e6
+                fstep: 1
+                visa:
+                virtual: 1
+                nr_of_channels: 1
 
-        self.label_8 = QLabel(self.frame_3)
-        self.label_8.setObjectName(u"label_8")
-        font = QFont()
+                [Channel_1]
+                name: RFIn
+                min_attenuation: 10
+                meas_time: 0.05
+                preamplifier: off
+                unit: dBuV
+                attenuation: auto
+                rbw: auto
+                detector: PEAK
+                """).strip()
+SETTINGS_APP = "receiver_ui"
+
+
+class DriverTask(QtCore.QObject):
+    """Execute one driver callable in a worker thread."""
+
+    completed = QtCore.Signal(object, object)
+    finished = QtCore.Signal()
+
+    def __init__(self, func):
+        super().__init__()
+        self._func = func
+
+    @QtCore.Slot()
+    def run(self):
+        result = None
+        error = None
+        try:
+            result = self._func()
+        except Exception as exc:
+            error = exc
+        finally:
+            self.completed.emit(result, error)
+            self.finished.emit()
+
+
+class ReceiverWidget(QtWidgets.QWidget):
+    """Thread-aware test UI for the common receiver driver API."""
+
+    def __init__(self, instance, ini=None, parent=None, use_ini_draft=True):
+        super().__init__(parent)
+
+        self.rx = instance
+        self.ini_source = ini if ini is not None else io.StringIO(std_ini_text)
+        self.use_ini_draft = use_ini_draft
+        self._last_ini_text = ""
+        self._status_fields = {}
+        self._status_raw = {}
+        self._busy = False
+        self._is_initialized = False
+        self._last_error_text = "none"
+        self._last_reading = None
+        self._active_thread = None
+        self._active_task = None
+        self._task_label = None
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = None
+        self._task_on_error = None
+        self._task_on_finished = None
+        self._use_worker_threads = False
+        self._poll_timer = QtCore.QTimer(self)
+        self._poll_timer.timeout.connect(self.on_poll_timeout)
+
+        self.setWindowTitle("Receiver Test Utility")
+        self.resize(1120, 780)
+
+        self._build_ui()
+        self._load_ini()
+        self.log_message("UI ready.")
+
+    def _build_ui(self):
+        main_layout = QtWidgets.QVBoxLayout(self)
+        self.tabs = QtWidgets.QTabWidget()
+        main_layout.addWidget(self.tabs)
+
+        self._build_connection_tab()
+        self._build_status_tab()
+        self._build_measurement_tab()
+        self._build_command_tab()
+        self._build_smoke_tab()
+        self._build_log_tab()
+
+        bottom = QtWidgets.QHBoxLayout()
+        self.state_label = QtWidgets.QLabel()
+        self.init_state_label = QtWidgets.QLabel()
+        self.driver_label = QtWidgets.QLabel()
+        self.last_error_label = QtWidgets.QLabel()
+        self.last_error_label.setMinimumWidth(300)
+        self.last_error_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        bottom.addWidget(self.state_label)
+        bottom.addSpacing(10)
+        bottom.addWidget(self.init_state_label)
+        bottom.addSpacing(10)
+        bottom.addWidget(self.driver_label)
+        bottom.addSpacing(10)
+        bottom.addWidget(self.last_error_label, 1)
+
+        self.refresh_all_button = QtWidgets.QPushButton("Refresh All")
+        self.refresh_all_button.clicked.connect(self.refresh_all)
+        bottom.addWidget(self.refresh_all_button)
+
+        self.close_button = QtWidgets.QPushButton("Close")
+        self.close_button.clicked.connect(self.close)
+        bottom.addWidget(self.close_button)
+
+        main_layout.addLayout(bottom)
+        self._refresh_status_bar()
+
+    def _build_connection_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        row = QtWidgets.QHBoxLayout()
+        self.channel_spin = QtWidgets.QSpinBox()
+        self.channel_spin.setMinimum(1)
+        self.channel_spin.setMaximum(128)
+        self.channel_spin.setValue(1)
+        self.init_button = QtWidgets.QPushButton("Init / Re-Init")
+        self.init_button.clicked.connect(self.on_init_clicked)
+        self.quit_button = QtWidgets.QPushButton("Quit")
+        self.quit_button.clicked.connect(self.on_quit_clicked)
+        self.load_ini_button = QtWidgets.QPushButton("Load INI File")
+        self.load_ini_button.clicked.connect(self.on_load_ini_clicked)
+        self.save_ini_button = QtWidgets.QPushButton("Save INI File")
+        self.save_ini_button.clicked.connect(self.on_save_ini_clicked)
+        row.addWidget(QtWidgets.QLabel("Channel"))
+        row.addWidget(self.channel_spin)
+        row.addWidget(self.init_button)
+        row.addWidget(self.quit_button)
+        row.addWidget(self.load_ini_button)
+        row.addWidget(self.save_ini_button)
+        row.addStretch()
+
+        self.ini_edit = IniPlainTextEdit()
+        self.ini_edit.setMinimumHeight(360)
+        layout.addLayout(row)
+        layout.addWidget(self.ini_edit)
+        self.tabs.addTab(tab, "Connection")
+
+    def _build_status_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        row = QtWidgets.QHBoxLayout()
+        self.refresh_status_button = QtWidgets.QPushButton("Refresh Status")
+        self.refresh_status_button.clicked.connect(self.refresh_status)
+        row.addWidget(self.refresh_status_button)
+        row.addStretch()
+        layout.addLayout(row)
+
+        grid = QtWidgets.QGridLayout()
+        specs = [
+            ("Description", "GetDescription"),
+            ("Frequency", "GetFreq"),
+            ("RBW", "GetResolutionBandwidth"),
+            ("Measurement Time", "GetMeasTime"),
+            ("Attenuation", "GetAttenuation"),
+            ("Min. Attenuation", "GetMinAttenuation"),
+            ("Detector", "GetDetector"),
+            ("Preamplifier", "GetPreamplifier"),
+            ("Virtual", "GetVirtual"),
+            ("Last Reading", "_last_reading"),
+        ]
+        for idx, (label, key) in enumerate(specs):
+            edit = QtWidgets.QLineEdit()
+            edit.setReadOnly(True)
+            edit.setText("unknown")
+            self._status_fields[key] = edit
+            row_idx = idx // 2
+            col = (idx % 2) * 2
+            grid.addWidget(QtWidgets.QLabel(label), row_idx, col)
+            grid.addWidget(edit, row_idx, col + 1)
+        layout.addLayout(grid)
+        layout.addStretch()
+        self.tabs.addTab(tab, "Status")
+
+    def _build_measurement_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+
+        main_group = QtWidgets.QGroupBox("Measurement")
+        main_layout = QtWidgets.QGridLayout(main_group)
+        self.freq_control = FrequencyControl(default_hz=1e6)
+        self.freq_control.valueApplied.connect(self.on_set_freq_clicked)
+        self.freq_indicator = QtWidgets.QLabel("unknown")
+        self.freq_indicator.setMinimumWidth(90)
+        self.read_freq_button = QtWidgets.QPushButton("Read Frequency")
+        self.read_freq_button.clicked.connect(self.on_read_freq_clicked)
+        main_layout.addWidget(QtWidgets.QLabel("Frequency"), 0, 0)
+        main_layout.addWidget(self.freq_control, 0, 1)
+        main_layout.addWidget(self.freq_indicator, 0, 2)
+        main_layout.addWidget(self.read_freq_button, 0, 3)
+
+        self.rbw_control = FrequencyControl(default_hz=9e3)
+        self.rbw_control.valueApplied.connect(self.on_set_rbw_clicked)
+        self.rbw_auto_check = QtWidgets.QCheckBox("Auto")
+        self.rbw_auto_check.toggled.connect(self.on_rbw_auto_toggled)
+        main_layout.addWidget(QtWidgets.QLabel("RBW"), 1, 0)
+        main_layout.addWidget(self.rbw_control, 1, 1)
+        main_layout.addWidget(self.rbw_auto_check, 1, 2)
+
+        self.meas_time_spin = QtWidgets.QDoubleSpinBox()
+        self.meas_time_spin.setRange(0.0, 10_000.0)
+        self.meas_time_spin.setDecimals(6)
+        self.meas_time_spin.setValue(0.05)
+        self.meas_time_spin.setSuffix(" s")
+        self.set_meas_time_button = QtWidgets.QPushButton("Apply")
+        self.set_meas_time_button.clicked.connect(self.on_set_meas_time_clicked)
+        main_layout.addWidget(QtWidgets.QLabel("Measurement Time"), 2, 0)
+        main_layout.addWidget(self.meas_time_spin, 2, 1)
+        main_layout.addWidget(self.set_meas_time_button, 2, 3)
+
+        self.detector_combo = QtWidgets.QComboBox()
+        self.detector_combo.addItems(["PEAK", "QPEAK", "AVERAGE"])
+        self.detector_combo.currentTextChanged.connect(self.on_detector_changed)
+        main_layout.addWidget(QtWidgets.QLabel("Detector"), 3, 0)
+        main_layout.addWidget(self.detector_combo, 3, 1)
+
+        self.preamp_combo = QtWidgets.QComboBox()
+        self.preamp_combo.addItems(["OFF", "ON"])
+        self.preamp_combo.currentTextChanged.connect(self.on_preamp_changed)
+        main_layout.addWidget(QtWidgets.QLabel("Preamplifier"), 4, 0)
+        main_layout.addWidget(self.preamp_combo, 4, 1)
+
+        att_group = QtWidgets.QGroupBox("Attenuation")
+        att_layout = QtWidgets.QGridLayout(att_group)
+        self.att_spin = QtWidgets.QDoubleSpinBox()
+        self.att_spin.setRange(0.0, 200.0)
+        self.att_spin.setDecimals(2)
+        self.att_spin.setSuffix(" dB")
+        self.att_auto_check = QtWidgets.QCheckBox("Auto")
+        self.att_auto_check.toggled.connect(self.on_att_auto_toggled)
+        self.set_att_button = QtWidgets.QPushButton("Apply Attenuation")
+        self.set_att_button.clicked.connect(self.on_set_attenuation_clicked)
+        self.min_att_spin = QtWidgets.QDoubleSpinBox()
+        self.min_att_spin.setRange(0.0, 200.0)
+        self.min_att_spin.setDecimals(2)
+        self.min_att_spin.setSuffix(" dB")
+        self.set_min_att_button = QtWidgets.QPushButton("Apply Min.")
+        self.set_min_att_button.clicked.connect(self.on_set_min_attenuation_clicked)
+        att_layout.addWidget(QtWidgets.QLabel("Attenuation"), 0, 0)
+        att_layout.addWidget(self.att_spin, 0, 1)
+        att_layout.addWidget(self.att_auto_check, 0, 2)
+        att_layout.addWidget(self.set_att_button, 0, 3)
+        att_layout.addWidget(QtWidgets.QLabel("Minimum"), 1, 0)
+        att_layout.addWidget(self.min_att_spin, 1, 1)
+        att_layout.addWidget(self.set_min_att_button, 1, 3)
+
+        action_row = QtWidgets.QHBoxLayout()
+        self.trigger_button = QtWidgets.QPushButton("Trigger")
+        self.trigger_button.clicked.connect(self.on_trigger_clicked)
+        self.measure_button = QtWidgets.QPushButton("GetData")
+        self.measure_button.clicked.connect(self.on_measure_clicked)
+        self.measure_nb_button = QtWidgets.QPushButton("GetDataNB")
+        self.measure_nb_button.clicked.connect(self.on_measure_nb_clicked)
+        self.retrigger_check = QtWidgets.QCheckBox("Retrigger")
+        self.retrigger_check.setChecked(True)
+        self.poll_check = QtWidgets.QCheckBox("Poll GetDataNB")
+        self.poll_check.toggled.connect(self.on_poll_toggled)
+        self.poll_interval_spin = QtWidgets.QSpinBox()
+        self.poll_interval_spin.setRange(100, 60_000)
+        self.poll_interval_spin.setValue(1000)
+        self.poll_interval_spin.setSuffix(" ms")
+        action_row.addWidget(self.trigger_button)
+        action_row.addWidget(self.measure_button)
+        action_row.addWidget(self.measure_nb_button)
+        action_row.addWidget(self.retrigger_check)
+        action_row.addWidget(self.poll_check)
+        action_row.addWidget(self.poll_interval_spin)
+        action_row.addStretch()
+
+        self.reading_label = QtWidgets.QLabel("No reading")
+        font = self.reading_label.font()
         font.setPointSize(24)
-        self.label_8.setFont(font)
-
-        self.horizontalLayout_6.addWidget(self.label_8)
-
-        self.label_level = QLabel(self.frame_3)
-        self.label_level.setObjectName(u"label_level")
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_level.sizePolicy().hasHeightForWidth())
-        self.label_level.setSizePolicy(sizePolicy)
-        font1 = QFont()
-        font1.setPointSize(24)
-        font1.setBold(True)
-        self.label_level.setFont(font1)
-        self.label_level.setTextFormat(Qt.TextFormat.PlainText)
-        self.label_level.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
-
-        self.horizontalLayout_6.addWidget(self.label_level)
-
-        self.label_levelunit = QLabel(self.frame_3)
-        self.label_levelunit.setObjectName(u"label_levelunit")
-        self.label_levelunit.setFont(font)
-
-        self.horizontalLayout_6.addWidget(self.label_levelunit)
-
-
-        self.verticalLayout_2.addWidget(self.frame_3)
-
-        self.frame_2 = QFrame(self.centralwidget)
-        self.frame_2.setObjectName(u"frame_2")
-        self.frame_2.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_2.setFrameShadow(QFrame.Shadow.Raised)
-        self.horizontalLayout_2 = QHBoxLayout(self.frame_2)
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.groupBox = QGroupBox(self.frame_2)
-        self.groupBox.setObjectName(u"groupBox")
-        self.verticalLayout = QVBoxLayout(self.groupBox)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.scrollArea = QScrollArea(self.groupBox)
-        self.scrollArea.setObjectName(u"scrollArea")
-        self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents = QWidget()
-        self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 426, 258))
-        self.gridLayout_2 = QGridLayout(self.scrollAreaWidgetContents)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.plainTextEdit_ini = QPlainTextEdit(self.scrollAreaWidgetContents)
-        self.plainTextEdit_ini.setObjectName(u"plainTextEdit_ini")
-
-        self.gridLayout_2.addWidget(self.plainTextEdit_ini, 0, 0, 1, 1)
-
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
-
-        self.verticalLayout.addWidget(self.scrollArea)
-
-        self.widget_4 = QWidget(self.groupBox)
-        self.widget_4.setObjectName(u"widget_4")
-        self.horizontalLayout = QHBoxLayout(self.widget_4)
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.pushButton_load_ini = QPushButton(self.widget_4)
-        self.pushButton_load_ini.setObjectName(u"pushButton_load_ini")
-
-        self.horizontalLayout.addWidget(self.pushButton_load_ini)
-
-        self.pushButton_init = QPushButton(self.widget_4)
-        self.pushButton_init.setObjectName(u"pushButton_init")
-
-        self.horizontalLayout.addWidget(self.pushButton_init)
-
-
-        self.verticalLayout.addWidget(self.widget_4)
-
-
-        self.horizontalLayout_2.addWidget(self.groupBox)
-
-        self.groupBox_2 = QGroupBox(self.frame_2)
-        self.groupBox_2.setObjectName(u"groupBox_2")
-        self.gridLayout_4 = QGridLayout(self.groupBox_2)
-        self.gridLayout_4.setObjectName(u"gridLayout_4")
-        self.label_3 = QLabel(self.groupBox_2)
-        self.label_3.setObjectName(u"label_3")
-
-        self.gridLayout_4.addWidget(self.label_3, 4, 0, 1, 1)
-
-        self.doubleSpinBox_freq = QDoubleSpinBox(self.groupBox_2)
-        self.doubleSpinBox_freq.setObjectName(u"doubleSpinBox_freq")
-        self.doubleSpinBox_freq.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
-        self.doubleSpinBox_freq.setDecimals(0)
-        self.doubleSpinBox_freq.setMinimum(1.000000000000000)
-        self.doubleSpinBox_freq.setMaximum(1000.000000000000000)
-
-        self.gridLayout_4.addWidget(self.doubleSpinBox_freq, 0, 1, 1, 1)
-
-        self.label_2 = QLabel(self.groupBox_2)
-        self.label_2.setObjectName(u"label_2")
-
-        self.gridLayout_4.addWidget(self.label_2, 2, 0, 1, 1)
-
-        self.label = QLabel(self.groupBox_2)
-        self.label.setObjectName(u"label")
-
-        self.gridLayout_4.addWidget(self.label, 0, 0, 1, 1)
-
-        self.doubleSpinBox_att = QDoubleSpinBox(self.groupBox_2)
-        self.doubleSpinBox_att.setObjectName(u"doubleSpinBox_att")
-        self.doubleSpinBox_att.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
-        self.doubleSpinBox_att.setDecimals(1)
-        self.doubleSpinBox_att.setMaximum(200.000000000000000)
-        self.doubleSpinBox_att.setValue(10.000000000000000)
-
-        self.gridLayout_4.addWidget(self.doubleSpinBox_att, 5, 1, 1, 1)
-
-        self.label_7 = QLabel(self.groupBox_2)
-        self.label_7.setObjectName(u"label_7")
-
-        self.gridLayout_4.addWidget(self.label_7, 7, 0, 1, 1)
-
-        self.label_10 = QLabel(self.groupBox_2)
-        self.label_10.setObjectName(u"label_10")
-
-        self.gridLayout_4.addWidget(self.label_10, 5, 2, 1, 1)
-
-        self.label_11 = QLabel(self.groupBox_2)
-        self.label_11.setObjectName(u"label_11")
-
-        self.gridLayout_4.addWidget(self.label_11, 7, 2, 1, 1)
-
-        self.doubleSpinBox_meastime = QDoubleSpinBox(self.groupBox_2)
-        self.doubleSpinBox_meastime.setObjectName(u"doubleSpinBox_meastime")
-        self.doubleSpinBox_meastime.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
-        self.doubleSpinBox_meastime.setDecimals(2)
-        self.doubleSpinBox_meastime.setMinimum(0.000000000000000)
-        self.doubleSpinBox_meastime.setMaximum(1000.000000000000000)
-
-        self.gridLayout_4.addWidget(self.doubleSpinBox_meastime, 4, 1, 1, 1)
-
-        self.widget_3 = QWidget(self.groupBox_2)
-        self.widget_3.setObjectName(u"widget_3")
-        self.horizontalLayout_5 = QHBoxLayout(self.widget_3)
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.radioButton_meastime_ms = QRadioButton(self.widget_3)
-        self.radioButton_meastime_ms.setObjectName(u"radioButton_meastime_ms")
-        self.radioButton_meastime_ms.setChecked(True)
-
-        self.horizontalLayout_5.addWidget(self.radioButton_meastime_ms)
-
-        self.radioButton_meastime_s = QRadioButton(self.widget_3)
-        self.radioButton_meastime_s.setObjectName(u"radioButton_meastime_s")
-
-        self.horizontalLayout_5.addWidget(self.radioButton_meastime_s)
-
-
-        self.gridLayout_4.addWidget(self.widget_3, 4, 2, 1, 1, Qt.AlignmentFlag.AlignLeft)
-
-        self.label_5 = QLabel(self.groupBox_2)
-        self.label_5.setObjectName(u"label_5")
-
-        self.gridLayout_4.addWidget(self.label_5, 9, 0, 1, 1)
-
-        self.doubleSpinBox_rbw = QDoubleSpinBox(self.groupBox_2)
-        self.doubleSpinBox_rbw.setObjectName(u"doubleSpinBox_rbw")
-        self.doubleSpinBox_rbw.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
-        self.doubleSpinBox_rbw.setDecimals(0)
-        self.doubleSpinBox_rbw.setMinimum(1.000000000000000)
-        self.doubleSpinBox_rbw.setMaximum(1000.000000000000000)
-
-        self.gridLayout_4.addWidget(self.doubleSpinBox_rbw, 2, 1, 1, 1)
-
-        self.comboBox_detec = QComboBox(self.groupBox_2)
-        self.comboBox_detec.addItem("")
-        self.comboBox_detec.addItem("")
-        self.comboBox_detec.addItem("")
-        self.comboBox_detec.setObjectName(u"comboBox_detec")
-
-        self.gridLayout_4.addWidget(self.comboBox_detec, 8, 1, 1, 1)
-
-        self.widget = QWidget(self.groupBox_2)
-        self.widget.setObjectName(u"widget")
-        self.horizontalLayout_3 = QHBoxLayout(self.widget)
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.radioButton_freq_1 = QRadioButton(self.widget)
-        self.radioButton_freq_1.setObjectName(u"radioButton_freq_1")
-
-        self.horizontalLayout_3.addWidget(self.radioButton_freq_1)
-
-        self.radioButton_freq_k = QRadioButton(self.widget)
-        self.radioButton_freq_k.setObjectName(u"radioButton_freq_k")
-        self.radioButton_freq_k.setChecked(True)
-
-        self.horizontalLayout_3.addWidget(self.radioButton_freq_k)
-
-        self.radioButton_freq_M = QRadioButton(self.widget)
-        self.radioButton_freq_M.setObjectName(u"radioButton_freq_M")
-
-        self.horizontalLayout_3.addWidget(self.radioButton_freq_M)
-
-        self.radioButton_freq_G = QRadioButton(self.widget)
-        self.radioButton_freq_G.setObjectName(u"radioButton_freq_G")
-
-        self.horizontalLayout_3.addWidget(self.radioButton_freq_G)
-
-
-        self.gridLayout_4.addWidget(self.widget, 0, 2, 1, 3, Qt.AlignmentFlag.AlignLeft)
-
-        self.widget_2 = QWidget(self.groupBox_2)
-        self.widget_2.setObjectName(u"widget_2")
-        self.horizontalLayout_4 = QHBoxLayout(self.widget_2)
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.radioButton_rbw_1 = QRadioButton(self.widget_2)
-        self.radioButton_rbw_1.setObjectName(u"radioButton_rbw_1")
-
-        self.horizontalLayout_4.addWidget(self.radioButton_rbw_1)
-
-        self.radioButton_rbw_k = QRadioButton(self.widget_2)
-        self.radioButton_rbw_k.setObjectName(u"radioButton_rbw_k")
-        self.radioButton_rbw_k.setChecked(True)
-
-        self.horizontalLayout_4.addWidget(self.radioButton_rbw_k)
-
-        self.radioButton_rbw_M = QRadioButton(self.widget_2)
-        self.radioButton_rbw_M.setObjectName(u"radioButton_rbw_M")
-
-        self.horizontalLayout_4.addWidget(self.radioButton_rbw_M)
-
-
-        self.gridLayout_4.addWidget(self.widget_2, 2, 2, 1, 3, Qt.AlignmentFlag.AlignLeft)
-
-        self.label_4 = QLabel(self.groupBox_2)
-        self.label_4.setObjectName(u"label_4")
-
-        self.gridLayout_4.addWidget(self.label_4, 8, 0, 1, 1)
-
-        self.label_6 = QLabel(self.groupBox_2)
-        self.label_6.setObjectName(u"label_6")
-
-        self.gridLayout_4.addWidget(self.label_6, 5, 0, 1, 1)
-
-        self.comboBox_preamp = QComboBox(self.groupBox_2)
-        self.comboBox_preamp.addItem("")
-        self.comboBox_preamp.addItem("")
-        self.comboBox_preamp.setObjectName(u"comboBox_preamp")
-
-        self.gridLayout_4.addWidget(self.comboBox_preamp, 9, 1, 1, 1)
-
-        self.doubleSpinBox_minatt = QDoubleSpinBox(self.groupBox_2)
-        self.doubleSpinBox_minatt.setObjectName(u"doubleSpinBox_minatt")
-        self.doubleSpinBox_minatt.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
-        self.doubleSpinBox_minatt.setDecimals(1)
-        self.doubleSpinBox_minatt.setMaximum(200.000000000000000)
-        self.doubleSpinBox_minatt.setValue(10.000000000000000)
-
-        self.gridLayout_4.addWidget(self.doubleSpinBox_minatt, 7, 1, 1, 1)
-
-        self.checkBox_rbw_auto = QCheckBox(self.groupBox_2)
-        self.checkBox_rbw_auto.setObjectName(u"checkBox_rbw_auto")
-
-        self.gridLayout_4.addWidget(self.checkBox_rbw_auto, 3, 1, 1, 1)
-
-        self.checkBox_att_auto = QCheckBox(self.groupBox_2)
-        self.checkBox_att_auto.setObjectName(u"checkBox_att_auto")
-
-        self.gridLayout_4.addWidget(self.checkBox_att_auto, 6, 1, 1, 1)
-
-
-        self.horizontalLayout_2.addWidget(self.groupBox_2)
-
-
-        self.verticalLayout_2.addWidget(self.frame_2)
-
-        self.groupBox_3 = QGroupBox(self.centralwidget)
-        self.groupBox_3.setObjectName(u"groupBox_3")
-        self.gridLayout_3 = QGridLayout(self.groupBox_3)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.scrollArea_2 = QScrollArea(self.groupBox_3)
-        self.scrollArea_2.setObjectName(u"scrollArea_2")
-        self.scrollArea_2.setWidgetResizable(True)
-        self.scrollAreaWidgetContents_2 = QWidget()
-        self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 898, 98))
-        self.gridLayout = QGridLayout(self.scrollAreaWidgetContents_2)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.plainTextEdit_output = QPlainTextEdit(self.scrollAreaWidgetContents_2)
-        self.plainTextEdit_output.setObjectName(u"plainTextEdit_output")
-
-        self.gridLayout.addWidget(self.plainTextEdit_output, 0, 0, 1, 1)
-
-        self.scrollArea_2.setWidget(self.scrollAreaWidgetContents_2)
-
-        self.gridLayout_3.addWidget(self.scrollArea_2, 1, 0, 1, 1)
-
-
-        self.verticalLayout_2.addWidget(self.groupBox_3)
-
-        MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QMenuBar(MainWindow)
-        self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 954, 30))
-        self.menuReceiver = QMenu(self.menubar)
-        self.menuReceiver.setObjectName(u"menuReceiver")
-        self.menuFile = QMenu(self.menubar)
-        self.menuFile.setObjectName(u"menuFile")
-        MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QStatusBar(MainWindow)
-        self.statusbar.setObjectName(u"statusbar")
-        MainWindow.setStatusBar(self.statusbar)
-#if QT_CONFIG(shortcut)
-        self.label_3.setBuddy(self.doubleSpinBox_meastime)
-        self.label_2.setBuddy(self.doubleSpinBox_rbw)
-        self.label.setBuddy(self.doubleSpinBox_freq)
-        self.label_7.setBuddy(self.doubleSpinBox_minatt)
-        self.label_5.setBuddy(self.comboBox_preamp)
-        self.label_4.setBuddy(self.comboBox_detec)
-        self.label_6.setBuddy(self.doubleSpinBox_att)
-#endif // QT_CONFIG(shortcut)
-        QWidget.setTabOrder(self.plainTextEdit_ini, self.plainTextEdit_output)
-        QWidget.setTabOrder(self.plainTextEdit_output, self.doubleSpinBox_freq)
-        QWidget.setTabOrder(self.doubleSpinBox_freq, self.radioButton_freq_1)
-        QWidget.setTabOrder(self.radioButton_freq_1, self.radioButton_freq_k)
-        QWidget.setTabOrder(self.radioButton_freq_k, self.radioButton_freq_M)
-        QWidget.setTabOrder(self.radioButton_freq_M, self.radioButton_freq_G)
-        QWidget.setTabOrder(self.radioButton_freq_G, self.doubleSpinBox_rbw)
-        QWidget.setTabOrder(self.doubleSpinBox_rbw, self.radioButton_rbw_1)
-        QWidget.setTabOrder(self.radioButton_rbw_1, self.radioButton_rbw_k)
-        QWidget.setTabOrder(self.radioButton_rbw_k, self.radioButton_rbw_M)
-        QWidget.setTabOrder(self.radioButton_rbw_M, self.doubleSpinBox_meastime)
-        QWidget.setTabOrder(self.doubleSpinBox_meastime, self.radioButton_meastime_ms)
-        QWidget.setTabOrder(self.radioButton_meastime_ms, self.radioButton_meastime_s)
-        QWidget.setTabOrder(self.radioButton_meastime_s, self.doubleSpinBox_att)
-        QWidget.setTabOrder(self.doubleSpinBox_att, self.doubleSpinBox_minatt)
-        QWidget.setTabOrder(self.doubleSpinBox_minatt, self.comboBox_detec)
-        QWidget.setTabOrder(self.comboBox_detec, self.comboBox_preamp)
-        QWidget.setTabOrder(self.comboBox_preamp, self.scrollArea)
-        QWidget.setTabOrder(self.scrollArea, self.scrollArea_2)
-
-        self.menubar.addAction(self.menuReceiver.menuAction())
-        self.menubar.addAction(self.menuFile.menuAction())
-        self.menuReceiver.addAction(self.actionInfo)
-        self.menuReceiver.addSeparator()
-        self.menuReceiver.addAction(self.actionQuit)
-        self.menuFile.addAction(self.actionOpen_Ini_File)
-
-        self.retranslateUi(MainWindow)
-        self.actionQuit.triggered.connect(MainWindow.close)
-        self.pushButton_load_ini.clicked.connect(self.actionOpen_Ini_File.trigger)
-
-        QMetaObject.connectSlotsByName(MainWindow)
-    # setupUi
-
-    def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.actionInfo.setText(QCoreApplication.translate("MainWindow", u"Info", None))
-        self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
-        self.actionOpen_Ini_File.setText(QCoreApplication.translate("MainWindow", u"Open Ini-File", None))
-        self.pushButton_trigger.setText(QCoreApplication.translate("MainWindow", u"Trigger", None))
-        self.label_8.setText(QCoreApplication.translate("MainWindow", u"Level:", None))
-        self.label_level.setText(QCoreApplication.translate("MainWindow", u"-100,5", None))
-        self.label_levelunit.setText(QCoreApplication.translate("MainWindow", u"dBuV", None))
-        self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"Ini File", None))
-        self.plainTextEdit_ini.setPlainText(QCoreApplication.translate("MainWindow", u"[DESCRIPTION]\n"
-"description: R&S ESHS30\n"
-"type:            RECEIVER\n"
-"vendor:       Rohde&Schwarz\n"
-"serialnr:\n"
-"deviceid:\n"
-"driver:         rec_rs_ESHS30.py\n"
-"\n"
-"[Init_Value]\n"
-"fstart: 9e3\n"
-"fstop: 30e6\n"
-"fstep: 1\n"
-"visa: GPIB0::17::INSTR\n"
-"virtual: 0\n"
-"\n"
-"[Channel_1]\n"
-"name: RFin\n"
-"min_attenuation: 10\n"
-"meas_time: 0.05\n"
-"preamplifier: on\n"
-"unit: Watt\n"
-"attenuation: auto\n"
-"rbw: auto\n"
-"detector: PEAK", None))
-        self.pushButton_load_ini.setText(QCoreApplication.translate("MainWindow", u"Load Ini-File", None))
-        self.pushButton_init.setText(QCoreApplication.translate("MainWindow", u"Init", None))
-        self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"Functions", None))
-        self.label_3.setText(QCoreApplication.translate("MainWindow", u"Meas Time", None))
-        self.label_2.setText(QCoreApplication.translate("MainWindow", u"Bandwidth", None))
-        self.label.setText(QCoreApplication.translate("MainWindow", u"Frequency", None))
-        self.label_7.setText(QCoreApplication.translate("MainWindow", u"Min Attenuation", None))
-        self.label_10.setText(QCoreApplication.translate("MainWindow", u"dB", None))
-        self.label_11.setText(QCoreApplication.translate("MainWindow", u"dB", None))
-        self.radioButton_meastime_ms.setText(QCoreApplication.translate("MainWindow", u"ms", None))
-        self.radioButton_meastime_s.setText(QCoreApplication.translate("MainWindow", u"s", None))
-        self.label_5.setText(QCoreApplication.translate("MainWindow", u"Preamplifier", None))
-        self.comboBox_detec.setItemText(0, QCoreApplication.translate("MainWindow", u"Peak", None))
-        self.comboBox_detec.setItemText(1, QCoreApplication.translate("MainWindow", u"Average", None))
-        self.comboBox_detec.setItemText(2, QCoreApplication.translate("MainWindow", u"QPeak", None))
-
-        self.radioButton_freq_1.setText(QCoreApplication.translate("MainWindow", u"1", None))
-        self.radioButton_freq_k.setText(QCoreApplication.translate("MainWindow", u"k", None))
-        self.radioButton_freq_M.setText(QCoreApplication.translate("MainWindow", u"M", None))
-        self.radioButton_freq_G.setText(QCoreApplication.translate("MainWindow", u"G", None))
-        self.radioButton_rbw_1.setText(QCoreApplication.translate("MainWindow", u"1", None))
-        self.radioButton_rbw_k.setText(QCoreApplication.translate("MainWindow", u"k", None))
-        self.radioButton_rbw_M.setText(QCoreApplication.translate("MainWindow", u"M", None))
-        self.label_4.setText(QCoreApplication.translate("MainWindow", u"Detector", None))
-        self.label_6.setText(QCoreApplication.translate("MainWindow", u"Attenuation", None))
-        self.comboBox_preamp.setItemText(0, QCoreApplication.translate("MainWindow", u"Off", None))
-        self.comboBox_preamp.setItemText(1, QCoreApplication.translate("MainWindow", u"On", None))
-
-        self.checkBox_rbw_auto.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
-        self.checkBox_att_auto.setText(QCoreApplication.translate("MainWindow", u"Auto", None))
-        self.groupBox_3.setTitle(QCoreApplication.translate("MainWindow", u"Output", None))
-        self.menuReceiver.setTitle(QCoreApplication.translate("MainWindow", u"Receiver", None))
-        self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
-    # retranslateUi
-
+        font.setBold(True)
+        self.reading_label.setFont(font)
+        self.reading_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+
+        layout.addWidget(main_group)
+        layout.addWidget(att_group)
+        layout.addLayout(action_row)
+        layout.addWidget(self.reading_label)
+        layout.addStretch()
+        self.tabs.addTab(tab, "Measurement")
+        self._set_freq_indicator("unknown")
+
+    def _build_command_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        row = QtWidgets.QHBoxLayout()
+        self.raw_command_edit = QtWidgets.QLineEdit()
+        self.raw_command_edit.setPlaceholderText("*IDN?")
+        self.raw_query_button = QtWidgets.QPushButton("Query")
+        self.raw_query_button.clicked.connect(self.on_raw_query_clicked)
+        self.raw_write_button = QtWidgets.QPushButton("Write")
+        self.raw_write_button.clicked.connect(self.on_raw_write_clicked)
+        row.addWidget(self.raw_command_edit, 1)
+        row.addWidget(self.raw_query_button)
+        row.addWidget(self.raw_write_button)
+        self.raw_output = QtWidgets.QPlainTextEdit()
+        self.raw_output.setReadOnly(True)
+        layout.addLayout(row)
+        layout.addWidget(self.raw_output)
+        self.tabs.addTab(tab, "Raw Command")
+
+    def _build_smoke_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        self.smoke_button = QtWidgets.QPushButton("Run Smoke Test")
+        self.smoke_button.clicked.connect(self.on_smoke_clicked)
+        self.smoke_output = QtWidgets.QPlainTextEdit()
+        self.smoke_output.setReadOnly(True)
+        layout.addWidget(QtWidgets.QLabel("Smoke test: Init, status readback, SetFreq, Trigger, GetDataNB, Quit."))
+        layout.addWidget(self.smoke_button)
+        layout.addWidget(self.smoke_output)
+        self.tabs.addTab(tab, "Smoke Test")
+
+    def _build_log_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        self.log_edit = QtWidgets.QPlainTextEdit()
+        self.log_edit.setReadOnly(True)
+        self.clear_log_button = QtWidgets.QPushButton("Clear Log")
+        self.clear_log_button.clicked.connect(self.log_edit.clear)
+        layout.addWidget(self.log_edit)
+        layout.addWidget(self.clear_log_button)
+        self.tabs.addTab(tab, "Log")
+
+    def _load_ini(self):
+        content = load_ini_with_draft(
+            self,
+            self.ini_edit,
+            self.ini_source,
+            std_ini_text,
+            SETTINGS_APP,
+            use_draft=self.use_ini_draft,
+        )
+        self._last_ini_text = content
+
+    def log_message(self, message):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.log_edit.appendPlainText(f"[{timestamp}] {message}")
+
+    def _driver_display_name(self):
+        driver_type = f"{type(self.rx).__module__}.{type(self.rx).__name__}"
+        idn = getattr(self.rx, "IDN", "") or ""
+        return f"Driver: {driver_type}" + (f" | {idn}" if idn else "")
+
+    def _refresh_status_bar(self, state_text=None):
+        if state_text is None:
+            state_text = "Busy" if self._busy else "Ready"
+        self.state_label.setText(f"State: {state_text}")
+        self.init_state_label.setText(f"Init: {'initialized' if self._is_initialized else 'not initialized'}")
+        self.driver_label.setText(self._driver_display_name())
+        self.last_error_label.setText(f"Last error: {self._last_error_text}")
+
+    def _set_busy(self, busy, message=None):
+        self._busy = busy
+        self.tabs.setEnabled(not busy)
+        self.refresh_all_button.setEnabled(not busy)
+        self.close_button.setEnabled(not busy)
+        self._refresh_status_bar(f"Busy: {message}" if busy and message else "Ready")
+
+    def _start_task(self, label, func, on_success=None, on_error=None, on_finished=None):
+        if self._busy:
+            QtWidgets.QMessageBox.information(self, "Operation in progress", "Another device operation is still running.")
+            return False
+
+        self.log_message(f"{label} started.")
+        self._set_busy(True, label)
+        if not self._use_worker_threads:
+            result = None
+            error = None
+            try:
+                QtWidgets.QApplication.processEvents()
+                result = func()
+            except Exception as exc:
+                error = exc
+            finally:
+                self._set_busy(False, "Ready")
+            self._finish_task(label, result, error, on_success, on_error, on_finished)
+            return True
+
+        self._task_label = label
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = on_success
+        self._task_on_error = on_error
+        self._task_on_finished = on_finished
+        thread = QtCore.QThread(self)
+        task = DriverTask(func)
+        task.moveToThread(thread)
+        thread.started.connect(task.run)
+        task.completed.connect(self._handle_task_completed, QtCore.Qt.QueuedConnection)
+        task.finished.connect(thread.quit)
+        task.finished.connect(task.deleteLater)
+        thread.finished.connect(self._handle_task_thread_finished, QtCore.Qt.QueuedConnection)
+        thread.finished.connect(thread.deleteLater)
+        thread.start()
+        self._active_thread = thread
+        self._active_task = task
+        return True
+
+    @QtCore.Slot(object, object)
+    def _handle_task_completed(self, result, error):
+        self._task_result = result
+        self._task_error = error
+
+    @QtCore.Slot()
+    def _handle_task_thread_finished(self):
+        label = self._task_label or "Task"
+        result = self._task_result
+        error = self._task_error
+        on_success = self._task_on_success
+        on_error = self._task_on_error
+        on_finished = self._task_on_finished
+        self._active_task = None
+        self._active_thread = None
+        self._task_label = None
+        self._task_result = None
+        self._task_error = None
+        self._task_on_success = None
+        self._task_on_error = None
+        self._task_on_finished = None
+        self._set_busy(False, "Ready")
+        self._finish_task(label, result, error, on_success, on_error, on_finished)
+
+    def _finish_task(self, label, result, error, on_success, on_error, on_finished):
+        if error is None:
+            self.log_message(f"{label} succeeded.")
+            if on_success is not None:
+                on_success(result)
+        else:
+            if label == "Init":
+                self._is_initialized = False
+            self.log_message(f"{label} failed: {type(error).__name__}: {error}")
+            if on_error is not None:
+                on_error(error)
+            else:
+                self._show_error(f"{label} Error", error)
+        if on_finished is not None:
+            on_finished()
+
+    def _show_error(self, title, error):
+        self._last_error_text = str(error)
+        self._refresh_status_bar()
+        QtWidgets.QMessageBox.critical(self, title, str(error))
+
+    def _driver_method(self, method_name, *args, **kwargs):
+        method = getattr(self.rx, method_name, None)
+        if method is None:
+            raise AttributeError(f"Driver does not implement {method_name}()")
+        return method(*args, **kwargs)
+
+    def _split_error_value(self, result):
+        if isinstance(result, tuple) and len(result) >= 2:
+            return result[0], result[1]
+        return 0, result
+
+    def _display_value(self, value):
+        return str(value)
+
+    def _ini_driver_settings(self, ini_text):
+        config = configparser.ConfigParser()
+        config.read_file(io.StringIO(ini_text))
+        description = {}
+        init_value = {}
+        for section in config.sections():
+            section_key = section.strip().lower()
+            if section_key == "description":
+                description = {key.lower(): parse_ini_value(value) for key, value in config.items(section)}
+            elif section_key == "init_value":
+                init_value = {key.lower(): parse_ini_value(value) for key, value in config.items(section)}
+        driver = str(description.get("driver", "") or "").strip()
+        virtual = strbool(init_value.get("virtual", False))
+        return driver, virtual
+
+    def _module_name_from_driver(self, driver, virtual):
+        if virtual or not driver or Path(driver).with_suffix("").name.lower() == "dummy":
+            return "receiver_virtual"
+        return Path(driver).with_suffix("").name.lower()
+
+    def _instantiate_driver(self, module_name):
+        module = importlib.import_module(f"mpylab.device.{module_name}")
+        driver_cls = getattr(module, "RECEIVER")
+        search_paths = getattr(self.rx, "SearchPaths", None)
+        if search_paths is not None:
+            try:
+                return driver_cls(SearchPaths=search_paths)
+            except TypeError:
+                pass
+        return driver_cls()
+
+    def _select_driver_from_ini(self, ini_text):
+        driver, virtual = self._ini_driver_settings(ini_text)
+        module_name = self._module_name_from_driver(driver, virtual)
+        current_module = type(self.rx).__module__.split(".")[-1]
+        if current_module == module_name:
+            return
+        old_driver = self.rx
+        self.rx = self._instantiate_driver(module_name)
+        self._is_initialized = False
+        self._status_raw = {}
+        self._last_reading = None
+        self._refresh_status_bar()
+        self.log_message(f"Driver switched from {type(old_driver).__module__} to {type(self.rx).__module__}.")
+
+    def _set_status_field(self, key, text):
+        widget = self._status_fields.get(key)
+        if widget is not None:
+            widget.setText(text)
+
+    def _set_freq_indicator(self, state, message=None):
+        styles = {
+            "unknown": ("unknown", "#777777"),
+            "pending": ("pending", "#d98c00"),
+            "ok": ("match", "#2e8b57"),
+            "mismatch": ("mismatch", "#b22222"),
+        }
+        text, color = styles.get(state, styles["unknown"])
+        self.freq_indicator.setText(text)
+        self.freq_indicator.setStyleSheet(f"color: {color}; font-weight: bold;")
+        self.freq_indicator.setToolTip(message or "")
+
+    def on_load_ini_clicked(self):
+        path, _filter = QtWidgets.QFileDialog.getOpenFileName(self, "Open INI File", "", "INI Files (*.ini *.txt);;All Files (*)")
+        if not path:
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                content = handle.read()
+            self.ini_edit.setPlainText(content)
+            self._last_ini_text = content
+            self.log_message(f"Loaded INI file: {path}")
+        except OSError as exc:
+            self._show_error("INI Load Error", exc)
+
+    def on_save_ini_clicked(self):
+        path, _filter = QtWidgets.QFileDialog.getSaveFileName(self, "Save INI File", "", "INI Files (*.ini *.txt);;All Files (*)")
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(self.ini_edit.toPlainText())
+            clear_ini_draft(self)
+            self.log_message(f"Saved INI file: {path}")
+        except OSError as exc:
+            self._show_error("INI Save Error", exc)
+
+    def on_init_clicked(self):
+        ini_text = self.ini_edit.toPlainText()
+        self._last_ini_text = ini_text
+        channel = self.channel_spin.value()
+        try:
+            self._select_driver_from_ini(ini_text)
+        except Exception as exc:
+            self._show_error("Driver Selection Error", exc)
+            return
+
+        def success(err):
+            self._is_initialized = (err == 0)
+            self._last_error_text = "none" if err == 0 else self._last_error_text
+            self._refresh_status_bar()
+            self.log_message(f"Init returned: {err}")
+            self.refresh_all()
+
+        self._start_task("Init", lambda: self._driver_method("Init", ini=io.StringIO(ini_text), channel=channel), on_success=success)
+
+    def on_quit_clicked(self):
+        def success(result):
+            self._is_initialized = False
+            self._poll_timer.stop()
+            self.poll_check.setChecked(False)
+            self._refresh_status_bar()
+            self.log_message(f"Quit returned: {result}")
+
+        self._start_task("Quit", lambda: self._driver_method("Quit"), on_success=success)
+
+    def on_set_freq_clicked(self, freq=None):
+        freq = self.freq_control.value_hz() if freq is None else freq
+        self._set_freq_indicator("pending")
+
+        def success(result):
+            _err, value = self._split_error_value(result)
+            try:
+                readback = float(value)
+            except (TypeError, ValueError):
+                self._set_freq_indicator("unknown", f"Readback is not numeric: {result}")
+                return
+            self.freq_control.set_value_hz(readback)
+            if abs(readback - freq) <= max(1.0, abs(freq) * 1e-9):
+                self._set_freq_indicator("ok")
+            else:
+                self._set_freq_indicator("mismatch", f"expected {freq}, got {readback}")
+            self._set_status_field("GetFreq", self._display_value(result))
+
+        self._start_task("Set Frequency", lambda: self._driver_method("SetFreq", freq), on_success=success)
+
+    def on_read_freq_clicked(self):
+        self._set_freq_indicator("pending")
+
+        def success(result):
+            _err, value = self._split_error_value(result)
+            try:
+                freq = float(value)
+            except (TypeError, ValueError):
+                self._set_freq_indicator("unknown", f"Readback is not numeric: {result}")
+                return
+            self.freq_control.set_value_hz(freq)
+            self._set_freq_indicator("ok")
+            self._set_status_field("GetFreq", self._display_value(result))
+
+        self._start_task("Read Frequency", lambda: self._driver_method("GetFreq"), on_success=success)
+
+    def on_set_rbw_clicked(self, rbw=None):
+        rbw = self.rbw_control.value_hz() if rbw is None else rbw
+        self.rbw_auto_check.setChecked(False)
+        self._start_task("Set RBW", lambda: self._driver_method("SetResolutionBandwidth", rbw), on_success=self._handle_rbw)
+
+    def on_rbw_auto_toggled(self, checked):
+        self.rbw_control.set_enabled(not checked)
+        if checked:
+            self._start_task("Set RBW Auto", lambda: self._driver_method("SetResolutionBandwidth", None), on_success=self._handle_rbw)
+
+    def _handle_rbw(self, result):
+        _err, value = self._split_error_value(result)
+        try:
+            self.rbw_control.set_value_hz(float(value))
+        except (TypeError, ValueError):
+            pass
+        self._set_status_field("GetResolutionBandwidth", self._display_value(result))
+
+    def on_set_meas_time_clicked(self):
+        value = self.meas_time_spin.value()
+        self._start_task("Set Measurement Time", lambda: self._driver_method("SetMeasTime", value), on_success=self._handle_meas_time)
+
+    def _handle_meas_time(self, result):
+        _err, value = self._split_error_value(result)
+        try:
+            self.meas_time_spin.setValue(float(value))
+        except (TypeError, ValueError):
+            pass
+        self._set_status_field("GetMeasTime", self._display_value(result))
+
+    def on_detector_changed(self, detector):
+        if self._is_initialized:
+            self._start_task("Set Detector", lambda: self._driver_method("SetDetector", detector), on_success=lambda result: self._set_status_field("GetDetector", self._display_value(result)))
+
+    def on_preamp_changed(self, state):
+        if self._is_initialized:
+            self._start_task("Set Preamplifier", lambda: self._driver_method("SetPreamplifier", state), on_success=lambda result: self._set_status_field("GetPreamplifier", self._display_value(result)))
+
+    def on_att_auto_toggled(self, checked):
+        self.att_spin.setEnabled(not checked)
+        if checked:
+            self._start_task("Set Attenuation Auto", lambda: self._driver_method("SetAttenuation", None), on_success=self._handle_attenuation)
+
+    def on_set_attenuation_clicked(self):
+        value = None if self.att_auto_check.isChecked() else self.att_spin.value()
+        self._start_task("Set Attenuation", lambda: self._driver_method("SetAttenuation", value), on_success=self._handle_attenuation)
+
+    def _handle_attenuation(self, result):
+        _err, value = self._split_error_value(result)
+        try:
+            self.att_spin.setValue(float(value))
+        except (TypeError, ValueError):
+            pass
+        self._set_status_field("GetAttenuation", self._display_value(result))
+
+    def on_set_min_attenuation_clicked(self):
+        value = self.min_att_spin.value()
+        self._start_task("Set Min Attenuation", lambda: self._driver_method("SetMinAttenuation", value), on_success=self._handle_min_attenuation)
+
+    def _handle_min_attenuation(self, result):
+        _err, value = self._split_error_value(result)
+        try:
+            self.min_att_spin.setValue(float(value))
+        except (TypeError, ValueError):
+            pass
+        self._set_status_field("GetMinAttenuation", self._display_value(result))
+
+    def on_trigger_clicked(self):
+        self._start_task("Trigger", lambda: self._driver_method("Trigger"))
+
+    def on_measure_clicked(self):
+        self._start_task("GetData", lambda: self._driver_method("GetData"), on_success=self._handle_reading)
+
+    def on_measure_nb_clicked(self):
+        retrigger = self.retrigger_check.isChecked()
+        self._start_task("GetDataNB", lambda: self._driver_method("GetDataNB", retrigger), on_success=self._handle_reading)
+
+    def on_poll_toggled(self, checked):
+        if checked:
+            self._poll_timer.start(self.poll_interval_spin.value())
+        else:
+            self._poll_timer.stop()
+
+    def on_poll_timeout(self):
+        if not self._busy and self._is_initialized:
+            self.on_measure_nb_clicked()
+
+    def _handle_reading(self, result):
+        _err, value = self._split_error_value(result)
+        self._last_reading = value
+        self.reading_label.setText(str(value))
+        self._set_status_field("_last_reading", str(value))
+
+    def on_raw_query_clicked(self):
+        cmd = self.raw_command_edit.text().strip()
+        if not cmd:
+            return
+        self._start_task("Raw Query", lambda: self.rx.query(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
+
+    def on_raw_write_clicked(self):
+        cmd = self.raw_command_edit.text().strip()
+        if not cmd:
+            return
+        self._start_task("Raw Write", lambda: self.rx.write(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
+
+    def on_smoke_clicked(self):
+        ini_text = self.ini_edit.toPlainText()
+        channel = self.channel_spin.value()
+        freq = self.freq_control.value_hz()
+        try:
+            self._select_driver_from_ini(ini_text)
+        except Exception as exc:
+            self._show_error("Driver Selection Error", exc)
+            return
+
+        def task():
+            lines = []
+            lines.append(f"Init: {self.rx.Init(ini=io.StringIO(ini_text), channel=channel)}")
+            for getter in ("GetDescription", "GetFreq", "GetResolutionBandwidth", "GetDetector", "GetPreamplifier"):
+                if hasattr(self.rx, getter):
+                    lines.append(f"{getter}: {getattr(self.rx, getter)()!r}")
+            lines.append(f"SetFreq({freq}): {self.rx.SetFreq(freq)!r}")
+            lines.append(f"Trigger: {self.rx.Trigger()!r}")
+            lines.append(f"GetDataNB: {self.rx.GetDataNB(True)!r}")
+            if hasattr(self.rx, "Quit"):
+                lines.append(f"Quit: {self.rx.Quit()!r}")
+            return "\n".join(lines)
+
+        def success(output):
+            self.smoke_output.setPlainText(output)
+            self._is_initialized = False
+            self._refresh_status_bar()
+
+        self._start_task("Smoke Test", task, on_success=success)
+
+    def refresh_status(self, on_complete=None):
+        getters = [
+            "GetDescription",
+            "GetFreq",
+            "GetResolutionBandwidth",
+            "GetMeasTime",
+            "GetAttenuation",
+            "GetMinAttenuation",
+            "GetDetector",
+            "GetPreamplifier",
+            "GetVirtual",
+        ]
+
+        def task():
+            snapshot = {}
+            for getter in getters:
+                if not hasattr(self.rx, getter):
+                    snapshot[getter] = "not implemented"
+                    continue
+                try:
+                    snapshot[getter] = getattr(self.rx, getter)()
+                except Exception as exc:
+                    snapshot[getter] = f"{type(exc).__name__}: {exc}"
+            snapshot["_last_reading"] = self._last_reading
+            return snapshot
+
+        def success(snapshot):
+            self._status_raw = snapshot
+            for key, value in snapshot.items():
+                self._set_status_field(key, self._display_value(value))
+            self._populate_controls_from_status(snapshot)
+            if on_complete is not None:
+                on_complete()
+
+        self._start_task("Refresh Status", task, on_success=success)
+
+    def _populate_controls_from_status(self, snapshot):
+        value = self._value_from_result(snapshot.get("GetFreq"))
+        if value is not None:
+            try:
+                self.freq_control.set_value_hz(float(value))
+                self._set_freq_indicator("ok")
+            except (TypeError, ValueError):
+                pass
+        value = self._value_from_result(snapshot.get("GetResolutionBandwidth"))
+        if value is not None:
+            try:
+                self.rbw_control.set_value_hz(float(value))
+            except (TypeError, ValueError):
+                pass
+        value = self._value_from_result(snapshot.get("GetMeasTime"))
+        if value is not None:
+            try:
+                self.meas_time_spin.setValue(float(value))
+            except (TypeError, ValueError):
+                pass
+        value = self._value_from_result(snapshot.get("GetAttenuation"))
+        if value is not None:
+            try:
+                self.att_spin.setValue(float(value))
+            except (TypeError, ValueError):
+                pass
+        value = self._value_from_result(snapshot.get("GetMinAttenuation"))
+        if value is not None:
+            try:
+                self.min_att_spin.setValue(float(value))
+            except (TypeError, ValueError):
+                pass
+        value = self._value_from_result(snapshot.get("GetDetector"))
+        if isinstance(value, str) and value.upper() in ("PEAK", "QPEAK", "AVERAGE"):
+            self.detector_combo.setCurrentText(value.upper())
+        value = self._value_from_result(snapshot.get("GetPreamplifier"))
+        if isinstance(value, str) and value.upper() in ("ON", "OFF"):
+            self.preamp_combo.setCurrentText(value.upper())
+
+    def _value_from_result(self, result):
+        if isinstance(result, tuple) and len(result) >= 2:
+            return result[1]
+        return result
+
+    def refresh_all(self):
+        self.refresh_status()
+
+    def closeEvent(self, event):
+        if self._busy and self._active_thread is not None:
+            QtWidgets.QMessageBox.information(self, "Operation in progress", "Please wait until the current device operation has finished.")
+            event.ignore()
+            return
+        self._poll_timer.stop()
+        try:
+            if hasattr(self.rx, "Quit"):
+                self.rx.Quit()
+        except Exception as exc:
+            self.log_message(f"Driver Quit failed: {type(exc).__name__}: {exc}")
+        super().closeEvent(event)
+
+
+UI = ReceiverWidget
+
+
+def _make_default_instance(args):
+    from mpylab.device.receiver_virtual import RECEIVER
+
+    ini = io.StringIO(std_ini_text.replace("virtual: 1", "virtual: 1" if args.virtual else "virtual: 0"))
+    if not args.virtual:
+        print("Driver will be selected from the INI file on Init. Using virtual receiver until then.")
+    return RECEIVER(), ini
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Receiver driver test utility")
+    parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
+    parser.add_argument("--virtual", action="store_true", help="Use the virtual receiver driver.")
+    parser.add_argument(
+        "--threaded",
+        action="store_true",
+        help="Run driver calls in worker threads. Disabled by default for VISA backend stability.",
+    )
+    args = parser.parse_args(argv)
+
+    rx, ini = _make_default_instance(args)
+    if args.ini:
+        try:
+            with open(args.ini, "r", encoding="utf-8") as handle:
+                ini = io.StringIO(handle.read())
+        except OSError as exc:
+            print(f"INI file could not be read: {exc}")
+            return 1
+
+    app = QtWidgets.QApplication(sys.argv if argv is None else [sys.argv[0], *argv])
+    window = ReceiverWidget(rx, ini=ini, use_ini_draft=not args.virtual)
+    window._use_worker_threads = args.threaded
+    window.show()
+    return app.exec()
+
+
+if __name__ == "__main__":
+    sys.exit(main())

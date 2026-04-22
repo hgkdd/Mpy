@@ -8,7 +8,7 @@ from PySide6 import QtWidgets
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
-from receiver_ui import Ui_MainWindow
+from receiver_qtdesigner_ui import Ui_MainWindow
 
 from mpylab.device.receiver import RECEIVER
 from mpylab.tools.util import format_block, case_insensitive_string_compare
