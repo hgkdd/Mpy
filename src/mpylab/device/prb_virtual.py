@@ -2,6 +2,7 @@
 """Virtual field probe driver for UI and workflow tests."""
 
 from copy import deepcopy
+import re
 
 from scuq import si, quantities, ucomponents
 
@@ -29,6 +30,7 @@ class FIELDPROBE(FIELDPROBE_BASE):
         self.uncertainty_expr = "0.1"
         self.battery = 1.0
         self.zero_state = "off"
+        self._last_response = ""
 
     def Init(self, ini=None, channel=None):
         self.channel = 1 if channel is None else channel
@@ -93,3 +95,43 @@ class FIELDPROBE(FIELDPROBE_BASE):
 
     def Quit(self):
         return 0
+
+    def write(self, cmd):
+        """Handle a small SCPI-like command subset without a hardware bus."""
+        cmd = str(cmd).strip()
+        upper = cmd.upper()
+        self._last_response = ""
+        if upper == "*IDN?":
+            self._last_response = self.IDN
+        elif upper == "FREQ?":
+            self._last_response = str(self.freq)
+        elif upper.startswith("FREQ "):
+            self.SetFreq(float(cmd.split()[1]))
+        elif upper == "BATTERY?":
+            self._last_response = str(self.battery)
+        elif upper == "DATA?":
+            _err, data = self.GetData()
+            self._last_response = ",".join(str(item) for item in data)
+        elif upper in {"ZERO ON", "ZERO:ON"}:
+            self.Zero("on")
+        elif upper in {"ZERO OFF", "ZERO:OFF"}:
+            self.Zero("off")
+        elif upper in {"QUIT", "*CLS"}:
+            self.Quit()
+        else:
+            self._last_response = f"OK {cmd}"
+        return 0
+
+    def read(self, tmpl=None):
+        """Return or parse the last virtual SCPI response."""
+        if tmpl is None:
+            return self._last_response
+        match = re.match(tmpl, self._last_response)
+        if match is None:
+            return {}
+        return match.groupdict()
+
+    def query(self, cmd, tmpl=None):
+        """Write a virtual SCPI query and return the raw or parsed response."""
+        self.write(cmd)
+        return self.read(tmpl)

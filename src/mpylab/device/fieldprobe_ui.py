@@ -3,6 +3,7 @@
 
 import argparse
 import configparser
+import csv
 import importlib
 import io
 import math
@@ -11,6 +12,10 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
+
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
 
 from mpylab.device.ui_frequency import FrequencyControl
 from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
@@ -67,7 +72,44 @@ class DriverTask(QtCore.QObject):
             self.finished.emit()
 
 
-class UI(QtWidgets.QWidget):
+class FieldProbeCanvas(FigureCanvas):
+    """Matplotlib canvas for field probe trend data."""
+
+    def __init__(self, parent=None):
+        self.figure = Figure(figsize=(7, 4), dpi=100)
+        self.ax = self.figure.add_subplot(111)
+        self._grid_enabled = True
+        super().__init__(self.figure)
+        self.setParent(parent)
+        self.update_plot([])
+
+    def set_grid_enabled(self, enabled):
+        """Enable or disable the trend grid."""
+        self._grid_enabled = bool(enabled)
+        self.ax.grid(self._grid_enabled, alpha=0.35)
+        self.draw_idle()
+
+    def update_plot(self, history):
+        """Redraw Ex/Ey/Ez/|E| trend data."""
+        self.ax.clear()
+        if history:
+            idx = [row["index"] for row in history]
+            self.ax.plot(idx, [row["Ex"] for row in history], label="Ex", linewidth=1.2)
+            self.ax.plot(idx, [row["Ey"] for row in history], label="Ey", linewidth=1.2)
+            self.ax.plot(idx, [row["Ez"] for row in history], label="Ez", linewidth=1.2)
+            self.ax.plot(idx, [row["Eabs"] for row in history], label="|E|", linewidth=1.4)
+            self.ax.legend(loc="best")
+        else:
+            self.ax.text(0.5, 0.5, "No field data acquired", ha="center", va="center", transform=self.ax.transAxes)
+        self.ax.set_title("Field Probe Trend")
+        self.ax.set_xlabel("Sample")
+        self.ax.set_ylabel("Field strength")
+        self.ax.grid(self._grid_enabled, alpha=0.35)
+        self.figure.tight_layout()
+        self.draw()
+
+
+class FieldProbeWidget(QtWidgets.QWidget):
     def __init__(self, instance, ini=None, parent=None, use_ini_draft=True):
         super().__init__(parent)
         self.dev = instance
@@ -79,6 +121,8 @@ class UI(QtWidgets.QWidget):
         self._is_initialized = False
         self._last_error_text = "none"
         self._last_data = None
+        self._history = []
+        self._sample_index = 0
         self._use_worker_threads = False
         self._active_thread = None
         self._active_task = None
@@ -88,9 +132,11 @@ class UI(QtWidgets.QWidget):
         self._task_on_success = None
         self._task_on_error = None
         self._task_on_finished = None
+        self._poll_timer = QtCore.QTimer(self)
+        self._poll_timer.timeout.connect(self.on_poll_timeout)
 
         self.setWindowTitle("FieldProbe Test Utility")
-        self.resize(1050, 780)
+        self.resize(1180, 850)
         self._build_ui()
         self._load_ini()
         self.log_message("UI ready.")
@@ -102,6 +148,8 @@ class UI(QtWidgets.QWidget):
         self._build_connection_tab()
         self._build_status_tab()
         self._build_measurement_tab()
+        self._build_trend_tab()
+        self._build_raw_tab()
         self._build_smoke_tab()
         self._build_log_tab()
 
@@ -204,13 +252,21 @@ class UI(QtWidgets.QWidget):
         self.measure_nb_button = QtWidgets.QPushButton("GetDataNB")
         self.measure_nb_button.clicked.connect(self.on_measure_nb_clicked)
         self.retrigger_check = QtWidgets.QCheckBox("Retrigger")
+        self.retrigger_check.setChecked(True)
+        self.poll_check = QtWidgets.QCheckBox("Poll GetDataNB")
+        self.poll_check.toggled.connect(self.on_poll_toggled)
+        self.poll_interval_spin = QtWidgets.QSpinBox()
+        self.poll_interval_spin.setRange(100, 60_000)
+        self.poll_interval_spin.setValue(1000)
+        self.poll_interval_spin.setSuffix(" ms")
         self.zero_on_button = QtWidgets.QPushButton("Zero On")
         self.zero_on_button.clicked.connect(lambda: self.on_zero_clicked("on"))
         self.zero_off_button = QtWidgets.QPushButton("Zero Off")
         self.zero_off_button.clicked.connect(lambda: self.on_zero_clicked("off"))
         for widget in (
             self.trigger_button, self.measure_button, self.measure_nb_button,
-            self.retrigger_check, self.zero_on_button, self.zero_off_button,
+            self.retrigger_check, self.poll_check, self.poll_interval_spin,
+            self.zero_on_button, self.zero_off_button,
         ):
             button_row.addWidget(widget)
         button_row.addStretch()
@@ -229,6 +285,48 @@ class UI(QtWidgets.QWidget):
         self.detail_edit.setReadOnly(True)
         layout.addWidget(self.detail_edit)
         self.tabs.addTab(tab, "Measurement")
+
+    def _build_trend_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        toolbar = QtWidgets.QHBoxLayout()
+        self.export_csv_button = QtWidgets.QPushButton("Export CSV")
+        self.export_csv_button.clicked.connect(self.on_export_csv_clicked)
+        self.clear_trend_button = QtWidgets.QPushButton("Clear Trend")
+        self.clear_trend_button.clicked.connect(self.on_clear_trend_clicked)
+        self.grid_button = QtWidgets.QPushButton("Grid On")
+        self.grid_button.setCheckable(True)
+        self.grid_button.setChecked(True)
+        self.grid_button.toggled.connect(self.on_grid_toggled)
+        toolbar.addWidget(self.export_csv_button)
+        toolbar.addWidget(self.clear_trend_button)
+        toolbar.addWidget(self.grid_button)
+        toolbar.addStretch()
+        self.trend_canvas = FieldProbeCanvas()
+        self.trend_toolbar = NavigationToolbar(self.trend_canvas, self)
+        layout.addLayout(toolbar)
+        layout.addWidget(self.trend_toolbar)
+        layout.addWidget(self.trend_canvas)
+        self.tabs.addTab(tab, "Trend")
+
+    def _build_raw_tab(self):
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        row = QtWidgets.QHBoxLayout()
+        self.raw_command_edit = QtWidgets.QLineEdit()
+        self.raw_command_edit.setPlaceholderText("*IDN?")
+        self.raw_query_button = QtWidgets.QPushButton("Query")
+        self.raw_query_button.clicked.connect(self.on_raw_query_clicked)
+        self.raw_write_button = QtWidgets.QPushButton("Write")
+        self.raw_write_button.clicked.connect(self.on_raw_write_clicked)
+        row.addWidget(self.raw_command_edit, 1)
+        row.addWidget(self.raw_query_button)
+        row.addWidget(self.raw_write_button)
+        self.raw_output = QtWidgets.QPlainTextEdit()
+        self.raw_output.setReadOnly(True)
+        layout.addLayout(row)
+        layout.addWidget(self.raw_output)
+        self.tabs.addTab(tab, "Raw Command")
 
     def _build_smoke_tab(self):
         tab = QtWidgets.QWidget()
@@ -510,7 +608,26 @@ class UI(QtWidgets.QWidget):
         self.component_fields["|E|"].setText(f"{magnitude:g} {unit}".strip())
         self.detail_edit.setPlainText(self._display_value(result))
         self._status_fields["_last_data"].setText(str(data))
+        self._append_history(nums, magnitude, unit)
         self.log_message(f"Field read: Ex={data[0]}, Ey={data[1]}, Ez={data[2]}, |E|={magnitude:g}")
+
+    def _append_history(self, components, magnitude, unit):
+        self._sample_index += 1
+        self._history.append(
+            {
+                "index": self._sample_index,
+                "timestamp": datetime.now().isoformat(timespec="seconds"),
+                "frequency_hz": self.freq_spin.value_hz(),
+                "Ex": components[0],
+                "Ey": components[1],
+                "Ez": components[2],
+                "Eabs": magnitude,
+                "unit": str(unit),
+            }
+        )
+        if len(self._history) > 5000:
+            self._history = self._history[-5000:]
+        self.trend_canvas.update_plot(self._history)
 
     def _set_status_field(self, key, value):
         field = self._status_fields.get(key)
@@ -559,6 +676,8 @@ class UI(QtWidgets.QWidget):
         def success(result):
             self._is_initialized = False
             self._channel_drivers = {}
+            self._poll_timer.stop()
+            self.poll_check.setChecked(False)
             self._refresh_status_bar()
             self.log_message(f"Quit returned: {result}")
 
@@ -600,8 +719,61 @@ class UI(QtWidgets.QWidget):
             on_success=self._handle_data_result,
         )
 
+    def on_poll_toggled(self, checked):
+        if checked:
+            self._poll_timer.start(self.poll_interval_spin.value())
+        else:
+            self._poll_timer.stop()
+
+    def on_poll_timeout(self):
+        if not self._busy and self._is_initialized:
+            self.on_measure_nb_clicked()
+
     def on_zero_clicked(self, state):
         self._start_task(f"Zero {state.upper()}", lambda: self._driver_method("Zero", state))
+
+    def on_raw_query_clicked(self):
+        cmd = self.raw_command_edit.text().strip()
+        if not cmd:
+            return
+        if not hasattr(self.dev, "query"):
+            self._show_error("Raw Query Error", AttributeError("driver did not expose query"))
+            return
+        self._start_task("Raw Query", lambda: self.dev.query(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
+
+    def on_raw_write_clicked(self):
+        cmd = self.raw_command_edit.text().strip()
+        if not cmd:
+            return
+        if not hasattr(self.dev, "write"):
+            self._show_error("Raw Write Error", AttributeError("driver did not expose write"))
+            return
+        self._start_task("Raw Write", lambda: self.dev.write(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
+
+    def on_export_csv_clicked(self):
+        if not self._history:
+            self._show_error("Export CSV Error", ValueError("No trend data acquired"))
+            return
+        path, _filter = QtWidgets.QFileDialog.getSaveFileName(self, "Export Field Trend CSV", "", "CSV Files (*.csv);;All Files (*)")
+        if not path:
+            return
+        try:
+            with open(path, "w", newline="", encoding="utf-8") as handle:
+                writer = csv.DictWriter(handle, fieldnames=["index", "timestamp", "frequency_hz", "Ex", "Ey", "Ez", "Eabs", "unit"])
+                writer.writeheader()
+                writer.writerows(self._history)
+            self.log_message(f"Exported trend CSV: {path}")
+        except OSError as exc:
+            self._show_error("Export CSV Error", exc)
+
+    def on_clear_trend_clicked(self):
+        self._history = []
+        self._sample_index = 0
+        self.trend_canvas.update_plot(self._history)
+
+    def on_grid_toggled(self, checked):
+        self.grid_button.setText("Grid On" if checked else "Grid Off")
+        self.trend_canvas.set_grid_enabled(checked)
 
     def refresh_status(self):
         def task():
@@ -655,6 +827,7 @@ class UI(QtWidgets.QWidget):
             event.ignore()
             QtWidgets.QMessageBox.information(self, "Operation in progress", "Close after current operation.")
             return
+        self._poll_timer.stop()
         try:
             if hasattr(self.dev, "Quit"):
                 self.dev.Quit()
@@ -663,10 +836,13 @@ class UI(QtWidgets.QWidget):
         super().closeEvent(event)
 
 
+UI = FieldProbeWidget
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="FieldProbe driver test utility")
+    parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
     parser.add_argument("--virtual", action="store_true", help="Use the virtual field probe driver")
-    parser.add_argument("--ini", help="Path to an INI file to preload")
     parser.add_argument("--threaded", action="store_true", help="Run driver calls in worker threads")
     args = parser.parse_args(argv)
 
@@ -677,11 +853,19 @@ def main(argv=None):
     else:
         from mpylab.device.prb_virtual import FIELDPROBE
         dev = FIELDPROBE()
-        ini = args.ini if args.ini else io.StringIO(std_ini_text)
+        if args.ini:
+            try:
+                with open(args.ini, "r", encoding="utf-8") as handle:
+                    ini = io.StringIO(handle.read())
+            except OSError as exc:
+                print(f"INI file could not be read: {exc}")
+                return 1
+        else:
+            ini = io.StringIO(std_ini_text)
         print("Driver will be selected from the INI file on Init. Using virtual field probe until then.")
 
     app = QtWidgets.QApplication(sys.argv if argv is None else [sys.argv[0], *argv])
-    ui = UI(dev, ini=ini, use_ini_draft=not args.virtual)
+    ui = FieldProbeWidget(dev, ini=ini, use_ini_draft=not args.virtual)
     ui._use_worker_threads = args.threaded
     ui.show()
     return app.exec()
