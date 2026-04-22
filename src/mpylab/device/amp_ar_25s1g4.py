@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from simpleeval import simple_eval
-
 from mpylab.device.amplifier import AMPLIFIER as AMP
 
 

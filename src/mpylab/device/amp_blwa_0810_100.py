@@ -2,7 +2,7 @@
 import time
 
 from mpylab.device.amplifier import AMPLIFIER as AMP
-from tools.numeric_eval import safe_numeric_eval
+from mpylab.tools.numeric_eval import safe_numeric_eval
 
 
 class AMPLIFIER(AMP):

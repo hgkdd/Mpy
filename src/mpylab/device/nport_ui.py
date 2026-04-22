@@ -453,6 +453,7 @@ class NPortWidget(QtWidgets.QWidget):
 
         def success(err):
             self._is_initialized = (err == 0)
+            self._set_plot_range_from_loaded_data()
             self.refresh_status()
 
         self._start_task("Init", task, success)
@@ -487,6 +488,23 @@ class NPortWidget(QtWidgets.QWidget):
                 if idx >= 0:
                     combo.setCurrentIndex(idx)
             combo.blockSignals(False)
+
+    def _set_plot_range_from_loaded_data(self):
+        frequencies = []
+        for entry in getattr(self.dev, "data", {}).values():
+            data = entry.get("data") if isinstance(entry, dict) else None
+            if isinstance(data, dict):
+                frequencies.extend(float(freq) for freq in data.keys())
+        if not frequencies:
+            return
+        fstart = min(frequencies)
+        fstop = max(frequencies)
+        if fstop <= fstart:
+            return
+        self.start_spin.setValue(fstart)
+        self.stop_spin.setValue(fstop)
+        self.freq_spin.setValue(fstart)
+        self.log_message(f"Plot range set from INI data: {fstart:g} Hz .. {fstop:g} Hz.")
 
     def on_set_freq_clicked(self):
         freq = self.freq_spin.value()
