@@ -225,9 +225,9 @@ class AmplifierWidget(NPortWidget):
         fstop = max(frequencies)
         if fstop <= fstart:
             return
-        self.start_spin.setValue(fstart)
-        self.stop_spin.setValue(fstop)
-        self.freq_spin.setValue(fstart)
+        self.start_spin.set_value_hz(fstart)
+        self.stop_spin.set_value_hz(fstop)
+        self.freq_spin.set_value_hz(fstart)
         self.log_message(f"Plot range set from INI data: {fstart:g} Hz .. {fstop:g} Hz.")
 
     def _run_state_command(self, method_name):
@@ -332,7 +332,7 @@ class AmplifierWidget(NPortWidget):
             lines.append(f"Description: {self.dev.GetDescription()}")
             lines.append(f"Channels: {self.dev.GetChannels()}")
             first = next(iter(self.dev.data.keys()))
-            lines.append(f"SetFreq: {self.dev.SetFreq(self.freq_spin.value())}")
+            lines.append(f"SetFreq: {self.dev.SetFreq(self.freq_spin.value_hz())}")
             lines.append(f"GetFreq: {self.dev.GetFreq()}")
             lines.append(f"GetData({first}): {self.dev.GetData(first)}")
             lines.append(f"Standby: {self.dev.Standby()}")

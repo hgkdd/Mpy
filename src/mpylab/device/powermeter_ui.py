@@ -12,6 +12,7 @@ from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
 
+from mpylab.device.ui_frequency import FrequencyControl
 from mpylab.tools.configuration import parse_ini_value, strbool
 from mpylab.tools.util import format_block
 from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
@@ -231,24 +232,16 @@ class PowerMeterWidget(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(tab)
 
         grid = QtWidgets.QGridLayout()
-        self.freq_spin = QtWidgets.QDoubleSpinBox()
-        self.freq_spin.setDecimals(3)
-        self.freq_spin.setRange(0.0, 1e12)
-        self.freq_spin.setValue(1e9)
-        self.freq_spin.setSingleStep(1e6)
-        self.freq_spin.setSuffix(" Hz")
-
-        self.apply_freq_button = QtWidgets.QPushButton("Apply Frequency")
-        self.apply_freq_button.clicked.connect(self.on_apply_freq_clicked)
+        self.freq_spin = FrequencyControl(default_hz=1e9)
+        self.freq_spin.valueApplied.connect(self.on_apply_freq_clicked)
         self.read_freq_button = QtWidgets.QPushButton("Readback")
         self.read_freq_button.clicked.connect(self.on_read_freq_clicked)
         self.freq_indicator = QtWidgets.QLabel("unknown")
 
         grid.addWidget(QtWidgets.QLabel("Frequency"), 0, 0)
         grid.addWidget(self.freq_spin, 0, 1)
-        grid.addWidget(self.apply_freq_button, 0, 2)
-        grid.addWidget(self.read_freq_button, 0, 3)
-        grid.addWidget(self.freq_indicator, 0, 4)
+        grid.addWidget(self.read_freq_button, 0, 2)
+        grid.addWidget(self.freq_indicator, 0, 3)
 
         self.trigger_button = QtWidgets.QPushButton("Trigger")
         self.trigger_button.clicked.connect(self.on_trigger_clicked)
@@ -706,8 +699,9 @@ class PowerMeterWidget(QtWidgets.QWidget):
             self._refresh_status_bar()
             self.refresh_status()
 
-    def on_apply_freq_clicked(self):
-        freq = self.freq_spin.value()
+    def on_apply_freq_clicked(self, freq=None):
+        if freq is None:
+            freq = self.freq_spin.value_hz()
         self._set_freq_indicator("pending")
 
         def success(result):
@@ -732,10 +726,8 @@ class PowerMeterWidget(QtWidgets.QWidget):
             return
 
         if expected is None:
-            expected = self.freq_spin.value()
-        self.freq_spin.blockSignals(True)
-        self.freq_spin.setValue(freq)
-        self.freq_spin.blockSignals(False)
+            expected = self.freq_spin.value_hz()
+        self.freq_spin.set_value_hz(freq)
         if abs(freq - expected) <= max(1.0, abs(expected) * 1e-9):
             self._set_freq_indicator("ok")
         else:
@@ -813,7 +805,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
     def on_run_smoke_test_clicked(self):
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
-        freq = self.freq_spin.value()
+        freq = self.freq_spin.value_hz()
 
         def task():
             lines = []

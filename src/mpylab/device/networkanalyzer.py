@@ -43,6 +43,8 @@ class NETWORKANALYZER(DRIVER):
                      'fstop': float,
                      'fstep': float,
                      'gpib': int,
+                     'visa': str,
+                     'nr_of_channels': int,
                      'virtual': strbool},
                 'channel_%d':
                     {'unit': str,
@@ -388,6 +390,8 @@ class NETWORKANALYZER(DRIVER):
                      'fstop': float,
                      'fstep': float,
                      'gpib': int,
+                     'visa': str,
+                     'nr_of_channels': int,
                      'virtual': strbool},
                 'channel_%d':
                     {'unit': str,

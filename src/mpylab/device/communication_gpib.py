@@ -6,10 +6,27 @@ This is the :mod:`mpylab.device.communication_gpib` module.
 
    :license: GPLv3 or higher
 """
+import os
+
 import pyvisa
 import pyvisa.constants
+from pyvisa.errors import VisaIOError
 
 from mpylab.device.communication_generic import generic_read, generic_write, generic_query
+
+
+VISA_BACKEND_ENV = "PYVISA_LIBRARY"
+
+
+def _resource_manager():
+    """Create a PyVISA resource manager with the PyVISA env override and pyvisa-py fallback."""
+    backend = os.environ.get(VISA_BACKEND_ENV)
+    if backend:
+        return pyvisa.ResourceManager(backend)
+    try:
+        return pyvisa.ResourceManager()
+    except Exception:
+        return pyvisa.ResourceManager("@py")
 
 
 class CommunicationGpib:
@@ -42,11 +59,27 @@ class CommunicationGpib:
         if query_delay_s < 0:
             raise ValueError("query_delay_s must be >= 0")
 
-        self.rm = pyvisa.ResourceManager()  # configure backend in .pyvisarc in your home dir
+        self.rm = _resource_manager()  # configure backend via PYVISA_LIBRARY or .pyvisarc
         open_kwargs = {"access_mode": lock}
         if not res_name.upper().endswith("::SOCKET"):
             open_kwargs["send_end"] = send_end
-        self.dev = self.rm.open_resource(res_name, **open_kwargs)
+        try:
+            self.dev = self.rm.open_resource(res_name, **open_kwargs)
+        except VisaIOError as exc:
+            if "TCPIP" in res_name.upper() and getattr(exc, "error_code", None) == pyvisa.constants.StatusCode.error_resource_not_found:
+                try:
+                    resources = ", ".join(self.rm.list_resources()) or "<none>"
+                except Exception as list_exc:
+                    resources = f"<list_resources failed: {list_exc}>"
+                raise VisaIOError(exc.error_code) from RuntimeError(
+                    "Could not open TCPIP VISA resource "
+                    f"{res_name!r}. Discovered resources: {resources}. "
+                    "Check the instrument LAN protocol/address. Typical variants are "
+                    "'TCPIP0::<ip>::inst0::INSTR' for VXI-11, "
+                    "'TCPIP0::<ip>::hislip0::INSTR' for HiSLIP, or "
+                    "'TCPIP0::<ip>::5025::SOCKET' for raw SCPI sockets."
+                )
+            raise
         self.dev.timeout = int(timeout_s * 1000)
         self.dev.chunk_size = int(chunk_size)
         self.dev.query_delay = float(query_delay_s)
@@ -167,7 +200,7 @@ if __name__ == "__main__":
     fake_rm = _FakeResourceManager()
 
     try:
-        pyvisa.ResourceManager = lambda: fake_rm
+        pyvisa.ResourceManager = lambda backend=None: fake_rm
 
         comm = CommunicationGpib(
             "GPIB::22::INSTR",

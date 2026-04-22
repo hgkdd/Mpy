@@ -13,6 +13,7 @@ from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as Navigation
 from matplotlib.figure import Figure
 
 from mpylab.tools.util import format_block
+from mpylab.device.ui_frequency import FrequencyControl
 from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
 
 std_ini_text = format_block("""
@@ -303,9 +304,9 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
 
         controls_grid = QtWidgets.QGridLayout()
         control_specs = [
-            ("Center Frequency [Hz]", "center_freq", QtWidgets.QLineEdit(), self.on_set_center_freq_clicked),
-            ("Span [Hz]", "span", QtWidgets.QLineEdit(), self.on_set_span_clicked),
-            ("RBW [Hz]", "rbw", QtWidgets.QLineEdit(), self.on_set_rbw_clicked),
+            ("Center Frequency", "center_freq", FrequencyControl(default_hz=1e9), self.on_set_center_freq_clicked),
+            ("Span", "span", FrequencyControl(default_hz=1e9), self.on_set_span_clicked),
+            ("RBW", "rbw", FrequencyControl(default_hz=10e3), self.on_set_rbw_clicked),
             ("Ref Level", "ref_level", QtWidgets.QLineEdit(), self.on_set_ref_level_clicked),
             ("Division Value", "division_value", QtWidgets.QLineEdit(), self.on_set_division_clicked),
             ("Sweep Type", "sweep_type", self._build_combo(("LINEAR", "LOGARITHMIC", "SEGMENT")), self.on_set_sweep_type_clicked),
@@ -320,15 +321,20 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             if isinstance(widget, QtWidgets.QSpinBox):
                 widget.setMaximum(1_000_000)
                 widget.setMinimum(0)
-            button = QtWidgets.QPushButton("Apply")
-            button.clicked.connect(handler)
+            button = None
+            if isinstance(widget, FrequencyControl):
+                widget.valueApplied.connect(handler)
+            else:
+                button = QtWidgets.QPushButton("Apply")
+                button.clicked.connect(handler)
             indicator = QtWidgets.QLabel("unknown")
             indicator.setMinimumWidth(72)
             self._control_widgets[key] = widget
             self._control_specs[key] = {"indicator": indicator}
             controls_grid.addWidget(QtWidgets.QLabel(label), idx, 0)
             controls_grid.addWidget(widget, idx, 1)
-            controls_grid.addWidget(button, idx, 2)
+            if button is not None:
+                controls_grid.addWidget(button, idx, 2)
             controls_grid.addWidget(indicator, idx, 3)
             self._set_indicator_state(key, "unknown")
 
@@ -749,6 +755,8 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
                     idx = widget.findText(str(raw_value))
                     if idx >= 0:
                         widget.setCurrentIndex(idx)
+                elif isinstance(widget, FrequencyControl):
+                    widget.set_value_hz(float(raw_value))
                 elif isinstance(widget, QtWidgets.QSpinBox):
                     widget.setValue(int(float(raw_value)))
                 else:
@@ -777,6 +785,8 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         widget = self._control_widgets[key]
         if isinstance(widget, QtWidgets.QComboBox):
             return widget.currentText().strip()
+        if isinstance(widget, FrequencyControl):
+            return widget.value_hz()
         if isinstance(widget, QtWidgets.QSpinBox):
             return int(widget.value())
         return widget.text().strip()
@@ -856,7 +866,10 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
                 )
 
     def _line_edit_float(self, key):
-        text = self._control_widgets[key].text().strip()
+        widget = self._control_widgets[key]
+        if isinstance(widget, FrequencyControl):
+            return widget.value_hz()
+        text = widget.text().strip()
         if not text:
             raise ValueError("Input field is empty")
         return float(text)
@@ -874,17 +887,17 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
 
         self._start_task(label, callable_, on_success=success)
 
-    def on_set_center_freq_clicked(self):
+    def on_set_center_freq_clicked(self, value=None):
         self._set_indicator_state("center_freq", "pending", "Write in progress.")
-        self._apply_and_refresh("SetCenterFreq", lambda: self._driver_method("SetCenterFreq", self._line_edit_float("center_freq")))
+        self._apply_and_refresh("SetCenterFreq", lambda: self._driver_method("SetCenterFreq", value if value is not None else self._line_edit_float("center_freq")))
 
-    def on_set_span_clicked(self):
+    def on_set_span_clicked(self, value=None):
         self._set_indicator_state("span", "pending", "Write in progress.")
-        self._apply_and_refresh("SetSpan", lambda: self._driver_method("SetSpan", self._line_edit_float("span")))
+        self._apply_and_refresh("SetSpan", lambda: self._driver_method("SetSpan", value if value is not None else self._line_edit_float("span")))
 
-    def on_set_rbw_clicked(self):
+    def on_set_rbw_clicked(self, value=None):
         self._set_indicator_state("rbw", "pending", "Write in progress.")
-        self._apply_and_refresh("SetRBW", lambda: self._driver_method("SetRBW", self._line_edit_float("rbw")))
+        self._apply_and_refresh("SetRBW", lambda: self._driver_method("SetRBW", value if value is not None else self._line_edit_float("rbw")))
 
     def on_set_ref_level_clicked(self):
         self._set_indicator_state("ref_level", "pending", "Write in progress.")

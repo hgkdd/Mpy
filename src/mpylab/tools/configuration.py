@@ -68,6 +68,23 @@ def strbool(s) -> bool:
     return bool(int(s))
 
 
+def _prefer_exact_match(name, candidates, *, ignorecase=True):
+    """Return an exact candidate match before falling back to fuzzy matching."""
+    if ignorecase:
+        lowered = str(name).lower()
+        for candidate in candidates:
+            if str(candidate).lower() == lowered:
+                return candidate
+    else:
+        for candidate in candidates:
+            if candidate == name:
+                return candidate
+    matches = fstrcmp(name, list(candidates), cutoff=0, ignorecase=ignorecase)
+    if not matches:
+        return None
+    return matches[0]
+
+
 def preprocess_ini_text(text):
     """
     Replace embedded inline-file Python expressions with placeholders so that
@@ -142,11 +159,10 @@ class Configuration:
         self.channel_list = []
 
         for sec in self.sections_in_ini:
-            matches = fstrcmp(sec, list(self.cnftmpl.keys()), cutoff=0, ignorecase=True)
-            if not matches:
+            tmplsec = _prefer_exact_match(sec, self.cnftmpl.keys(), ignorecase=True)
+            if tmplsec is None:
                 raise KeyError(f"No matching section template found for section '{sec}'")
 
-            tmplsec = matches[0]
             thesec = tmplsec
 
             try:
@@ -163,16 +179,14 @@ class Configuration:
             self.conf[thesec_c] = {}
 
             for key, val in config.items(sec):
-                key_matches = fstrcmp(
+                tmplkey = _prefer_exact_match(
                     key,
-                    list(self.cnftmpl[tmplsec].keys()),
-                    cutoff=0,
-                    ignorecase=True
+                    self.cnftmpl[tmplsec].keys(),
+                    ignorecase=True,
                 )
-                if not key_matches:
+                if tmplkey is None:
                     raise KeyError(f"No matching key template found for key '{key}' in section '{sec}'")
 
-                tmplkey = key_matches[0]
                 tmplkey_c = tmplkey if self.casesensitive else tmplkey.lower()
 
                 parsed_val = parse_ini_value(val, self._inline_files)

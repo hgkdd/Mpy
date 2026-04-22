@@ -17,6 +17,7 @@ from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as Navigation
 from matplotlib.figure import Figure
 
 from mpylab.device.spectrumanalyzer_virtual import SPECTRUMANALYZER as VIRTUAL_SPECTRUMANALYZER
+from mpylab.device.ui_frequency import FrequencyControl
 from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
 from mpylab.tools.configuration import parse_ini_value, strbool
 from mpylab.tools.util import format_block
@@ -106,6 +107,7 @@ class UI(QtWidgets.QWidget):
         "TriggerDelay": float,
         "SweepPoints": int,
     }
+    frequency_fields = {"CenterFreq", "Span", "StartFreq", "StopFreq", "RBW", "VBW"}
 
     def __init__(self, instance, ini=None, parent=None, use_ini_draft=True):
         super().__init__(parent)
@@ -244,10 +246,12 @@ class UI(QtWidgets.QWidget):
         value_widget = QtWidgets.QLineEdit()
         value_widget.setReadOnly(True)
         value_widget.setMinimumWidth(180)
-        new_widget = self._create_input_widget(self.field_types.get(name, str))
+        new_widget = self._create_input_widget(name, self.field_types.get(name, str))
         new_widget.setMinimumWidth(160)
         set_button = QtWidgets.QPushButton(f"Set{name}")
         get_button = QtWidgets.QPushButton(f"Get{name}")
+        if isinstance(new_widget, FrequencyControl):
+            new_widget.valueApplied.connect(lambda value, n=name: self._call_setter(n, value))
         set_button.clicked.connect(lambda checked=False, n=name: self._call_setter(n))
         get_button.clicked.connect(lambda checked=False, n=name: self._call_getter(n))
         self.value_widgets[name] = value_widget
@@ -265,7 +269,9 @@ class UI(QtWidgets.QWidget):
         layout.addStretch()
         return row
 
-    def _create_input_widget(self, py_type):
+    def _create_input_widget(self, name, py_type):
+        if name in self.frequency_fields:
+            return FrequencyControl(default_hz=10e6)
         if py_type is int:
             widget = QtWidgets.QSpinBox()
             widget.setRange(-1_000_000_000, 1_000_000_000)
@@ -308,6 +314,8 @@ class UI(QtWidgets.QWidget):
 
     def _get_input_value(self, name):
         widget = self.new_widgets[name]
+        if isinstance(widget, FrequencyControl):
+            return widget.value_hz()
         if isinstance(widget, (QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)):
             return widget.value()
         return widget.text()
@@ -318,6 +326,10 @@ class UI(QtWidgets.QWidget):
             return
         if isinstance(widget, QtWidgets.QSpinBox):
             widget.setValue(int(float(value)))
+        elif isinstance(widget, FrequencyControl):
+            if str(value).strip().lower() == "auto":
+                return
+            widget.set_value_hz(float(value))
         elif isinstance(widget, QtWidgets.QDoubleSpinBox):
             widget.setValue(float(value))
         else:
@@ -431,11 +443,12 @@ class UI(QtWidgets.QWidget):
                 self._show_error(f"Get{name} Error", exc)
             return None
 
-    def _call_setter(self, name):
+    def _call_setter(self, name, value=None):
         try:
             method = getattr(self.sp, f"Set{name}")
-            value = self._result_value(method(self._get_input_value(name)))
-            self._set_value_display(name, value)
+            input_value = self._get_input_value(name) if value is None else value
+            result_value = self._result_value(method(input_value))
+            self._set_value_display(name, result_value)
             self._last_error_text = "none"
             self._refresh_status_bar()
         except Exception as exc:

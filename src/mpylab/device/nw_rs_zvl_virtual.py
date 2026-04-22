@@ -66,6 +66,8 @@ class NETWORKANALYZER(REAL_ZVL):
             try:
                 value = ast.literal_eval(f"({arg_value})")
             except (ValueError, SyntaxError):
+                if "," in arg_value:
+                    return tuple(part.strip().strip("'\"") for part in arg_value.split(","))
                 return (arg_value,)
             if not isinstance(value, tuple):
                 value = (value,)
@@ -337,7 +339,7 @@ class NETWORKANALYZER(REAL_ZVL):
         self.SetTrace(first_trace_name)
 
         for func, args in list(self.conf[sec].items()):
-            if func in ("CreateTrace", "CreateWindow", "unit"):
+            if str(func).lower() in ("createtrace", "createwindow", "unit"):
                 continue
             try:
                 self._call_config_method(func, args)

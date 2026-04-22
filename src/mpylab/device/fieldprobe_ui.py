@@ -12,6 +12,7 @@ from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
 
+from mpylab.device.ui_frequency import FrequencyControl
 from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
 from mpylab.tools.configuration import parse_ini_value, strbool
 from mpylab.tools.util import format_block
@@ -186,19 +187,12 @@ class UI(QtWidgets.QWidget):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(tab)
         freq_row = QtWidgets.QHBoxLayout()
-        self.freq_spin = QtWidgets.QDoubleSpinBox()
-        self.freq_spin.setDecimals(3)
-        self.freq_spin.setRange(0.0, 1e12)
-        self.freq_spin.setSingleStep(1e6)
-        self.freq_spin.setValue(1e6)
-        self.freq_spin.setSuffix(" Hz")
-        self.set_freq_button = QtWidgets.QPushButton("Set Frequency")
-        self.set_freq_button.clicked.connect(self.on_set_freq_clicked)
+        self.freq_spin = FrequencyControl(default_hz=1e6)
+        self.freq_spin.valueApplied.connect(self.on_set_freq_clicked)
         self.read_freq_button = QtWidgets.QPushButton("Read Frequency")
         self.read_freq_button.clicked.connect(self.on_read_freq_clicked)
         freq_row.addWidget(QtWidgets.QLabel("Frequency"))
         freq_row.addWidget(self.freq_spin)
-        freq_row.addWidget(self.set_freq_button)
         freq_row.addWidget(self.read_freq_button)
         layout.addLayout(freq_row)
 
@@ -578,8 +572,9 @@ class UI(QtWidgets.QWidget):
             self._refresh_status_bar()
             self.refresh_status()
 
-    def on_set_freq_clicked(self):
-        freq = self.freq_spin.value()
+    def on_set_freq_clicked(self, freq=None):
+        if freq is None:
+            freq = self.freq_spin.value_hz()
         self._start_task("Set Frequency", lambda: self._driver_method("SetFreq", freq), on_success=self._handle_freq)
 
     def on_read_freq_clicked(self):
@@ -588,9 +583,7 @@ class UI(QtWidgets.QWidget):
     def _handle_freq(self, result):
         err, value = self._split_error_value(result)
         if err == 0 and value is not None:
-            self.freq_spin.blockSignals(True)
-            self.freq_spin.setValue(float(value))
-            self.freq_spin.blockSignals(False)
+            self.freq_spin.set_value_hz(float(value))
         self._set_status_field("GetFreq", self._display_value(result))
 
     def on_trigger_clicked(self):
@@ -639,7 +632,7 @@ class UI(QtWidgets.QWidget):
     def on_smoke_clicked(self):
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
-        freq = self.freq_spin.value()
+        freq = self.freq_spin.value_hz()
 
         def task():
             lines = []

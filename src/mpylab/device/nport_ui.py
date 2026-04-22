@@ -15,6 +15,7 @@ from matplotlib.figure import Figure
 from scuq.ucomponents import Context
 
 from mpylab.device.nport import ANTENNA, CABLE, NPORT
+from mpylab.device.ui_frequency import FrequencyControl
 from mpylab.tools.util import format_block
 from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
 
@@ -241,22 +242,15 @@ class NPortWidget(QtWidgets.QWidget):
         form = QtWidgets.QGridLayout()
         self.what_combo = QtWidgets.QComboBox()
         self.what_combo.setEditable(True)
-        self.freq_spin = QtWidgets.QDoubleSpinBox()
-        self.freq_spin.setRange(0.0, 1e13)
-        self.freq_spin.setDecimals(3)
-        self.freq_spin.setValue(1e9)
-        self.freq_spin.setSingleStep(1e6)
-        self.freq_spin.setSuffix(" Hz")
-        self.set_freq_button = QtWidgets.QPushButton("Set Frequency")
-        self.set_freq_button.clicked.connect(self.on_set_freq_clicked)
+        self.freq_spin = FrequencyControl(default_hz=1e9)
+        self.freq_spin.valueApplied.connect(self.on_set_freq_clicked)
         self.get_data_button = QtWidgets.QPushButton("Get Data")
         self.get_data_button.clicked.connect(self.on_get_data_clicked)
         form.addWidget(QtWidgets.QLabel("What"), 0, 0)
         form.addWidget(self.what_combo, 0, 1)
         form.addWidget(QtWidgets.QLabel("Frequency"), 1, 0)
         form.addWidget(self.freq_spin, 1, 1)
-        form.addWidget(self.set_freq_button, 1, 2)
-        form.addWidget(self.get_data_button, 1, 3)
+        form.addWidget(self.get_data_button, 1, 2)
         self.data_result = QtWidgets.QPlainTextEdit()
         self.data_result.setReadOnly(True)
         layout.addLayout(form)
@@ -269,16 +263,8 @@ class NPortWidget(QtWidgets.QWidget):
         controls = QtWidgets.QHBoxLayout()
         self.plot_what_combo = QtWidgets.QComboBox()
         self.plot_what_combo.setEditable(True)
-        self.start_spin = QtWidgets.QDoubleSpinBox()
-        self.start_spin.setRange(0.0, 1e13)
-        self.start_spin.setDecimals(3)
-        self.start_spin.setValue(10e6)
-        self.start_spin.setSuffix(" Hz")
-        self.stop_spin = QtWidgets.QDoubleSpinBox()
-        self.stop_spin.setRange(0.0, 1e13)
-        self.stop_spin.setDecimals(3)
-        self.stop_spin.setValue(10e9)
-        self.stop_spin.setSuffix(" Hz")
+        self.start_spin = FrequencyControl(default_hz=10e6)
+        self.stop_spin = FrequencyControl(default_hz=10e9)
         self.points_spin = QtWidgets.QSpinBox()
         self.points_spin.setRange(2, 10000)
         self.points_spin.setValue(201)
@@ -501,18 +487,19 @@ class NPortWidget(QtWidgets.QWidget):
         fstop = max(frequencies)
         if fstop <= fstart:
             return
-        self.start_spin.setValue(fstart)
-        self.stop_spin.setValue(fstop)
-        self.freq_spin.setValue(fstart)
+        self.start_spin.set_value_hz(fstart)
+        self.stop_spin.set_value_hz(fstop)
+        self.freq_spin.set_value_hz(fstart)
         self.log_message(f"Plot range set from INI data: {fstart:g} Hz .. {fstop:g} Hz.")
 
-    def on_set_freq_clicked(self):
-        freq = self.freq_spin.value()
+    def on_set_freq_clicked(self, freq=None):
+        if freq is None:
+            freq = self.freq_spin.value_hz()
         self._start_task("Set Frequency", lambda: self.dev.SetFreq(freq), lambda result: self.freq_edit.setText(str(result[1])))
 
     def on_get_data_clicked(self):
         what = self.what_combo.currentText().strip()
-        freq = self.freq_spin.value()
+        freq = self.freq_spin.value_hz()
 
         def task():
             self.dev.SetFreq(freq)
@@ -525,8 +512,8 @@ class NPortWidget(QtWidgets.QWidget):
 
     def on_plot_clicked(self):
         what = self.plot_what_combo.currentText().strip()
-        start = self.start_spin.value()
-        stop = self.stop_spin.value()
+        start = self.start_spin.value_hz()
+        stop = self.stop_spin.value_hz()
         points = self.points_spin.value()
 
         def task():
@@ -596,7 +583,7 @@ class NPortWidget(QtWidgets.QWidget):
             lines.append(f"Description: {self.dev.GetDescription()}")
             lines.append(f"Channels: {self.dev.GetChannels()}")
             first = next(iter(self.dev.data.keys()))
-            lines.append(f"SetFreq: {self.dev.SetFreq(self.freq_spin.value())}")
+            lines.append(f"SetFreq: {self.dev.SetFreq(self.freq_spin.value_hz())}")
             lines.append(f"GetFreq: {self.dev.GetFreq()}")
             lines.append(f"GetData({first}): {self.dev.GetData(first)}")
             lines.append(f"Quit: {self.dev.Quit()}")

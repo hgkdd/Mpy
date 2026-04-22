@@ -55,6 +55,18 @@ class NETWORKANALYZER(NETWORKAN):
         self._cmds = self._build_cmds()
         self._install_simple_methods()
 
+    def _conf_value(self, section, *keys, default=None):
+        """Return one configuration value while tolerating different key casing."""
+        section_dict = self.conf.get(section, {})
+        for key in keys:
+            if key in section_dict:
+                return section_dict[key]
+            lowered = key.lower()
+            for existing_key, value in section_dict.items():
+                if str(existing_key).lower() == lowered:
+                    return value
+        return default
+
     def _build_cmds(self):
         """Build the low-level SCPI command map consumed by ``DRIVER._do_cmds``."""
         fp = self._FP
@@ -199,10 +211,13 @@ class NETWORKANALYZER(NETWORKAN):
                 ),
             ],
             '_CreateWindow': [
-                (lambda self, window_name, **kwargs: f"DISPlay:WINDow{int(window_name)}:STATe ON", None),
+                (lambda self, window_name, **kwargs: f"DISPlay:WINDow{int(window_name)} ON", None),
             ],
             '_DeleteWindow': [
-                (lambda self, window_name, **kwargs: f"DISPlay:WINDow{int(window_name)}:STATe OFF", None),
+                (lambda self, window_name, **kwargs: f"DISPlay:WINDow{int(window_name)} OFF", None),
+            ],
+            'DisplayOn': [
+                ("SYSTem:DISPlay:UPDate ON", None),
             ],
             'CreateChannel': [
                 (lambda self, **kwargs: f"CONFigure:CHANnel{self.internChannel:d}:STATe ON", None),
@@ -367,7 +382,18 @@ class NETWORKANALYZER(NETWORKAN):
 
     def _parse_ini_args(self, arg_string):
         """Parse an INI argument list into a tuple of Python values."""
-        value = ast.literal_eval(f"({arg_string})")
+        if isinstance(arg_string, tuple):
+            return arg_string
+        if isinstance(arg_string, list):
+            return tuple(arg_string)
+        if not isinstance(arg_string, str):
+            return (arg_string,)
+        try:
+            value = ast.literal_eval(f"({arg_string})")
+        except (ValueError, SyntaxError):
+            if "," in arg_string:
+                return tuple(part.strip().strip("'\"") for part in arg_string.split(","))
+            return (arg_string,)
         if not isinstance(value, tuple):
             value = (value,)
         return value
@@ -613,9 +639,10 @@ class NETWORKANALYZER(NETWORKAN):
             self.levelunit = self._internal_unit
 
         self._run_cmd('SetNWAMode')
+        self._run_cmd('DisplayOn')
         self._run_cmd('CreateChannel')
 
-        create_window_args = self.conf[sec].get('CreateWindow')
+        create_window_args = self._conf_value(sec, 'CreateWindow')
         if create_window_args is None:
             raise GeneralDriverError("CreateWindow muss in der INI definiert sein")
         self._call_config_method('CreateWindow', create_window_args)
@@ -629,7 +656,7 @@ class NETWORKANALYZER(NETWORKAN):
                 self._run_cmd('_DeleteTrace', {'trace_name': trace[i]})
                 i += 2
 
-        create_trace_args = self.conf[sec].get('CreateTrace')
+        create_trace_args = self._conf_value(sec, 'CreateTrace')
         if create_trace_args is None:
             raise GeneralDriverError("CreateTrace muss in der INI definiert sein")
         self._call_config_method('CreateTrace', create_trace_args)
@@ -637,7 +664,7 @@ class NETWORKANALYZER(NETWORKAN):
         self.SetTrace(first_trace_name)
 
         for func, args in list(self.conf[sec].items()):
-            if func in ('CreateTrace', 'CreateWindow', 'unit'):
+            if str(func).lower() in ('createtrace', 'createwindow', 'unit'):
                 continue
             try:
                 self._call_config_method(func, args)

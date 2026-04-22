@@ -14,6 +14,7 @@ from PySide6 import QtCore, QtWidgets
 from scuq.quantities import Quantity
 
 from mpylab.device.device import CONVERT
+from mpylab.device.ui_frequency import FrequencyControl
 from mpylab.tools.configuration import parse_ini_value, strbool
 from mpylab.tools.util import format_block
 from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
@@ -231,13 +232,8 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
 
         grid = QtWidgets.QGridLayout()
 
-        self.freq_spin = QtWidgets.QDoubleSpinBox()
-        self.freq_spin.setDecimals(3)
-        self.freq_spin.setRange(0.0, 1e12)
-        self.freq_spin.setSingleStep(1e6)
-        self.freq_spin.setSuffix(" Hz")
-        self.apply_freq_button = QtWidgets.QPushButton("Apply")
-        self.apply_freq_button.clicked.connect(self.on_apply_freq_clicked)
+        self.freq_spin = FrequencyControl(default_hz=1e9)
+        self.freq_spin.valueApplied.connect(self.on_apply_freq_clicked)
         self.read_freq_button = QtWidgets.QPushButton("Readback")
         self.read_freq_button.clicked.connect(self.on_read_freq_clicked)
         self.freq_indicator = QtWidgets.QLabel("unknown")
@@ -245,9 +241,8 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
 
         grid.addWidget(QtWidgets.QLabel("Frequency"), 0, 0)
         grid.addWidget(self.freq_spin, 0, 1)
-        grid.addWidget(self.apply_freq_button, 0, 2)
-        grid.addWidget(self.read_freq_button, 0, 3)
-        grid.addWidget(self.freq_indicator, 0, 4)
+        grid.addWidget(self.read_freq_button, 0, 2)
+        grid.addWidget(self.freq_indicator, 0, 3)
 
         self.level_spin = QtWidgets.QDoubleSpinBox()
         self.level_spin.setDecimals(2)
@@ -301,11 +296,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         layout = QtWidgets.QFormLayout(tab)
 
         self.amsource_combo = self._build_combo_from_driver("AM_sources", ["INT1", "INT2", "EXT1", "EXT2", "OFF"])
-        self.amfreq_spin = QtWidgets.QDoubleSpinBox()
-        self.amfreq_spin.setDecimals(3)
-        self.amfreq_spin.setRange(0.0, 1e9)
-        self.amfreq_spin.setValue(1000.0)
-        self.amfreq_spin.setSuffix(" Hz")
+        self.amfreq_spin = FrequencyControl(default_hz=1000.0)
         self.amdepth_spin = QtWidgets.QDoubleSpinBox()
         self.amdepth_spin.setDecimals(3)
         self.amdepth_spin.setRange(0.0, 1.0)
@@ -345,11 +336,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         layout = QtWidgets.QFormLayout(tab)
 
         self.pmsource_combo = self._build_combo_from_driver("PM_sources", ["INT", "EXT1", "EXT2", "OFF"])
-        self.pmfreq_spin = QtWidgets.QDoubleSpinBox()
-        self.pmfreq_spin.setDecimals(3)
-        self.pmfreq_spin.setRange(0.0, 1e9)
-        self.pmfreq_spin.setValue(1000.0)
-        self.pmfreq_spin.setSuffix(" Hz")
+        self.pmfreq_spin = FrequencyControl(default_hz=1000.0)
         self.pmwidth_spin = QtWidgets.QDoubleSpinBox()
         self.pmwidth_spin.setDecimals(9)
         self.pmwidth_spin.setRange(0.0, 1.0)
@@ -829,7 +816,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         freq = self._status_raw.get("GetFreq")
         if freq is not None:
             try:
-                self.freq_spin.setValue(float(freq))
+                self.freq_spin.set_value_hz(float(freq))
             except (TypeError, ValueError):
                 self.log_message(f"Could not populate frequency from {freq!r}")
 
@@ -858,11 +845,11 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
             self._set_indicator_state("freq", "unknown", "No frequency readback available.")
         else:
             try:
-                current = float(self.freq_spin.value())
+                current = float(self.freq_spin.value_hz())
                 readback = float(freq)
                 matches = abs(current - readback) <= max(1e-6, abs(readback) * 1e-9)
             except Exception:
-                matches = str(self.freq_spin.value()) == str(freq)
+                matches = str(self.freq_spin.value_hz()) == str(freq)
             self._set_indicator_state("freq", "ok" if matches else "mismatch", f"Readback: {freq!r}")
 
         level = self._status_raw.get("GetLevel")
@@ -884,9 +871,10 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
             except Exception:
                 pass
 
-    def on_apply_freq_clicked(self):
+    def on_apply_freq_clicked(self, value=None):
         self._set_indicator_state("freq", "pending", "Write in progress.")
-        value = self.freq_spin.value()
+        if value is None:
+            value = self.freq_spin.value_hz()
 
         def task():
             return self._driver_method("SetFreq", value)
@@ -937,7 +925,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
 
     def on_conf_am_clicked(self):
         source = self.amsource_combo.currentText()
-        freq = self.amfreq_spin.value()
+        freq = self.amfreq_spin.value_hz()
         depth = self.amdepth_spin.value()
         waveform = self.amwave_combo.currentText()
         lfout = self.lfout_combo.currentText()
@@ -969,7 +957,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
 
     def on_conf_pm_clicked(self):
         source = self.pmsource_combo.currentText()
-        freq = self.pmfreq_spin.value()
+        freq = self.pmfreq_spin.value_hz()
         pol = self.pmpol_combo.currentText()
         width = self.pmwidth_spin.value()
         delay = self.pmdelay_spin.value()
@@ -1008,7 +996,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         if hasattr(self.sg, "GetLevel"):
             results.append(f"GetLevel: {self._driver_method('GetLevel')!r}")
 
-        freq = self.freq_spin.value()
+        freq = self.freq_spin.value_hz()
         if hasattr(self.sg, "SetFreq"):
             results.append(f"SetFreq({freq!r}): {self._driver_method('SetFreq', freq)!r}")
 
