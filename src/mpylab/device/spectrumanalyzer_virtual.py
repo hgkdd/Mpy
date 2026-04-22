@@ -4,6 +4,7 @@
 import configparser
 import io
 import math
+import re
 
 from mpylab.device.spectrumanalyzer import SPECTRUMANALYZER as BASE_SPECTRUMANALYZER
 from mpylab.tools.configuration import parse_ini_value
@@ -34,6 +35,7 @@ class SPECTRUMANALYZER(BASE_SPECTRUMANALYZER):
         self.spoints = 500
         self.trgmode = "FREE"
         self.tdelay = 0.0
+        self._last_response = ""
 
     def _restore_virtual_api(self):
         for name in (
@@ -270,3 +272,49 @@ class SPECTRUMANALYZER(BASE_SPECTRUMANALYZER):
     def Quit(self):
         self.error = 0
         return self.error
+
+    def write(self, cmd):
+        """Handle a small SCPI-like command subset without a hardware bus."""
+        cmd = str(cmd).strip()
+        upper = cmd.upper()
+        self._last_response = ""
+        if upper == "*IDN?":
+            self._last_response = self.conf.get("description", {}).get("description", "Virtual SpectrumAnalyzer")
+        elif upper == "CENTERFREQ?":
+            self._last_response = f"CENTERFREQ {self.cfreq} HZ"
+        elif upper.startswith("CENTERFREQ "):
+            self.SetCenterFreq(float(cmd.split()[1]))
+        elif upper == "SPAN?":
+            self._last_response = f"SPAN {self.span} HZ"
+        elif upper.startswith("SPAN "):
+            self.SetSpan(float(cmd.split()[1]))
+        elif upper == "RBW?":
+            self._last_response = f"RBW {self.rbw} HZ"
+        elif upper.startswith("RBW "):
+            self.SetRBW(cmd.split()[1])
+        elif upper == "VBW?":
+            self._last_response = f"VBW {self.vbw} HZ"
+        elif upper.startswith("VBW "):
+            self.SetVBW(float(cmd.split()[1]))
+        elif upper == "DATA?":
+            x, y = self.GetSpectrum()[1]
+            self._last_response = "DATA " + ",".join(f"{freq:g}:{amp:g}" for freq, amp in zip(x, y))
+        elif upper in {"QUIT", "*CLS"}:
+            self.Quit()
+        else:
+            self._last_response = f"OK {cmd}"
+        return 0
+
+    def read(self, tmpl=None):
+        """Return or parse the last virtual SCPI response."""
+        if tmpl is None:
+            return self._last_response
+        match = re.match(tmpl, self._last_response)
+        if match is None:
+            return {}
+        return match.groupdict()
+
+    def query(self, cmd, tmpl=None):
+        """Write a virtual SCPI query and return the raw or parsed response."""
+        self.write(cmd)
+        return self.read(tmpl)
