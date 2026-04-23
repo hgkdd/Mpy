@@ -363,10 +363,10 @@ class Measure(object):
             self.ui.set_messenger(messenger)
             self.messenger = self.ui.ask
 
-    def set_user_interrupt_Tester(self, tester):
+    def set_user_interrupt_tester(self, tester):
         """Set function to test for user interrupt.
 
-           Parameter *tester*: the user interrupt Tester (see :meth:`stdUserInterruptTester`)
+           Parameter *tester*: callable (see :meth:`stdUserInterruptTester`).
 
            Return: *None*
         """
@@ -374,6 +374,10 @@ class Measure(object):
             self.ui.set_interrupt_tester(tester)
             self.UserInterruptTester = self.ui.check_interrupt
             self.PollKey = self.ui.poll_key
+
+    def set_user_interrupt_Tester(self, tester):
+        """Backward-compatible alias for :meth:`set_user_interrupt_tester`."""
+        self.set_user_interrupt_tester(tester)
 
     def set_pre_user_event(self, event_cb):
         """Set function called before user-facing UI interactions."""

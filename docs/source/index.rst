@@ -20,6 +20,7 @@ Contents:
    intro-driver-framework-de.rst
    dat-file-grammar.rst
    FAQ-en.rst
+   mpylab/ui_adapter_contract.rst
    messanleitung.rst
    mpylab.rst
 
@@ -29,4 +30,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

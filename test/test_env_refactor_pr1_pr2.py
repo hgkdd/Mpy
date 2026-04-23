@@ -1,4 +1,5 @@
 import os
+import pickle
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -8,8 +9,8 @@ from scuq.si import WATT
 from scuq.quantities import Quantity
 
 from mpylab.env.Measure import Measure
-from mpylab.env.msc.MSC import MSC
-from mpylab.env.tem.TEMCell import TEMCell
+from mpylab.env.msc.MSC import MSC, stdImmunityKernel as MSCStdImmunityKernel
+from mpylab.env.tem.TEMCell import TEMCell, stdImmunityKernel as TEMStdImmunityKernel
 from mpylab.env.univers.AmplifierTest import AmplifierTest
 from mpylab.tools.aunits import EFIELD
 
@@ -334,9 +335,11 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
         self.assertEqual(seen["msg"], "adapter test")
         self.assertEqual(seen["called"], 1)
 
-        m.set_user_interrupt_Tester(lambda: 77)
+        m.set_user_interrupt_tester(lambda: 77)
         self.assertEqual(m.UserInterruptTester(), 77)
         self.assertEqual(m.PollKey(), 77)
+        m.set_user_interrupt_Tester(lambda: 78)
+        self.assertEqual(m.UserInterruptTester(), 78)
 
     def test_measure_lifecycle_helpers(self):
         m = Measure()
@@ -376,7 +379,7 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
                 return buttons.index("Continue")
             return -1
 
-        m.set_user_interrupt_Tester(interrupt_once)
+        m.set_user_interrupt_tester(interrupt_once)
         m.set_messenger(messenger)
 
         mg = _FakeInterruptMGraph()
@@ -386,6 +389,67 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
         self.assertEqual(mg.rfoff_calls, 1)
         self.assertEqual(mg.rfon_calls, 1)
         self.assertEqual(mg.nbtrigger_calls, 1)
+
+    def test_common_interrupt_flow_suspend_resume(self):
+        m = Measure()
+
+        def interrupt_once():
+            vals = getattr(interrupt_once, "_vals", [ord("x"), None])
+            if vals:
+                out = vals.pop(0)
+                interrupt_once._vals = vals
+                return out
+            return None
+
+        def messenger(msg, buttons=None, level="", dct=None):
+            _ = (msg, level, dct)
+            if buttons == ['Continue', 'Suspend', 'Interactive', 'Quit']:
+                return buttons.index("Suspend")
+            if buttons == ['Resume', 'Quit']:
+                return buttons.index("Resume")
+            return -1
+
+        m.set_user_interrupt_tester(interrupt_once)
+        m.set_messenger(messenger)
+
+        mg = _FakeInterruptMGraph()
+        scope = {"mg": mg, "delay": 0, "nblist": ["dev1"]}
+        handled = m._handle_user_interrupt_common(scope, wait_handler=lambda dct: None)
+        self.assertTrue(handled)
+        self.assertEqual(mg.quit_calls, 1)
+        self.assertEqual(mg.init_calls, 1)
+        self.assertEqual(mg.zero_calls, 1)
+        self.assertEqual(mg.rfoff_calls, 2)
+        self.assertEqual(mg.rfon_calls, 1)
+        self.assertEqual(mg.nbtrigger_calls, 1)
+
+    def test_common_interrupt_flow_suspend_quit_aborts(self):
+        m = Measure()
+
+        def interrupt_once():
+            vals = getattr(interrupt_once, "_vals", [ord("x"), None])
+            if vals:
+                out = vals.pop(0)
+                interrupt_once._vals = vals
+                return out
+            return None
+
+        def messenger(msg, buttons=None, level="", dct=None):
+            _ = (msg, level, dct)
+            if buttons == ['Continue', 'Suspend', 'Interactive', 'Quit']:
+                return buttons.index("Suspend")
+            if buttons == ['Resume', 'Quit']:
+                return buttons.index("Quit")
+            return -1
+
+        m.set_user_interrupt_tester(interrupt_once)
+        m.set_messenger(messenger)
+        mg = _FakeInterruptMGraph()
+        with self.assertRaises(UserWarning):
+            m._handle_user_interrupt_common({"mg": mg, "delay": 0, "nblist": ["dev1"]}, wait_handler=lambda dct: None)
+        self.assertEqual(mg.quit_calls, 1)
+        self.assertEqual(mg.rfon_calls, 0)
+        self.assertEqual(mg.nbtrigger_calls, 0)
 
     def test_temcell_interrupt_flow_continue(self):
         tem = TEMCell()
@@ -414,6 +478,60 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
         self.assertEqual(mg.rfoff_calls, 1)
         self.assertEqual(mg.rfon_calls, 1)
         self.assertEqual(mg.nbtrigger_calls, 1)
+
+    def test_measure_pickle_roundtrip_restores_ui_adapter(self):
+        m = Measure()
+        m.set_messenger(_always_start)
+        m.set_user_interrupt_tester(lambda: 88)
+        blob = pickle.dumps(m)
+        m2 = pickle.loads(blob)
+        self.assertTrue(hasattr(m2, "ui"))
+        self.assertTrue(callable(m2.ui.ask))
+        self.assertTrue(callable(m2.UserInterruptTester))
+        self.assertTrue(callable(m2.PollKey))
+        self.assertEqual(m2.UserInterruptTester.__func__, m2.ui.check_interrupt.__func__)
+        self.assertEqual(m2.PollKey.__func__, m2.ui.poll_key.__func__)
+
+    def test_msc_kernel_poll_key_user_event(self):
+        kernel = MSCStdImmunityKernel(
+            field=1.0,
+            tp={1.0: [[0]]},
+            messenger=lambda *args, **kwargs: -1,
+            UIHandler=lambda: ord("s"),
+            lcls={},
+            dwell=0.02,
+            keylist="sS",
+        )
+        cmd = None
+        for _ in range(10):
+            cmd = kernel.test("")
+            if cmd[0] == "eut":
+                break
+        self.assertIsNotNone(cmd)
+        self.assertEqual(cmd[0], "eut")
+        self.assertEqual(cmd[1], "User event.")
+        self.assertEqual(cmd[2]["eutstatus"], "Marked by user")
+
+    def test_temcell_kernel_poll_key_user_event(self):
+        kernel = TEMStdImmunityKernel(
+            field=1.0,
+            freqs=[1.0],
+            positions={"v": [0], "h": []},
+            messenger=lambda *args, **kwargs: -1,
+            UIHandler=lambda: ord("s"),
+            lcls={},
+            dwell=0.02,
+            keylist="sS",
+        )
+        cmd = None
+        for _ in range(10):
+            cmd = kernel.test("")
+            if cmd[0] == "eut":
+                break
+        self.assertIsNotNone(cmd)
+        self.assertEqual(cmd[0], "eut")
+        self.assertEqual(cmd[1], "User event.")
+        self.assertEqual(cmd[2]["eutstatus"], "Marked by user")
 
     def test_msc_interrupt_flow_continue(self):
         msc = MSC()

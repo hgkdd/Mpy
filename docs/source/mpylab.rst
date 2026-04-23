@@ -120,6 +120,15 @@ This is the documentation of the API.
    :inherited-members:
 
 
+:mod:`mpylab.env.ui.ui_adapter`
+-------------------------------
+
+.. automodule:: mpylab.env.ui.ui_adapter
+   :members:
+   :undoc-members:
+   :inherited-members:
+
+
 :mod:`mpylab.env.msc.MSC`
 --------------------------
 
