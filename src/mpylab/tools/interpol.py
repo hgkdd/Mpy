@@ -8,6 +8,7 @@
    :license: GPL-3 or higher
 """
 import cmath
+from numbers import Real
 from scipy.interpolate import interp1d
 from numpy import nan_to_num, atan2, errstate
 from scuq.ucomponents import Context, UncertainInput
@@ -51,7 +52,7 @@ def unwrap(dct, arg=None):
         unwrapped[1].append(abs(dct[f]))
         unwrapped[2].append(phik)
         try:
-            with errstate(divide='ignore'):
+            with errstate(divide='ignore', invalid='ignore'):
                 q = dct[freqs[k + 1]] / dct[f]   # quantity(next freq) / quantity(actual freq) -> get delta of arg
             q = nan_to_num(q)  # replace NaN with appropriate numbers
             dang = arg(q)   # delta of argument
@@ -66,6 +67,26 @@ def unwrap(dct, arg=None):
     unwrapped[2].append(phik)
     # return tuple of list: f mag ang sorted fy f
     return unwrapped
+
+
+def _is_certainly_real(obj):
+    """Return True only for values that are safely usable as real scalars."""
+    if isinstance(obj, Real):
+        return True
+    imag = getattr(obj, "imag", None)
+    if imag is None:
+        return False
+    try:
+        return imag == 0 and isinstance(obj.real, Real)
+    except Exception:
+        return False
+
+
+def _as_real_float(obj):
+    """Convert a value previously accepted by ``_is_certainly_real`` to float."""
+    if isinstance(obj, Real):
+        return float(obj)
+    return float(obj.real)
 
 
 class cplx_interpol():
@@ -145,12 +166,27 @@ class UQ_interpol():
         ctx = Context()
         for f, d in list(self.dct.items()):
             self.vdct[f], self.edct[f], self.unit = ctx.value_uncertainty_unit(d)
-        self.vi = cplx_interpol(self.vdct)
-        self.ei = cplx_interpol(self.edct)
+        self.real_valued = (
+            all(_is_certainly_real(value) for value in self.vdct.values())
+            and all(_is_certainly_real(value) for value in self.edct.values())
+        )
+        if self.real_valued:
+            freqs = sorted(self.vdct.keys())
+            values = [_as_real_float(self.vdct[f]) for f in freqs]
+            uncertainties = [_as_real_float(self.edct[f]) for f in freqs]
+            self.vi = interp1d(freqs, values)
+            self.ei = interp1d(freqs, uncertainties)
+        else:
+            self.vi = cplx_interpol(self.vdct)
+            self.ei = cplx_interpol(self.edct)
 
     def __call__(self, f):
-        val = self.vi(f)
-        err = self.ei(f)
+        if self.real_valued:
+            val = float(self.vi(f))
+            err = float(self.ei(f))
+        else:
+            val = self.vi(f)
+            err = self.ei(f)
         ret = Quantity(self.unit, UncertainInput(val, err))
         return ret
 
