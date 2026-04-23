@@ -23,6 +23,7 @@ class MOTORCONTROLLER(MOTORCONTROLLER_BASE):
         self.position = 0.0
         self.speed = 30.0
         self.direction = 0
+        self.target_position = None
         self._last_update = time.monotonic()
 
     def Init(self, ini=None, channel=None, ignore_bus=True):
@@ -38,8 +39,39 @@ class MOTORCONTROLLER(MOTORCONTROLLER_BASE):
         now = time.monotonic()
         elapsed = now - self._last_update
         self._last_update = now
-        if self.direction:
-            self.position = (self.position + self.direction * self.speed * elapsed) % 360.0
+        if not self.direction or self.speed <= 0:
+            return
+
+        step = abs(self.speed * elapsed)
+        if self.target_position is None:
+            self.position = (self.position + self.direction * step) % 360.0
+            return
+
+        remaining = self._directed_distance(self.position, self.target_position, self.direction)
+        if step >= remaining:
+            self.position = self.target_position
+            self.direction = 0
+            self.target_position = None
+        else:
+            self.position = (self.position + self.direction * step) % 360.0
+
+    def _shortest_direction(self, current, target):
+        """Return direction for the shortest path from current to target."""
+        clockwise = (target - current) % 360.0
+        anti_clockwise = (current - target) % 360.0
+        if clockwise == 0:
+            return 0
+        if clockwise <= anti_clockwise:
+            return 1
+        return -1
+
+    def _directed_distance(self, current, target, direction):
+        """Return remaining distance from current to target in the given direction."""
+        if direction > 0:
+            return (target - current) % 360.0
+        if direction < 0:
+            return (current - target) % 360.0
+        return 0.0
 
     def GetDescription(self):
         """Return a virtual identification string."""
@@ -50,11 +82,13 @@ class MOTORCONTROLLER(MOTORCONTROLLER_BASE):
         return 0, True
 
     def Goto(self, pos):
-        """Move immediately to an absolute angle in degrees."""
+        """Start moving to an absolute angle in degrees using the configured speed."""
         self.error = 0
         self._update_position()
-        self.position = float(pos) % 360.0
-        self.direction = 0
+        self.target_position = float(pos) % 360.0
+        self.direction = self._shortest_direction(self.position, self.target_position)
+        if self.direction == 0:
+            self.target_position = None
         return self.error, self.position
 
     def Move(self, direction):
@@ -66,6 +100,7 @@ class MOTORCONTROLLER(MOTORCONTROLLER_BASE):
         self.error = 0
         self._update_position()
         self.direction = direction
+        self.target_position = None
         return self.error, self.direction
 
     def GetState(self):
@@ -95,6 +130,7 @@ class MOTORCONTROLLER(MOTORCONTROLLER_BASE):
         self.error = 0
         self._update_position()
         self.direction = 0
+        self.target_position = None
         return self.error
 
     def write(self, cmd):
