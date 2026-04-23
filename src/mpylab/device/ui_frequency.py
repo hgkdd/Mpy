@@ -25,20 +25,27 @@ class FrequencyControl(QtWidgets.QWidget):
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
         self.spin = QtWidgets.QDoubleSpinBox()
         self.spin.setDecimals(decimals)
         self.spin.setRange(0.0, 1000.0)
         self.spin.setSingleStep(1.0)
         self.spin.setKeyboardTracking(False)
+        self.spin.setMinimumWidth(92)
+        self.spin.setMaximumWidth(118)
         layout.addWidget(self.spin, 1)
 
         for label, factor in self.UNITS:
-            button = QtWidgets.QPushButton(label)
+            button = QtWidgets.QToolButton()
+            button.setText(label)
             button.setCheckable(True)
+            button.setMinimumWidth(34)
+            button.setMaximumWidth(46)
             button.clicked.connect(lambda checked=False, unit=label: self.apply_unit(unit))
             self._buttons[label] = button
             layout.addWidget(button)
 
+        self.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Fixed)
         self.set_value_hz(default_hz)
 
     def value_hz(self):
