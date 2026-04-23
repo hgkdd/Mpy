@@ -130,7 +130,7 @@ class MotorControllerWidget(QtWidgets.QWidget):
         self._task_result = None
         self._task_error = None
         self._task_on_success = None
-        self._use_worker_threads = True
+        self._use_worker_threads = False
 
         self._poll_timer = QtCore.QTimer(self)
         self._poll_timer.setInterval(500)
@@ -376,6 +376,30 @@ class MotorControllerWidget(QtWidgets.QWidget):
             return False
         self.log_message(f"{label} started.")
         self._set_busy(True, label)
+        if not self._use_worker_threads:
+            result = None
+            error = None
+            try:
+                QtWidgets.QApplication.processEvents()
+                result = func()
+            except Exception as exc:
+                error = exc
+            finally:
+                self._set_busy(False)
+            if error is None:
+                self._last_error_text = "none"
+                self.log_message(f"{label} succeeded.")
+                if on_success is not None:
+                    on_success(result)
+            else:
+                if label == "Init":
+                    self._is_initialized = False
+                self._last_error_text = str(error)
+                self.log_message(f"{label} failed: {type(error).__name__}: {error}")
+                QtWidgets.QMessageBox.critical(self, f"{label} Error", str(error))
+            self._refresh_status_bar()
+            return True
+
         self._task_label = label
         self._task_result = None
         self._task_error = None
@@ -649,13 +673,21 @@ class MotorControllerWidget(QtWidgets.QWidget):
 
     def on_raw_query_clicked(self):
         cmd = self.raw_command_edit.text().strip()
-        if cmd:
-            self._start_task("Raw Query", lambda: self.dev.query(cmd), lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
+        if not cmd:
+            return
+        if not hasattr(self.dev, "query"):
+            QtWidgets.QMessageBox.critical(self, "Raw Query Error", "driver did not expose query")
+            return
+        self._start_task("Raw Query", lambda: self.dev.query(cmd), lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_raw_write_clicked(self):
         cmd = self.raw_command_edit.text().strip()
-        if cmd:
-            self._start_task("Raw Write", lambda: self.dev.write(cmd), lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
+        if not cmd:
+            return
+        if not hasattr(self.dev, "write"):
+            QtWidgets.QMessageBox.critical(self, "Raw Write Error", "driver did not expose write")
+            return
+        self._start_task("Raw Write", lambda: self.dev.write(cmd), lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_smoke_clicked(self):
         ini_text = self.ini_edit.toPlainText()
@@ -694,11 +726,13 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Motor controller test utility")
     parser.add_argument("ini", nargs="?", help="INI file to load")
     parser.add_argument("--virtual", action="store_true", help="start with the virtual motor controller")
+    parser.add_argument("--threaded", action="store_true", help="Run driver calls in worker threads")
     args = parser.parse_args(argv)
 
     app = QtWidgets.QApplication(sys.argv if argv is None else [sys.argv[0], *argv])
     ini = io.StringIO(std_ini_text) if args.virtual or not args.ini else args.ini
     window = MotorControllerWidget(VIRTUAL_MOTORCONTROLLER(), ini=ini, use_ini_draft=not args.virtual)
+    window._use_worker_threads = args.threaded
     window.show()
     return app.exec()
 
