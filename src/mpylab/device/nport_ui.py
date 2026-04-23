@@ -16,6 +16,7 @@ from scuq.ucomponents import Context
 
 from mpylab.device.nport import ANTENNA, CABLE, NPORT
 from mpylab.device.ui_frequency import FrequencyControl
+from mpylab.device.ui_quantity_display import INI_UNIT_MODE, SCUQ_UNIT_MODE, quantity_display_values
 from mpylab.tools.util import format_block
 from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
 
@@ -270,6 +271,9 @@ class NPortWidget(QtWidgets.QWidget):
         self.points_spin.setValue(201)
         self.errorbar_check = QtWidgets.QCheckBox("Plot uncertainty")
         self.errorbar_check.setChecked(True)
+        self.display_mode_combo = QtWidgets.QComboBox()
+        self.display_mode_combo.addItems([INI_UNIT_MODE, SCUQ_UNIT_MODE])
+        self.display_mode_combo.currentTextChanged.connect(lambda _text: self._replot_last_rows())
         self.plot_button = QtWidgets.QPushButton("Plot")
         self.plot_button.clicked.connect(self.on_plot_clicked)
         self.export_button = QtWidgets.QPushButton("Export CSV")
@@ -282,6 +286,8 @@ class NPortWidget(QtWidgets.QWidget):
         controls.addWidget(self.stop_spin)
         controls.addWidget(QtWidgets.QLabel("Points"))
         controls.addWidget(self.points_spin)
+        controls.addWidget(QtWidgets.QLabel("Display"))
+        controls.addWidget(self.display_mode_combo)
         controls.addWidget(self.errorbar_check)
         controls.addWidget(self.plot_button)
         controls.addWidget(self.export_button)
@@ -527,8 +533,7 @@ class NPortWidget(QtWidgets.QWidget):
                 err, uq = self.dev.GetData(what)
                 if err != 0:
                     raise RuntimeError(f"GetData({what!r}) failed at {freq} Hz with error {err}")
-                value, uncertainty, unit = self._ctx.value_uncertainty_unit(uq)
-                rows.append((freq, value, uncertainty, str(unit), uq))
+                rows.append((freq, uq))
             return rows
 
         self._start_task("Plot", task, self._plot_rows)
@@ -541,6 +546,28 @@ class NPortWidget(QtWidgets.QWidget):
 
     def _plot_rows(self, rows):
         self._last_plot_rows = rows
+        self._replot_last_rows()
+
+    def _display_row(self, row, what, mode):
+        freq, uq = row
+        value, uncertainty, unit = quantity_display_values(
+            uq,
+            device=self.dev,
+            what=what,
+            mode=mode,
+            context=self._ctx,
+        )
+        return freq, value, uncertainty, unit, uq
+
+    def _display_rows(self):
+        what = self.plot_what_combo.currentText().strip()
+        mode = self.display_mode_combo.currentText()
+        return [self._display_row(row, what, mode) for row in self._last_plot_rows]
+
+    def _replot_last_rows(self):
+        if not self._last_plot_rows:
+            return
+        rows = self._display_rows()
         x = [row[0] for row in rows]
         y = [self._to_float(row[1]) for row in rows]
         yerr = [abs(self._to_float(row[2])) for row in rows]
@@ -570,7 +597,7 @@ class NPortWidget(QtWidgets.QWidget):
         with open(path, "w", newline="", encoding="utf-8") as handle:
             writer = csv.writer(handle)
             writer.writerow(["frequency_hz", "value", "standard_uncertainty", "unit", "quantity"])
-            for freq, value, uncertainty, unit, uq in self._last_plot_rows:
+            for freq, value, uncertainty, unit, uq in self._display_rows():
                 writer.writerow([freq, value, uncertainty, unit, uq])
         self.log_message(f"Exported CSV: {path}")
 

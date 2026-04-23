@@ -6,7 +6,6 @@ import configparser
 import csv
 import importlib
 import io
-import math
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -20,6 +19,7 @@ from scuq.ucomponents import Context
 
 from mpylab.device.ui_frequency import FrequencyControl
 from mpylab.device.ui_ini_draft import IniPlainTextEdit, clear_ini_draft, load_ini_with_draft
+from mpylab.device.ui_quantity_display import INI_UNIT_MODE, SCUQ_UNIT_MODE, quantity_display_values
 from mpylab.device.vlisn_virtual import VLISN as VIRTUAL_VLISN
 from mpylab.tools.configuration import parse_ini_value, strbool
 from mpylab.tools.util import format_block
@@ -293,6 +293,9 @@ class VlisnWidget(QtWidgets.QWidget):
         self.points_spin = QtWidgets.QSpinBox()
         self.points_spin.setRange(2, 10_000)
         self.points_spin.setValue(101)
+        self.display_mode_combo = QtWidgets.QComboBox()
+        self.display_mode_combo.addItems([INI_UNIT_MODE, SCUQ_UNIT_MODE])
+        self.display_mode_combo.currentTextChanged.connect(lambda _text: self._replot_last_rows())
         self.plot_button = QtWidgets.QPushButton("Plot Channel")
         self.plot_button.clicked.connect(self.on_plot_clicked)
         self.export_csv_button = QtWidgets.QPushButton("Export CSV")
@@ -311,6 +314,8 @@ class VlisnWidget(QtWidgets.QWidget):
         toolbar.addWidget(self.stop_freq_control)
         toolbar.addWidget(QtWidgets.QLabel("Points"))
         toolbar.addWidget(self.points_spin)
+        toolbar.addWidget(QtWidgets.QLabel("Display"))
+        toolbar.addWidget(self.display_mode_combo)
         toolbar.addWidget(self.plot_button)
         toolbar.addWidget(self.export_csv_button)
         toolbar.addWidget(self.clear_plot_button)
@@ -487,24 +492,15 @@ class VlisnWidget(QtWidgets.QWidget):
     def _result_value(self, result):
         return self._split_error_value(result)[1]
 
-    def _channel_unit(self, what):
-        data = getattr(self.dev, "data", {})
-        try:
-            return str(data[what]["unit"])
-        except Exception:
-            return ""
-
     def _display_quantity(self, quantity, what=None):
         try:
-            value, uncertainty, unit = self._ctx.value_uncertainty_unit(quantity)
-            if what is not None and self._channel_unit(what).lower() == "db":
-                value_f = float(abs(value))
-                uncertainty_f = abs(float(uncertainty))
-                if value_f > 0:
-                    db_value = 10.0 * math.log10(value_f)
-                    db_uncertainty = 10.0 / math.log(10.0) * uncertainty_f / value_f
-                    return db_value, db_uncertainty, "dB"
-            return value, uncertainty, str(unit)
+            return quantity_display_values(
+                quantity,
+                device=self.dev,
+                what=what,
+                mode=self.display_mode_combo.currentText(),
+                context=self._ctx,
+            )
         except Exception:
             return quantity, 0.0, ""
 
@@ -729,17 +725,14 @@ class VlisnWidget(QtWidgets.QWidget):
                 err, quantity = self.dev.GetData(what)
                 if err != 0:
                     raise RuntimeError(f"GetData({what!r}) failed at {freq:g} Hz with error {err}")
-                value, uncertainty, unit = self._display_quantity(quantity, what=what)
                 rows.append(
                     {
                         "frequency_hz": float(freq),
                         "path": self.path_combo.currentText(),
                         "filter": self.filter_check.isChecked(),
                         "what": what,
-                        "value": float(value),
-                        "uncertainty": abs(float(uncertainty)),
-                        "unit": unit,
                         "quantity": str(quantity),
+                        "_quantity": quantity,
                     }
                 )
             return rows
@@ -748,10 +741,36 @@ class VlisnWidget(QtWidgets.QWidget):
 
     def _plot_rows(self, rows, what):
         self._last_plot_rows = rows
-        self.plot.update_plot(rows, what=what)
+        self._replot_last_rows()
         if rows:
             self.freq_control.set_value_hz(rows[-1]["frequency_hz"])
             self._set_status_field("GetFreq", rows[-1]["frequency_hz"])
+
+    def _display_plot_row(self, row):
+        what = row["what"]
+        quantity = row.get("_quantity")
+        value, uncertainty, unit = quantity_display_values(
+            quantity,
+            device=self.dev,
+            what=what,
+            mode=self.display_mode_combo.currentText(),
+            context=self._ctx,
+        )
+        display_row = dict(row)
+        display_row["value"] = float(value)
+        display_row["uncertainty"] = abs(float(uncertainty))
+        display_row["unit"] = unit
+        display_row.pop("_quantity", None)
+        return display_row
+
+    def _display_plot_rows(self):
+        return [self._display_plot_row(row) for row in self._last_plot_rows]
+
+    def _replot_last_rows(self):
+        if not self._last_plot_rows:
+            return
+        what = self.plot_what_combo.currentText().strip()
+        self.plot.update_plot(self._display_plot_rows(), what=what)
 
     def on_raw_query_clicked(self):
         cmd = self.raw_command_edit.text().strip()
@@ -782,7 +801,7 @@ class VlisnWidget(QtWidgets.QWidget):
             with open(path, "w", newline="", encoding="utf-8") as handle:
                 writer = csv.DictWriter(handle, fieldnames=["frequency_hz", "path", "filter", "what", "value", "uncertainty", "unit", "quantity"])
                 writer.writeheader()
-                writer.writerows(self._last_plot_rows)
+                writer.writerows(self._display_plot_rows())
             self.log_message(f"Exported CSV: {path}")
         except OSError as exc:
             self._show_error("Export CSV Error", exc)
