@@ -8,6 +8,7 @@
 
 from typing import Any
 import gzip
+import inspect
 import os
 import pickle
 import sys
@@ -112,13 +113,40 @@ class Measure(object):
         odict.pop('ui', None)
         return odict
 
+    @staticmethod
+    def _invoke_wait_handler(handler, dct):
+        """Call a wait/interrupt handler in a backward-compatible way.
+
+        Supported styles:
+        - ``handler(dct)`` (legacy flow handler)
+        - ``handler()`` (poll-key style)
+        """
+        if not callable(handler):
+            return None
+        try:
+            sig = inspect.signature(handler)
+            params = list(sig.parameters.values())
+            has_var_positional = any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params)
+            positional = [
+                p for p in params
+                if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            ]
+            if has_var_positional or positional:
+                return handler(dct)
+            return handler()
+        except (TypeError, ValueError):
+            try:
+                return handler(dct)
+            except TypeError:
+                return handler()
+
     def wait(self, delay, dct, uitester, intervall=0.1):
-        """A wait function that can de interrupted.
+        """A wait function that can be interrupted.
 
            - *delay*: seconds to wait
-           - *dct*: namespace used by uitester (:meth:`Measure.stdUserInterruptTester`)
-           - *uitester*: User-Interupt Tester
-           - *intervall*: seconds to sllep between uitester calls
+           - *dct*: namespace passed to legacy handler style
+           - *uitester*: interrupt callback; supports ``fn(dct)`` and ``fn()``
+           - *intervall*: seconds to sleep between callback calls
 
            Return: *None*
         """
@@ -126,7 +154,7 @@ class Measure(object):
         delay = abs(delay)
         intervall = abs(intervall)
         while time.time() - start < delay:
-            uitester(dct)
+            self._invoke_wait_handler(uitester, dct)
             time.sleep(intervall)
 
     def out(self, item):

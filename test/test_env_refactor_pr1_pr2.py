@@ -338,7 +338,7 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
         m.set_user_interrupt_tester(lambda: 77)
         self.assertEqual(m.UserInterruptTester(), 77)
         self.assertEqual(m.PollKey(), 77)
-        m.set_user_interrupt_Tester(lambda: 78)
+        m.set_user_interrupt_tester(lambda: 78)
         self.assertEqual(m.UserInterruptTester(), 78)
 
     def test_measure_lifecycle_helpers(self):
@@ -468,7 +468,7 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
                 return buttons.index("Continue")
             return -1
 
-        tem.set_user_interrupt_Tester(interrupt_once)
+        tem.set_user_interrupt_tester(interrupt_once)
         tem.set_messenger(messenger)
 
         mg = _FakeInterruptMGraph()
@@ -550,7 +550,7 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
                 return buttons.index("Continue")
             return -1
 
-        msc.set_user_interrupt_Tester(interrupt_once)
+        msc.set_user_interrupt_tester(interrupt_once)
         msc.set_messenger(messenger)
 
         mg = _FakeInterruptMGraph()
@@ -564,7 +564,7 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
     def test_amplifiertest_measure_smoke_with_fake_graph(self):
         at = AmplifierTest()
         at.set_messenger(_always_start)
-        at.set_user_interrupt_Tester(lambda: None)
+        at.set_user_interrupt_tester(lambda: None)
 
         with patch("mpylab.env.univers.AmplifierTest.MGraph", _FakeMGraphForAmplifierTest):
             stat = at.Measure(description="smoke", freqs=[1e6], levels=[], virtual=False)
@@ -579,7 +579,7 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
     def test_amplifiertest_finalize_on_exception(self):
         at = AmplifierTest()
         at.set_messenger(_always_start)
-        at.set_user_interrupt_Tester(lambda: None)
+        at.set_user_interrupt_tester(lambda: None)
 
         _FakeMGraphForAmplifierTest.raise_on_setfreq = True
         try:
@@ -650,7 +650,7 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
     def test_msc_measure_maincal_e2e_with_fake_graph(self):
         msc = MSC()
         msc.set_messenger(_always_start)
-        msc.set_user_interrupt_Tester(lambda: None)
+        msc.set_user_interrupt_tester(lambda: None)
 
         names = {
             "sg": "sg",
@@ -697,7 +697,7 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
     def test_temcell_measure_e0y_e2e_with_fake_graph(self):
         tem = TEMCell()
         tem.set_messenger(_always_start)
-        tem.set_user_interrupt_Tester(lambda: None)
+        tem.set_user_interrupt_tester(lambda: None)
 
         names = {
             "sg": "sg",
@@ -728,6 +728,29 @@ class TestEnvRefactorPR1PR2(unittest.TestCase):
         self.assertEqual(mg._quit, 1)
         self.assertGreaterEqual(mg._rfoff, 1)
         self.assertGreaterEqual(mg._rfon, 1)
+
+    def test_wait_accepts_legacy_handler_with_context(self):
+        m = Measure()
+        calls = []
+
+        def handler(dct):
+            calls.append(dct["x"])
+
+        m.wait(0.0, {"x": 1}, handler, intervall=0.0)
+        m.wait(0.01, {"x": 2}, handler, intervall=0.005)
+        self.assertGreaterEqual(len(calls), 1)
+        self.assertIn(2, calls)
+
+    def test_wait_accepts_poll_key_style_handler(self):
+        m = Measure()
+        calls = []
+
+        def handler():
+            calls.append(1)
+            return None
+
+        m.wait(0.01, {"ignored": True}, handler, intervall=0.005)
+        self.assertGreaterEqual(len(calls), 1)
 
 
 if __name__ == "__main__":
