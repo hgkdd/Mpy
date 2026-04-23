@@ -37,10 +37,16 @@ For compatibility, both interrupt setter spellings are supported:
 - ``set_user_interrupt_tester(...)`` (preferred)
 - ``set_user_interrupt_Tester(...)`` (legacy alias)
 
+Migration note
+--------------
+
+Internal code should use ``set_user_interrupt_tester(...)`` only.
+The legacy alias ``set_user_interrupt_Tester(...)`` remains available for
+external scripts and existing notebooks to keep backward compatibility.
+
 Kernel usage
 ------------
 
 Measurement kernels use ``poll_key()`` as the explicit key-input path.
 When a direct handler is not callable, ``resolve_poll_key(...)`` can resolve
 ``self.PollKey`` from caller locals as fallback.
-
