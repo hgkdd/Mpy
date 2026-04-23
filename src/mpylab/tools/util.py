@@ -304,22 +304,24 @@ def flatten(a):
 
 
 def send_email(to=None, fr=None, subj='a message from mpylab.util', msg=''):
+    """Send an e-mail via localhost SMTP; return True on success, else False."""
     if not (to and fr):
-        return
-    m = EmailMessage()
-    m.set_content(msg)
+        return False
+    email_msg = EmailMessage()
+    email_msg.set_content(msg)
 
-    msg['Subject'] = subj
-    msg['From'] = fr
-    msg['To'] = to
+    email_msg['Subject'] = subj
+    email_msg['From'] = fr
+    email_msg['To'] = to
 
     try:
         # Send the message via our own SMTP server.
         s = smtplib.SMTP('localhost')
-        s.send_message(msg)
+        s.send_message(email_msg)
         s.quit()
-    except:
-        pass
+        return True
+    except Exception:
+        return False
 
 
 def get_var_from_nearest_outerframe(varstr):
