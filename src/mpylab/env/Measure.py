@@ -27,6 +27,7 @@ import time
 #    crt = CRT()
 
 from mpylab.tools import util, calling
+from mpylab.env.ui.ui_adapter import TUIAdapter
 from scuq.quantities import Quantity
 from scuq.si import WATT
 
@@ -69,10 +70,23 @@ class Measure(object):
         self.logger = [self.stdlogger]
         self.logfile = None
         self.logfilename = None
-        self.messenger = self.stdUserMessenger
-        self.UserInterruptTester = self.stdUserInterruptTester
-        self.PreUserEvent = self.stdPreUserEvent
-        self.PostUserEvent = self.stdPostUserEvent
+        self._setup_ui_adapter()
+
+    def _setup_ui_adapter(self):
+        """Create/recreate UI adapter and bind legacy interaction hooks."""
+        self.ui = TUIAdapter(
+            messenger=self.stdUserMessenger,
+            logger=self.logger,
+            interrupt_tester=self.stdUserInterruptTester,
+            pre_user_event=self.stdPreUserEvent,
+            post_user_event=self.stdPostUserEvent,
+            interactive_runner=self.stdInteractiveSession,
+        )
+        self.messenger = self.ui.ask
+        self.UserInterruptTester = self.ui.check_interrupt
+        self.PollKey = self.ui.poll_key
+        self.PreUserEvent = self.ui.pre_user_event
+        self.PostUserEvent = self.ui.post_user_event
 
     def __setstate__(self, dct):
         """used instead of __init__ when instance is created from pickle file"""
@@ -82,21 +96,20 @@ class Measure(object):
             logfile = open(dct['logfilename'], "a+")
         self.__dict__.update(dct)
         self.logfile = logfile
-        self.messenger = self.stdUserMessenger
         self.logger = [self.stdlogger]
-        self.UserInterruptTester = self.stdUserInterruptTester
-        self.PreUserEvent = self.stdPreUserEvent
-        self.PostUserEvent = self.stdPostUserEvent
+        self._setup_ui_adapter()
 
     def __getstate__(self):
         """prepare a dict for pickling"""
         odict = self.__dict__.copy()
-        del odict['logfile']
-        del odict['logger']
-        del odict['messenger']
-        del odict['UserInterruptTester']
-        del odict['PreUserEvent']
-        del odict['PostUserEvent']
+        odict.pop('logfile', None)
+        odict.pop('logger', None)
+        odict.pop('messenger', None)
+        odict.pop('UserInterruptTester', None)
+        odict.pop('PollKey', None)
+        odict.pop('PreUserEvent', None)
+        odict.pop('PostUserEvent', None)
+        odict.pop('ui', None)
         return odict
 
     def wait(self, delay, dct, uitester, intervall=0.1):
@@ -234,8 +247,7 @@ class Measure(object):
         if dct is None:
             dct = {}
         print(msg)
-        for l in self.logger:
-            l(msg, but, level, dct)
+        self.ui.emit_log(msg, but, level, dct)
         if level in ('email',):
             try:
                 util.send_email(to=dct['to'], fr=dct['from'], subj=dct['subject'], msg=msg)
@@ -246,15 +258,19 @@ class Measure(object):
             if _tts:
                 _tts.say(msg)
                 _tts.runAndWait()
-            while True:
-                key = chr(util.keypress())
-                key = key.lower()
-                for s in but:
-                    if s.lower().startswith(key):
-                        if _tts:
-                            _tts.say(s)  # , pyTTS.tts_purge_before_speak)
-                            _tts.runAndWait()
-                        return but.index(s)
+            self.PreUserEvent()
+            try:
+                while True:
+                    key = chr(util.keypress())
+                    key = key.lower()
+                    for s in but:
+                        if s.lower().startswith(key):
+                            if _tts:
+                                _tts.say(s)  # , pyTTS.tts_purge_before_speak)
+                                _tts.runAndWait()
+                            return but.index(s)
+            finally:
+                self.PostUserEvent()
         else:
             return -1
 
@@ -334,6 +350,7 @@ class Measure(object):
             logger = [self.stdlogger]
         logger = util.flatten(logger)  # ensure flat list
         self.logger = [l for l in logger if callable(l)]
+        self.ui.set_logger(self.logger)
 
     def set_messenger(self, messenger):
         """Set function to present messages.
@@ -343,7 +360,8 @@ class Measure(object):
            Return: *None*
         """
         if callable(messenger):
-            self.messenger = messenger
+            self.ui.set_messenger(messenger)
+            self.messenger = self.ui.ask
 
     def set_user_interrupt_Tester(self, tester):
         """Set function to test for user interrupt.
@@ -353,7 +371,26 @@ class Measure(object):
            Return: *None*
         """
         if callable(tester):
-            self.UserInterruptTester = tester
+            self.ui.set_interrupt_tester(tester)
+            self.UserInterruptTester = self.ui.check_interrupt
+            self.PollKey = self.ui.poll_key
+
+    def set_pre_user_event(self, event_cb):
+        """Set function called before user-facing UI interactions."""
+        if callable(event_cb):
+            self.ui.set_pre_user_event(event_cb)
+            self.PreUserEvent = self.ui.pre_user_event
+
+    def set_post_user_event(self, event_cb):
+        """Set function called after user-facing UI interactions."""
+        if callable(event_cb):
+            self.ui.set_post_user_event(event_cb)
+            self.PostUserEvent = self.ui.post_user_event
+
+    def set_interactive_runner(self, runner):
+        """Set function used for interactive user sessions."""
+        if callable(runner):
+            self.ui.set_interactive_runner(runner)
 
     def set_autosave(self, name):
         """Setter for the class attribute *asname* (name of the auto save file).
@@ -363,6 +400,147 @@ class Measure(object):
            Return: *None*
         """
         self.asname = name
+
+    def _init_measurement_devices(self, mg, do_zero=False, do_rfoff=False):
+        """Initialize measurement devices with optional safe defaults.
+
+        Returns:
+            int: status from init path (`0` means success).
+        """
+        self.messenger(util.tstamp() + " Init devices...", [])
+        err = mg.Init_Devices()
+        if err:
+            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
+            return err
+        self.messenger(util.tstamp() + " ...done", [])
+
+        if do_rfoff:
+            mg.RFOff_Devices()
+
+        if do_zero:
+            self.messenger(util.tstamp() + " Zero devices...", [])
+            mg.Zero_Devices()
+            self.messenger(util.tstamp() + " ...done", [])
+        return 0
+
+    def _finalize_measurement_devices(self, mg, do_rfoff=True, do_quit=True):
+        """Finalize measurement devices in a fail-safe way.
+
+        Returns:
+            int: last device status seen (`0` by default).
+        """
+        stat = 0
+        if mg is None:
+            return stat
+
+        if do_rfoff:
+            self.messenger(util.tstamp() + " RF Off...", [])
+            try:
+                stat = mg.RFOff_Devices()
+            except Exception:
+                util.LogError(self.messenger)
+
+        if do_quit:
+            self.messenger(util.tstamp() + " Quit...", [])
+            try:
+                stat = mg.Quit_Devices()
+            except Exception:
+                util.LogError(self.messenger)
+        return stat
+
+    def _handle_user_interrupt_common(
+        self,
+        dct,
+        ignorelist='',
+        set_level_cb=None,
+        do_leveling_cb=None,
+        wait_handler=None,
+        on_resume_cb=None,
+    ):
+        """Shared interrupt/suspend/resume flow used by measurement classes.
+
+        Returns:
+            bool: `True` if an interrupt was handled, else `False`.
+        """
+        key = self.UserInterruptTester()
+        if not key or chr(key) in ignorelist:
+            return False
+
+        # Empty key buffer.
+        _k = self.UserInterruptTester()
+        while _k is not None:
+            _k = self.UserInterruptTester()
+
+        mg = dct['mg']
+        names = dct.get('names', {})
+        f = dct.get('f')
+        SGLevel = dct.get('SGLevel')
+        leveling = dct.get('leveling')
+        hassg = (SGLevel is not None and leveling is not None)
+        delay = dct.get('delay', 0)
+        nblist = dct.get('nblist', [])
+
+        self.messenger(util.tstamp() + " RF Off...", [])
+        mg.RFOff_Devices()
+
+        msg1 = (
+            "The measurement has been interrupted by the user.\n"
+            "How do you want to proceed?\n\n"
+            "Continue: go ahead...\n"
+            "Suspend: Quit devices, go ahead later after reinit...\n"
+            "Interactive: Go to interactive mode...\n"
+            "Quit: Quit measurement..."
+        )
+        but1 = ['Continue', 'Suspend', 'Interactive', 'Quit']
+        answer = self.messenger(msg1, but1)
+        if answer == but1.index('Quit'):
+            self.messenger(util.tstamp() + " measurment terminated by user.", [])
+            raise UserWarning
+        if answer == but1.index('Interactive'):
+            self.ui.run_interactive(
+                self, "Press CTRL-D (Linux,MacOS) or CTRL-Z (Windows) plus Return to exit"
+            )
+        elif answer == but1.index('Suspend'):
+            self.messenger(util.tstamp() + " measurment suspended by user.", [])
+            mg.Quit_Devices()
+            msg2 = "Measurement is suspended.\n\nResume: Reinit and continue\nQuit: Quit measurement..."
+            but2 = ['Resume', 'Quit']
+            answer = self.messenger(msg2, but2)
+            if answer == but2.index('Resume'):
+                self._init_measurement_devices(mg, do_zero=True, do_rfoff=True)
+                if hassg and callable(set_level_cb):
+                    try:
+                        set_level_cb(mg, names, SGLevel)
+                    except AmplifierProtectionError as _e:
+                        self.messenger(
+                            util.tstamp() + " Can not set signal generator level. Amplifier protection raised with message: %s"
+                            % _e.message,
+                            [],
+                        )
+                if f is not None:
+                    mg.SetFreq_Devices(f)
+                    mg.EvaluateConditions()
+                if callable(on_resume_cb):
+                    on_resume_cb(mg, names, dct)
+            else:
+                self.messenger(util.tstamp() + " measurment terminated by user.", [])
+                raise UserWarning
+
+        self.messenger(util.tstamp() + " RF On...", [])
+        mg.RFOn_Devices()
+        if hassg and callable(do_leveling_cb):
+            do_leveling_cb(leveling, mg, names, dct)
+
+        if wait_handler is None:
+            wait_handler = self._handle_user_interrupt_common
+        try:
+            self.messenger(util.tstamp() + " Going to sleep for %d seconds ..." % (delay), [])
+            self.wait(delay, dct, wait_handler)
+            self.messenger(util.tstamp() + " ... back.", [])
+        except Exception:
+            pass
+        mg.NBTrigger(nblist)
+        return True
 
     def do_autosave(self, name_or_obj=None, depth=None, prefixes=None):
         """Serialize *self* using :mod:`pickle`.
@@ -437,6 +615,23 @@ class Measure(object):
 
         # print self.ascmd
 
+    def _run_with_output_target(self, fname, fn, *args, **kwargs):
+        """Run a printer function with optional stdout redirection to file."""
+        stdout = sys.stdout
+        fp = None
+        if fname:
+            fp = open(fname, "w")
+            sys.stdout = fp
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            try:
+                if fp is not None:
+                    fp.close()
+            except IOError:
+                util.LogError(self.messenger)
+            sys.stdout = stdout
+
     @staticmethod
     def stdPreUserEvent():
         #"""Just calls :meth:`mpylab.tools.unixcrt.unbuffer_stdin()`.
@@ -452,6 +647,11 @@ class Measure(object):
         #"""
         #crt.restore_stdin()
         pass
+
+    @staticmethod
+    def stdInteractiveSession(obj, banner):
+        """Default interactive session hook for terminal usage."""
+        util.interactive(obj=obj, banner=banner)
 
     # def do_leveling(self, leveling, mg, names, dct):
     # """Perform leveling on the measurement graph.
@@ -542,6 +742,30 @@ class Measure(object):
         self.messenger(util.tstamp() + " Signal Generator set to %s" % (lv), [])
         return lv
 
+    # --- Backward compatible legacy aliases ---------------------------------
+    def setLevel(self, mg, level_or_names, level_or_leveler=None):
+        """Backward-compatible wrapper for legacy callers.
+
+        Supported call shapes:
+        - ``setLevel(mg, level_dBm)``
+        - ``setLevel(mg, level_dBm, leveler)``
+        - ``setLevel(mg, names_dict, level_dBm)`` (legacy TEM/Univers code)
+        """
+        if isinstance(level_or_names, dict):
+            # Legacy signature: (mg, names, level_dBm)
+            return self.set_level(mg, level_or_leveler, leveler=None)
+        return self.set_level(mg, level_or_names, leveler=level_or_leveler)
+
+    def doLeveling(self, leveling, mg, names, dct):
+        """Backward-compatible no-op stub for removed legacy leveling API.
+
+        The legacy callers expect this method to exist and to return either a
+        new level or ``None``. Current code path keeps behavior by returning
+        ``None``.
+        """
+        _ = (leveling, mg, names, dct)
+        return None
+
     # def __test_leveling_condition(self, actual, nominal, c_level):
     # cond = True
     # actual = util.flatten(actual)  # ensure lists
@@ -567,6 +791,10 @@ class Measure(object):
                 deslist = []
         return deslist
 
+    def MakeDeslist(self, thedata, description):
+        """Backward-compatible wrapper around :meth:`make_deslist`."""
+        return self.make_deslist(thedata, description)
+
     def make_whatlist(self, thedata, what):
         allwhat_withdupes = util.flatten([list(v.keys()) for v in thedata.values()])
         allwhat = list(set(allwhat_withdupes))
@@ -579,9 +807,18 @@ class Measure(object):
             whatlist = [w for w in what if w in allwhat]
         return whatlist
 
+    def MakeWhatlist(self, thedata, what):
+        """Backward-compatible wrapper around :meth:`make_whatlist`."""
+        return self.make_whatlist(thedata, what)
+
     @staticmethod
     def stdEutStatusChecker(status):
         return status in ['ok', 'OK']
+
+    @staticmethod
+    def std_eut_status_checker(status):
+        """Backward-compatible alias for :meth:`stdEutStatusChecker`."""
+        return Measure.stdEutStatusChecker(status)
 
 
 class Error(Exception):

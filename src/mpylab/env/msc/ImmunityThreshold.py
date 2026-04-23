@@ -10,6 +10,7 @@
 
 import time
 from typing import Any, Iterable, Callable
+from mpylab.env.ui.ui_adapter import resolve_poll_key
 from mpylab.tools import util
 from mpylab.tools.aunits import EFIELD
 from mpylab.device import driver
@@ -63,7 +64,7 @@ class ImmunityKernel_Thres:
     """
 
     def __init__(self, messenger: Callable[[str, Iterable[str] | None, str, dict[Any, Any] | None], int],
-                 UIHandler: Callable[[None], int | None],
+                 UIHandler: Callable[[], int | None],
                  locals: dict[str, Any],
                  dwell: float,
                  keylist: str = 'sS',
@@ -98,6 +99,7 @@ class ImmunityKernel_Thres:
         self.tp = tp
         self.messenger = messenger
         self.UIHandler = UIHandler
+        self.poll_key = resolve_poll_key(UIHandler, locals)
         self.callerlocals = locals
         self._testplan = self._makeTestPlan()
         self._innerblock = None
@@ -212,8 +214,8 @@ class ImmunityKernel_Thres:
             self.messenger(util.tstamp() + " Press %s to set user event" % str(self.keylist), [])
             dct = {}
             while time.time() - start < self.dwell:
-                key = util.anykeyevent()
-                if key and chr(key) in self.keylist:
+                key = self.poll_key() if callable(self.poll_key) else None
+                if isinstance(key, int) and key and chr(key) in self.keylist:
                     self.messenger(util.tstamp() + " Got user event while EUT checking.", [])
                     cmd = ('eut', 'User event.', {'eutstatus': 'Marked by user'})
                     self.goto_next_freq = True

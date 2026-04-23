@@ -42,113 +42,18 @@ def W2dBm(v):
 
 class AmplifierTest(Measure):
     def __init__(self, SearchPaths=None):
-        Measure.__init__(self, SearchPaths=SearchPaths)
+        super().__init__(SearchPaths=SearchPaths)
         self.rawData = {}
         self.processedData = {}
 
-    # def __setstate__(self, dct):
-    # if dct['logfilename'] is None:
-    # logfile = None
-    # else:
-    # logfile = open(dct['logfilename'], "a+")
-    # self.__dict__.update(dct)
-    # self.logfile = logfile
-    # self.messenger=self.stdUserMessenger
-    # self.logger=[self.stdlogger]
-    # self.UserInterruptTester=self.stdUserInterruptTester
-    # self.PreUserEvent=self.stdPreUserEvent
-    # self.PostUserEvent=self.stdPostUserEvent
-
-    # def __getstate__(self):
-    # odict = self.__dict__.copy()
-    # del odict['logfile']
-    # del odict['logger']
-    # del odict['messenger']
-    # del odict['UserInterruptTester']
-    # del odict['PreUserEvent']
-    # del odict['PostUserEvent']
-    # return odict
-
     def _HandleUserInterrupt(self, dct, ignorelist=''):
-        key = self.UserInterruptTester()
-        if key and not chr(key) in ignorelist:
-            # empty key buffer
-            _k = self.UserInterruptTester()
-            while _k is not None:
-                _k = self.UserInterruptTester()
-
-            mg = dct['mg']
-            names = dct['names']
-            f = dct['f']
-            try:
-                SGLevel = dct['SGLevel']
-                leveling = dct['leveling']
-            except KeyError:
-                hassg = False
-            else:
-                hassg = True
-            try:
-                delay = dct['delay']
-            except KeyError:
-                pass
-            try:
-                nblist = dct['nblist']
-            except KeyError:
-                nblist = []
-
-            self.messenger(util.tstamp() + " RF Off...", [])
-            stat = mg.RFOff_Devices()  # switch off after measure
-            msg1 = """The measurement has been interrupted by the user.\nHow do you want to proceed?\n\nContinue: go ahead...\nSuspend: Quit devices, go ahead later after reinit...\nInteractive: Go to interactive mode...\nQuit: Quit measurement..."""
-            but1 = ['Continue', 'Suspend', 'Interactive', 'Quit']
-            answer = self.messenger(msg1, but1)
-            # print answer
-            if answer == but1.index('Quit'):
-                self.messenger(util.tstamp() + " measurment terminated by user.", [])
-                raise UserWarning  # to reach finally statement
-            elif answer == but1.index('Interactive'):
-                util.interactive(obj=self, banner="Press CTRL-D (Linux,MacOS) or CTRL-Z (Windows) plus Return to exit")
-            elif answer == but1.index('Suspend'):
-                self.messenger(util.tstamp() + " measurment suspended by user.", [])
-                stat = mg.Quit_Devices()
-                msg2 = """Measurement is suspended.\n\nResume: Reinit and continue\nQuit: Quit measurement..."""
-                but2 = ['Resume', 'Quit']
-                answer = self.messenger(msg2, but2)
-                if answer == but2.index('Resume'):
-                    # TODO: check if init was successful
-                    self.messenger(util.tstamp() + " Init devices...", [])
-                    stat = mg.Init_Devices()
-                    self.messenger(util.tstamp() + " ... Init returned with stat = %d" % stat, [])
-                    stat = mg.RFOff_Devices()  # switch off
-                    self.messenger(util.tstamp() + " Zero devices...", [])
-                    stat = mg.Zero_Devices()
-                    if hassg:
-                        try:
-                            level = self.setLevel(mg, names, SGLevel)
-                        except AmplifierProtectionError as _e:
-                            self.messenger(
-                                util.tstamp() + " Can not set signal generator level. Amplifier protection raised with message: %s" % _e.message,
-                                [])
-
-                    # set frequency for all devices
-                    (minf, maxf) = mg.SetFreq_Devices(f)
-                    mg.EvaluateConditions()
-                elif answer == but2.index('Quit'):
-                    self.messenger(util.tstamp() + " measurment terminated by user.", [])
-                    raise UserWarning  # to reach finally statement
-            self.messenger(util.tstamp() + " RF On...", [])
-            stat = mg.RFOn_Devices()  # switch on just before measure
-            if hassg:
-                level2 = self.doLeveling(leveling, mg, names, locals())
-                if level2:
-                    level = level2
-            try:
-                # wait delay seconds
-                self.messenger(util.tstamp() + " Going to sleep for %d seconds ..." % (delay), [])
-                self.wait(delay, dct, self._HandleUserInterrupt)
-                self.messenger(util.tstamp() + " ... back.", [])
-            except:
-                pass
-            mg.NBTrigger(nblist)
+        return self._handle_user_interrupt_common(
+            dct,
+            ignorelist=ignorelist,
+            set_level_cb=lambda mg, names, sg_level: self.setLevel(mg, names, sg_level),
+            do_leveling_cb=lambda leveling, mg, names, scope: self.doLeveling(leveling, mg, names, scope),
+            wait_handler=self._HandleUserInterrupt,
+        )
 
     def Measure(self, description="AmplifierTest",
                 dotfile='amplifier.dot',
@@ -190,13 +95,10 @@ class AmplifierTest(Measure):
         if virtual:
             mg.CmdDevices(False, 'SetVirtual', True)
 
-        self.messenger(util.tstamp() + " Init devices...", [])
-        err = mg.Init_Devices()
+        err = self._init_measurement_devices(mg, do_zero=False, do_rfoff=False)
         if err:
-            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
             return err
         try:
-            self.messenger(util.tstamp() + " ...done", [])
             if freqs is None:
                 freqs = []
 
@@ -321,8 +223,7 @@ Quit: quit measurement.
 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(util.tstamp() + " Quit...", [])
-            stat = mg.Quit_Devices()
+            stat = self._finalize_measurement_devices(mg, do_rfoff=True, do_quit=True)
         self.messenger(util.tstamp() + " End of Amplifier test Measurement. Status: %d" % stat, [])
         self.PostUserEvent()
         return stat

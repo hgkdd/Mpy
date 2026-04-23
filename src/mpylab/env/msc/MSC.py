@@ -27,6 +27,7 @@ from scuq.si import WATT, METER
 from scuq.ucomponents import Context
 
 from mpylab.env import Measure
+from mpylab.env.ui.ui_adapter import resolve_poll_key
 from mpylab.tools import util, mgraph, spacing, distributions, statistic
 from mpylab.tools.aunits import POWERRATIO, EFIELD, EFIELDPNORM
 from mpylab.tools.distributions import test_for_rayleigh
@@ -63,7 +64,7 @@ class MSC(Measure.Measure):
     """
 
     def __init__(self):
-        super(MSC, self).__init__()
+        super().__init__()
         self.TPosCmp = self.stdTPosCmp
         self.rawData_MainCal = {}
         self.processedData_MainCal = {}
@@ -78,11 +79,11 @@ class MSC(Measure.Measure):
         self.std_Standard = 'IEC 61000-4-21'
 
     def __setstate__(self, dct):
-        super(MSC, self).__setstate__(dct)
+        super().__setstate__(dct)
         self.TPosCmp = self.stdTPosCmp
 
     def __getstate__(self):
-        odict = super(MSC, self).__getstate__()
+        odict = super().__getstate__()
         del odict['TPosCmp']
         return odict
 
@@ -891,94 +892,33 @@ class MSC(Measure.Measure):
             return self.stdUserInterruptHandler(dct, ignorelist=ignorelist)
 
     def stdUserInterruptHandler(self, dct, ignorelist=''):
-        key = self.UserInterruptTester()
-        if key and not chr(key) in ignorelist:
-            # empty key buffer
-            _k = self.UserInterruptTester()
-            while _k is not None:
-                _k = self.UserInterruptTester()
+        def _resume_tuner_position(mg, names, scope):
+            t = scope.get('t')
+            ddict = scope.get('ddict', {})
+            if t is None:
+                return
+            self.messenger(util.tstamp() + " Move tuner(s)...", [])
+            for i in range(len(names.get('tuner', []))):
+                TPos = t[i]
+                ddict[names['tuner'][i]].Goto(TPos)
+            self.messenger(util.tstamp() + " ...done", [])
 
-            mg = dct['mg']
-            names = dct['names']
-            f = dct['f']
-            t = dct['t']
-            ddict = dct['ddict']
-            try:
-                SGLevel = dct['SGLevel']
-                leveling = dct['leveling']
-            except KeyError:
-                hassg = False
-            else:
-                hassg = True
-            try:
-                delay = dct['delay']
-            except KeyError:
-                pass
-            try:
-                nblist = dct['nblist']
-            except KeyError:
-                nblist = []
+        def _set_level(mg, names, sg_level):
+            _ = names
+            self.set_level(mg, sg_level)
 
-            self.messenger(util.tstamp() + " RF Off...", [])
-            stat = mg.RFOff_Devices()  # switch off after measure
-            msg1 = """The measurement has been interrupted by the user.\nHow do you want to proceed?\n\nContinue: go ahead...\nSuspend: Quit devices, go ahead later after reinit...\nInteractive: Go to interactive mode...\nQuit: Quit measurement..."""
-            but1 = ['Continue', 'Suspend', 'Interactive', 'Quit']
-            answer = self.messenger(msg1, but1)
-            # print answer
-            if answer == but1.index('Quit'):
-                self.messenger(util.tstamp() + " measurment terminated by user.", [])
-                raise UserWarning  # to reach finally statement
-            elif answer == but1.index('Interactive'):
-                util.interactive(obj=self, banner="Press CTRL-D (Linux,MacOS) or CTRL-Z (Windows) plus Return to exit")
-            elif answer == but1.index('Suspend'):
-                self.messenger(util.tstamp() + " measurment suspended by user.", [])
-                stat = mg.Quit_Devices()
-                msg2 = """Measurement is suspended.\n\nResume: Reinit and continue\nQuit: Quit measurement..."""
-                but2 = ['Resume', 'Quit']
-                answer = self.messenger(msg2, but2)
-                if answer == but2.index('Resume'):
-                    # TODO: check if init was successful
-                    self.messenger(util.tstamp() + " Init devices...", [])
-                    stat = mg.Init_Devices()
-                    self.messenger(util.tstamp() + " ... Init returned with stat = %d" % stat, [])
-                    stat = mg.RFOff_Devices()  # switch off
-                    self.messenger(util.tstamp() + " Zero devices...", [])
-                    stat = mg.Zero_Devices()
-                    if hassg:
-                        try:
-                            level = self.set_level(mg, SGLevel)
-                        except AmplifierProtectionError as _e:
-                            self.messenger(
-                                util.tstamp() + " Can not set signal generator level. Amplifier protection raised with message: %s" % _e.message,
-                                [])
+        do_leveling = getattr(self, 'do_leveling', None)
+        if not callable(do_leveling):
+            do_leveling = lambda leveling, mg, names, scope: self.doLeveling(leveling, mg, names, scope)
 
-                    # set frequency for all devices
-                    (minf, maxf) = mg.SetFreq_Devices(f)
-                    mg.EvaluateConditions()
-                    # position tuners
-                    if t is not None:
-                        self.messenger(util.tstamp() + " Move tuner(s)...", [])
-                        for i in range(len(names['tuner'])):
-                            TPos = t[i]
-                            IsPos = ddict[names['tuner'][i]].Goto(TPos)
-                        self.messenger(util.tstamp() + " ...done", [])
-                elif answer == but2.index('Quit'):
-                    self.messenger(util.tstamp() + " measurment terminated by user.", [])
-                    raise UserWarning  # to reach finally statement
-            self.messenger(util.tstamp() + " RF On...", [])
-            stat = mg.RFOn_Devices()  # switch on just before measure
-            if hassg:
-                level2 = self.do_leveling(leveling, mg, names, locals())
-                if level2:
-                    level = level2
-            try:
-                # wait delay seconds
-                self.messenger(util.tstamp() + " Going to sleep for %d seconds ..." % delay, [])
-                self.wait(delay, dct, self.__HandleUserInterrupt)
-                self.messenger(util.tstamp() + " ... back.", [])
-            except ValueError:
-                pass
-            mg.NBTrigger(nblist)
+        return self._handle_user_interrupt_common(
+            dct,
+            ignorelist=ignorelist,
+            set_level_cb=_set_level,
+            do_leveling_cb=do_leveling,
+            wait_handler=self.__HandleUserInterrupt,
+            on_resume_cb=_resume_tuner_position,
+        )
 
     def Measure_EUTCal(self,
                        description="EUT",
@@ -1912,13 +1852,10 @@ class MSC(Measure.Measure):
         # for k,v in ddict.items():
         #    globals()[k] = v
 
-        self.messenger(util.tstamp() + " Init devices...", [])
-        err = mg.Init_Devices()
+        err = self._init_measurement_devices(mg, do_zero=False, do_rfoff=False)
         if err:
-            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
             return err
         try:
-            self.messenger(util.tstamp() + " ...done", [])
             if freqs is None:
                 freqs = []
 
@@ -2223,8 +2160,7 @@ Quit: quit measurement.
 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(util.tstamp() + " Quit...", [])
-            stat = mg.Quit_Devices()
+            stat = self._finalize_measurement_devices(mg, do_rfoff=True, do_quit=True)
         self.messenger(util.tstamp() + " End of Emission mesurement. Status: %d" % stat, [])
         self.PostUserEvent()
         return stat
@@ -2270,54 +2206,15 @@ Quit: quit measurement.
 
     def OutputRawData_MainCal(self, description=None, what=None, fname=None):
         thedata = self.rawData_MainCal
-        stdout = sys.stdout
-        fp = None
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputRawData(thedata, description, what)
-        finally:
-            try:
-                if fp:
-                    fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     def OutputRawData_Emission(self, description=None, what=None, fname=None):
         thedata = self.rawData_Emission
-        stdout = sys.stdout
-        fp = None
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputRawData(thedata, description, what)
-        finally:
-            try:
-                if fp:
-                    fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     def OutputRawData_AutoCorr(self, description=None, what=None, fname=None):
         thedata = self.rawData_AutoCorr
-        stdout = sys.stdout
-        fp = None
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputRawData(thedata, description, what)
-        finally:
-            try:
-                if fp:
-                    fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     ##        # fuers praktikum
     ##        deslist = self.__MakeDeslist(thedata, description)
@@ -2341,37 +2238,11 @@ Quit: quit measurement.
 
     def OutputRawData_EUTCal(self, description=None, what=None, fname=None):
         thedata = self.rawData_EUTCal
-        stdout = sys.stdout
-        fp = None
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputRawData(thedata, description, what)
-        finally:
-            try:
-                if fp:
-                    fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     def OutputRawData_Immunity(self, description=None, what=None, fname=None):
         thedata = self.rawData_Immunity
-        stdout = sys.stdout
-        fp = None
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputRawData(thedata, description, what)
-        finally:
-            try:
-                if fp:
-                    fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     def __OutputRawData(self, thedata, description, what):
         deslist = self.make_deslist(thedata, description)
@@ -2402,78 +2273,23 @@ Quit: quit measurement.
 
     def OutputProcessedData_MainCal(self, description=None, what=None, fname=None):
         thedata = self.processedData_MainCal
-        stdout = sys.stdout
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputProcessedData(thedata, description, what)
-        finally:
-            try:
-                fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def OutputProcessedData_Emission(self, description=None, what=None, fname=None):
         thedata = self.processedData_Emission
-        stdout = sys.stdout
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputProcessedData(thedata, description, what)
-        finally:
-            try:
-                fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def OutputProcessedData_EUTCal(self, description=None, what=None, fname=None):
         thedata = self.processedData_EUTCal
-        stdout = sys.stdout
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputProcessedData(thedata, description, what)
-        finally:
-            try:
-                fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def OutputProcessedData_AutoCorr(self, description=None, what=None, fname=None):
         thedata = self.processedData_AutoCorr
-        stdout = sys.stdout
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputProcessedData(thedata, description, what)
-        finally:
-            try:
-                fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def OutputProcessedData_Immunity(self, description=None, what=None, fname=None):
         thedata = self.processedData_Immunity
-        stdout = sys.stdout
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputProcessedData(thedata, description, what)
-        finally:
-            try:
-                fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def __OutputProcessedData(self, thedata, description, what):
         deslist = self.make_deslist(thedata, description)
@@ -2527,6 +2343,232 @@ Quit: quit measurement.
              3.2, 3.6, 3.97]
         return scipy.interpolate.interp1d(t, r)
 
+    def __aggregate_efield_stats(self, efields_f, tees, pees, include_total=False, eval_values=False):
+        """Aggregate E-field maxima and forward-power statistics for one frequency."""
+        EMaxL = {}
+        PInputEL = {}
+        PInputVariationEL = {}
+        EMaxTL = {}
+
+        for p in pees:
+            EMax = [Quantity(EFIELD, 0.0) for _ in (0, 1, 2)]
+            EMaxT = Quantity(EFIELD, 0.0) if include_total else None
+            PInput = Quantity(WATT, 0.0)
+            PInputMin = Quantity(WATT, 1.0e10)
+            PInputMax = Quantity(WATT, 0.0)
+            InCounter = 0
+
+            for t in tees:
+                for efli in efields_f[t][p]:
+                    ef = efli['value']
+                    for k in (0, 1, 2):
+                        EMax[k] = max(EMax[k], ef[k])
+                    if include_total:
+                        et = numpy.sqrt(sum([e * e for e in ef], Quantity(EFIELD, 0.0) ** 2))
+                        EMaxT = max(EMaxT, et)
+
+                    pf = efli['pfwd']
+                    PInputMin = min(PInputMin, pf)
+                    PInputMax = max(PInputMax, pf)
+                    PInput += pf
+                    InCounter += 1
+
+            PInput /= InCounter
+            PInputVariation = PInputMax / PInputMin
+
+            if eval_values:
+                EMaxL[p] = [_.eval() for _ in EMax]
+                PInputEL[p] = PInput.eval()
+                PInputVariationEL[p] = PInputVariation.eval()
+                if include_total:
+                    EMaxTL[p] = EMaxT.eval()
+            else:
+                EMaxL[p] = EMax
+                PInputEL[p] = PInput
+                PInputVariationEL[p] = PInputVariation
+                if include_total:
+                    EMaxTL[p] = EMaxT
+
+        return EMaxL, PInputEL, PInputVariationEL, EMaxTL
+
+    def __aggregate_refant_stats(self, pref_f, tees, prees, eval_values=False, fill_missing=False):
+        """Aggregate receive-antenna and forward-power statistics for one frequency."""
+        PMaxRecL = {}
+        PAveRecL = {}
+        PInputAL = {}
+        PInputVariationAL = {}
+
+        for p in prees:
+            PMaxRec = Quantity(WATT, 0.0)
+            PAveRec = Quantity(WATT, 0.0)
+            RecCounter = 0
+            PInput = Quantity(WATT, 0.0)
+            PInputMin = Quantity(WATT, 1.0e10)
+            PInputMax = Quantity(WATT, 0.0)
+            InCounter = 0
+
+            for t in tees:
+                if fill_missing:
+                    try:
+                        pref_f[t][p]
+                    except KeyError:
+                        pref_f[t][p] = pref_f[t][0][:]
+
+                for rec in pref_f[t][p]:
+                    pr = rec['value']
+                    PMaxRec = max(PMaxRec, pr)
+                    PAveRec += pr
+                    RecCounter += 1
+
+                    pf = rec['pfwd']
+                    PInputMin = min(PInputMin, pf)
+                    PInputMax = max(PInputMax, pf)
+                    PInput += pf
+                    InCounter += 1
+
+            PAveRec /= RecCounter
+            PInput /= InCounter
+            PInputVariation = PInputMax / PInputMin
+
+            if eval_values:
+                PMaxRecL[p] = PMaxRec.eval()
+                PAveRecL[p] = PAveRec.eval()
+                PInputAL[p] = PInput.eval()
+                PInputVariationAL[p] = PInputVariation.eval()
+            else:
+                PMaxRecL[p] = PMaxRec
+                PAveRecL[p] = PAveRec
+                PInputAL[p] = PInput
+                PInputVariationAL[p] = PInputVariation
+
+        return PMaxRecL, PAveRecL, PInputAL, PInputVariationAL
+
+    def __populate_maincal_enorm_sigma(self, processed_desc, f, EMaxL, EMaxTL):
+        """Compute and store Enorm/Sigma values for MainCal for one frequency."""
+        Avxyz = [Quantity(EFIELDPNORM, 0.0) for _ in (1, 2, 3)]
+        processed_desc['Enorm'][f] = {}
+        processed_desc['EnormT'][f] = {}
+        for pos, Em in list(EMaxL.items()):
+            pin = processed_desc['PInputForEField'][f][pos]
+            v = numpy.sqrt(pin)
+            sqrtPInput = v
+            en = [_e_ / sqrtPInput for _e_ in Em]
+            for k, _en_ in enumerate(en):
+                Avxyz[k] += _en_
+            processed_desc['Enorm'][f][pos] = [_.eval() for _ in en]
+        Npos = len(list(EMaxL.keys()))
+        Avxyz = [_a_ / float(Npos) for _a_ in Avxyz]
+        AvT = Quantity(EFIELDPNORM, 0.0)
+        for pos, Em in list(EMaxTL.items()):
+            pin = processed_desc['PInputForEField'][f][pos]
+            v = numpy.sqrt(pin)
+            sqrtPInput = v
+            en = Em / sqrtPInput
+            processed_desc['EnormT'][f][pos] = en.eval()
+            AvT += en
+        AvT /= float(len(EMaxTL))
+        Av24 = Quantity(EFIELDPNORM, 0.0)
+        for k in (0, 1, 2):
+            Av24 += Avxyz[k]
+        Av24 /= 3.0
+        Avxyz = processed_desc['EnormAveXYZ'][f] = [_.eval() for _ in Avxyz]
+        Av24 = processed_desc['EnormAve'][f] = Av24.eval()
+        AvT = processed_desc['EnormTAve'][f] = AvT.eval()
+        enorm = processed_desc['Enorm'][f]
+        Sxyz = []
+        list24 = []
+        for k in (0, 1, 2):
+            lst = [enorm[p][k] for p in list(enorm.keys())]
+            list24 = list24 + lst
+            S = util.CalcSigma(lst, Avxyz[k])
+            Sxyz.append(S.eval())
+        S24 = util.CalcSigma(list24, Av24).eval()
+
+        processed_desc['SigmaXYZ'][f] = [_.eval() for _ in Sxyz]
+        processed_desc['Sigma24'][f] = S24.eval()
+        SdBxyz = [20 * numpy.log10((Sxyz[k] + Avxyz[k]) / Avxyz[k]) for k in (0, 1, 2)]
+        SdB24 = 20 * numpy.log10((S24 + Av24) / Av24)
+        processed_desc['SigmaXYZ_dB'][f] = [_.eval() for _ in SdBxyz]
+        processed_desc['Sigma24_dB'][f] = SdB24.eval()
+
+    def __populate_eutcal_enorm_sigma(self, processed_desc, f, EMaxL, npees):
+        """Compute and store Enorm/Sigma values for EUTCal for one frequency."""
+        if npees > 0:
+            Avxyz = [Quantity(EFIELDPNORM, 0.0)] * 3
+            processed_desc['Enorm'][f] = {}
+            for pos, Em in list(EMaxL.items()):
+                pin = processed_desc['PInputForEField'][f][pos]
+                v = pin
+                sqrtv = numpy.sqrt(v)
+                sqrtPInput = sqrtv
+                en = []
+                for k, em in enumerate(Em):
+                    en.append(em / sqrtPInput)
+                    Avxyz[k] += em
+                processed_desc['Enorm'][f][pos] = en
+            Av24 = Quantity(EFIELDPNORM, 0.0)
+            for k in range(3):
+                Avxyz[k] /= len(list(EMaxL.keys()))
+                Av24 += Avxyz[k]
+            Av24 /= 3.0
+            processed_desc['EnormAveXYZ'][f] = Avxyz
+            processed_desc['EnormAve'][f] = Av24
+            enorm = processed_desc['Enorm'][f]
+            Sxyz = []
+            list24 = []
+            for k in range(3):
+                lst = [enorm[p][k] for p in list(enorm.keys())]
+                list24 += lst
+                S = util.CalcSigma(lst, Avxyz[k])
+                try:
+                    Sxyz.append(S)
+                except:
+                    util.LogError(self.messenger)
+            try:
+                S24 = util.CalcSigma(list24, Av24)
+            except:
+                S24 = None
+
+            processed_desc['SigmaXYZ'][f] = Sxyz
+            processed_desc['Sigma24'][f] = S24
+            SdBxyz = []
+            for k in range(3):
+                try:
+                    SdBxyz.append((20 * numpy.log10((Sxyz[k] + Avxyz[k]) / Avxyz[k])).eval())
+                except:
+                    util.LogError(self.messenger)
+            try:
+                SdB24 = (20 * (numpy.log10(S24 + Av24) / Av24)).eval()
+            except:
+                SdB24 = None
+            processed_desc['SigmaXYZ_dB'][f] = SdBxyz
+            processed_desc['Sigma24_dB'][f] = SdB24
+        else:
+            processed_desc['Enorm'][f] = None
+            processed_desc['EnormAveXYZ'][f] = None
+            processed_desc['EnormAve'][f] = None
+            processed_desc['SigmaXYZ'][f] = None
+            processed_desc['Sigma24'][f] = None
+            processed_desc['SigmaXYZ_dB'][f] = None
+            processed_desc['Sigma24_dB'][f] = None
+
+    @staticmethod
+    def __get_raw_description(raw_store, description):
+        """Return the raw-data dictionary for one description."""
+        return raw_store[description]
+
+    @staticmethod
+    def __prepare_processed_description(processed_store, description, dict_fields, scalar_fields=None):
+        """Ensure/reset processed-data fields for one description."""
+        if scalar_fields is None:
+            scalar_fields = {}
+        processed_desc = processed_store.setdefault(description, {})
+        for key, value in scalar_fields.items():
+            processed_desc[key] = value
+        for field in dict_fields:
+            processed_desc[field] = {}
+        return processed_desc
+
     def Evaluate_MainCal(self, description="empty", standard=None, freqs=None):
         ctx = Context()
         standard = self.getStandard(standard)
@@ -2535,37 +2577,42 @@ Quit: quit measurement.
             self.messenger(util.tstamp() + " Description %s not found." % description, [])
             return -1
 
+        raw_desc = self.__get_raw_description(self.rawData_MainCal, description)
         if not freqs:
-            freqs = list(self.rawData_MainCal[description]['efield'].keys())
+            freqs = list(raw_desc['efield'].keys())
         freqs.sort()
 
         # shortcuts to raw data
-        efields = self.rawData_MainCal[description]['efield']
-        pref = self.rawData_MainCal[description]['pref']
+        efields = raw_desc['efield']
+        pref = raw_desc['pref']
 
-        self.processedData_MainCal.setdefault(description, {})
-        self.processedData_MainCal[description]['Standard_Used'] = standard
-        self.processedData_MainCal[description]['PMaxRec'] = {}
-        self.processedData_MainCal[description]['PAveRec'] = {}
-        self.processedData_MainCal[description]['PInputForEField'] = {}
-        self.processedData_MainCal[description]['PInputForRecAnt'] = {}
-        self.processedData_MainCal[description]['PInputVarationForEField'] = {}
-        self.processedData_MainCal[description]['PInputVarationForRecAnt'] = {}
-        self.processedData_MainCal[description]['ACF'] = {}
-        self.processedData_MainCal[description]['IL'] = {}
-        self.processedData_MainCal[description]['EMax'] = {}
-        self.processedData_MainCal[description]['EMaxT'] = {}
-        self.processedData_MainCal[description]['Enorm'] = {}
-        self.processedData_MainCal[description]['EnormT'] = {}
-        self.processedData_MainCal[description][
-            'EnormTmax2'] = {}  # normalized averaged squared Magnitude of Efield cal (DO160 20.6.3.3)
-        self.processedData_MainCal[description]['EnormAveXYZ'] = {}
-        self.processedData_MainCal[description]['EnormAve'] = {}
-        self.processedData_MainCal[description]['EnormTAve'] = {}
-        self.processedData_MainCal[description]['SigmaXYZ'] = {}
-        self.processedData_MainCal[description]['Sigma24'] = {}
-        self.processedData_MainCal[description]['SigmaXYZ_dB'] = {}
-        self.processedData_MainCal[description]['Sigma24_dB'] = {}
+        processed_desc = self.__prepare_processed_description(
+            self.processedData_MainCal,
+            description,
+            dict_fields=(
+                'PMaxRec',
+                'PAveRec',
+                'PInputForEField',
+                'PInputForRecAnt',
+                'PInputVarationForEField',
+                'PInputVarationForRecAnt',
+                'ACF',
+                'IL',
+                'EMax',
+                'EMaxT',
+                'Enorm',
+                'EnormT',
+                'EnormTmax2',  # normalized averaged squared Magnitude of Efield cal (DO160 20.6.3.3)
+                'EnormAveXYZ',
+                'EnormAve',
+                'EnormTAve',
+                'SigmaXYZ',
+                'Sigma24',
+                'SigmaXYZ_dB',
+                'Sigma24_dB',
+            ),
+            scalar_fields={'Standard_Used': standard},
+        )
         # the evaluation has to be done for all frequencies
         for f in freqs:
             self.messenger(util.tstamp() + " Frequency: %.2f ..." % f, [])
@@ -2580,102 +2627,21 @@ Quit: quit measurement.
             ntees = len(tees)
             npees = len(pees)
             nprees = len(prees)
-            # EMaxL EMaxTL, PInputL and PInputVariation
-            # are all dicts with key=e-field probe pos
-            # and items are lists (because values in raw data are lists allready)
-            EMaxL = {}  # for R components
-            EMaxTL = {}  # same for total field
-            PInputEL = {}  # input for a certain field strength
-            PInputVariationEL = {}  # max to min ratio
-            for p in pees:  # positions in the room, keys for the dicts
-                # print p,
-                EMax = []
-                for k in (0, 1, 2):  # x,y,z
-                    EMax.append(Quantity(EFIELD, 0.0))  # for each p init EMax with (0 V/m, 0 V/m, 0 V/m)
-                EMaxT = Quantity(EFIELD, 0.0)
-                PInput = Quantity(WATT, 0.0)
-                PInputMin = Quantity(WATT, 1.0e10)
-                PInputMax = Quantity(WATT, 0.0)
-                InCounter = 0
-                for t in tees:  # tuner positions-> max values with respect to tuner
-                    # print t,
-                    # try:
-                    #    efields[f][t][p]
-                    # except KeyError:
-                    #    efields[f][t][p]=efields[f][t][0]   # TO BE REMOVED
-                    for efli in efields[f][t][p]:  # typically, len=1
-                        ef = efli['value']  # x,y,z vector
-                        # import pprint
-                        # pprint.pprint(ef)
-                        # print len(ef), ef[0], ef[1], ef[2]
-                        for k in (0, 1, 2):  # max for each component
-                            # print EMax[k], ef[k], '->',
-                            EMax[k] = max(EMax[k], ef[k])
-                            # print EMax[k]
-                        # print "EMax", EMax
-                        et = numpy.sqrt(sum([e * e for e in ef], Quantity(EFIELD, 0.0) ** 2))  # max of rss (E_T)
-                        EMaxT = max(EMaxT, et)
+            EMaxL, PInputEL, PInputVariationEL, EMaxTL = self.__aggregate_efield_stats(
+                efields[f], tees, pees, include_total=True, eval_values=True
+            )
+            PMaxRecL, PAveRecL, PInputAL, PInputVariationAL = self.__aggregate_refant_stats(
+                pref[f], tees, prees, eval_values=True, fill_missing=True
+            )
 
-                        pf = efli['pfwd']
-                        PInputMin = min(PInputMin, pf)  # min
-                        PInputMax = max(PInputMax, pf)  # max
-                        PInput += pf  # av
-                        InCounter += 1
-                # print
-                # print EMax
-                PInput /= InCounter
-                EMaxL[p] = [_.eval() for _ in EMax]  # for each probe pos: Max over tuner positions
-                EMaxTL[p] = EMaxT.eval()
-                PInputVariation = (PInputMax / PInputMin).eval()
-                PInputEL[p] = PInput.eval()
-                PInputVariationEL[p] = PInputVariation
-
-            # receive antenna calibration
-            PMaxRecL = {}  # again, keys are the positions and values are lists
-            PAveRecL = {}
-            PInputAL = {}
-            PInputVariationAL = {}
-            for p in prees:  # ref antenna positions -> keys
-                PMaxRec = Quantity(WATT, 0.0)
-                PAveRec = Quantity(WATT, 0.0)
-                RecCounter = 0
-                PInput = Quantity(WATT, 0.0)
-                PInputMin = Quantity(WATT, 1.0e10)
-                PInputMax = Quantity(WATT, 0.0)
-                InCounter = 0
-                for t in tees:
-                    try:
-                        pref[f][t][p]
-                    except KeyError:
-                        pref[f][t][p] = pref[f][t][0][:]
-                    for i in range(len(pref[f][t][p])):
-                        pr = pref[f][t][p][i]['value']
-                        # pr = pr.mag()
-                        PMaxRec = max(PMaxRec, pr)
-                        PAveRec += pr
-                        RecCounter += 1
-                        pf = pref[f][t][p][i]['pfwd']
-                        # pf = pf.mag()
-                        PInputMin = min(PInputMin, pf)
-                        PInputMax = max(PInputMax, pf)
-                        PInput += pf
-                        InCounter += 1
-                PAveRec /= RecCounter
-                PMaxRecL[p] = PMaxRec.eval()
-                PAveRecL[p] = PAveRec.eval()  # for each receive antenna pos: Max and Av over tuner positions
-                PInput /= InCounter
-                PInputVariation = (PInputMax / PInputMin).eval()
-                PInputAL[p] = PInput.eval()
-                PInputVariationAL[p] = PInputVariation
-
-            self.processedData_MainCal[description]['PMaxRec'][f] = PMaxRecL.copy()
-            self.processedData_MainCal[description]['PAveRec'][f] = PAveRecL.copy()
-            self.processedData_MainCal[description]['PInputForEField'][f] = PInputEL.copy()
-            self.processedData_MainCal[description]['PInputForRecAnt'][f] = PInputAL.copy()
-            self.processedData_MainCal[description]['PInputVarationForEField'][f] = PInputVariationEL.copy()
-            self.processedData_MainCal[description]['PInputVarationForRecAnt'][f] = PInputVariationAL.copy()
-            self.processedData_MainCal[description]['EMax'][f] = EMaxL.copy()
-            self.processedData_MainCal[description]['EMaxT'][f] = EMaxTL.copy()
+            processed_desc['PMaxRec'][f] = PMaxRecL.copy()
+            processed_desc['PAveRec'][f] = PAveRecL.copy()
+            processed_desc['PInputForEField'][f] = PInputEL.copy()
+            processed_desc['PInputForRecAnt'][f] = PInputAL.copy()
+            processed_desc['PInputVarationForEField'][f] = PInputVariationEL.copy()
+            processed_desc['PInputVarationForRecAnt'][f] = PInputVariationAL.copy()
+            processed_desc['EMax'][f] = EMaxL.copy()
+            processed_desc['EMaxT'][f] = EMaxTL.copy()
 
             # calc ACF and IL
             IL = Quantity(POWERRATIO, 0.0)
@@ -2686,61 +2652,12 @@ Quit: quit measurement.
             for pos, Pav in list(PAveRecL.items()):
                 ACF = ACF + Quantity(POWERRATIO, 1.0) * Pav / PInputAL[pos]
             ACF = (ACF / len(list(PAveRecL.keys()))).eval()
-            self.processedData_MainCal[description]['ACF'][f] = ACF
-            self.processedData_MainCal[description]['IL'][f] = IL
+            processed_desc['ACF'][f] = ACF
+            processed_desc['IL'][f] = IL
 
-            Avxyz = [Quantity(EFIELDPNORM, 0.0) for _ in (1, 2, 3)]  # umddevice.stdVectorUMDMResult()
-            self.processedData_MainCal[description]['Enorm'][f] = {}
-            self.processedData_MainCal[description]['EnormT'][f] = {}
-            for pos, Em in list(EMaxL.items()):
-                pin = self.processedData_MainCal[description]['PInputForEField'][f][pos]
-                v = numpy.sqrt(pin)
-                # sqrtv=math.sqrt(v)
-                # u = pin.get_u()
-                # l = pin.get_l()
-                sqrtPInput = v  # umddevice.UMDMResult(sqrtv, sqrtv+(u-l)/(4.0*sqrtv), sqrtv-(u-l)/(4.0*sqrtv), umddevice.UMD_sqrtW)
-                en = [_e_ / sqrtPInput for _e_ in Em]  # umddevice.stdVectorUMDMResult()
-                for k, _en_ in enumerate(en):
-                    Avxyz[k] += _en_
-                self.processedData_MainCal[description]['Enorm'][f][pos] = [_.eval() for _ in en]
-            Npos = len(list(EMaxL.keys()))
-            Avxyz = [_a_ / float(Npos) for _a_ in Avxyz]
-            AvT = Quantity(EFIELDPNORM, 0.0)
-            for pos, Em in list(EMaxTL.items()):
-                pin = self.processedData_MainCal[description]['PInputForEField'][f][pos]
-                v = numpy.sqrt(pin)
-                # sqrtv=math.sqrt(v)
-                # u = pin.get_u()
-                # l = pin.get_l()
-                sqrtPInput = v  # umddevice.UMDMResult(sqrtv, sqrtv+(u-l)/(4.0*sqrtv), sqrtv-(u-l)/(4.0*sqrtv), umddevice.UMD_sqrtW)
-                en = Em / sqrtPInput
-                self.processedData_MainCal[description]['EnormT'][f][pos] = en.eval()
-                AvT += en
-            AvT /= float(len(EMaxTL))
-            Av24 = Quantity(EFIELDPNORM, 0.0)
-            for k in (0, 1, 2):
-                Av24 += Avxyz[k]
-            Av24 /= 3.0
-            Avxyz = self.processedData_MainCal[description]['EnormAveXYZ'][f] = [_.eval() for _ in Avxyz]
-            Av24 = self.processedData_MainCal[description]['EnormAve'][f] = Av24.eval()
-            AvT = self.processedData_MainCal[description]['EnormTAve'][f] = AvT.eval()
-            enorm = self.processedData_MainCal[description]['Enorm'][f]
-            Sxyz = []  # umddevice.stdVectorUMDMResult()
-            list24 = []
-            for k in (0, 1, 2):
-                lst = [enorm[p][k] for p in list(enorm.keys())]
-                list24 = list24 + lst
-                S = util.CalcSigma(lst, Avxyz[k])
-                Sxyz.append(S.eval())
-            S24 = util.CalcSigma(list24, Av24).eval()
-
-            self.processedData_MainCal[description]['SigmaXYZ'][f] = [_.eval() for _ in Sxyz]
-            self.processedData_MainCal[description]['Sigma24'][f] = S24.eval()
-            SdBxyz = [20 * numpy.log10((Sxyz[k] + Avxyz[k]) / Avxyz[k]) for k in
-                      (0, 1, 2)]  # umddevice.stdVectorUMDMResult()
-            SdB24 = 20 * numpy.log10((S24 + Av24) / Av24)
-            self.processedData_MainCal[description]['SigmaXYZ_dB'][f] = [_.eval() for _ in SdBxyz]
-            self.processedData_MainCal[description]['Sigma24_dB'][f] = SdB24.eval()
+            self.__populate_maincal_enorm_sigma(
+                processed_desc, f, EMaxL, EMaxTL
+            )
 
         self.messenger(util.tstamp() + " End of evaluation of main calibration", [])
         return 0
@@ -3270,31 +3187,37 @@ Quit: quit measurement.
         # zeroVm = Quantity(EFIELD, 0.0)
         # Quantity(EFIELDPNORM,0.0) = Quantity (EFIELDPNORM, 0.0)
 
-        efields = self.rawData_EUTCal[description]['efield']
-        pref = self.rawData_EUTCal[description]['pref']
-        noise = self.rawData_EUTCal[description]['noise']
+        raw_desc = self.__get_raw_description(self.rawData_EUTCal, description)
+        efields = raw_desc['efield']
+        pref = raw_desc['pref']
+        noise = raw_desc['noise']
         freqs = list(pref.keys())
         freqs.sort()
 
-        self.processedData_EUTCal.setdefault(description, {})
-        self.processedData_EUTCal[description]['PMaxRec'] = {}
-        self.processedData_EUTCal[description]['PAveRec'] = {}
-        self.processedData_EUTCal[description]['PInputForEField'] = {}
-        self.processedData_EUTCal[description]['PInputForRecAnt'] = {}
-        self.processedData_EUTCal[description]['PInputVarationForEField'] = {}
-        self.processedData_EUTCal[description]['PInputVarationForRecAnt'] = {}
-        self.processedData_EUTCal[description]['CCF'] = {}
-        self.processedData_EUTCal[description]['CLF'] = {}
-        self.processedData_EUTCal[description]['CCF_from_PMaxRec'] = {}
-        self.processedData_EUTCal[description]['CLF_from_PMaxRec'] = {}
-        self.processedData_EUTCal[description]['EMax'] = {}
-        self.processedData_EUTCal[description]['Enorm'] = {}
-        self.processedData_EUTCal[description]['EnormAveXYZ'] = {}
-        self.processedData_EUTCal[description]['EnormAve'] = {}
-        self.processedData_EUTCal[description]['SigmaXYZ'] = {}
-        self.processedData_EUTCal[description]['Sigma24'] = {}
-        self.processedData_EUTCal[description]['SigmaXYZ_dB'] = {}
-        self.processedData_EUTCal[description]['Sigma24_dB'] = {}
+        processed_desc = self.__prepare_processed_description(
+            self.processedData_EUTCal,
+            description,
+            dict_fields=(
+                'PMaxRec',
+                'PAveRec',
+                'PInputForEField',
+                'PInputForRecAnt',
+                'PInputVarationForEField',
+                'PInputVarationForRecAnt',
+                'CCF',
+                'CLF',
+                'CCF_from_PMaxRec',
+                'CLF_from_PMaxRec',
+                'EMax',
+                'Enorm',
+                'EnormAveXYZ',
+                'EnormAve',
+                'SigmaXYZ',
+                'Sigma24',
+                'SigmaXYZ_dB',
+                'Sigma24_dB',
+            ),
+        )
         for f in freqs:
             tees = list(pref[f].keys())
             pees = []
@@ -3308,72 +3231,20 @@ Quit: quit measurement.
             npees = len(pees)
             nprees = len(prees)
 
-            EMaxL = {}
-            PInputEL = {}
-            PInputVariationEL = {}
-            for p in pees:
-                EMax = [Quantity(EFIELD, 0.0) for k in (0, 1, 2)]
-                PInput = Quantity(WATT, 0.0)
-                PInputMin = Quantity(WATT, 1.0e10)
-                PInputMax = Quantity(WATT, 0.0)
-                InCounter = 0
-                for t in tees:
-                    for i in range(len(efields[f][t][p])):
-                        ef = efields[f][t][p][i]['value']
-                        for k in range(3):
-                            EMax[k] = max(EMax[k], ef[k])
-                        pf = efields[f][t][p][i]['pfwd']
-                        # pf = pf.mag()
-                        PInputMin = min(PInputMin, pf)
-                        PInputMax = max(PInputMax, pf)
-                        PInput += pf
-                        InCounter += 1
-                EMaxL[p] = EMax  # for each probe pos: Max over tuner positions
-                PInput /= InCounter
-                PInputVariation = PInputMax / PInputMin
-                PInputEL[p] = PInput
-                PInputVariationEL[p] = PInputVariation
+            EMaxL, PInputEL, PInputVariationEL, _ = self.__aggregate_efield_stats(
+                efields[f], tees, pees, include_total=False, eval_values=False
+            )
+            PMaxRecL, PAveRecL, PInputAL, PInputVariationAL = self.__aggregate_refant_stats(
+                pref[f], tees, prees, eval_values=False, fill_missing=False
+            )
 
-            PMaxRecL = {}
-            PAveRecL = {}
-            PInputAL = {}
-            PInputVariationAL = {}
-            for p in prees:
-                PMaxRec = Quantity(WATT, 0.0)
-                PAveRec = Quantity(WATT, 0.0)
-                RecCounter = 0
-                PInput = Quantity(WATT, 0.0)
-                PInputMin = Quantity(WATT, 1.0e10)
-                PInputMax = Quantity(WATT, 0.0)
-                InCounter = 0
-                for t in tees:
-                    for i in range(len(pref[f][t][p])):
-                        pr = pref[f][t][p][i]['value']
-                        # pr = pr.mag()
-                        PMaxRec = max(PMaxRec, pr)
-                        PAveRec += pr
-                        RecCounter += 1
-                        pf = pref[f][t][p][i]['pfwd']
-                        # pf = pf.mag()
-                        PInputMin = min(PInputMin, pf)
-                        PInputMax = max(PInputMax, pf)
-                        PInput += pf
-                        InCounter += 1
-                PAveRec /= RecCounter
-                PMaxRecL[p] = PMaxRec
-                PAveRecL[p] = PAveRec  # for each receive antenna pos: Max and Av over tuner positions
-                PInput /= InCounter
-                PInputVariation = PInputMax / PInputMin
-                PInputAL[p] = PInput
-                PInputVariationAL[p] = PInputVariation
-
-            self.processedData_EUTCal[description]['PMaxRec'][f] = PMaxRecL.copy()
-            self.processedData_EUTCal[description]['PAveRec'][f] = PAveRecL.copy()
-            self.processedData_EUTCal[description]['PInputForEField'][f] = PInputEL.copy()
-            self.processedData_EUTCal[description]['PInputForRecAnt'][f] = PInputAL.copy()
-            self.processedData_EUTCal[description]['PInputVarationForEField'][f] = PInputVariationEL.copy()
-            self.processedData_EUTCal[description]['PInputVarationForRecAnt'][f] = PInputVariationAL.copy()
-            self.processedData_EUTCal[description]['EMax'][f] = EMaxL.copy()
+            processed_desc['PMaxRec'][f] = PMaxRecL.copy()
+            processed_desc['PAveRec'][f] = PAveRecL.copy()
+            processed_desc['PInputForEField'][f] = PInputEL.copy()
+            processed_desc['PInputForRecAnt'][f] = PInputAL.copy()
+            processed_desc['PInputVarationForEField'][f] = PInputVariationEL.copy()
+            processed_desc['PInputVarationForRecAnt'][f] = PInputVariationAL.copy()
+            processed_desc['EMax'][f] = EMaxL.copy()
 
             # calc CCF and CCF_from_PMaxRec
             CCF_from_PMaxRec = Quantity(POWERRATIO, 0.0)
@@ -3384,76 +3255,19 @@ Quit: quit measurement.
             for pos, Pav in list(PAveRecL.items()):
                 CCF += Pav / PInputAL[pos]
             CCF /= len(list(PAveRecL.keys()))
-            self.processedData_EUTCal[description]['CCF_from_PMaxRec'][f] = CCF_from_PMaxRec
-            self.processedData_EUTCal[description]['CCF'][f] = CCF
+            processed_desc['CCF_from_PMaxRec'][f] = CCF_from_PMaxRec
+            processed_desc['CCF'][f] = CCF
 
-            if npees > 0:
-                Avxyz = [Quantity(EFIELDPNORM, 0.0)] * 3
-                self.processedData_EUTCal[description]['Enorm'][f] = {}
-                for pos, Em in list(EMaxL.items()):
-                    pin = self.processedData_EUTCal[description]['PInputForEField'][f][pos]
-                    v = pin  # .get_v()
-                    sqrtv = numpy.sqrt(v)
-                    # u = pin.get_u()
-                    # l = pin.get_l()
-                    sqrtPInput = sqrtv
-                    en = []
-                    for k, em in enumerate(Em):
-                        en.append(em / sqrtPInput)
-                        Avxyz[k] += em
-                    self.processedData_EUTCal[description]['Enorm'][f][pos] = en
-                Av24 = Quantity(EFIELDPNORM, 0.0)
-                for k in range(3):
-                    Avxyz[k] /= len(list(EMaxL.keys()))
-                    Av24 += Avxyz[k]
-                Av24 /= 3.0
-                self.processedData_EUTCal[description]['EnormAveXYZ'][f] = Avxyz
-                self.processedData_EUTCal[description]['EnormAve'][f] = Av24
-                enorm = self.processedData_EUTCal[description]['Enorm'][f]
-                Sxyz = []
-                list24 = []
-                for k in range(3):
-                    lst = [enorm[p][k] for p in list(enorm.keys())]
-                    list24 += lst
-                    S = util.CalcSigma(lst, Avxyz[k])
-                    try:
-                        Sxyz.append(S)
-                    except:
-                        util.LogError(self.messenger)
-                try:
-                    S24 = util.CalcSigma(list24, Av24)
-                except:
-                    S24 = None
-
-                self.processedData_EUTCal[description]['SigmaXYZ'][f] = Sxyz
-                self.processedData_EUTCal[description]['Sigma24'][f] = S24
-                SdBxyz = []
-                for k in range(3):
-                    try:
-                        SdBxyz.append((20 * numpy.log10((Sxyz[k] + Avxyz[k]) / Avxyz[k])).eval())
-                    except:
-                        util.LogError(self.messenger)
-                try:
-                    SdB24 = (20 * (numpy.log10(S24 + Av24) / Av24)).eval()
-                except:
-                    SdB24 = None
-                self.processedData_EUTCal[description]['SigmaXYZ_dB'][f] = SdBxyz
-                self.processedData_EUTCal[description]['Sigma24_dB'][f] = SdB24
-            else:  # no efield data available
-                self.processedData_EUTCal[description]['Enorm'][f] = None
-                self.processedData_EUTCal[description]['EnormAveXYZ'][f] = None
-                self.processedData_EUTCal[description]['EnormAve'][f] = None
-                self.processedData_EUTCal[description]['SigmaXYZ'][f] = None
-                self.processedData_EUTCal[description]['Sigma24'][f] = None
-                self.processedData_EUTCal[description]['SigmaXYZ_dB'][f] = None
-                self.processedData_EUTCal[description]['Sigma24_dB'][f] = None
+            self.__populate_eutcal_enorm_sigma(
+                processed_desc, f, EMaxL, npees
+            )
 
         acf = self.processedData_MainCal[calibration]['ACF']
         il = self.processedData_MainCal[calibration]['IL']
-        ccf = self.processedData_EUTCal[description]['CCF']
-        ccfPMax = self.processedData_EUTCal[description]['CCF_from_PMaxRec']
-        self.processedData_EUTCal[description]['CLF'] = self.__CalcLoading(ccf, acf, freqs, 'linxliny')
-        self.processedData_EUTCal[description]['CLF_from_PMaxRec'] = self.__CalcLoading(ccfPMax, il, freqs, 'linxliny')
+        ccf = processed_desc['CCF']
+        ccfPMax = processed_desc['CCF_from_PMaxRec']
+        processed_desc['CLF'] = self.__CalcLoading(ccf, acf, freqs, 'linxliny')
+        processed_desc['CLF_from_PMaxRec'] = self.__CalcLoading(ccfPMax, il, freqs, 'linxliny')
         self.messenger(util.tstamp() + " End of evaluation of EUT calibration", [])
         return 0
 
@@ -3511,6 +3325,7 @@ class stdImmunityKernel:
         self.tp = tp
         self.messenger = messenger
         self.UIHandler = UIHandler
+        self.poll_key = resolve_poll_key(UIHandler, lcls)
         self.callerlocals = lcls
         try:
             self.in_as = self.callerlocals['in_as']
@@ -3561,8 +3376,8 @@ class stdImmunityKernel:
             start = time.time()
             intervall = 0.01
             while (time.time() - start < self.dwell):
-                key = util.anykeyevent()
-                if (0 <= key <= 255) and chr(key) in self.keylist:
+                key = self.poll_key() if callable(self.poll_key) else None
+                if isinstance(key, int) and (0 <= key <= 255) and chr(key) in self.keylist:
                     cmd = ('eut', 'User event.', {'eutstatus': 'Marked by user'})
                     break
 

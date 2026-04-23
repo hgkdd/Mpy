@@ -21,6 +21,7 @@ from scuq.si import METER, OHM, WATT, SECOND, VOLT
 from scuq.ucomponents import Context
 
 from mpylab.env import Measure
+from mpylab.env.ui.ui_adapter import resolve_poll_key
 from mpylab.tools import util, mgraph, interpol
 from mpylab.tools.aunits import POWERRATIO, EFIELD
 from mpylab.tools.space_generators import LogSpace
@@ -50,18 +51,6 @@ class TEMCell(Measure.Measure):
 
     def __init__(self):
         super().__init__()
-        self.asname = None
-        self.ascmd = None
-        self.autosave = False
-        self.autosave_interval = 3600
-        self.lastautosave = time.time()
-        self.logger = [self.stdlogger]
-        self.logfile = None
-        self.logfilename = None
-        self.messenger = self.stdUserMessenger
-        self.UserInterruptTester = self.stdUserInterruptTester
-        self.PreUserEvent = self.stdPreUserEvent
-        self.PostUserEvent = self.stdPostUserEvent
         self.rawData_e0y = {}
         self.processedData_e0y = {}
         self.rawData_Immunity = {}
@@ -79,11 +68,8 @@ class TEMCell(Measure.Measure):
             logfile = open(dct['logfilename'], "a+")
         self.__dict__.update(dct)
         self.logfile = logfile
-        self.messenger = self.stdUserMessenger
         self.logger = [self.stdlogger]
-        self.UserInterruptTester = self.stdUserInterruptTester
-        self.PreUserEvent = self.stdPreUserEvent
-        self.PostUserEvent = self.stdPostUserEvent
+        self._setup_ui_adapter()
         # for 'old' pickle files
         if not hasattr(self, 'asname'):
             self.asname = None
@@ -95,94 +81,24 @@ class TEMCell(Measure.Measure):
 
     def __getstate__(self):
         odict = self.__dict__.copy()
-        del odict['logfile']
-        del odict['logger']
-        del odict['messenger']
-        del odict['UserInterruptTester']
-        del odict['PreUserEvent']
-        del odict['PostUserEvent']
+        odict.pop('logfile', None)
+        odict.pop('logger', None)
+        odict.pop('messenger', None)
+        odict.pop('UserInterruptTester', None)
+        odict.pop('PollKey', None)
+        odict.pop('PreUserEvent', None)
+        odict.pop('PostUserEvent', None)
+        odict.pop('ui', None)
         return odict
 
     def _HandleUserInterrupt(self, dct, ignorelist=''):
-        key = self.UserInterruptTester()
-        if key and not chr(key) in ignorelist:
-            # empty key buffer
-            _k = self.UserInterruptTester()
-            while _k is not None:
-                _k = self.UserInterruptTester()
-
-            mg = dct['mg']
-            names = dct['names']
-            f = dct['f']
-            try:
-                SGLevel = dct['SGLevel']
-                leveling = dct['leveling']
-            except KeyError:
-                hassg = False
-            else:
-                hassg = True
-            try:
-                delay = dct['delay']
-            except KeyError:
-                pass
-            try:
-                nblist = dct['nblist']
-            except KeyError:
-                nblist = []
-
-            self.messenger(util.tstamp() + " RF Off...", [])
-            stat = mg.RFOff_Devices()  # switch off after measure
-            msg1 = """The measurement has been interrupted by the user.\nHow do you want to proceed?\n\nContinue: go ahead...\nSuspend: Quit devices, go ahead later after reinit...\nInteractive: Go to interactive mode...\nQuit: Quit measurement..."""
-            but1 = ['Continue', 'Suspend', 'Interactive', 'Quit']
-            answer = self.messenger(msg1, but1)
-            # print answer
-            if answer == but1.index('Quit'):
-                self.messenger(util.tstamp() + " measurment terminated by user.", [])
-                raise UserWarning  # to reach finally statement
-            elif answer == but1.index('Interactive'):
-                util.interactive(obj=self, banner="Press CTRL-D (Linux,MacOS) or CTRL-Z (Windows) plus Return to exit")
-            elif answer == but1.index('Suspend'):
-                self.messenger(util.tstamp() + " measurment suspended by user.", [])
-                stat = mg.Quit_Devices()
-                msg2 = """Measurement is suspended.\n\nResume: Reinit and continue\nQuit: Quit measurement..."""
-                but2 = ['Resume', 'Quit']
-                answer = self.messenger(msg2, but2)
-                if answer == but2.index('Resume'):
-                    # TODO: check if init was successful
-                    self.messenger(util.tstamp() + " Init devices...", [])
-                    stat = mg.Init_Devices()
-                    self.messenger(util.tstamp() + " ... Init returned with stat = %d" % stat, [])
-                    stat = mg.RFOff_Devices()  # switch off
-                    self.messenger(util.tstamp() + " Zero devices...", [])
-                    stat = mg.Zero_Devices()
-                    if hassg:
-                        try:
-                            level = self.setLevel(mg, names, SGLevel)
-                        except Measure.AmplifierProtectionError as _e:
-                            self.messenger(
-                                util.tstamp() + " Can not set signal generator level. Amplifier protection raised with message: %s" % _e.message,
-                                [])
-
-                    # set frequency for all devices
-                    (minf, maxf) = mg.SetFreq_Devices(f)
-                    mg.EvaluateConditions()
-                elif answer == but2.index('Quit'):
-                    self.messenger(util.tstamp() + " measurment terminated by user.", [])
-                    raise UserWarning  # to reach finally statement
-            self.messenger(util.tstamp() + " RF On...", [])
-            stat = mg.RFOn_Devices()  # switch on just before measure
-            if hassg:
-                level2 = self.doLeveling(leveling, mg, names, locals())
-                if level2:
-                    level = level2
-            try:
-                # wait delay seconds
-                self.messenger(util.tstamp() + " Going to sleep for %d seconds ..." % delay, [])
-                self.wait(delay, dct, self._HandleUserInterrupt)
-                self.messenger(util.tstamp() + " ... back.", [])
-            except Exception:
-                pass
-            mg.NBTrigger(nblist)
+        return self._handle_user_interrupt_common(
+            dct,
+            ignorelist=ignorelist,
+            set_level_cb=lambda mg, names, sg_level: self.setLevel(mg, names, sg_level),
+            do_leveling_cb=lambda leveling, mg, names, scope: self.doLeveling(leveling, mg, names, scope),
+            wait_handler=self._HandleUserInterrupt,
+        )
 
     def Evaluate_Emission(self,
                           description='EUT',
@@ -544,13 +460,10 @@ class TEMCell(Measure.Measure):
         # for k,v in ddict.items():
         #    globals()[k] = v
 
-        self.messenger(util.tstamp() + " Init devices...", [])
-        err = mg.Init_Devices()
+        err = self._init_measurement_devices(mg, do_zero=False, do_rfoff=False)
         if err:
-            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
             return err
         try:
-            self.messenger(util.tstamp() + " ...done", [])
             if freqs is None:
                 freqs = [f for f in LogSpace(80e6, 1000e6, 1.01, True)]
 
@@ -678,8 +591,7 @@ Select EUT position.
 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(util.tstamp() + " Quit...", [])
-            stat = mg.Quit_Devices()
+            stat = self._finalize_measurement_devices(mg, do_rfoff=True, do_quit=True)
         self.messenger(util.tstamp() + " End of Emission mesurement. Status: %d" % stat, [])
         self.PostUserEvent()
         return stat
@@ -778,13 +690,10 @@ Select EUT position.
         # for k,v in ddict.items():
         #    globals()[k] = v
 
-        self.messenger(util.tstamp() + " Init devices...", [])
-        err = mg.Init_Devices()
+        err = self._init_measurement_devices(mg, do_zero=False, do_rfoff=False)
         if err:
-            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
             return err
         try:
-            self.messenger(util.tstamp() + " ...done", [])
             if freqs is None:
                 freqs = [f for f in LogSpace(80e6, 1000e6, 1.01, True)]
 
@@ -912,8 +821,7 @@ Select EUT position.
 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(util.tstamp() + " Quit...", [])
-            stat = mg.Quit_Devices()
+            stat = self._finalize_measurement_devices(mg, do_rfoff=True, do_quit=True)
         self.messenger(util.tstamp() + " End of Emission mesurement. Status: %d" % stat, [])
         self.PostUserEvent()
         return stat
@@ -997,13 +905,10 @@ Select EUT position.
         # for k,v in ddict.items():
         #    globals()[k] = v
 
-        self.messenger(util.tstamp() + " Init devices...", [])
-        err = mg.Init_Devices()
+        err = self._init_measurement_devices(mg, do_zero=False, do_rfoff=False)
         if err:
-            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
             return err
         try:
-            self.messenger(util.tstamp() + " ...done", [])
             if freqs is None:
                 freqs = []
 
@@ -1252,8 +1157,7 @@ Select EUT position.
 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(util.tstamp() + " Quit...", [])
-            stat = mg.Quit_Devices()
+            stat = self._finalize_measurement_devices(mg, do_rfoff=True, do_quit=True)
         self.messenger(util.tstamp() + " End of Emission mesurement. Status: %d" % stat, [])
         self.PostUserEvent()
         return stat
@@ -1341,18 +1245,10 @@ Select EUT position.
         for k, v in list(ddict.items()):
             globals()[k] = v
 
-        self.messenger(util.tstamp() + " Init devices...", [])
-        err = mg.Init_Devices()
+        err = self._init_measurement_devices(mg, do_zero=True, do_rfoff=True)
         if err:
-            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
             return err
         try:
-            self.messenger(util.tstamp() + " ...done", [])
-            stat = mg.RFOff_Devices()
-            self.messenger(util.tstamp() + " Zero devices...", [])
-            stat = mg.Zero_Devices()
-            self.messenger(util.tstamp() + " ...done", [])
-
             try:
                 level = self.setLevel(mg, names, SGLevel)
             except Measure.AmplifierProtectionError as _e:
@@ -1500,9 +1396,7 @@ Select EUT position.
 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(util.tstamp() + " RF Off and Quit...", [])
-            stat = mg.RFOff_Devices()
-            stat = mg.Quit_Devices()
+            stat = self._finalize_measurement_devices(mg, do_rfoff=True, do_quit=True)
         self.messenger(util.tstamp() + " End of e0y calibration. Status: %d" % stat, [])
         self.PostUserEvent()
         return stat
@@ -1596,18 +1490,10 @@ Select EUT position.
         for k, v in list(ddict.items()):
             globals()[k] = v
 
-        self.messenger(util.tstamp() + " Init devices...", [])
-        err = mg.Init_Devices()
+        err = self._init_measurement_devices(mg, do_zero=True, do_rfoff=True)
         if err:
-            self.messenger(util.tstamp() + " ...faild with err %d" % (err), [])
             return err
         try:
-            self.messenger(util.tstamp() + " ...done", [])
-            stat = mg.RFOff_Devices()
-            self.messenger(util.tstamp() + " Zero devices...", [])
-            stat = mg.Zero_Devices()
-            self.messenger(util.tstamp() + " ...done", [])
-
             try:
                 level = self.setLevel(mg, names, SGLevel)
             except Measure.AmplifierProtectionError as _e:
@@ -1758,9 +1644,7 @@ Select EUT position.
 
         finally:
             # finally is executed if and if not an exception occur -> save exit
-            self.messenger(util.tstamp() + " RF Off and Quit...", [])
-            stat = mg.RFOff_Devices()
-            stat = mg.Quit_Devices()
+            stat = self._finalize_measurement_devices(mg, do_rfoff=True, do_quit=True)
         self.messenger(util.tstamp() + " End of e0y calibration. Status: %d" % stat, [])
         self.PostUserEvent()
         return stat
@@ -1795,33 +1679,11 @@ Select EUT position.
 
     def OutputRawData_e0y(self, description=None, what=None, fname=None):
         thedata = self.rawData_e0y
-        stdout = sys.stdout
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputRawData(thedata, description, what)
-        finally:
-            try:
-                fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     def OutputRawData_Emission(self, description=None, what=None, fname=None):
         thedata = self.rawData_Emission
-        stdout = sys.stdout
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputRawData(thedata, description, what)
-        finally:
-            try:
-                fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     def __OutputRawData(self, thedata, description, what):
         deslist = self.MakeDeslist(thedata, description)
@@ -1852,33 +1714,11 @@ Select EUT position.
 
     def OutputProcessedData_e0y(self, description=None, what=None, fname=None):
         thedata = self.processedData_e0y
-        stdout = sys.stdout
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputProcessedData(thedata, description, what)
-        finally:
-            try:
-                fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def OutputProcessedData_Emission(self, description=None, what=None, fname=None):
         thedata = self.processedData_Emission
-        stdout = sys.stdout
-        if fname:
-            fp = open(fname, "w")
-            sys.stdout = fp
-        try:
-            self.__OutputProcessedData(thedata, description, what)
-        finally:
-            try:
-                fp.close()
-            except:
-                util.LogError(self.messenger)
-            sys.stdout = stdout
+        self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def __OutputProcessedData(self, thedata, description, what):
         deslist = self.MakeDeslist(thedata, description)
@@ -1947,6 +1787,7 @@ class stdImmunityKernel:
         self.positions = positions
         self.messenger = messenger
         self.UIHandler = UIHandler
+        self.poll_key = resolve_poll_key(UIHandler, lcls)
         self.callerlocals = lcls
         try:
             self.in_as = self.callerlocals['in_as']
@@ -1997,8 +1838,8 @@ class stdImmunityKernel:
             start = time.time()
             intervall = 0.01
             while (time.time() - start < self.dwell):
-                key = util.anykeyevent()
-                if (0 <= key <= 255) and chr(key) in self.keylist:
+                key = self.poll_key() if callable(self.poll_key) else None
+                if isinstance(key, int) and (0 <= key <= 255) and chr(key) in self.keylist:
                     cmd = ('eut', 'User event.', {'eutstatus': 'Marked by user'})
                     break
 
