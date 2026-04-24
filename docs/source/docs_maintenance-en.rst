@@ -78,6 +78,12 @@ Docstring language audit (fail on potentially non-English public API docstrings)
 
    python tools/docs_audit.py --fail-on-non-english-docstrings
 
+Toctree order audit (fail when normalized DE/EN index order differs):
+
+.. code-block:: bash
+
+   python tools/docs_audit.py --fail-on-toctree-order-mismatch
+
 CI behavior
 -----------
 

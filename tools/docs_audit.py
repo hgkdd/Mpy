@@ -67,6 +67,7 @@ QT_EVENT_METHOD_NAMES = {
     "wheelEvent",
 }
 LANG_SUFFIX_RE = re.compile(r"^(?P<base>.+)-(?P<lang>de|en)\.rst$")
+LANG_TRAILING_SUFFIX_RE = re.compile(r"-(de|en)\.rst$")
 GERMAN_WORD_RE = re.compile(
     r"\b("
     r"der|die|das|und|mit|nicht|wird|werden|kann|soll|"
@@ -265,6 +266,55 @@ def find_non_english_docstrings(symbols: list[SymbolDoc]) -> list[DocstringLangu
     return sorted(issues, key=lambda item: (-item.score, item.symbol))
 
 
+def read_toctree_entries(index_file: Path) -> list[str]:
+    """Read explicit ``.rst`` entries from a Sphinx index-like file."""
+    entries: list[str] = []
+    for line in index_file.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith(".. ") or stripped.startswith(":"):
+            continue
+        if stripped.endswith(".rst"):
+            entries.append(stripped)
+    return entries
+
+
+def normalize_lang_entry(entry: str) -> str:
+    """Normalize ``-de``/``-en`` suffixes so EN and DE toctrees can be compared."""
+    return LANG_TRAILING_SUFFIX_RE.sub(".rst", entry)
+
+
+def discover_toctree_order_mismatches(docs_root: Path) -> list[str]:
+    """Compare normalized EN and DE index toctree order and report mismatches."""
+    de_index = docs_root / "de" / "index.rst"
+    en_index = docs_root / "en" / "index.rst"
+    mismatches: list[str] = []
+    if not de_index.exists():
+        mismatches.append(f"Missing file: {de_index}")
+        return mismatches
+    if not en_index.exists():
+        mismatches.append(f"Missing file: {en_index}")
+        return mismatches
+
+    de_entries = read_toctree_entries(de_index)
+    en_entries = read_toctree_entries(en_index)
+    de_norm = [normalize_lang_entry(e) for e in de_entries]
+    en_norm = [normalize_lang_entry(e) for e in en_entries]
+
+    if de_norm == en_norm:
+        return mismatches
+
+    if len(de_norm) != len(en_norm):
+        mismatches.append(f"Different entry count: de={len(de_norm)} vs en={len(en_norm)}")
+
+    max_len = max(len(de_norm), len(en_norm))
+    for idx in range(max_len):
+        de_val = de_norm[idx] if idx < len(de_norm) else "<missing>"
+        en_val = en_norm[idx] if idx < len(en_norm) else "<missing>"
+        if de_val != en_val:
+            mismatches.append(f"Position {idx + 1}: de={de_val} vs en={en_val}")
+    return mismatches
+
+
 def count_by_kind(symbols: Iterable[SymbolDoc]) -> dict[str, int]:
     """Count symbols per symbol kind."""
     counts = {"module": 0, "class": 0, "function": 0, "method": 0}
@@ -349,6 +399,15 @@ def print_docstring_language_report(issues: list[DocstringLanguageIssue], top_is
         )
 
 
+def print_toctree_order_report(mismatches: list[str]) -> None:
+    """Print report for EN/DE index toctree order mismatches."""
+    print(f"DE/EN toctree order mismatches: {len(mismatches)}")
+    if not mismatches:
+        return
+    for item in mismatches:
+        print(f"  - {item}")
+
+
 def main() -> int:
     """Run the documentation/API coverage audits."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -386,6 +445,11 @@ def main() -> int:
         action="store_true",
         help="Return non-zero if heuristic detects potentially non-English public API docstrings",
     )
+    parser.add_argument(
+        "--fail-on-toctree-order-mismatch",
+        action="store_true",
+        help="Return non-zero if normalized EN and DE index toctree order differ",
+    )
     args = parser.parse_args()
 
     src_root = Path(args.src_root)
@@ -400,6 +464,7 @@ def main() -> int:
     missing_docstrings = [sym for sym in public_symbols if not sym.has_docstring]
     missing_de_pages, missing_en_pages = discover_language_counterpart_gaps(docs_root)
     non_english_docstrings = find_non_english_docstrings(public_symbols)
+    toctree_order_mismatches = discover_toctree_order_mismatches(docs_root)
 
     print(f"Source modules: {len(source_modules)}")
     print(f"Documented automodule entries: {len(documented_modules)}")
@@ -422,6 +487,7 @@ def main() -> int:
     print_docstring_report(public_symbols, top_missing=args.top_missing_files)
     print_language_counterpart_report(missing_de_pages, missing_en_pages)
     print_docstring_language_report(non_english_docstrings, top_issues=args.top_language_issues)
+    print_toctree_order_report(toctree_order_mismatches)
 
     if stale_documented:
         return 1
@@ -433,6 +499,8 @@ def main() -> int:
         return 4
     if args.fail_on_non_english_docstrings and non_english_docstrings:
         return 5
+    if args.fail_on_toctree_order_mismatch and toctree_order_mismatches:
+        return 6
     return 0
 
 

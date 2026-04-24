@@ -20,6 +20,9 @@ Choose Language
    :hidden:
 
    installation-walktrough.rst
+   dat-file-grammar.rst
+   dot-grammar.rst
+   mpylab.rst
    docs_maintenance.rst
    mpylab/driver_framework.rst
    mpylab/ui_adapter_contract.rst

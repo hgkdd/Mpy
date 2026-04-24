@@ -10,7 +10,7 @@ Deutsche Dokumentation
    ../FAQ-de.rst
    ../mpylab/ui_adapter_contract-de.rst
    ../messanleitung-de.rst
-   ../dat-file-grammar.rst
-   ../dot-grammar.rst
-   ../mpylab.rst
+   ../dat-file-grammar-de.rst
+   ../dot-grammar-de.rst
+   ../mpylab-de.rst
    ../docs_maintenance-de.rst

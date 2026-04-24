@@ -79,6 +79,12 @@ Docstring-Sprachaudit (Fehler bei potenziell nicht-englischen Public-API-Docstri
 
    python tools/docs_audit.py --fail-on-non-english-docstrings
 
+Toctree-Reihenfolge-Audit (Fehler bei abweichender normalisierter DE/EN-Reihenfolge):
+
+.. code-block:: bash
+
+   python tools/docs_audit.py --fail-on-toctree-order-mismatch
+
 CI-Verhalten
 ------------
 

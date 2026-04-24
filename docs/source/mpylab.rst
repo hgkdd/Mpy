@@ -1,9 +1,5 @@
-API Documentation
-=================
+API Documentation (Compatibility Path)
+======================================
 
-The API reference is generated from the source tree.
-
-.. toctree::
-   :maxdepth: 2
-
-   api/modules.rst
+This page is kept as a compatibility path.
+The maintained English source is :doc:`mpylab-en`.
