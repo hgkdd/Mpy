@@ -9,6 +9,7 @@ from scipy.optimize import minimize_scalar
 from scuq import quantities, si
 
 from mpylab.env.Measure import Measure, AmplifierProtectionError
+from mpylab.env.univers.name_maps import coerce_amplifier_names
 from mpylab.tools import util
 from mpylab.tools.aunits import POWERRATIO
 from mpylab.tools.mgraph import MGraph
@@ -75,13 +76,7 @@ class AmplifierTest(Measure):
 
                The dict has to have keys 'sg', 'amp_in', 'amp_out', 'pm_fwd', 'pm_bwd' and 'output'. 
         """
-        if names is None:
-            names = {'sg': 'sg',
-                     'amp_in': 'amp_in',
-                     'amp_out': 'amp_out',
-                     'pm_fwd': 'pm1',
-                     'pm_bwd': 'pm2',
-                     'output': 'gtem'}
+        names = coerce_amplifier_names(names)
         self.PreUserEvent()
         if self.autosave:
             self.messenger(util.tstamp() + " Resume amplifier test measurement from autosave...", [])

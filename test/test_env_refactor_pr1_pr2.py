@@ -9,6 +9,7 @@ from scuq.si import WATT
 from scuq.quantities import Quantity
 
 from mpylab.env.Measure import Measure
+from mpylab.env.msc.name_maps import coerce_msc_autocorr_names
 from mpylab.env.msc.MSC import MSC, stdImmunityKernel as MSCStdImmunityKernel
 from mpylab.env.tem.TEMCell import TEMCell, stdImmunityKernel as TEMStdImmunityKernel
 from mpylab.env.univers.AmplifierTest import AmplifierTest
@@ -303,6 +304,37 @@ def _always_start(msg, buttons=None, level="", dct=None):
 
 
 class TestEnvRefactorPR1PR2(unittest.TestCase):
+    def test_name_map_coercion_accepts_tuple_lists(self):
+        names = coerce_msc_autocorr_names(
+            {
+                "sg": "sg",
+                "a1": "a1",
+                "a2": "a2",
+                "ant": "ant",
+                "pmfwd": "pm1",
+                "pmbwd": "pm2",
+                "fp": ("fp1", "fp2"),
+                "tuner": ("t1",),
+            }
+        )
+        self.assertEqual(names["fp"], ["fp1", "fp2"])
+        self.assertEqual(names["tuner"], ["t1"])
+
+    def test_name_map_coercion_rejects_wrong_scalar_type(self):
+        with self.assertRaises(TypeError):
+            coerce_msc_autocorr_names(
+                {
+                    "sg": ["sg"],  # type: ignore[list-item]
+                    "a1": "a1",
+                    "a2": "a2",
+                    "ant": "ant",
+                    "pmfwd": "pm1",
+                    "pmbwd": "pm2",
+                    "fp": ["fp1"],
+                    "tuner": ["t1"],
+                }
+            )
+
     def test_measure_legacy_aliases(self):
         m = Measure()
         m.set_messenger(_always_start)

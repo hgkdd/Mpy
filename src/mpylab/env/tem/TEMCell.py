@@ -21,6 +21,11 @@ from scuq.si import METER, OHM, WATT, SECOND, VOLT
 from scuq.ucomponents import Context
 
 from mpylab.env import Measure
+from mpylab.env.tem.name_maps import (
+    coerce_tem_e0y_names,
+    coerce_tem_emission_names,
+    coerce_tem_immunity_names,
+)
 from mpylab.env.ui.ui_adapter import resolve_poll_key
 from mpylab.tools import util, mgraph, interpol
 from mpylab.tools.aunits import POWERRATIO, EFIELD
@@ -422,14 +427,7 @@ class TEMCell(Measure.Measure):
            - *fwd_dbm*: forward power at feed point in dbm
            - *names*: dict with the mapping from internal names to dot-file names.
         """
-        if names is None:
-            names = {'sg': 'sg',
-                     'a1': 'a1',
-                     'a2': 'a2',
-                     'tem': 'gtem',
-                     'pmfwd': 'pm1',
-                     'pmbwd': 'pm2'
-                     }
+        names = coerce_tem_immunity_names(names)
         self.PreUserEvent()
 
         if freqs is None:
@@ -645,14 +643,7 @@ Select EUT position.
            - *freqs*: sequence of frequencies in Hz to use for the measurements.
            - *names*: dict with the mapping from internal names to dot-file names.
         """
-        if names is None:
-            names = {'sg': 'sg',
-                     'a1': 'a1',
-                     'a2': 'a2',
-                     'tem': 'gtem',
-                     'pmfwd': 'pm1',
-                     'pmbwd': 'pm2'
-                     }
+        names = coerce_tem_immunity_names(names)
         self.PreUserEvent()
         if kernel[0] is None:
             if kernel[1] is None:
@@ -883,9 +874,7 @@ Select EUT position.
                For a Crawford cell it would be two.
 
         """
-        if names is None:
-            names = {'port': ['port'],
-                     'receiver': ['analyzer']}
+        names = coerce_tem_emission_names(names)
         if positions is None:
             positions = self.std_3_positions
 
@@ -1207,14 +1196,7 @@ Select EUT position.
                names in the dot-file.
  
         """
-        if names is None:
-            names = {'sg': 'sg',
-                     'a1': 'a1',
-                     'a2': 'a2',
-                     'port': 'port',
-                     'pmfwd': 'pm1',
-                     'pmbwd': 'pm2',
-                     'fp': ['fp1']}
+        names = coerce_tem_e0y_names(names)
         self.PreUserEvent()
 
         if self.autosave:
@@ -1449,14 +1431,7 @@ Select EUT position.
                names in the dot-file.
 
         """
-        if names is None:
-            names = {'sg': 'sg',
-                     'a1': 'a1',
-                     'a2': 'a2',
-                     'port': 'port',
-                     'pmfwd': 'pm1',
-                     'pmbwd': 'pm2',
-                     'fp': ['fp1']}
+        names = coerce_tem_e0y_names(names)
         self.PreUserEvent()
 
         if EFieldStrength is None:

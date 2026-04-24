@@ -28,6 +28,13 @@ from scuq.ucomponents import Context
 
 from mpylab.env import Measure
 from mpylab.env.ui.ui_adapter import resolve_poll_key
+from mpylab.env.msc.name_maps import (
+    coerce_msc_autocorr_names,
+    coerce_msc_emission_names,
+    coerce_msc_eutcal_names,
+    coerce_msc_immunity_names,
+    coerce_msc_maincal_names,
+)
 from mpylab.tools import util, mgraph, spacing, distributions, statistic
 from mpylab.tools.aunits import POWERRATIO, EFIELD, EFIELDPNORM
 from mpylab.tools.distributions import test_for_rayleigh
@@ -136,17 +143,7 @@ class MSC(Measure.Measure):
                         names=None):
         """Performs a msc main calibration according to IEC 61000-4-21
         """
-        if names is None:
-            names = {'sg': 'sg',
-                     'a1': 'a1',
-                     'a2': 'a2',
-                     'ant': 'ant',
-                     'pmfwd': 'pm1',
-                     'pmbwd': 'pm2',
-                     'fp': ['fp1', 'fp2', 'fp3', 'fp4', 'fp5', 'fp6', 'fp7', 'fp8'],
-                     'tuner': ['tuner1'],
-                     'refant': ['refant1'],
-                     'pmref': ['pmref1']}
+        names = coerce_msc_maincal_names(names)
         if nrefantpostab is None:
             nrefantpostab = [8, 8, 8, 8, 8]
         if nprbpostab is None:
@@ -646,15 +643,7 @@ class MSC(Measure.Measure):
                                 names=None):
         """Performs a msc autocorrelation measurement
         """
-        if names is None:
-            names = {'sg': 'sg',
-                     'a1': 'a1',
-                     'a2': 'a2',
-                     'ant': 'ant',
-                     'pmfwd': 'pm1',
-                     'pmbwd': 'pm2',
-                     'fp': ['fp1', 'fp2', 'fp3', 'fp4', 'fp5', 'fp6', 'fp7', 'fp8'],
-                     'tuner': ['tuner1']}
+        names = coerce_msc_autocorr_names(names)
         if ntunerpos is None:
             ntunerpos = [360]
         if toffsets is None:
@@ -932,17 +921,7 @@ class MSC(Measure.Measure):
                        names=None):
         """Performs a msc EUT calibration according to IEC 61000-4-21
         """
-
-        if names is None:
-            names = {'sg': 'sg',
-                     'a1': 'a1',
-                     'a2': 'a2',
-                     'ant': 'ant',
-                     'pmfwd': 'pm1',
-                     'pmbwd': 'pm2',
-                     'tuner': ['tuner1'],
-                     'refant': ['refant1'],
-                     'pmref': ['pmref1']}
+        names = coerce_msc_eutcal_names(names)
         self.PreUserEvent()
         if self.autosave:
             self.messenger(util.tstamp() + " Resume EUT calibration measurement from autosave...", [])
@@ -962,9 +941,7 @@ class MSC(Measure.Measure):
                          'path': None}]
 
         # number of probes, ref-antenna and tuners
-        nprb = 0
-        if 'fp' in names:  # default is no fieldprobes
-            nprb = len(names['fp'])
+        nprb = len(names['fp'])
         nrefant = min(len(names['refant']), len(names['pmref']))
         ntuner = len(names['tuner'])
 
@@ -1283,18 +1260,7 @@ class MSC(Measure.Measure):
                          names=None):
         """Performs a msc immunity measurement according to IEC 61000-4-21
         """
-
-        if names is None:
-            names = {'sg': 'sg',
-                     'a1': 'a1',
-                     'a2': 'a2',
-                     'ant': 'ant',
-                     'fp': [],
-                     'pmfwd': 'pm1',
-                     'pmbwd': 'pm2',
-                     'tuner': ['tuner1'],
-                     'refant': ['refant1'],
-                     'pmref': ['pmref1']}
+        names = coerce_msc_immunity_names(names)
         self.PreUserEvent()
         if kernel[0] is None:
             if kernel[1] is None:
@@ -1830,11 +1796,7 @@ class MSC(Measure.Measure):
                          names=None):
         """Performs a msc emission measurement according to IEC 61000-4-21
         """
-
-        if names is None:
-            names = {'tuner': ['tuner1'],
-                     'refant': ['refant1'],
-                     'receiver': ['saref1']}
+        names = coerce_msc_emission_names(names)
         self.PreUserEvent()
         if self.autosave:
             self.messenger(util.tstamp() + " Resume MSC emission measurement from autosave...", [])
