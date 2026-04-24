@@ -1,8 +1,8 @@
-UI Adapter Contract
-===================
+UI Adapter Specification
+========================
 
 The measurement runtime in ``mpylab.env`` supports a small UI adapter
-contract so that terminal (TUI) and future GUI implementations can use the
+specification so that terminal (TUI) and future GUI implementations can use the
 same measurement logic.
 
 Primary methods

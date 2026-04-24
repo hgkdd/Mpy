@@ -1,7 +1,7 @@
-UI-Adapter-Vertrag
-==================
+UI-Adapter-Spezifikation
+========================
 
-Dieses Dokument beschreibt den UI-Adapter-Vertrag der Messlaufzeit in ``mpylab.env``.
+Dieses Dokument beschreibt die UI-Adapter-Spezifikation der Messlaufzeit in ``mpylab.env``.
 Ziel ist, dass Terminal- (TUI) und GUI-Implementierungen dieselbe Messlogik nutzen können.
 
 Primäre Methoden

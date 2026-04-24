@@ -20,8 +20,10 @@ Choose Language
    :hidden:
 
    installation-walktrough.rst
+   docs_maintenance.rst
    mpylab/driver_framework.rst
    mpylab/ui_adapter_contract.rst
+   legacy/index.rst
 
 Indices and tables
 ==================
