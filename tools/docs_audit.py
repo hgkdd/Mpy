@@ -5,6 +5,8 @@ Checks:
 - documented automodule entries that do not exist in source tree
 - source modules that are not referenced by any automodule directive
 - missing docstrings on public API symbols
+- missing ``-de``/``-en`` page counterparts in docs
+- potentially non-English public API docstrings (heuristic)
 
 Public API policy used by this audit:
 - public modules: all importable ``*.py`` under ``src/mpylab`` except
@@ -64,6 +66,16 @@ QT_EVENT_METHOD_NAMES = {
     "timerEvent",
     "wheelEvent",
 }
+LANG_SUFFIX_RE = re.compile(r"^(?P<base>.+)-(?P<lang>de|en)\.rst$")
+GERMAN_WORD_RE = re.compile(
+    r"\b("
+    r"der|die|das|und|mit|nicht|wird|werden|kann|soll|"
+    r"beispiel|verwendung|hinweis|klasse|gerät|treiber|"
+    r"messung|rueckgabe|rückgabe|beschreibung"
+    r")\b",
+    re.IGNORECASE,
+)
+GERMAN_CHAR_RE = re.compile(r"[äöüßÄÖÜ]")
 
 
 def is_valid_module_path(parts: list[str]) -> bool:
@@ -87,6 +99,18 @@ class SymbolDoc:
     kind: str
     symbol: str
     has_docstring: bool
+    docstring: str | None
+
+
+@dataclass(frozen=True)
+class DocstringLanguageIssue:
+    """Heuristic language issue found in a public API docstring."""
+
+    file: Path
+    symbol: str
+    kind: str
+    score: int
+    preview: str
 
 
 def discover_source_modules(src_root: Path) -> dict[str, Path]:
@@ -141,6 +165,7 @@ def discover_public_api_symbols(source_modules: dict[str, Path]) -> tuple[list[S
                 kind="module",
                 symbol=module_name,
                 has_docstring=ast.get_docstring(tree) is not None,
+                docstring=ast.get_docstring(tree),
             )
         )
 
@@ -155,6 +180,7 @@ def discover_public_api_symbols(source_modules: dict[str, Path]) -> tuple[list[S
                         kind="function",
                         symbol=f"{module_name}.{node.name}",
                         has_docstring=ast.get_docstring(node) is not None,
+                        docstring=ast.get_docstring(node),
                     )
                 )
             elif isinstance(node, ast.ClassDef):
@@ -168,6 +194,7 @@ def discover_public_api_symbols(source_modules: dict[str, Path]) -> tuple[list[S
                         kind="class",
                         symbol=class_name,
                         has_docstring=ast.get_docstring(node) is not None,
+                        docstring=ast.get_docstring(node),
                     )
                 )
                 for member in node.body:
@@ -181,9 +208,61 @@ def discover_public_api_symbols(source_modules: dict[str, Path]) -> tuple[list[S
                                 kind="method",
                                 symbol=f"{class_name}.{member.name}",
                                 has_docstring=ast.get_docstring(member) is not None,
+                                docstring=ast.get_docstring(member),
                             )
                         )
     return symbols, parse_errors
+
+
+def discover_language_counterpart_gaps(docs_root: Path) -> tuple[list[str], list[str]]:
+    """Return missing ``-de`` and missing ``-en`` pages based on suffix variants."""
+    variants: dict[str, set[str]] = {}
+    for rst in docs_root.rglob("*.rst"):
+        rel = rst.relative_to(docs_root).as_posix()
+        match = LANG_SUFFIX_RE.match(rel)
+        if not match:
+            continue
+        base = match.group("base")
+        lang = match.group("lang")
+        variants.setdefault(base, set()).add(lang)
+
+    missing_de: list[str] = []
+    missing_en: list[str] = []
+    for base, langs in sorted(variants.items()):
+        if "de" in langs and "en" not in langs:
+            missing_en.append(f"{base}-en.rst")
+        if "en" in langs and "de" not in langs:
+            missing_de.append(f"{base}-de.rst")
+    return missing_de, missing_en
+
+
+def find_non_english_docstrings(symbols: list[SymbolDoc]) -> list[DocstringLanguageIssue]:
+    """Heuristically detect potentially non-English public API docstrings."""
+    issues: list[DocstringLanguageIssue] = []
+    for sym in symbols:
+        if not sym.docstring:
+            continue
+        text = sym.docstring.strip()
+        if not text:
+            continue
+
+        score = len(set(m.group(0).lower() for m in GERMAN_WORD_RE.finditer(text)))
+        if GERMAN_CHAR_RE.search(text):
+            score += 1
+        if score < 2:
+            continue
+
+        preview = text.splitlines()[0].strip()
+        issues.append(
+            DocstringLanguageIssue(
+                file=sym.file,
+                symbol=sym.symbol,
+                kind=sym.kind,
+                score=score,
+                preview=preview[:120],
+            )
+        )
+    return sorted(issues, key=lambda item: (-item.score, item.symbol))
 
 
 def count_by_kind(symbols: Iterable[SymbolDoc]) -> dict[str, int]:
@@ -243,6 +322,33 @@ def print_docstring_report(symbols: list[SymbolDoc], top_missing: int) -> None:
         print(f"  - {file_path}: {count}")
 
 
+def print_language_counterpart_report(missing_de: list[str], missing_en: list[str]) -> None:
+    """Print report for missing ``-de``/``-en`` docs page counterparts."""
+    total = len(missing_de) + len(missing_en)
+    print(f"Missing language counterparts: {total}")
+    if missing_de:
+        print("Missing German counterparts (-de):")
+        for rel in missing_de:
+            print(f"  - {rel}")
+    if missing_en:
+        print("Missing English counterparts (-en):")
+        for rel in missing_en:
+            print(f"  - {rel}")
+
+
+def print_docstring_language_report(issues: list[DocstringLanguageIssue], top_issues: int) -> None:
+    """Print report for potentially non-English public API docstrings."""
+    print(f"Potentially non-English public API docstrings: {len(issues)}")
+    if not issues:
+        return
+    print(f"Top {top_issues} potential language issues:")
+    for issue in issues[:top_issues]:
+        print(
+            f"  - {issue.symbol} [{issue.kind}] "
+            f"(score={issue.score}, file={issue.file}): {issue.preview}"
+        )
+
+
 def main() -> int:
     """Run the documentation/API coverage audits."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -264,6 +370,22 @@ def main() -> int:
         default=20,
         help="How many files to include in the missing-docstring hotspot list (default: 20)",
     )
+    parser.add_argument(
+        "--top-language-issues",
+        type=int,
+        default=20,
+        help="How many suspected non-English docstring issues to print (default: 20)",
+    )
+    parser.add_argument(
+        "--fail-on-missing-language-counterparts",
+        action="store_true",
+        help="Return non-zero if any -de/-en counterpart page is missing",
+    )
+    parser.add_argument(
+        "--fail-on-non-english-docstrings",
+        action="store_true",
+        help="Return non-zero if heuristic detects potentially non-English public API docstrings",
+    )
     args = parser.parse_args()
 
     src_root = Path(args.src_root)
@@ -276,6 +398,8 @@ def main() -> int:
     stale_documented = sorted(m for m in documented_modules if m not in source_modules)
     uncovered_source = sorted(m for m in source_modules if m not in documented_modules)
     missing_docstrings = [sym for sym in public_symbols if not sym.has_docstring]
+    missing_de_pages, missing_en_pages = discover_language_counterpart_gaps(docs_root)
+    non_english_docstrings = find_non_english_docstrings(public_symbols)
 
     print(f"Source modules: {len(source_modules)}")
     print(f"Documented automodule entries: {len(documented_modules)}")
@@ -296,6 +420,8 @@ def main() -> int:
             print(f"  - {path}: {error}")
 
     print_docstring_report(public_symbols, top_missing=args.top_missing_files)
+    print_language_counterpart_report(missing_de_pages, missing_en_pages)
+    print_docstring_language_report(non_english_docstrings, top_issues=args.top_language_issues)
 
     if stale_documented:
         return 1
@@ -303,6 +429,10 @@ def main() -> int:
         return 2
     if args.fail_on_missing_docstrings and missing_docstrings:
         return 3
+    if args.fail_on_missing_language_counterparts and (missing_de_pages or missing_en_pages):
+        return 4
+    if args.fail_on_non_english_docstrings and non_english_docstrings:
+        return 5
     return 0
 
 

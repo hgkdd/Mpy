@@ -10,7 +10,7 @@ Deutsche Dokumentation
    ../intro-driver-framework-de.rst
    ../FAQ-de.rst
    ../mpylab/ui_adapter_contract-de.rst
-   ../messanleitung.rst
+   ../messanleitung-de.rst
    ../dat-file-grammar.rst
    ../dot-grammar.rst
    ../mpylab.rst

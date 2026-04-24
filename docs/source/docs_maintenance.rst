@@ -66,6 +66,18 @@ Strict docstring audit (fail when public symbols are undocumented):
 
    python tools/docs_audit.py --fail-on-missing-docstrings
 
+Language counterpart audit (fail when ``-de``/``-en`` page pairs are incomplete):
+
+.. code-block:: bash
+
+   python tools/docs_audit.py --fail-on-missing-language-counterparts
+
+Docstring language audit (fail on potentially non-English public API docstrings):
+
+.. code-block:: bash
+
+   python tools/docs_audit.py --fail-on-non-english-docstrings
+
 CI behavior
 -----------
 
