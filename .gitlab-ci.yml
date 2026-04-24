@@ -2,33 +2,34 @@ stages:
   - deploy
 
 create-pages:
-  image: python:3.11
+  image: python:3.11 # Dies wird ignoriert, da wir den Shell-Executor nutzen, aber gut für Referenz
   stage: deploy
-  timeout: 2 hours  # Optional: Bei langen Builds
-
   variables:
     PIP_DISABLE_PIP_VERSION_CHECK: "1"
     MPLCONFIGDIR: "$CI_PROJECT_DIR/.cache/matplotlib"
-
   cache:
     key: "${CI_COMMIT_REF_SLUG}"
     paths:
       - .cache/pip
       - .cache/matplotlib
-
+      - .ci_venv  # Wir cachen jetzt auch das Venv!
   before_script:
     - export PATH="/opt/homebrew/bin:$PATH"
-    - python -m pip install --upgrade pip
-    - python -m pip install -e . || echo "Package install skipped"  # Fallback
-    - python -m pip install sphinx
-
+    # 1. Virtuelle Umgebung erstellen (falls nicht vorhanden)
+    - python -m venv .ci_venv
+    # 2. Aktivieren
+    - source .ci_venv/bin/activate
+    # 3. Pip im Venv updaten
+    - pip install --upgrade pip
+    # 4. Abhängigkeiten installieren
+    - pip install -e .
+    - pip install sphinx
   script:
     - mkdir -p public
+    # Alle folgenden Befehle laufen jetzt im aktiven Venv
     - python tools/docs_generate_api.py
     - python tools/docs_audit.py --fail-on-uncovered
     - sphinx-build -W --keep-going -E -a -b html docs/source public
-
   pages: true
-
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
