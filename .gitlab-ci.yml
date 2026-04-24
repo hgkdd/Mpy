@@ -1,7 +1,7 @@
 stages:
   - deploy
 
-pages:
+create-pages:
   image: python:3.11
   stage: deploy
   variables:
