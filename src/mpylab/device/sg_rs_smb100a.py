@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+"""mpylab.device.sg_rs_smb100a module."""
 import io
 import sys
 
@@ -13,6 +14,7 @@ from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 # Diese greift auf die Unterklasse SIGNALGENERATOR (signalgenerator.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
 class SIGNALGENERATOR(SGNLGNRTR):
+    """SIGNALGENERATOR class."""
     def __init__(self, **kw):
         SGNLGNRTR.__init__(self, **kw)
         self.map['AM_sources']['INT1'] = 'INT'
@@ -90,6 +92,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         #
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         if channel is None:
             channel = 1
         self.error = SGNLGNRTR.Init(self, ini, channel)
@@ -231,6 +234,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
 # Die Funktion main() wird nur zum Test des Treibers verwendet!
 #
 def main():
+    """main function."""
     import argparse
     from PySide6 import QtWidgets
     from mpylab.tools.util import format_block

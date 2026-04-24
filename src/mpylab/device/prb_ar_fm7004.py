@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Driver for the Amplifier Research FM7004/FL7018 field probe setup."""
 #
 import io
 import sys
@@ -9,6 +10,8 @@ from mpylab.device.fieldprobe import FIELDPROBE as FLDPRB
 
 
 class FIELDPROBE(FLDPRB):
+    """Concrete field probe driver for the AR FM7004 controller."""
+
     def __init__(self, **kw):
         FLDPRB.__init__(self, **kw)
         self._internal_unit = si.VOLT / si.METER
@@ -20,12 +23,14 @@ class FIELDPROBE(FLDPRB):
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
     def Init(self, ini=None, channel=None):
+        """Initialize probe communication and enable correction mode."""
         self.term_chars = '\r'
         self.error = FLDPRB.Init(self, ini, channel)
         self.write('CORR,ON')
         return self.error
 
     def SetFreq(self, freq):
+        """Set probe frequency and return the confirmed frequency in Hz."""
         self.error = 0
         if freq >= 1e9:
             fs = f"FREQ,{(freq * 1e-9):07.3f}G"
@@ -47,6 +52,7 @@ class FIELDPROBE(FLDPRB):
         return self.error, freq
 
     def GetData(self):
+        """Return one three-axis field vector with fixed relative uncertainty."""
         time.sleep(0.5)
         self.error = 0
         cmd = f"D,{self.channel}?"
@@ -68,14 +74,17 @@ class FIELDPROBE(FLDPRB):
         return self.error, data
 
     def GetDataNB(self, retrigger):
+        """Return data via the blocking acquisition path."""
         return self.GetData()
 
     def GetBatteryState(self):
+        """Return a fixed battery-state placeholder."""
         self.error = 0
         return self.error, 1.0
 
 
 def test():
+    """Create and initialize a test field probe instance."""
     from mpylab.tools.util import format_block
     ini = format_block("""
                         [DESCRIPTION]
@@ -105,6 +114,7 @@ def test():
 
 
 def main():
+    """Start the legacy UI test harness for this probe driver."""
     from mpylab.tools.util import format_block
     from mpylab.device.fieldprobe_ui import UI as UI
     #

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+"""mpylab.device.sg_rs_swm module."""
 import io
 import sys
 
@@ -10,6 +11,7 @@ from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 
 
 class SIGNALGENERATOR(SGNLGNRTR):
+    """SIGNALGENERATOR class."""
     def __init__(self, **kw):
         SGNLGNRTR.__init__(self, **kw)
         self._internal_unit = 'dBm'
@@ -47,6 +49,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         self.term_chars = '\n'
         if channel is None:
             channel = 1
@@ -136,6 +139,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
 
 
 def main():
+    """main function."""
     import argparse
     from PySide6 import QtWidgets
     from mpylab.tools.util import format_block

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+"""mpylab.device.motorcontroller module."""
 from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool
 from mpylab.tools.regular_expressions import FP

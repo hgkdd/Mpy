@@ -157,6 +157,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         setattr(self, "GetTriggerDelay", functools.partial(self._GetTriggerDelayIntern))
 
     def GetSpectrum(self):
+        """GetSpectrum method."""
         self.error = 0
         dct = self._do_cmds("GetSpectrum", locals())
         self._update(dct)
@@ -239,12 +240,14 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return 0, self.tdelay
 
     def SetSANMode(self):
+        """SetSANMode method."""
         self.error = 0
         dct = self._do_cmds("SetSANMode", locals())
         self._update(dct)
         return self.error, 0
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         if channel is None:
             channel = 1
         self.error = super().Init(ini, channel)
@@ -281,6 +284,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
 
 
 def main():
+    """main function."""
     from PySide6 import QtWidgets
     from mpylab.tools.util import format_block
     from mpylab.device.spectrumanalyzer_ui import UI

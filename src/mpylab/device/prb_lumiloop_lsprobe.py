@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""Driver for the Lumiloop LSProbe multi-channel field probe."""
+
 import sys
 import io
 import time
@@ -26,6 +28,8 @@ def _parse_mode_pair(mode):
 
 
 class FIELDPROBE(FLDPRB):
+    """Field probe driver with synchronized multi-probe trigger handling."""
+
     conftmpl = deepcopy(FLDPRB.conftmpl)
     conftmpl['init_value']['visa'] = str
     conftmpl['init_value']['mode'] = str
@@ -52,6 +56,7 @@ class FIELDPROBE(FLDPRB):
         self.LastData = None
 
     def Init(self, ini=None, channel=None):
+        """Initialize one logical channel and shared probe controller state."""
         self.ch = channel
         self.mode = None
 
@@ -99,6 +104,7 @@ class FIELDPROBE(FLDPRB):
         return f"{self.visa}_{self.ch}"
 
     def wait_for_laser_ready(self):
+        """Block until the probe laser/calibration state is reported ready."""
         if not self.is_main_instance:
             return
         while True:
@@ -110,6 +116,7 @@ class FIELDPROBE(FLDPRB):
         self.LastData_ns = time.time_ns()
 
     def setMode(self, mode):
+        """Set measurement mode on all probes and refresh effective sample rate."""
         if not self.is_main_instance:
             return self.main_instance.mode
         mode = int(mode)
@@ -135,6 +142,7 @@ class FIELDPROBE(FLDPRB):
         return mode
 
     def GetFreq(self):
+        """Return the currently configured measurement frequency."""
         self.error = 0
         if not self.is_main_instance:
             return self.error, self.main_instance.freq
@@ -150,6 +158,7 @@ class FIELDPROBE(FLDPRB):
         return self.error, self.freq
 
     def SetFreq(self, freq):
+        """Set frequency and switch low/high measurement mode as needed."""
         self.error = 0
         #self.setMode(1)
 
@@ -312,6 +321,7 @@ class FIELDPROBE(FLDPRB):
     #     return tuple(float(ans[_k]) for _k in ('x', 'y', 'z', 'm') )
 
     def GetData(self):
+        """Acquire one synchronized three-axis field sample for the current channel."""
         self.error = 0
         if self.is_main_instance:
             # relative error for single measured point
@@ -356,9 +366,11 @@ class FIELDPROBE(FLDPRB):
         return self.error, data
 
     def GetDataNB(self, retrigger=False):
+        """Return data using the same implementation as the blocking path."""
         return self.GetData()
 
     def GetWaveform(self, forceTRIG_CL=True):
+        """Acquire one raw waveform frame and return time plus Ex/Ey/Ez traces."""
         while True:
             err, Ex, Ey, Ez = self._float_force_trigger_GetData(forceTRIG_CL=forceTRIG_CL)
             if err == 0:
@@ -368,10 +380,12 @@ class FIELDPROBE(FLDPRB):
         return err, ts, Ex[0], Ey[0], Ez[0]
 
     def GetBatteryState(self):
+        """Return a fixed battery state placeholder value."""
         self.error = 0
         return self.error, 1.0
 
     def Quit(self):
+        """Reset shared instance state and disable laser on the main instance."""
         if self.is_main_instance:
             FIELDPROBE.instances = {}  # dict to hold instances (channels) of this driver
             FIELDPROBE.main_instance = None
@@ -382,6 +396,7 @@ class FIELDPROBE(FLDPRB):
         return self.error
 
 def main2():
+    """Run a manual integration test for multiple LSProbe channels."""
     from mpylab.tools.util import format_block
     import numpy as np
 

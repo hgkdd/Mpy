@@ -1,3 +1,5 @@
+"""Conducted-emission limits according to FCC Part 18.307 (Subpart C)."""
+
 from inspect import cleandoc
 
 from numpy import array, full_like, log10, nan, piecewise
@@ -6,10 +8,12 @@ from mpylab.limits.limit import Limit, log_linear
 
 
 def uv_to_dbuv(uv):
+    """Convert microvolt values to dBµV."""
     return 20.0 * log10(float(uv))
 
 
 class LIMIT(Limit):
+    """Configurable FCC Part 18.307 conducted-emission limit model."""
     description_title = "FCC 47 CFR Part 18.307 (Subpart C), conducted"
     description_case = {
         "Other consumer device": """
@@ -99,12 +103,15 @@ class LIMIT(Limit):
         return piecewise(f, conditions, functions)
 
     def limit_Other_consumer_device_QP(self, f):
+        """Return QP limits for generic consumer Part 18 devices."""
         return self._common_150k_to_30m(f, 66.0, 56.0, 56.0, 46.0)
 
     def limit_Other_consumer_device_AV(self, f):
+        """Return AV limits for generic consumer Part 18 devices."""
         return self._common_150k_to_30m(f, 66.0, 56.0, 56.0, 46.0)
 
     def limit_Induction_Ultrasonic_QP(self, f):
+        """Return QP limits for induction cooking/ultrasonic equipment."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [
@@ -118,6 +125,7 @@ class LIMIT(Limit):
         return piecewise(f, conditions, functions)
 
     def limit_Induction_Ultrasonic_AV(self, f):
+        """Return AV limits for induction cooking/ultrasonic equipment."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         # CFR table does not specify AV limit below 150 kHz for this equipment.
@@ -129,15 +137,19 @@ class LIMIT(Limit):
         return out
 
     def limit_RF_lighting_consumer_QP(self, f):
+        """Return QP limits for consumer RF lighting equipment."""
         return self._limit_rf_lighting(f, consumer=True)
 
     def limit_RF_lighting_consumer_AV(self, f):
+        """Return AV limits for consumer RF lighting equipment."""
         return self._limit_rf_lighting(f, consumer=True)
 
     def limit_RF_lighting_non_consumer_QP(self, f):
+        """Return QP limits for non-consumer RF lighting equipment."""
         return self._limit_rf_lighting(f, consumer=False)
 
     def limit_RF_lighting_non_consumer_AV(self, f):
+        """Return AV limits for non-consumer RF lighting equipment."""
         return self._limit_rf_lighting(f, consumer=False)
 
     def _limit_rf_lighting(self, f, consumer):

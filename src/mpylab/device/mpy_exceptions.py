@@ -5,6 +5,7 @@
 
 
 class InitError(Exception):
+    """InitError class."""
     def __init__(self, message='Before Commands can be executed, the DRIVER.Init method must be called'):
         self.message = message
 
@@ -13,6 +14,7 @@ class InitError(Exception):
 
 
 class ValidateError(Exception):
+    """ValidateError class."""
     def __init__(self, message='Validators Error', parameter=None, command=None):
         self.message = message
         self.parameter = parameter
@@ -30,6 +32,7 @@ class ValidateError(Exception):
 
 
 class Return_TypesError(Exception):
+    """Return_TypesError class."""
     def __init__(self, message=''):
         self.message = message
 
@@ -38,6 +41,7 @@ class Return_TypesError(Exception):
 
 
 class DriverImplementedError(Exception):
+    """DriverImplementedError class."""
     def __init__(self, message=''):
         self.message = message
 
@@ -46,6 +50,7 @@ class DriverImplementedError(Exception):
 
 
 class GeneralDriverError(Exception):
+    """GeneralDriverError class."""
     def __init__(self, message=''):
         self.message = message
 

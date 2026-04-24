@@ -1,3 +1,4 @@
+"""mpylab.tools.levenshtein module."""
 from os.path import commonprefix
 from Levenshtein import distance as ldistance
 
@@ -33,6 +34,7 @@ def relative(a, b, first_must_match=True):
     return r
 
 def fstrcmp(a, possibilities, cutoff=0.0, ignorecase=True, use_rmcp=True):
+    """fstrcmp function."""
     a = a.strip("'\"")
 
     if ignorecase:

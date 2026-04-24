@@ -14,6 +14,7 @@ from mpylab.device.communication_generic import generic_read, generic_write, gen
 
 
 class CommunicationPrologix:
+    """CommunicationPrologix class."""
     def __init__(
         self,
         ip,
@@ -172,7 +173,7 @@ class CommunicationPrologix:
         """
         :param cmd: str, Kommando an das Instrument
         :param tmpl: str oder None, Regex-Pattern für generic_query
-        :param send_opc: bool, append '; *OPC?' to a non-query command
+        :param send_opc: bool, append ``; *OPC?`` to a non-query command
 
         :return: str oder dict oder None
         """
@@ -194,6 +195,7 @@ class CommunicationPrologix:
         return generic_query(query_fn, cmd, tmpl, send_opc)
 
     def close(self):
+        """close method."""
         pass
 
     def __enter__(self):

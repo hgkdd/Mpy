@@ -74,6 +74,7 @@ class DriverTask(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        """Execute the worker callable and emit completion signals."""
         result = None
         error = None
         try:
@@ -380,6 +381,7 @@ class VlisnWidget(QtWidgets.QWidget):
         self._last_ini_text = content
 
     def log_message(self, message):
+        """Append a timestamped message to the log view."""
         self.log_edit.appendPlainText(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
 
     def _refresh_status_bar(self, state_text=None):
@@ -554,6 +556,7 @@ class VlisnWidget(QtWidgets.QWidget):
         self.log_message(f"Driver switched from {type(old_driver).__module__} to {type(self.dev).__module__}.")
 
     def on_load_ini_clicked(self):
+        """Load INI content from file into the editor."""
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(self, "Open INI", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -567,6 +570,7 @@ class VlisnWidget(QtWidgets.QWidget):
             self._show_error("INI Load Error", exc)
 
     def on_save_ini_clicked(self):
+        """Save current INI editor content to file."""
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(self, "Save INI", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -579,6 +583,7 @@ class VlisnWidget(QtWidgets.QWidget):
             self._show_error("INI Save Error", exc)
 
     def on_init_clicked(self):
+        """Initialize active V-LISN driver from current INI text."""
         ini_text = self.ini_edit.toPlainText()
         self._last_ini_text = ini_text
         try:
@@ -595,6 +600,7 @@ class VlisnWidget(QtWidgets.QWidget):
         self._start_task("Init", lambda: self._driver_method("Init", io.StringIO(ini_text)), on_success=success)
 
     def on_quit_clicked(self):
+        """Call driver ``Quit`` and reset initialized state."""
         def success(result):
             self._is_initialized = False
             self._refresh_status_bar()
@@ -603,10 +609,12 @@ class VlisnWidget(QtWidgets.QWidget):
         self._start_task("Quit", lambda: self._driver_method("Quit"), on_success=success)
 
     def on_set_freq_clicked(self, freq=None):
+        """Set V-LISN frequency in Hz."""
         freq = self.freq_control.value_hz() if freq is None else freq
         self._start_task("Set Frequency", lambda: self._driver_method("SetFreq", freq), on_success=self._handle_freq)
 
     def on_read_freq_clicked(self):
+        """Read current V-LISN frequency."""
         self._start_task("Read Frequency", lambda: self._driver_method("GetFreq"), on_success=self._handle_freq)
 
     def _handle_freq(self, result):
@@ -616,6 +624,7 @@ class VlisnWidget(QtWidgets.QWidget):
         self._set_status_field("GetFreq", result)
 
     def on_set_path_clicked(self):
+        """Set active LISN path."""
         path = self.path_combo.currentText()
         self._start_task("Set Path", lambda: self._driver_method("SetPath", path), on_success=self._handle_path)
 
@@ -627,10 +636,12 @@ class VlisnWidget(QtWidgets.QWidget):
         self._set_status_field("GetPath", result)
 
     def on_set_filter_toggled(self, checked):
+        """Enable or disable LISN filter state."""
         if self._is_initialized:
             self._start_task("Set Filter", lambda: self._driver_method("SetFilter", checked), on_success=lambda result: self._set_status_field("GetFilter", result))
 
     def on_get_data_clicked(self):
+        """Acquire one correction value for selected data name."""
         what = self.what_combo.currentText().strip()
         self._start_task("GetData", lambda: self._driver_method("GetData", what), on_success=lambda result: self._handle_data(result, what))
 
@@ -662,6 +673,7 @@ class VlisnWidget(QtWidgets.QWidget):
             field.setText(str(value))
 
     def refresh_status(self):
+        """Refresh status fields from supported driver getters."""
         def task():
             snapshot = {}
             for method_name in ("GetDescription", "GetVirtual", "GetFreq", "GetPath", "GetFilter", "GetChannels"):
@@ -714,6 +726,7 @@ class VlisnWidget(QtWidgets.QWidget):
         self._start_task("Refresh Status", task, on_success=success)
 
     def on_plot_clicked(self):
+        """Acquire a sweep over frequency range and plot values."""
         what = self.plot_what_combo.currentText().strip()
         start = self.start_freq_control.value_hz()
         stop = self.stop_freq_control.value_hz()
@@ -778,6 +791,7 @@ class VlisnWidget(QtWidgets.QWidget):
         self.plot.update_plot(self._display_plot_rows(), what=what)
 
     def on_raw_query_clicked(self):
+        """Execute raw query command and append response."""
         cmd = self.raw_command_edit.text().strip()
         if not cmd:
             return
@@ -787,6 +801,7 @@ class VlisnWidget(QtWidgets.QWidget):
         self._start_task("Raw Query", lambda: self.dev.query(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_raw_write_clicked(self):
+        """Execute raw write command and append response."""
         cmd = self.raw_command_edit.text().strip()
         if not cmd:
             return
@@ -796,6 +811,7 @@ class VlisnWidget(QtWidgets.QWidget):
         self._start_task("Raw Write", lambda: self.dev.write(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_export_csv_clicked(self):
+        """Export last acquired plot rows to CSV."""
         if not self._last_plot_rows:
             self._show_error("Export CSV Error", ValueError("No data acquired"))
             return
@@ -812,14 +828,17 @@ class VlisnWidget(QtWidgets.QWidget):
             self._show_error("Export CSV Error", exc)
 
     def on_clear_plot_clicked(self):
+        """Clear current plot data."""
         self._last_plot_rows = []
         self.plot.update_plot(self._last_plot_rows, what=self.plot_what_combo.currentText().strip())
 
     def on_grid_toggled(self, checked):
+        """Toggle plot grid visibility."""
         self.grid_button.setText("Grid On" if checked else "Grid Off")
         self.plot.set_grid_enabled(checked)
 
     def on_smoke_clicked(self):
+        """Run conservative V-LISN smoke test sequence."""
         ini_text = self.ini_edit.toPlainText()
         freq = self.freq_control.value_hz()
         what = self.what_combo.currentText().strip() or "S21"
@@ -866,6 +885,7 @@ def _make_default_instance(args):
 
 
 def main(argv=None):
+    """Start standalone V-LISN test utility."""
     parser = argparse.ArgumentParser(description="V-LISN driver test utility")
     parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
     parser.add_argument("--virtual", action="store_true", help="Use the virtual V-LISN driver.")

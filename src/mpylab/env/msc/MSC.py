@@ -881,6 +881,7 @@ class MSC(Measure.Measure):
             return self.stdUserInterruptHandler(dct, ignorelist=ignorelist)
 
     def stdUserInterruptHandler(self, dct, ignorelist=''):
+        """Default interrupt handler used by measurement loops."""
         def _resume_tuner_position(mg, names, scope):
             t = scope.get('t')
             ddict = scope.get('ddict', {})
@@ -1677,6 +1678,7 @@ class MSC(Measure.Measure):
         return stat
 
     def getMaxE(self, mg, names, f, etest, rfac=None):
+        """Compute the required source level to reach a target test field."""
         #        start=names['sg']
         #        ends=[names['ant'],names['pmfwd'],names['pmbwd']]
         #        maxstart=None
@@ -2128,6 +2130,7 @@ Quit: quit measurement.
         return stat
 
     def GetAllTPos(self, description):
+        """Return all tuner-position combinations found in main-cal raw data."""
         try:
             data = self.rawData_MainCal[description]['efield']
         except:
@@ -2150,6 +2153,7 @@ Quit: quit measurement.
         return alltpos
 
     def UseTunerPos(self, description, f, t):
+        """Return whether tuner position ``t`` exists for frequency ``f``."""
         try:
             data = self.rawData_MainCal[description]['efield']
         except:
@@ -2167,14 +2171,17 @@ Quit: quit measurement.
             return False
 
     def OutputRawData_MainCal(self, description=None, what=None, fname=None):
+        """Print or write raw main-calibration data."""
         thedata = self.rawData_MainCal
         self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     def OutputRawData_Emission(self, description=None, what=None, fname=None):
+        """Print or write raw emission data."""
         thedata = self.rawData_Emission
         self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     def OutputRawData_AutoCorr(self, description=None, what=None, fname=None):
+        """Print or write raw autocorrelation data."""
         thedata = self.rawData_AutoCorr
         self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
@@ -2199,10 +2206,12 @@ Quit: quit measurement.
     ##                        out.close()
 
     def OutputRawData_EUTCal(self, description=None, what=None, fname=None):
+        """Print or write raw EUT-calibration data."""
         thedata = self.rawData_EUTCal
         self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     def OutputRawData_Immunity(self, description=None, what=None, fname=None):
+        """Print or write raw immunity data."""
         thedata = self.rawData_Immunity
         self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
@@ -2234,22 +2243,27 @@ Quit: quit measurement.
                     print()
 
     def OutputProcessedData_MainCal(self, description=None, what=None, fname=None):
+        """Print or write processed main-calibration data."""
         thedata = self.processedData_MainCal
         self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def OutputProcessedData_Emission(self, description=None, what=None, fname=None):
+        """Print or write processed emission data."""
         thedata = self.processedData_Emission
         self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def OutputProcessedData_EUTCal(self, description=None, what=None, fname=None):
+        """Print or write processed EUT-calibration data."""
         thedata = self.processedData_EUTCal
         self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def OutputProcessedData_AutoCorr(self, description=None, what=None, fname=None):
+        """Print or write processed autocorrelation data."""
         thedata = self.processedData_AutoCorr
         self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def OutputProcessedData_Immunity(self, description=None, what=None, fname=None):
+        """Print or write processed immunity data."""
         thedata = self.processedData_Immunity
         self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
@@ -2276,9 +2290,11 @@ Quit: quit measurement.
                         print()
 
     def GetKeys_MainCal(self):
+        """Return available processed main-calibration description keys."""
         return list(self.processedData_MainCal.keys())
 
     def GetFreqs_MainCal(self, description):
+        """Return sorted frequencies for one raw main-calibration description."""
         if description in self.rawData_MainCal:
             freqs = list(self.rawData_MainCal[description]['efield'].keys())
             freqs.sort()
@@ -2287,6 +2303,7 @@ Quit: quit measurement.
             return []
 
     def getStandard(self, s=None):
+        """Normalize standard aliases to canonical standard names."""
         if s is None:
             s = self.std_Standard
         ls = s.lower()
@@ -2300,6 +2317,7 @@ Quit: quit measurement.
             return self.std_Standard
 
     def MaxtoAvET2(self):
+        """Return interpolation from max to average E^2 conversion factors."""
         t = [1, 2, 3, 4, 5, 9, 10, 12, 18, 20, 24, 30, 36, 40, 45, 60, 90, 120, 180, 400, 1000]
         r = [1, 1.313, 1.499, 1.630, 1.732, 1.957, 2, 2.08, 2.25, 2.3, 2.38, 2.47, 2.54, 2.59, 2.64, 2.76, 2.92, 3.04,
              3.2, 3.6, 3.97]
@@ -2532,6 +2550,7 @@ Quit: quit measurement.
         return processed_desc
 
     def Evaluate_MainCal(self, description="empty", standard=None, freqs=None):
+        """Evaluate main calibration raw data into processed metrics."""
         ctx = Context()
         standard = self.getStandard(standard)
         self.messenger(util.tstamp() + " Start of evaluation of main calibration with description %s" % description, [])
@@ -2635,6 +2654,7 @@ Quit: quit measurement.
                           hg=0.8,
                           RH=(0.8, 0.8),
                           isoats=None):
+        """Evaluate emission raw data using chamber calibration data."""
         if isoats is None:
             isoats = False
         if isoats:
@@ -2801,6 +2821,7 @@ Quit: quit measurement.
                           EUT_cal="EUT",
                           EUT_OK=None,
                           interpolation='linxliny'):
+        """Evaluate immunity measurements and derive threshold statistics."""
         self.messenger(util.tstamp() + " Start of evaluation of immunity measurement with description %s" % description,
                        [])
         if description not in self.rawData_Immunity:
@@ -2941,6 +2962,7 @@ Quit: quit measurement.
                           skip=None,
                           every=1,
                           offset=0):
+        """Evaluate autocorrelation, independence, and distribution metrics."""
         if skip is None:
             skip = []
         self.messenger(
@@ -3137,6 +3159,7 @@ Quit: quit measurement.
         return 0
 
     def Evaluate_EUTCal(self, description="EUT", calibration="empty"):
+        """Evaluate EUT calibration measurements against chamber calibration."""
         self.messenger(util.tstamp() + " Start of evaluation of EUT calibration with description %s" % description, [])
         if description not in self.rawData_EUTCal:
             self.messenger(util.tstamp() + " Description %s not found." % description, [])
@@ -3282,6 +3305,8 @@ Quit: quit measurement.
 
 
 class stdImmunityKernel:
+    """Stateful command generator for immunity measurement test sequences."""
+
     def __init__(self, field, tp, messenger, UIHandler, lcls, dwell, keylist='sS'):
         self.field = field
         self.tp = tp
@@ -3320,6 +3345,7 @@ class stdImmunityKernel:
         return ret
 
     def test(self, stat):
+        """Return next test-plan command based on current execution status."""
         if stat == 'AmplifierProtectionError':
             # last command failed due to Amplifier Protection
             # look for 'LoopMarker' and continue there
@@ -3349,6 +3375,8 @@ class stdImmunityKernel:
 
 
 class TestField:
+    """Callable converter from forward power to expected electric field."""
+
     def __init__(self, instance, maincal='empty', eutcal=None):
         self.fail = False
         if maincal not in instance.processedData_MainCal:
@@ -3396,6 +3424,8 @@ class TestField:
 
 
 class TestPower:
+    """Callable converter from target field strength to required power."""
+
     def __init__(self, instance, maincal='empty', eutcal=None):
         self.fail = False
         self.instance = instance

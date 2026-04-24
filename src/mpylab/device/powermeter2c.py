@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+"""mpylab.device.powermeter2c module."""
 import time
 from mpylab.device.powermeter import POWERMETER as PM
 
 
 class POWERMETER(PM):
+    """POWERMETER class."""
     instances = {}
 
     def __init__(self, SearchPaths=None):
@@ -14,6 +16,7 @@ class POWERMETER(PM):
         self.istriggered = False
 
     def Init(self, ini=None, channel=None, ignore_bus=False):
+        """Init method."""
         self.error = PM.Init(self, ini=ini, channel=channel, ignore_bus=ignore_bus)
         self.ch = channel
         self.trg_threshold = self.conf[f'channel_{channel}']['trg_threshold']
@@ -47,6 +50,7 @@ class POWERMETER(PM):
         return self.error
 
     def GetData(self):
+        """GetData method."""
         now = time.time()
         for inst in self._crossref():
             if inst.lasttrigger and (now - inst.lasttrigger) <= self.trg_threshold:
@@ -62,9 +66,11 @@ class POWERMETER(PM):
         return self.error, mine
 
     def GetDataNB(self, retrigger):
+        """GetDataNB method."""
         self.error, obj = PM.GetDataNB(self, retrigger)
 
     def Quit(self):
+        """Quit method."""
         PM.Quit(self)
         del POWERMETER.instances[self._hash()]  # remove this instance
 

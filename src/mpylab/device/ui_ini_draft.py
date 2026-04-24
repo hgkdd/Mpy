@@ -18,12 +18,14 @@ class IniPlainTextEdit(QtWidgets.QPlainTextEdit):
         self.insertPlainText(textwrap.dedent(text).strip("\n"))
 
     def insertFromMimeData(self, source):
+        """insertFromMimeData method."""
         if source.hasText():
             self._insert_dedented_text(source.text())
             return
         super().insertFromMimeData(source)
 
     def paste(self):
+        """paste method."""
         clipboard = QtWidgets.QApplication.clipboard()
         text = clipboard.text()
         if text:

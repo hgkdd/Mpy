@@ -85,6 +85,7 @@ def getch():
 
 
 def test():
+    """test function."""
     unbuffer_stdin()
     count = 0
     print("A trail of '*'s will be written while I poll for keystrokes")

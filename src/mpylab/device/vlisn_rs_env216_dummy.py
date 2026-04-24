@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""mpylab.device.vlisn_rs_env216_dummy module."""
 from mpylab.device.vlisn import VLISN as VL
 from mpylab.tools.util import case_insensitive_string_compare
 
@@ -12,11 +13,13 @@ class VLISN(VL):
         VL.__init__(self, **kw)
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         self.path = None
         super().Init(ini=ini, channel=channel)
         return self.error
 
     def SetPath(self, path):
+        """SetPath method."""
         self.error = 0
         # self.path = None
         for _path in ('L', 'N'):
@@ -29,6 +32,7 @@ class VLISN(VL):
         return self.GetPath()
 
 def main():
+    """main function."""
     import sys
     import io
     from mpylab.tools.util import format_block

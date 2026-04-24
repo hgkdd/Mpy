@@ -62,6 +62,7 @@ class DriverTask(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        """Execute the worker callable and emit completion signals."""
         result = None
         error = None
         try:
@@ -454,9 +455,11 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._settings().setValue(LAST_INI_PATH_KEY, self.ini_path)
 
     def log_edit_clear(self):
+        """Clear the UI log view."""
         self.log_edit.clear()
 
     def log_message(self, message):
+        """Append a timestamped message to the log view."""
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.log_edit.appendPlainText(f"[{timestamp}] {message}")
 
@@ -676,6 +679,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         indicator.setToolTip(message or "")
 
     def on_load_ini_clicked(self):
+        """Load INI content from a file into the editor."""
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(
             self,
             "Open INI File",
@@ -695,6 +699,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
             self._show_error("INI Load Error", exc)
 
     def on_save_ini_clicked(self):
+        """Save current INI content to a file."""
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save INI File",
@@ -713,6 +718,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
             self._show_error("INI Save Error", exc)
 
     def on_init_clicked(self):
+        """Initialize selected signal-generator driver from INI text."""
         ini_text = self.ini_edit.toPlainText()
         self._last_ini_text = ini_text
         channel = self.channel_spin.value()
@@ -780,6 +786,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._refresh_state_fields()
 
     def refresh_status(self, on_complete=None):
+        """Refresh status fields from driver readback values."""
         def success(snapshot):
             self._apply_status_snapshot(snapshot)
             if on_complete is not None:
@@ -788,6 +795,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._start_task("Refresh Status", self._collect_status_snapshot, on_success=success)
 
     def refresh_all(self):
+        """Refresh all status-dependent UI fields."""
         self.refresh_status()
 
     def _read_driver_state(self, getter, attr, fallback):
@@ -813,6 +821,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._pm_state = self._state_from_driver("pm_state", self._pm_state)
 
     def populate_controls_from_status(self):
+        """Populate writable controls from latest driver status snapshot."""
         freq = self._status_raw.get("GetFreq")
         if freq is not None:
             try:
@@ -872,6 +881,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
                 pass
 
     def on_apply_freq_clicked(self, value=None):
+        """Apply frequency setpoint to the signal generator."""
         self._set_indicator_state("freq", "pending", "Write in progress.")
         if value is None:
             value = self.freq_spin.value_hz()
@@ -886,9 +896,11 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._start_task("Set Frequency", task, on_success=success)
 
     def on_read_freq_clicked(self):
+        """Request a frequency readback refresh."""
         self.refresh_status()
 
     def on_apply_level_clicked(self):
+        """Apply output level setpoint to the signal generator."""
         self._set_indicator_state("level", "pending", "Write in progress.")
         value = self.level_spin.value()
         unit = self.level_unit_combo.currentText().strip()
@@ -905,12 +917,15 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._start_task("Set Level", task, on_success=success)
 
     def on_read_level_clicked(self):
+        """Request a level readback refresh."""
         self.refresh_status()
 
     def on_rf_on_clicked(self):
+        """Switch RF output on."""
         self._start_task("RF On", lambda: self._driver_method("RFOn"), on_success=self._rf_on_success)
 
     def on_rf_off_clicked(self):
+        """Switch RF output off."""
         self._start_task("RF Off", lambda: self._driver_method("RFOff"), on_success=self._rf_off_success)
 
     def _rf_on_success(self, result):
@@ -924,6 +939,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._refresh_state_fields()
 
     def on_conf_am_clicked(self):
+        """Apply AM modulation configuration."""
         source = self.amsource_combo.currentText()
         freq = self.amfreq_spin.value_hz()
         depth = self.amdepth_spin.value()
@@ -940,9 +956,11 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._start_task("Configure AM", task, on_success=success)
 
     def on_am_on_clicked(self):
+        """Enable AM modulation."""
         self._start_task("AM On", lambda: self._driver_method("AMOn"), on_success=self._am_on_success)
 
     def on_am_off_clicked(self):
+        """Disable AM modulation."""
         self._start_task("AM Off", lambda: self._driver_method("AMOff"), on_success=self._am_off_success)
 
     def _am_on_success(self, result):
@@ -956,6 +974,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._refresh_state_fields()
 
     def on_conf_pm_clicked(self):
+        """Apply PM modulation configuration."""
         source = self.pmsource_combo.currentText()
         freq = self.pmfreq_spin.value_hz()
         pol = self.pmpol_combo.currentText()
@@ -972,9 +991,11 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         self._start_task("Configure PM", task, on_success=success)
 
     def on_pm_on_clicked(self):
+        """Enable PM modulation."""
         self._start_task("PM On", lambda: self._driver_method("PMOn"), on_success=self._pm_on_success)
 
     def on_pm_off_clicked(self):
+        """Disable PM modulation."""
         self._start_task("PM Off", lambda: self._driver_method("PMOff"), on_success=self._pm_off_success)
 
     def _pm_on_success(self, result):
@@ -1006,6 +1027,7 @@ class SignalGeneratorWidget(QtWidgets.QWidget):
         return results
 
     def on_run_smoke_test_clicked(self):
+        """Run conservative smoke test and display collected results."""
         def success(lines):
             self._rf_state = "off"
             text = "\n".join(lines)

@@ -1,3 +1,5 @@
+"""Radiated-emission limits according to FCC Part 15.109 (Subpart B)."""
+
 from inspect import cleandoc
 
 from numpy import array, full_like, log10, nan, piecewise
@@ -6,10 +8,12 @@ from mpylab.limits.limit import Limit
 
 
 def uv_to_dbuv(uv_per_m):
+    """Convert microvolt-per-meter values to dBµV/m."""
     return 20.0 * log10(float(uv_per_m))
 
 
 class LIMIT(Limit):
+    """Configurable FCC Part 15.109 radiated-emission limit model."""
     description_title = "FCC 47 CFR Part 15.109 (Subpart B), radiated"
     description_Classification = {
         "A": """
@@ -112,21 +116,27 @@ class LIMIT(Limit):
         return out
 
     def limit_CB_3_m_QP(self, f):
+        """Return Class B quasi-peak limits at 3 m."""
         return self._table_class_b_3m(f)
 
     def limit_CA_10_m_QP(self, f):
+        """Return Class A quasi-peak limits at 10 m."""
         return self._table_class_a_10m(f)
 
     def limit_CB_3_m_AV(self, f):
+        """Return Class B average limits above 960 MHz at 3 m."""
         return self._above_960_average(f, 500)
 
     def limit_CA_10_m_AV(self, f):
+        """Return Class A average limits above 960 MHz at 10 m."""
         return self._above_960_average(f, 300)
 
     def limit_CB_3_m_PK(self, f):
+        """Return Class B peak limits above 960 MHz at 3 m."""
         return self.limit_CB_3_m_AV(f) + 20.0
 
     def limit_CA_10_m_PK(self, f):
+        """Return Class A peak limits above 960 MHz at 10 m."""
         return self.limit_CA_10_m_AV(f) + 20.0
 
 

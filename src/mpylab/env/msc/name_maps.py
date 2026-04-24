@@ -6,6 +6,8 @@ from typing import Mapping, Sequence, TypedDict, cast
 
 
 class MSCMainCalNames(TypedDict):
+    """Typed device-name mapping for MSC main calibration workflow."""
+
     sg: str
     a1: str
     a2: str
@@ -19,6 +21,8 @@ class MSCMainCalNames(TypedDict):
 
 
 class MSCAutoCorrNames(TypedDict):
+    """Typed device-name mapping for MSC auto-correlation workflow."""
+
     sg: str
     a1: str
     a2: str
@@ -30,6 +34,8 @@ class MSCAutoCorrNames(TypedDict):
 
 
 class MSCEUTCalNames(TypedDict):
+    """Typed device-name mapping for MSC EUT calibration workflow."""
+
     sg: str
     a1: str
     a2: str
@@ -43,6 +49,8 @@ class MSCEUTCalNames(TypedDict):
 
 
 class MSCImmunityNames(TypedDict):
+    """Typed device-name mapping for MSC immunity measurement workflow."""
+
     sg: str
     a1: str
     a2: str
@@ -56,6 +64,8 @@ class MSCImmunityNames(TypedDict):
 
 
 class MSCEmissionNames(TypedDict):
+    """Typed device-name mapping for MSC emission measurement workflow."""
+
     tuner: list[str]
     refant: list[str]
     receiver: list[str]
@@ -104,6 +114,7 @@ def _require_list_str(data: dict[str, object], key: str) -> None:
 
 
 def coerce_msc_maincal_names(names: Mapping[str, object] | None) -> MSCMainCalNames:
+    """Validate and complete a main-calibration MSC name map."""
     data = _as_name_map(
         names,
         {
@@ -127,6 +138,7 @@ def coerce_msc_maincal_names(names: Mapping[str, object] | None) -> MSCMainCalNa
 
 
 def coerce_msc_autocorr_names(names: Mapping[str, object] | None) -> MSCAutoCorrNames:
+    """Validate and complete an auto-correlation MSC name map."""
     data = _as_name_map(
         names,
         {
@@ -148,6 +160,7 @@ def coerce_msc_autocorr_names(names: Mapping[str, object] | None) -> MSCAutoCorr
 
 
 def coerce_msc_eutcal_names(names: Mapping[str, object] | None) -> MSCEUTCalNames:
+    """Validate and complete an EUT-calibration MSC name map."""
     data = _as_name_map(
         names,
         {
@@ -171,6 +184,7 @@ def coerce_msc_eutcal_names(names: Mapping[str, object] | None) -> MSCEUTCalName
 
 
 def coerce_msc_immunity_names(names: Mapping[str, object] | None) -> MSCImmunityNames:
+    """Validate and complete an MSC immunity name map."""
     data = _as_name_map(
         names,
         {
@@ -194,6 +208,7 @@ def coerce_msc_immunity_names(names: Mapping[str, object] | None) -> MSCImmunity
 
 
 def coerce_msc_emission_names(names: Mapping[str, object] | None) -> MSCEmissionNames:
+    """Validate and complete an MSC emission name map."""
     data = _as_name_map(names, {"tuner": ["tuner1"], "refant": ["refant1"], "receiver": ["saref1"]})
     for k in ("tuner", "refant", "receiver"):
         _require_list_str(data, k)

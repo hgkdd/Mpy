@@ -1,3 +1,4 @@
+"""mpylab.limits.conducted_emission.iec_61000_6_3 module."""
 from inspect import cleandoc
 
 from mpylab.limits.conducted_emission.en_55032 import LIMIT as CISPR32_LIMIT
@@ -5,6 +6,7 @@ from mpylab.limits.limit import Limit
 
 
 class LIMIT(Limit):
+    """LIMIT class."""
     description_title = "IEC 61000-6-3 (generic residential/commercial), conducted"
     description_mapping = """
         This module follows the Academy EMC mapping for generic residential emission and

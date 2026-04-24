@@ -6,6 +6,7 @@ from typing import Mapping, TypedDict, cast
 
 
 class AmplifierNames(TypedDict):
+    """AmplifierNames class."""
     sg: str
     amp_in: str
     amp_out: str
@@ -15,6 +16,7 @@ class AmplifierNames(TypedDict):
 
 
 def coerce_amplifier_names(names: Mapping[str, object] | None) -> AmplifierNames:
+    """coerce_amplifier_names function."""
     default = {"sg": "sg", "amp_in": "amp_in", "amp_out": "amp_out", "pm_fwd": "pm1", "pm_bwd": "pm2", "output": "gtem"}
     data = dict(default if names is None else names)
     for k, v in default.items():

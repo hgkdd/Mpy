@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
+"""mpylab.device.amp_ar_25s1g4 module."""
 from mpylab.device.amplifier import AMPLIFIER as AMP
 
 
 class AMPLIFIER(AMP):
+    """AMPLIFIER class."""
     conftmpl = AMP.conftmpl
     conftmpl['init_value']['gpib'] = int
 
@@ -17,6 +19,7 @@ class AMPLIFIER(AMP):
         self.error = None
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         self.error = AMP.Init(self, ini, channel)
         self.POn()
         self.Operate()
@@ -24,6 +27,7 @@ class AMPLIFIER(AMP):
 
 
 def main():
+    """main function."""
     import sys
     import io
 

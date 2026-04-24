@@ -147,6 +147,7 @@ class DRIVER:
         return self.dev
 
     def get_config(self, ini, channel):
+        """Load configuration for a channel from ini source into ``self.conf``."""
         self.channel = channel
         if not self.channel:
             self.channel = 1
@@ -634,6 +635,8 @@ class DRIVER:
 
 @dataclass(frozen=True)
 class MethodCall:
+    """Structured method-call action used in command/preset definitions."""
+
     name: str
     args: tuple = ()
     kwargs: dict = field(default_factory=dict)
@@ -641,6 +644,7 @@ class MethodCall:
 
 
 def test_do_cmds():
+    """Run local integration checks for mixed legacy/new `_do_cmds` actions."""
     import re
     import io
     from mpylab.tools.configuration import strbool
@@ -938,6 +942,7 @@ def test_do_cmds():
     print("\n=== Test beendet ===")
 
 def test_dummy_driver():
+    """Run a text-level smoke test for base DRIVER initialization flow."""
     import io
     from mpylab.tools.util import format_block
     from mpylab.tools.configuration import strbool
@@ -1022,6 +1027,7 @@ def test_dummy_driver():
         raise
 
 def test_hybrid():
+    """Verify `_do_cmds` behavior for hybrid template/callable command styles."""
     import re
 
     class FakeCommunication:
@@ -1139,6 +1145,7 @@ def test_hybrid():
     print("test_hybrid passed")
 
 def test_presets_hybrid():
+    """Verify legacy-style preset expansion and command rendering behavior."""
     class FakeCommunication:
         def __init__(self):
             self.writes = []
@@ -1272,6 +1279,7 @@ def test_presets_hybrid():
     print("test_presets_hybrid passed")
 
 def test_apply_presets_sequences_and_method_calls():
+    """Verify sequence presets and string-method-call preset actions."""
     class FakeCommunication:
         def __init__(self):
             self.writes = []
@@ -1356,6 +1364,7 @@ def test_apply_presets_sequences_and_method_calls():
     print("test_apply_presets_sequences_and_method_calls passed")
 
 def test_apply_presets_equivalence():
+    """Check equivalence between legacy and normalized preset application paths."""
     class FakeCommunication:
         def __init__(self):
             self.writes = []

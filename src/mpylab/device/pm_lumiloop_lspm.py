@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Driver for the Lumiloop multi-channel LSPM power meter."""
 import sys
 import io
 import time
@@ -14,6 +15,7 @@ from mpylab.device.powermeter import POWERMETER as PMMTR
 from mpylab.tools.statistic import linstat_lin
 
 def dBm2W(vals):
+    """Convert dBm values to watts."""
     watts = np.power(10, 0.1*np.asarray(vals))*0.001
     return watts
 
@@ -26,6 +28,8 @@ def _parse_mode_pair(mode):
     return values[0], values[1]
 
 class POWERMETER(PMMTR):
+    """Power meter driver with synchronized trigger/waveform acquisition."""
+
     conftmpl = deepcopy(PMMTR.conftmpl)
     conftmpl['init_value']['visa'] = str
     conftmpl['init_value']['mode'] = str
@@ -52,6 +56,7 @@ class POWERMETER(PMMTR):
         self.LastData = None
 
     def Init(self, ini=None, channel=None):
+        """Initialize one logical channel and shared LSPM controller state."""
         self.ch = channel
         self.mode = None
 
@@ -110,6 +115,7 @@ class POWERMETER(PMMTR):
         return f"{self.visa}_{self.ch}"
 
     def wait_for_laser_ready(self):
+        """Wait until measurement readiness is reported for all probes."""
         if not self.is_main_instance:
             return
         while True:
@@ -121,6 +127,7 @@ class POWERMETER(PMMTR):
         self.LastData_ns = time.time_ns()
 
     def setMode(self, mode):
+        """Set low/high measurement mode across all attached meters."""
         if not self.is_main_instance:
             return self.main_instance.mode
         mode = int(mode)
@@ -146,6 +153,7 @@ class POWERMETER(PMMTR):
         return mode
 
     def GetFreq(self):
+        """Return the currently configured frequency in Hz."""
         self.error = 0
         if not self.is_main_instance:
             return self.error, self.main_instance.freq
@@ -161,6 +169,7 @@ class POWERMETER(PMMTR):
         return self.error, self.freq
 
     def SetFreq(self, freq):
+        """Set frequency and switch between configured low/high modes."""
         self.error = 0
         #self.setMode(1)
 
@@ -319,6 +328,7 @@ class POWERMETER(PMMTR):
     #     return tuple(float(ans[_k]) for _k in ('x', 'y', 'z', 'm') )
 
     def GetData(self):
+        """Acquire one synchronized power sample set and return channel data."""
         self.error = 0
         if self.is_main_instance:
             # relative error for single measured point
@@ -344,13 +354,16 @@ class POWERMETER(PMMTR):
         return self.error, data
 
     def GetDataNB(self, retrigger=False):
+        """Return data via the blocking acquisition implementation."""
         return self.GetData()
 
     def Quit(self):
+        """Close the driver and return status."""
         self.error = 0
         return self.error
 
 def main2():
+    """Run an interactive manual test loop for the LSPM driver."""
     from mpylab.tools.util import format_block
     import numpy as np
 

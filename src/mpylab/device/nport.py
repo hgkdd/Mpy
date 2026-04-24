@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Base driver for passive n-port style data models."""
 
 from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool, fstrcmp
@@ -48,6 +49,7 @@ class NPORT(DRIVER):
         self.freq = None
 
     def Init(self, ini=None, channel=None, ignore_bus=True):
+        """Initialize channel datasets and interpolation helpers from config."""
         super().Init(ini=ini, channel=channel, ignore_bus=ignore_bus)
         # self.error=0
         # self.Configuration=Configuration(ini, self.conftmpl)
@@ -80,36 +82,44 @@ class NPORT(DRIVER):
         return self.conf[sectok][keytok]
 
     def Quit(self):
+        """Close driver state and return status."""
         self.error = 0
         return self.error
 
     def SetVirtual(self, virtual):
+        """Enable or disable virtual mode in runtime configuration."""
         self.error = 0
         self.conf['init_value']['virtual'] = virtual
         return self.error
 
     def GetVirtual(self):
+        """Return whether virtual mode is enabled."""
         self.error = 0
         return self.error, self.conf['init_value']['virtual']
 
     def GetDescription(self):
+        """Return the configured description string."""
         self.error = 0
         return self.error, self.conf['description']['description']
 
     def SetFreq(self, freq):
+        """Set current interpolation frequency in Hz."""
         self.error = 0
         self.freq = freq
         return self.error, freq
 
     def GetFreq(self):
+        """Return current interpolation frequency in Hz."""
         self.error = 0
         return self.error, self.freq
 
     def GetChannels(self):
+        """Return available channel names."""
         self.error = 0
         return self.error, tuple(self.data.keys())
 
     def GetData(self, what):
+        """Return interpolated data for a requested channel name."""
         self.error = 0
         allwhat = list(self.data.keys())
         whatguess = None
@@ -134,6 +144,7 @@ class ANTENNA(NPORT):
 
 
 def main():
+    """Run a simple manual test for NPORT interpolation behavior."""
     import sys
     import io
     from mpylab.tools.util import format_block

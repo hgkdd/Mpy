@@ -6,6 +6,7 @@ from typing import Mapping, Sequence, TypedDict, cast
 
 
 class TEMImmunityNames(TypedDict):
+    """TEMImmunityNames class."""
     sg: str
     a1: str
     a2: str
@@ -15,11 +16,13 @@ class TEMImmunityNames(TypedDict):
 
 
 class TEMEmissionNames(TypedDict):
+    """TEMEmissionNames class."""
     port: list[str]
     receiver: list[str]
 
 
 class TEME0YNames(TypedDict):
+    """TEME0YNames class."""
     sg: str
     a1: str
     a2: str
@@ -72,6 +75,7 @@ def _require_list_str(data: dict[str, object], key: str) -> None:
 
 
 def coerce_tem_immunity_names(names: Mapping[str, object] | None) -> TEMImmunityNames:
+    """coerce_tem_immunity_names function."""
     data = _as_name_map(
         names,
         {"sg": "sg", "a1": "a1", "a2": "a2", "tem": "gtem", "pmfwd": "pm1", "pmbwd": "pm2"},
@@ -82,6 +86,7 @@ def coerce_tem_immunity_names(names: Mapping[str, object] | None) -> TEMImmunity
 
 
 def coerce_tem_emission_names(names: Mapping[str, object] | None) -> TEMEmissionNames:
+    """coerce_tem_emission_names function."""
     data = _as_name_map(names, {"port": ["port"], "receiver": ["analyzer"]})
     for k in ("port", "receiver"):
         _require_list_str(data, k)
@@ -89,6 +94,7 @@ def coerce_tem_emission_names(names: Mapping[str, object] | None) -> TEMEmission
 
 
 def coerce_tem_e0y_names(names: Mapping[str, object] | None) -> TEME0YNames:
+    """coerce_tem_e0y_names function."""
     data = _as_name_map(
         names,
         {"sg": "sg", "a1": "a1", "a2": "a2", "port": "port", "pmfwd": "pm1", "pmbwd": "pm2", "fp": ["fp1"]},

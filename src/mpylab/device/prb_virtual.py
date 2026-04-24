@@ -11,6 +11,8 @@ from mpylab.tools.numeric_eval import safe_numeric_eval
 
 
 class FIELDPROBE(FIELDPROBE_BASE):
+    """Virtual field probe backend with expression-based component synthesis."""
+
     conftmpl = deepcopy(FIELDPROBE_BASE.conftmpl)
     conftmpl["channel_%d"]["x"] = str
     conftmpl["channel_%d"]["y"] = str
@@ -33,6 +35,7 @@ class FIELDPROBE(FIELDPROBE_BASE):
         self._last_response = ""
 
     def Init(self, ini=None, channel=None):
+        """Initialize virtual channel expressions and enable virtual mode."""
         self.channel = 1 if channel is None else channel
         self.error = FIELDPROBE_BASE.Init(self, ini, self.channel, ignore_bus=True)
         self.bus_ready = True
@@ -48,19 +51,24 @@ class FIELDPROBE(FIELDPROBE_BASE):
         return self.error
 
     def GetDescription(self):
+        """Return virtual instrument identification."""
         return 0, self.IDN
 
     def SetFreq(self, freq):
+        """Set virtual operating frequency in Hz."""
         self.freq = float(freq)
         return 0, self.freq
 
     def GetFreq(self):
+        """Return virtual operating frequency in Hz."""
         return 0, self.freq
 
     def Trigger(self):
+        """Trigger acquisition (no-op in virtual mode)."""
         return 0, 0
 
     def Zero(self, state):
+        """Set virtual zero state flag to ``on`` or ``off``."""
         self.zero_state = "on" if str(state).strip().lower() == "on" else "off"
         return 0, self.zero_state
 
@@ -76,6 +84,7 @@ class FIELDPROBE(FIELDPROBE_BASE):
         )
 
     def GetData(self):
+        """Return synthetic three-axis field data as quantities."""
         return 0, [
             self._component(self.x_expr),
             self._component(self.y_expr),
@@ -83,17 +92,21 @@ class FIELDPROBE(FIELDPROBE_BASE):
         ]
 
     def GetDataNB(self, retrigger=False):
+        """Return data and optionally emulate retrigger behavior."""
         if retrigger:
             self.Trigger()
         return self.GetData()
 
     def GetBatteryState(self):
+        """Return virtual battery state."""
         return 0, self.battery
 
     def GetWaveform(self):
+        """Return unsupported marker for waveform access."""
         return -1, None, None, None, None
 
     def Quit(self):
+        """Close virtual driver and return success."""
         return 0
 
     def write(self, cmd):

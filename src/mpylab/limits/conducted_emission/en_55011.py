@@ -1,3 +1,5 @@
+"""Conducted emission limit lines according to DIN EN 55011:2022-05."""
+
 from inspect import cleandoc
 from numpy import piecewise, log10, array, full_like, nan
 
@@ -5,6 +7,7 @@ from mpylab.limits.limit import Limit, log_linear
 
 
 class LIMIT(Limit):
+    """EN 55011 conducted-emission limit model with selectable variants."""
     description_title = "DIN EN 55011:2022-05 (CISPR-11), conducted"
     description_Group = {'1': """
                             ## Group 1: (general purpose applications)
@@ -139,6 +142,7 @@ class LIMIT(Limit):
 
     # AC below 20 kVA
     def limit_G1_CB_AC_less_20_kVA_AV(self, f):
+        """Return Group 1/Class B AC <=20 kVA average limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
@@ -152,15 +156,19 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CB_AC_less_20_kVA_QP(self, f):  # 10 dB higher for QP
+        """Return Group 1/Class B AC <=20 kVA quasi-peak limit values."""
         return self.limit_G1_CB_AC_less_20_kVA_AV(f) + 10
 
     def limit_G2_CB_AC_less_20_kVA_AV(self, f):  # same as Group 1
+        """Return Group 2/Class B AC <=20 kVA average limit values."""
         return self.limit_G1_CB_AC_less_20_kVA_AV(f)
 
     def limit_G2_CB_AC_less_20_kVA_QP(self, f): # same as Group 1
+        """Return Group 2/Class B AC <=20 kVA quasi-peak limit values."""
         return self.limit_G1_CB_AC_less_20_kVA_QP(f)
 
     def limit_G1_CA_AC_less_20_kVA_AV(self, f):     # only <= 20 kVA
+        """Return Group 1/Class A AC <=20 kVA average limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
@@ -172,9 +180,11 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CA_AC_less_20_kVA_QP(self, f):    # only <= 20 kVA
+        """Return Group 1/Class A AC <=20 kVA quasi-peak limit values."""
         return self.limit_G1_CA_AC_less_20_kVA_AV(f) + 13
 
     def limit_G2_CA_AC_less_20_kVA_AV(self, f):     # only <= 75 kVA
+        """Return Group 2/Class A AC <=20 kVA average limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
@@ -188,6 +198,7 @@ class LIMIT(Limit):
         return results
 
     def limit_G2_CA_AC_less_20_kVA_QP(self, f):     # only <= 75 kVA
+        """Return Group 2/Class A AC <=20 kVA quasi-peak limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
@@ -202,31 +213,40 @@ class LIMIT(Limit):
 
     # AC lower 75 kVA
     def limit_G1_CA_AC_less_75_kVA_AV(self, f):
+        """Return Group 1/Class A AC <=75 kVA average limit values."""
         return self.limit_G2_CA_AC_less_20_kVA_AV(f)
 
     def limit_G1_CA_AC_less_75_kVA_QP(self, f):
+        """Return Group 1/Class A AC <=75 kVA quasi-peak limit values."""
         return self.limit_G2_CA_AC_less_20_kVA_QP(f)
 
     def limit_G1_CB_AC_less_75_kVA_AV(self, f):
+        """Return Group 1/Class B AC <=75 kVA average limit values."""
         return self.limit_G1_CB_AC_less_20_kVA_AV(f)
 
     def limit_G1_CB_AC_less_75_kVA_QP(self, f):
+        """Return Group 1/Class B AC <=75 kVA quasi-peak limit values."""
         return self.limit_G1_CB_AC_less_20_kVA_QP(f)
 
     def limit_G2_CA_AC_less_75_kVA_AV(self, f):
+        """Return Group 2/Class A AC <=75 kVA average limit values."""
         return self.limit_G1_CA_AC_less_75_kVA_AV(f)
 
     def limit_G2_CA_AC_less_75_kVA_QP(self, f):
+        """Return Group 2/Class A AC <=75 kVA quasi-peak limit values."""
         return self.limit_G1_CA_AC_less_75_kVA_QP(f)
 
     def limit_G2_CB_AC_less_75_kVA_AV(self, f):
+        """Return Group 2/Class B AC <=75 kVA average limit values."""
         return self.limit_G2_CB_AC_less_20_kVA_AV(f)
 
     def limit_G2_CB_AC_less_75_kVA_QP(self, f):
+        """Return Group 2/Class B AC <=75 kVA quasi-peak limit values."""
         return self.limit_G2_CB_AC_less_20_kVA_QP(f)
 
     # AC over 75 kVA
     def limit_G1_CA_AC_over_75_kVA_AV(self, f):
+        """Return Group 1/Class A AC >75 kVA average limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
@@ -240,29 +260,37 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CA_AC_over_75_kVA_QP(self, f):
+        """Return Group 1/Class A AC >75 kVA quasi-peak limit values."""
         return self.limit_G1_CA_AC_over_75_kVA_AV(f) +10
 
     def limit_G1_CB_AC_over_75_kVA_AV(self, f):
+        """Return Group 1/Class B AC >75 kVA average limit values."""
         return self.limit_G1_CB_AC_less_20_kVA_AV(f)
 
     def limit_G1_CB_AC_over_75_kVA_QP(self, f):
+        """Return Group 1/Class B AC >75 kVA quasi-peak limit values."""
         return self.limit_G1_CB_AC_less_20_kVA_QP(f)
 
     def limit_G2_CA_AC_over_75_kVA_AV(self, f):
+        """Return Group 2/Class A AC >75 kVA average limit values."""
         return self.limit_G1_CA_AC_over_75_kVA_AV(f)
 
     def limit_G2_CA_AC_over_75_kVA_QP(self, f):
+        """Return Group 2/Class A AC >75 kVA quasi-peak limit values."""
         return self.limit_G1_CA_AC_over_75_kVA_QP(f)
 
     def limit_G2_CB_AC_over_75_kVA_AV(self, f):
+        """Return Group 2/Class B AC >75 kVA average limit values."""
         return self.limit_G2_CB_AC_less_20_kVA_AV(f)
 
     def limit_G2_CB_AC_over_75_kVA_QP(self, f):
+        """Return Group 2/Class B AC >75 kVA quasi-peak limit values."""
         return self.limit_G2_CB_AC_less_20_kVA_QP(f)
 
 ################################# DC ###########################
     # DC below 20 kVA
     def limit_G1_CB_DC_less_20_kVA_AV(self, f):
+        """Return Group 1/Class B DC <=20 kVA average limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
@@ -276,15 +304,19 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CB_DC_less_20_kVA_QP(self, f):  # 10 dB higher for QP
+        """Return Group 1/Class B DC <=20 kVA quasi-peak limit values."""
         return self.limit_G1_CB_DC_less_20_kVA_AV(f) + 10
 
     def limit_G2_CB_DC_less_20_kVA_AV(self, f):  # same as Group 1
+        """Return Group 2/Class B DC <=20 kVA average limit values."""
         return self.no_limit(f)
 
     def limit_G2_CB_DC_less_20_kVA_QP(self, f): # same as Group 1
+        """Return Group 2/Class B DC <=20 kVA quasi-peak limit values."""
         return self.no_limit(f)
 
     def limit_G1_CA_DC_less_20_kVA_AV(self, f):     # only <= 20 kVA
+        """Return Group 1/Class A DC <=20 kVA average limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 5e6),
@@ -296,16 +328,20 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CA_DC_less_20_kVA_QP(self, f):    # only <= 20 kVA
+        """Return Group 1/Class A DC <=20 kVA quasi-peak limit values."""
         return self.limit_G1_CA_DC_less_20_kVA_AV(f) + 13
 
     def limit_G2_CA_DC_less_20_kVA_AV(self, f):     # only <= 75 kVA
+        """Return Group 2/Class A DC <=20 kVA average limit values."""
         return self.no_limit(f)
 
     def limit_G2_CA_DC_less_20_kVA_QP(self, f):     # only <= 75 kVA
+        """Return Group 2/Class A DC <=20 kVA quasi-peak limit values."""
         return self.no_limit(f)
 
     # DC lower 75 kVA
     def limit_G1_CA_DC_less_75_kVA_AV(self, f):
+        """Return Group 1/Class A DC <=75 kVA average limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 5e6),
@@ -317,6 +353,7 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CA_DC_less_75_kVA_QP(self, f):
+        """Return Group 1/Class A DC <=75 kVA quasi-peak limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 5e6),
@@ -328,25 +365,32 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CB_DC_less_75_kVA_AV(self, f):
+        """Return Group 1/Class B DC <=75 kVA average limit values."""
         return self.limit_G1_CB_DC_less_20_kVA_AV(f)
 
     def limit_G1_CB_DC_less_75_kVA_QP(self, f):
+        """Return Group 1/Class B DC <=75 kVA quasi-peak limit values."""
         return self.limit_G1_CB_DC_less_20_kVA_QP(f)
 
     def limit_G2_CA_DC_less_75_kVA_AV(self, f):
+        """Return Group 2/Class A DC <=75 kVA average limit values."""
         return self.no_limit(f)
 
     def limit_G2_CA_DC_less_75_kVA_QP(self, f):
+        """Return Group 2/Class A DC <=75 kVA quasi-peak limit values."""
         return self.no_limit(f)
 
     def limit_G2_CB_DC_less_75_kVA_AV(self, f):
+        """Return Group 2/Class B DC <=75 kVA average limit values."""
         return self.no_limit(f)
 
     def limit_G2_CB_DC_less_75_kVA_QP(self, f):
+        """Return Group 2/Class B DC <=75 kVA quasi-peak limit values."""
         return self.no_limit(f)
 
     # DC over 75 kVA
     def limit_G1_CA_DC_over_75_kVA_AV(self, f):
+        """Return Group 1/Class A DC >75 kVA average limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 5e6),
@@ -358,6 +402,7 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CA_DC_over_75_kVA_QP(self, f):
+        """Return Group 1/Class A DC >75 kVA quasi-peak limit values."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 5e6),
@@ -369,21 +414,27 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CB_DC_over_75_kVA_AV(self, f):
+        """Return Group 1/Class B DC >75 kVA average limit values."""
         return self.limit_G1_CB_DC_less_20_kVA_AV(f)
 
     def limit_G1_CB_DC_over_75_kVA_QP(self, f):
+        """Return Group 1/Class B DC >75 kVA quasi-peak limit values."""
         return self.limit_G1_CB_DC_less_20_kVA_QP(f)
 
     def limit_G2_CA_DC_over_75_kVA_AV(self, f):
+        """Return Group 2/Class A DC >75 kVA average limit values."""
         return self.no_limit(f)
 
     def limit_G2_CA_DC_over_75_kVA_QP(self, f):
+        """Return Group 2/Class A DC >75 kVA quasi-peak limit values."""
         return self.no_limit(f)
 
     def limit_G2_CB_DC_over_75_kVA_AV(self, f):
+        """Return Group 2/Class B DC >75 kVA average limit values."""
         return self.no_limit(f)
 
     def limit_G2_CB_DC_over_75_kVA_QP(self, f):
+        """Return Group 2/Class B DC >75 kVA quasi-peak limit values."""
         return self.no_limit(f)
 
 
@@ -403,5 +454,4 @@ if __name__ == '__main__':
     ax.semilogx(freqs, limit_values, freqs)
     ax.grid(True)
     fig.show()
-
 

@@ -1,3 +1,5 @@
+"""Radiated-emission limits according to EN 55011 (CISPR 11)."""
+
 from inspect import cleandoc
 from numpy import piecewise, array, full_like, nan
 
@@ -5,6 +7,8 @@ from mpylab.limits.limit import Limit
 
 
 class LIMIT(Limit):
+    """Configurable EN 55011 radiated-emission limit model."""
+
     description_title = "DIN EN 55011:2022-05 (CISPR-11), radiated"
     description_Group = {'1': """
                             ## Group 1: (general purpose applications)
@@ -168,6 +172,7 @@ class LIMIT(Limit):
 
     # AC below 20 kVA
     def limit_G1_CB_AC_less_20_kVA_QP_10_m(self, f):
+        """Return Group 1 Class B QP limits for AC <= 20 kVA at 10 m."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 30e6) & (f < 230e6),
@@ -179,23 +184,29 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CB_AC_less_20_kVA_QP_3_m(self, f):  # 10 dB higher for 3m
+        """Return Group 1 Class B QP limits for AC <= 20 kVA at 3 m."""
         return self.limit_G1_CB_AC_less_20_kVA_QP_10_m(f) + 10
 
     def limit_G1_CA_AC_less_20_kVA_QP_10_m(self, f):  #
+        """Return Group 1 Class A QP limits for AC <= 20 kVA at 10 m."""
         return self.limit_G1_CB_AC_less_20_kVA_QP_3_m(f)
 
     def limit_G1_CA_AC_less_20_kVA_QP_3_m(self, f):  #
+        """Return Group 1 Class A QP limits for AC <= 20 kVA at 3 m."""
         return self.limit_G1_CA_AC_less_20_kVA_QP_10_m(f)
 
     def limit_G1_CA_AC_over_20_kVA_QP_10_m(self, f):
+        """Return Group 1 Class A QP limits for AC > 20 kVA at 10 m."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         return full_like(f, 50)
 
     def limit_G1_CA_AC_over_20_kVA_QP_3_m(self, f):
+        """Return Group 1 Class A QP limits for AC > 20 kVA at 3 m."""
         return self.limit_G1_CA_AC_over_20_kVA_QP_10_m(f) + 10
 
     def limit_G1_CB_AC_less_20_kVA_AV_3_m(self, f):
+        """Return Group 1 Class B AV limits for AC <= 20 kVA at 3 m."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 1e9) & (f < 3e9),
@@ -207,12 +218,15 @@ class LIMIT(Limit):
         return results
 
     def limit_G1_CA_AC_less_20_kVA_AV_3_m(self, f):
+        """Return Group 1 Class A AV limits for AC <= 20 kVA at 3 m."""
         return self.limit_G1_CB_AC_less_20_kVA_AV_3_m(f) + 6
 
     def limit_G1_CB_AC_less_20_kVA_PK_3_m(self, f):
+        """Return Group 1 Class B PK limits for AC <= 20 kVA at 3 m."""
         return self.limit_G1_CB_AC_less_20_kVA_AV_3_m(f) + 20
 
     def limit_G1_CA_AC_less_20_kVA_PK_3_m(self, f):
+        """Return Group 1 Class A PK limits for AC <= 20 kVA at 3 m."""
         return self.limit_G1_CB_AC_less_20_kVA_AV_3_m(f) + 26
 
 
@@ -231,5 +245,4 @@ if __name__ == '__main__':
     ax.semilogx(freqs, limit_values, freqs)
     ax.grid(True)
     fig.show()
-
 

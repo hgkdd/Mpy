@@ -30,6 +30,7 @@ def _resource_manager():
 
 
 class CommunicationGpib:
+    """CommunicationGpib class."""
     def __init__(self, res_name,
                  lock=None,
                  timeout_s=3,
@@ -117,7 +118,7 @@ class CommunicationGpib:
         """
         :param cmd: *str*, command to send
         :param tmpl: *str*, a re pattern for re.match or None
-        :param send_opc: *bool*, append '; *OPC?' to a non-query command
+        :param send_opc: *bool*, append ``; *OPC?`` to a non-query command
         :return: *str or dict or None*: dict with the parsed result
 
         See read function for more explanation regarding the re pattern

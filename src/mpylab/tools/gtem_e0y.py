@@ -1,7 +1,9 @@
+"""mpylab.tools.gtem_e0y module."""
 import numpy as np
 from scipy.special import j0
 
 class GTEM:
+    """GTEM class."""
     def __init__(self, az: float, hz: float, gz: float, zz: float, Zc: float = 50) -> None:
         self.az = az
         self.hz = hz
@@ -11,15 +13,19 @@ class GTEM:
         self.points = self.generate_points(zz, 100, 100)
 
     def a(self, z):
+        """a method."""
         return self.az/self.zz * z
 
     def g(self, z):
+        """g method."""
         return self.gz/self.zz * z
 
     def h(self, z):
+        """h method."""
         return self.hz/self.zz * z
 
     def e0y(self, x, y, z, max_m: int = 1000):
+        """e0y method."""
         x = np.asarray(x)
         y = np.asarray(y)
         z = np.asarray(z)

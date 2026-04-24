@@ -12,6 +12,7 @@ import sys, os, tty, termios, fcntl
 
 
 class PosixTerm():
+    """PosixTerm class."""
     def __init__(self):
         self.peek_buffer = {}
 
@@ -39,6 +40,7 @@ class PosixTerm():
         return char
 
     def kbhit(self, fd=sys.stdin.fileno()):
+        """kbhit method."""
         if self.peek_buffer.get(fd):
             return 1
         char = self._read_nonblocking(fd)
@@ -46,6 +48,7 @@ class PosixTerm():
         return int(bool(char))
 
     def getch(self, fd=sys.stdin.fileno()):
+        """getch method."""
         if self.peek_buffer.get(fd):
             char = self.peek_buffer[fd][0]
             self.peek_buffer[fd] = self.peek_buffer[fd][1:]
@@ -53,6 +56,7 @@ class PosixTerm():
         return self._read_blocking(fd)
 
     def getwch(self, fd=sys.stdin.fileno(), encoding=sys.stdin.encoding):
+        """getwch method."""
         raw_str = ""
         for i in range(4):
             if self.peek_buffer.get(fd):

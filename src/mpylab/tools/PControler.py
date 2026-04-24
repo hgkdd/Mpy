@@ -13,6 +13,7 @@ from scipy.stats import norm
 
 
 def extrap1d(interpolator):
+    """Wrap a 1D interpolator with bounded linear extrapolation at both ends."""
     xs = interpolator.x
     ys = interpolator.y
 
@@ -33,6 +34,8 @@ def extrap1d(interpolator):
 
 
 class Rapp():
+    """Simple Rapp-like amplifier model with additive random noise."""
+
     def __init__(self, g, Ps, S, PinMax=1e-3, noise_loc=1.0, noise_sc=0.5):
         self.g = g
         self.Ps = Ps
@@ -42,6 +45,7 @@ class Rapp():
         self.noise = norm(loc=noise_loc, scale=noise_sc)
 
     def Pout(self, Pin):
+        """Return noisy output power for a given input power."""
         u = self.g * Pin
         S2 = self.S2
         Po = u / (1 + (u / self.Ps) ** S2) ** (1. / S2)
@@ -53,14 +57,19 @@ class Rapp():
 
 
 class SG():
+    """Minimal signal-generator stub exposing a level setter."""
+
     def __init__(self):
         pass
 
     def SetLevel(self, lv):
+        """Set generator level (console stub implementation)."""
         print(("SG:", lv))
 
 
 class Leveler():
+    """Iterative level controller using sampled inverse interpolation."""
+
     def __init__(self, sg, amp, pin=None):
         """
         sg: object providing sg.SetLevel(lv) lv: float
@@ -76,6 +85,7 @@ class Leveler():
         self.update_interpol()
 
     def add_samples(self, pin):
+        """Measure and store output samples for one or more input levels."""
         if not hasattr(pin, '__iter__'):
             pin = [pin]
         for pi in pin:
@@ -86,6 +96,7 @@ class Leveler():
         self.update_interpol()
 
     def update_interpol(self):
+        """Rebuild forward and inverse interpolators from current samples."""
         x = sorted(self.samples)
         y = [self.samples[xi] for xi in x]
         self.interp = interp1d(x, y)
@@ -94,6 +105,7 @@ class Leveler():
         self.i_extrap = extrap1d(self.i_interp)
 
     def adjust_level(self, soll, maxiter=10, relerr=0.01):
+        """Iteratively adjust input level to reach target output level."""
         self.add_samples(soll / self.amp.g)
         self.x = []
         self.y = []

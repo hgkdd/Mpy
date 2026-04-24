@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""mpylab.device.sg_rs_smr module."""
 import sys
 import io
 from scuq import *
@@ -7,6 +8,7 @@ from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 # import pprint
 
 class SIGNALGENERATOR(SGNLGNRTR):
+    """SIGNALGENERATOR class."""
     def __init__(self, **kw):
         SGNLGNRTR.__init__(self, **kw)
         self._internal_unit = 'dBm'
@@ -52,6 +54,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         if channel is None:
             channel = 1
         self.error = SIGNALGENERATOR.Init(self, ini, channel)
@@ -164,6 +167,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
 
 
 def main():
+    """main function."""
     from mpylab.tools.util import format_block
 
     try:

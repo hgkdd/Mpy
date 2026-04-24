@@ -1,3 +1,4 @@
+"""mpylab.limits.conducted_emission.fcc_part15_subpartb module."""
 from inspect import cleandoc
 
 from numpy import array, piecewise
@@ -6,6 +7,7 @@ from mpylab.limits.limit import Limit, log_linear
 
 
 class LIMIT(Limit):
+    """LIMIT class."""
     description_title = "FCC 47 CFR Part 15.107 (Subpart B), conducted"
     description_Classification = {
         "A": """
@@ -71,6 +73,7 @@ class LIMIT(Limit):
             self.limitline = self.no_limit
 
     def limit_CB_AC_QP(self, f):
+        """limit_CB_AC_QP method."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3), (f >= 500e3) & (f < 5e6), (f >= 5e6) & (f <= 30e6)]
@@ -78,6 +81,7 @@ class LIMIT(Limit):
         return piecewise(f, conditions, functions)
 
     def limit_CB_AC_AV(self, f):
+        """limit_CB_AC_AV method."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3), (f >= 500e3) & (f < 5e6), (f >= 5e6) & (f <= 30e6)]
@@ -85,6 +89,7 @@ class LIMIT(Limit):
         return piecewise(f, conditions, functions)
 
     def limit_CA_AC_QP(self, f):
+        """limit_CA_AC_QP method."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3), (f >= 500e3) & (f <= 30e6)]
@@ -92,6 +97,7 @@ class LIMIT(Limit):
         return piecewise(f, conditions, functions)
 
     def limit_CA_AC_AV(self, f):
+        """limit_CA_AC_AV method."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3), (f >= 500e3) & (f <= 30e6)]

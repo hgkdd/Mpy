@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""mpylab.env.univers.AmplifierTest module."""
 import re
 import sys
 import time
@@ -42,6 +43,7 @@ def W2dBm(v):
 
 
 class AmplifierTest(Measure):
+    """AmplifierTest class."""
     def __init__(self, SearchPaths=None):
         super().__init__(SearchPaths=SearchPaths)
         self.rawData = {}
@@ -251,6 +253,7 @@ Quit: quit measurement.
         parent[key]['parameter'] = parameter
 
     def OutputIniFile(self, description=None, fname=None, driver="amplifier.py", gpib=1):
+        """OutputIniFile method."""
         if fname is None:
             out = sys.stdout
         else:
@@ -320,6 +323,7 @@ FILE = io.StringIO(format_block('''
             out.close()
 
     def GetGainAndCompression(self, description=None, small_signal_factor=10):
+        """GetGainAndCompression method."""
         rd = self.rawData[description]
         pd = {}
         pdg = pd.setdefault('gain', {})

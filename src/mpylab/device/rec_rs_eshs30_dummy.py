@@ -16,6 +16,8 @@ from scuq.si import VOLT, WATT
 
 
 class RECEIVER(REC):
+    """Dummy receiver implementation compatible with the ESHS30 API."""
+
     def __init__(self, **kw):
         REC.__init__(self, **kw)
         self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
@@ -44,23 +46,28 @@ class RECEIVER(REC):
                              'average': 'AVERAGE'}
 
     def write(self, cmd):
+        """Accept a raw command and report the written byte count."""
         self.error = 0
         return self.error, len(cmd)
 
     def GetDescription(self):
+        """Return a static dummy receiver description."""
         self.error = 0
         return self.error, "ESHS Dummy"
 
     def SetFreq(self, freq):
+        """Set receiver frequency in Hz."""
         self.error = 0
         self.freq = freq
         return self.error, self.freq
 
     def GetFreq(self):
+        """Return current receiver frequency in Hz."""
         self.error = 0
         return self.error, self.freq
 
     def Init(self, ini=None, channel=None):
+        """Initialize dummy receiver state from INI configuration."""
         if channel is None:
             channel = 1
         self.error = super().Init(ini=ini, channel=channel)
@@ -167,51 +174,62 @@ class RECEIVER(REC):
         return obj
 
     def SetPreamplifier(self, preamplifier):
+        """Set preamplifier state."""
         self.error = 0
         self.preamplifier = preamplifier
         return self.error, self.preamplifier
 
     def GetPreamplifier(self):
+        """Return preamplifier state."""
         self.error = 0
         return self.error, self.preamplifier
 
     def SetDetector(self, detector):
+        """Set detector mode."""
         self.error = 0
         self.detector = detector
         return self.error, self.detector
 
     def GetDetector(self):
+        """Return detector mode."""
         self.error = 0
         return self.error, self.detector
 
     def SetMeasTime(self, meas_time):
+        """Set measurement time in seconds."""
         self.error = 0
         self.meas_time = meas_time
         return self.error, self.meas_time
 
     def GetMeasTime(self):
+        """Return measurement time in seconds."""
         self.error = 0
         return self.error, self.meas_time
 
     def SetResolutionBandwidth(self, rbw):
+        """Set IF resolution bandwidth in Hz."""
         self.error = 0
         self.rbw = rbw
         return self.error, self.rbw
 
     def GetResolutionBandwidth(self):
+        """Return IF resolution bandwidth in Hz."""
         self.error = 0
         return self.error, self.rbw
 
     def SetAttenuation(self, attenuation):
+        """Set attenuation value in dB."""
         self.error = 0
         self.attenuation = attenuation
         return self.error, self.attenuation
 
     def GetAttenuation(self):
+        """Return attenuation value in dB."""
         self.error = 0
         return self.error, self.attenuation
 
     def GetData(self):
+        """Return one synthetic uncertain level reading."""
         self.error = 0
         lower = -10
         upper = 60
@@ -235,20 +253,24 @@ class RECEIVER(REC):
         return self.error, obj
 
     def Trigger(self):
+        """Trigger one measurement cycle."""
         self.error = 0
         return self.error
 
     def SetMinAttenuation(self, att):
+        """Set minimum attenuation floor in dB."""
         self.min_attenuation = max(att, 0)   # 0 dB is minimal min_attenuation
         if self.attenuation is None or self.min_attenuation > self.attenuation:
             self.error, self.attenuation = self.SetAttenuation(self.min_attenuation)
         return 0, self.min_attenuation
 
     def GetMinAttenuation(self):
+        """Return minimum attenuation floor in dB."""
         return 0, self.min_attenuation
 
 
 def main():
+    """Run a minimal command-line smoke test for the dummy receiver."""
     import sys, io
     from mpylab.tools.util import format_block
     try:

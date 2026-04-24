@@ -74,6 +74,7 @@ class DriverTask(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        """Execute the worker callable and emit completion signals."""
         result = None
         error = None
         try:
@@ -459,6 +460,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
         self._last_ini_text = content
 
     def log_message(self, message):
+        """Append a timestamped message to the log view."""
         self.log_edit.appendPlainText(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
 
     def _refresh_status_bar(self, state_text=None):
@@ -672,6 +674,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
         self.log_message(f"Driver switched from {type(old_driver).__module__} to {type(self.sp).__module__}.")
 
     def on_load_ini_clicked(self):
+        """Load INI content from file into the editor."""
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(self, "Open INI", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -685,6 +688,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
             self._show_error("INI Load Error", exc)
 
     def on_save_ini_clicked(self):
+        """Save current INI editor content to file."""
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(self, "Save INI", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -697,6 +701,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
             self._show_error("INI Save Error", exc)
 
     def on_init_clicked(self):
+        """Initialize active spectrum-analyzer driver from INI text."""
         ini_text = self.ini_edit.toPlainText()
         self._last_ini_text = ini_text
         channel = self.channel_spin.value()
@@ -716,6 +721,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
         self._start_task("Init", lambda: self._driver_method("Init", io.StringIO(ini_text), channel), on_success=success)
 
     def on_quit_clicked(self):
+        """Call driver ``Quit`` and reset initialized state."""
         def success(result):
             self._is_initialized = False
             self._refresh_status_bar()
@@ -724,6 +730,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
         self._start_task("Quit", lambda: self._driver_method("Quit"), on_success=success)
 
     def refresh_status(self, on_complete=None):
+        """Refresh high-level status fields from driver getters."""
         getters = ["GetDescription", "GetVirtual", "GetCenterFreq", "GetStartFreq", "GetStopFreq", "GetSpan", "GetRBW", "GetVBW", "GetRefLevel", "GetDetector", "GetTraceMode"]
 
         def task():
@@ -752,9 +759,11 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
         self._start_task("Refresh Status", task, on_success=success)
 
     def refresh_all(self):
+        """Refresh status and detailed control readbacks."""
         self.refresh_status(on_complete=self.refresh_controls)
 
     def refresh_controls(self):
+        """Refresh control rows not covered by compact status view."""
         covered = {"CenterFreq", "StartFreq", "StopFreq", "Span", "RBW", "VBW", "RefLevel", "Detector", "TraceMode"}
         names = [name for name in self.controls if name not in covered]
 
@@ -845,9 +854,11 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
         return str(expected).strip().lower() == str(actual).strip().lower()
 
     def on_get_spectrum_clicked(self):
+        """Acquire one blocking spectrum trace."""
         self._start_task("GetSpectrum", lambda: self._driver_method("GetSpectrum"), on_success=self._handle_spectrum)
 
     def on_get_spectrum_nb_clicked(self):
+        """Acquire one non-blocking spectrum trace."""
         self._start_task("GetSpectrumNB", lambda: self._driver_method("GetSpectrumNB"), on_success=self._handle_spectrum)
 
     def _handle_spectrum(self, result):
@@ -871,6 +882,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
         return f"{len(x)} points, {x[0]:g} Hz .. {x[-1]:g} Hz"
 
     def on_export_csv_clicked(self):
+        """Export last acquired spectrum to CSV."""
         if not self._last_spectrum:
             self._show_error("Export CSV Error", ValueError("No spectrum acquired"))
             return
@@ -888,10 +900,12 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
             self._show_error("Export CSV Error", exc)
 
     def on_grid_toggled(self, checked):
+        """Toggle spectrum plot grid visibility."""
         self.grid_button.setText("Grid On" if checked else "Grid Off")
         self.plot.set_grid_enabled(checked)
 
     def on_raw_query_clicked(self):
+        """Execute raw query command and append response."""
         cmd = self.raw_command_edit.text().strip()
         if not cmd:
             return
@@ -901,6 +915,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
         self._start_task("Raw Query", lambda: self.sp.query(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_raw_write_clicked(self):
+        """Execute raw write command and append response."""
         cmd = self.raw_command_edit.text().strip()
         if not cmd:
             return
@@ -910,6 +925,7 @@ class SpectrumAnalyzerWidget(QtWidgets.QWidget):
         self._start_task("Raw Write", lambda: self.sp.write(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_smoke_clicked(self):
+        """Run conservative spectrum-analyzer smoke test."""
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
         try:
@@ -963,6 +979,7 @@ def _make_default_instance(args):
 
 
 def main(argv=None):
+    """Start standalone spectrum-analyzer test utility."""
     parser = argparse.ArgumentParser(description="Spectrum analyzer driver test utility")
     parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
     parser.add_argument("--virtual", action="store_true", help="Use the virtual spectrum analyzer driver.")

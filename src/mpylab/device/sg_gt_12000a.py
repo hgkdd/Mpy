@@ -3,6 +3,7 @@
 # Driver for Signal Generator Giga-tronics Series 12000A Microwave Synthesizer 
 
 # implements a file-like class, StringIO, that reads and writes a string buffer
+"""mpylab.device.sg_gt_12000a module."""
 import io
 # System-specific parameters and functions
 import sys
@@ -20,6 +21,7 @@ from mpylab.device.signalgenerator import SIGNALGENERATOR as SGNLGNRTR
 # child class for the special signalgenerator
 class SIGNALGENERATOR(SGNLGNRTR):
     # function for initialization
+    """SIGNALGENERATOR class."""
     def __init__(self, **kw):
         SGNLGNRTR.__init__(self, **kw)
         # overwrite internal unit
@@ -75,6 +77,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
 
     def Init(self, ini=None, channel=None):
         # line feed character from PyVISA
+        """Init method."""
         self.term_chars = '\n'
         # use standard channel 1 if no channel is set
         if channel is None:
@@ -166,6 +169,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
 
 
 def main():
+    """main function."""
     from mpylab.tools.util import format_block
 
     try:

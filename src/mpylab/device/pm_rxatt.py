@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Composite power meter driver with automatic RX attenuation switching."""
 
 import importlib.util
 import io
@@ -928,6 +929,8 @@ ini0dBLF = format_block("""
 
 
 class POWERMETER(PWRMTR):
+    """Power meter wrapper that compensates fixed-path attenuator networks."""
+
     conftmpl = deepcopy(PWRMTR.conftmpl)
     conftmpl['description']['pmini'] = str
 
@@ -965,6 +968,7 @@ class POWERMETER(PWRMTR):
         self.plimit = quantities.Quantity(si.WATT, 1.0)  # 1 Watt max power for the sensor
 
     def Init(self, ini, channel=1):
+        """Initialize underlying power meter and RF switch controller."""
         self.conf = Configuration(ini, self.conftmpl).conf
         pmini = self.conf['description']['pmini']
         pmini = next(locate(pmini, paths=self.SearchPaths))
@@ -1018,6 +1022,7 @@ class POWERMETER(PWRMTR):
         return r
 
     def GetData(self):
+        """Acquire one measurement and compensate attenuation path settings."""
         self.sw_instance.SetAtt(True)
         self.error, obj = self.pm_instance.GetData()
         obj = self._check(obj)
@@ -1025,6 +1030,7 @@ class POWERMETER(PWRMTR):
         return self.error, obj
 
     def GetDataNB(self, retrigger):
+        """Return non-blocking data and apply attenuation compensation when available."""
         self.sw_instance.SetAtt(True)
         self.error, obj = self.pm_instance.GetDataNB(retrigger)
         if obj:
@@ -1033,6 +1039,7 @@ class POWERMETER(PWRMTR):
         return self.error, obj
 
     def SetFreq(self, freq):
+        """Set frequency for meter/switch and update path correction factors."""
         self.error, rfreq = self.pm_instance.SetFreq(freq)
         # print rfreq
         # assert rfreq==freq
@@ -1055,10 +1062,12 @@ class POWERMETER(PWRMTR):
         return self.error, freq
 
     def GetDescription(self):
+        """Return combined wrapper and underlying meter description."""
         self.error, pm_des = self.pm_instance.GetDescription()
         return self.error, str(self.conf['description']) + pm_des
 
     def Quit(self):
+        """Shut down all delegated devices and return success."""
         # self.np20.Quit()
         # self.np0.Quit()
         self.np0L.Quit()
@@ -1072,6 +1081,7 @@ class POWERMETER(PWRMTR):
 
 
 def test_init(ch):
+    """Create and initialize a test instance for one channel."""
     import io
     from mpylab.tools.util import format_block
     inst = POWERMETER()
@@ -1134,6 +1144,7 @@ def test_init(ch):
 
 
 def main():
+    """Run the standalone UI test harness for this wrapper driver."""
     import io
     import sys
     from mpylab.tools.util import format_block

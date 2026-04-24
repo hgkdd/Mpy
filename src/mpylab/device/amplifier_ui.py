@@ -240,6 +240,7 @@ class AmplifierWidget(NPortWidget):
         self._start_task(method_name, method, success)
 
     def on_operate_clicked(self):
+        """Ask for confirmation and run guarded Operate command."""
         answer = QtWidgets.QMessageBox.question(
             self,
             "Operate Amplifier?",
@@ -267,6 +268,7 @@ class AmplifierWidget(NPortWidget):
         QtWidgets.QMessageBox.warning(self, "Operate unavailable", "Current driver does not implement Operate().")
 
     def on_init_clicked(self):
+        """Select driver from INI, initialize it, and refresh UI state."""
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
         try:
@@ -287,6 +289,7 @@ class AmplifierWidget(NPortWidget):
         self._start_task("Init", task, success)
 
     def refresh_status(self):
+        """Query device status and update all status widgets."""
         def task():
             snapshot = {
                 "description": self.dev.GetDescription(),
@@ -311,6 +314,7 @@ class AmplifierWidget(NPortWidget):
         self._start_task("Refresh Status", task, success)
 
     def on_save_ini_clicked(self):
+        """Save current INI editor text to a file."""
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(self, "Save INI", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -319,6 +323,7 @@ class AmplifierWidget(NPortWidget):
         clear_ini_draft(self)
 
     def on_smoke_clicked(self):
+        """Run a compact end-to-end smoke test and show textual output."""
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
         try:
@@ -365,6 +370,7 @@ UI = AmplifierWidget
 
 
 def main(argv=None):
+    """Start the standalone amplifier UI test utility."""
     parser = argparse.ArgumentParser(description="Amplifier driver test utility")
     parser.add_argument("--ini", help="Path to an INI file to preload")
     parser.add_argument("--virtual", action="store_true", help="Use the virtual amplifier driver")

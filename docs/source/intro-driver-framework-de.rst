@@ -20,7 +20,7 @@ Als Beispiel soll ein Netzwerkanalysator von Rohde und Schwarz
 mit der Typenbezeichung ZLV dienen.
 
 Der Treiber basiert auf der Klasse :class:`Networkanalyer`, 
-die wiederum auf der Klasse :class:`DRIVER` aus der Datei driver_new.py 
+die wiederum auf der Klasse :class:`DRIVER` aus der Datei driver.py 
 aufsetzt. Alle Treiber sind im Verzeichnis `/mpylab/device/` gespeichert.
 
 Einen neuen Treiber anlegen
@@ -57,7 +57,7 @@ neues `Command` bzw. `Function` angelegt. Ein `Command` besteht aus::
 
 	Command(Name, VISA-Befehl, Parameter, Retrun-Typ/-Funktion)
 
-Für eine detailliertere Beschreibung siehe :class:`tools.Command()` und :class:`tools.Function()`.
+Für eine detailliertere Beschreibung siehe ``tools.Command()`` und ``tools.Function()``.
 
 Auf jedes ` Command `, das in `_cmds` definiert wurde, kann in der Klasse
 wie auf eine normale Methode zugegriffen werden.
@@ -116,7 +116,7 @@ die Methoden, welche Grundfunktionen ansprechen sollen, identische sind.
 ^^^^^^^^^^^^^
 
 Im Teil 1.2 der Klasse werden die Methoden der Klasse definiert. 
-In der Beispiel Klasse :class:`nw_rs_zlv` finden sich dazu verschiedene Beispiele.
+In der Beispiel-Klasse ``nw_rs_zlv`` finden sich dazu verschiedene Beispiele.
 
 
 1.3 Die INIT() Methode

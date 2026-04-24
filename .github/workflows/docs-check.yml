@@ -1,0 +1,35 @@
+name: docs-check
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  sphinx-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package and docs toolchain
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install sphinx
+
+      - name: Generate API docs page
+        run: python tools/docs_generate_api.py
+
+      - name: Audit docs API references
+        run: python tools/docs_audit.py --fail-on-uncovered
+
+      - name: Build docs
+        env:
+          MPLCONFIGDIR: ${{ runner.temp }}/matplotlib
+        run: sphinx-build -W --keep-going -E -a -b html docs/source docs/_build/html

@@ -1,3 +1,4 @@
+"""mpylab.limits.qtlimit_proxy module."""
 import re
 
 from PySide6.QtCore import QSortFilterProxyModel
@@ -5,6 +6,7 @@ from PySide6.QtWidgets import QTreeView, QFileSystemModel, QApplication
 
 
 class Tree(QTreeView):
+    """Tree class."""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -49,6 +51,7 @@ class HideFileTypesProxy(QSortFilterProxyModel):
             self._regexes = regexes[:]
 
     def filterAcceptsRow(self, srcRow, srcParent):
+        """filterAcceptsRow method."""
         idx = self.sourceModel().index(srcRow, 0, srcParent)
         name = idx.data()
 

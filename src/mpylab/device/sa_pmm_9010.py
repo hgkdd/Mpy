@@ -11,6 +11,7 @@ from mpylab.device.spectrumanalyzer import SPECTRUMANALYZER as SPECTRUMAN
 
 
 def _number_or_auto(value):
+    """Convert numeric values to float while preserving the string ``auto``."""
     if isinstance(value, str) and value.strip().lower() == "auto":
         return "auto"
     return float(value)
@@ -65,6 +66,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return str(value).strip().lower() in {"1", "on", "true"}
 
     def Init(self, ini=None, channel=None):
+        """Initialize the analyzer from INI data and apply channel defaults."""
         if channel is None:
             channel = 1
         self.error = super().Init(ini, channel)
@@ -81,26 +83,31 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return self.error
 
     def SetStartFreq(self, something):
+        """Set start frequency in Hz."""
         self.error = 0
         self._send(f"SART {something}")
         return self.GetStartFreq()
 
     def GetStartFreq(self):
+        """Return start frequency in Hz."""
         self.error = 0
         self.stfreq = self._first_float(self._ask("?ART"))
         return self.error, self.stfreq
 
     def SetStopFreq(self, something):
+        """Set stop frequency in Hz."""
         self.error = 0
         self._send(f"SAOP {something}")
         return self.GetStopFreq()
 
     def GetStopFreq(self):
+        """Return stop frequency in Hz."""
         self.error = 0
         self.spfreq = self._first_float(self._ask("?AOP"))
         return self.error, self.spfreq
 
     def SetCenterFreq(self, something):
+        """Set center frequency in Hz while keeping the current span."""
         self.error = 0
         span = self.GetSpan()[1]
         start = float(something) - 0.5 * span
@@ -109,11 +116,13 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return self.GetCenterFreq()
 
     def GetCenterFreq(self):
+        """Return center frequency in Hz."""
         self.error = 0
         self.cfreq = self._first_float(self._ask("?ACE"))
         return self.error, self.cfreq
 
     def SetSpan(self, something):
+        """Set frequency span in Hz around the current center."""
         self.error = 0
         center = self.GetCenterFreq()[1]
         start = center - 0.5 * float(something)
@@ -122,11 +131,13 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return self.GetSpan()
 
     def GetSpan(self):
+        """Return configured frequency span in Hz."""
         self.error = 0
         self.span = self._first_float(self._ask("?ASP"))
         return self.error, self.span
 
     def SetAtt(self, something):
+        """Set input attenuation in dB or enable automatic attenuation."""
         self.error = 0
         if isinstance(something, str) and something.strip().lower() == "auto":
             self._send("SAAT -1")
@@ -135,11 +146,13 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return self.GetAtt()
 
     def GetAtt(self):
+        """Return input attenuation in dB."""
         self.error = 0
         self.att = self._first_float(self._ask("?AAT"))
         return self.error, self.att
 
     def SetRefLevel(self, something):
+        """Set display reference level in dBm."""
         self.error = 0
         # PMM uses one display command valid for analyzer/manual/sweep.
         self.reflevel = float(something)
@@ -147,11 +160,13 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return self.GetRefLevel()
 
     def GetRefLevel(self):
+        """Return cached display reference level in dBm."""
         self.error = 0
         # No dedicated query in chapter 14, keep software mirror.
         return self.error, self.reflevel
 
     def SetDetector(self, something):
+        """Set detector mode."""
         self.error = 0
         key = str(something).strip().upper()
         det_id = self._DET_TO_ID.get(key, 1)
@@ -159,6 +174,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return self.GetDetector()
 
     def GetDetector(self):
+        """Return detector mode."""
         self.error = 0
         ans = self._ask("?ADT").upper()
         if "RMS" in ans:
@@ -170,6 +186,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return self.error, self.detector
 
     def SetSweepTime(self, something):
+        """Set sweep time in seconds or use device auto mode."""
         self.error = 0
         if isinstance(something, str) and something.strip().lower() == "auto":
             self.stime = 1.0
@@ -178,66 +195,83 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return self.GetSweepTime()
 
     def GetSweepTime(self):
+        """Return sweep time in seconds."""
         self.error = 0
         self.stime = self._first_float(self._ask("?AHT")) * 1e-3
         return self.error, self.stime
 
     def SetTrace(self, trace):
+        """Set active trace number."""
         self.trace = int(trace)
         return 0, self.trace
 
     def GetTrace(self):
+        """Return active trace number."""
         return 0, self.trace
 
     def SetTraceMode(self, tmode):
+        """Set trace mode."""
         self.tmode = str(tmode).upper()
         return 0, self.tmode
 
     def GetTraceMode(self):
+        """Return trace mode."""
         return 0, getattr(self, "tmode", "WRITE")
 
     def SetSweepCount(self, scount):
+        """Set sweep count."""
         self.scount = int(scount)
         return 0, self.scount
 
     def GetSweepCount(self):
+        """Return sweep count."""
         return 0, getattr(self, "scount", 1)
 
     def SetSweepPoints(self, points):
+        """Set number of sweep points."""
         self.spoints = int(points)
         return 0, self.spoints
 
     def GetSweepPoints(self):
+        """Return number of sweep points."""
         return 0, getattr(self, "spoints", 0)
 
     def SetTriggerMode(self, trgmode):
+        """Set trigger mode."""
         self.trgmode = str(trgmode).upper()
         return 0, self.trgmode
 
     def GetTriggerMode(self):
+        """Return trigger mode."""
         return 0, getattr(self, "trgmode", "FREE")
 
     def SetAttMode(self, attmode):
+        """Set attenuation mode."""
         self.attmode = "LOWNOISE"
         return 0, self.attmode
 
     def GetAttMode(self):
+        """Return attenuation mode."""
         return 0, self.attmode
 
     def SetTriggerDelay(self, delay):
+        """Set trigger delay in seconds."""
         self.tdelay = float(delay)
         return 0, self.tdelay
 
     def GetTriggerDelay(self):
+        """Return trigger delay in seconds."""
         return 0, self.tdelay
 
     def SetPreAmp(self, something):
+        """Enable or disable the preamplifier."""
         self.error = 0
         state = "ON" if self._is_on(something) or float(something) != 0 else "OFF"
         self._send(f"SAPA {state}")
         return self.GetPreAmp()
 
     def GetPreAmp(self):
+        """Return preamplifier setting in dB."""
         self.error = 0
         ans = self._ask("?APA").upper()
         self.preamp = 20 if "ON" in ans else 0
@@ -270,6 +304,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
         return tuple(xvalues), tuple(yvalues)
 
     def GetSpectrum(self):
+        """Acquire one binary spectrum trace from the analyzer."""
         self.error = 0
         try:
             self.power = self._read_analyzer_reply()
@@ -280,17 +315,20 @@ class SPECTRUMANALYZER(SPECTRUMAN):
             return self.error, None
 
     def GetDescription(self):
+        """Query and return the instrument identification string."""
         self.error = 0
         self.IDN = self._ask("?IDN")
         return self.error, self.IDN
 
     def Quit(self):
+        """Stop analyzer operation."""
         self.error = 0
         self._send("SSTP")
         return self.error
 
 
 def main():
+    """Run a minimal command-line smoke test for the PMM driver."""
     import sys
 
     from mpylab.tools.util import format_block

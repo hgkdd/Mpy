@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+"""mpylab.device.spectrumanalyzer module."""
 import functools
 import re
 

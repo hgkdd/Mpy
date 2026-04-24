@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
+"""mpylab.device.amp_blma_1018_100 module."""
 import pyvisa
 import time
 from mpylab.device.amplifier import AMPLIFIER as AMP
 
 
 class AMPLIFIER(AMP):
+    """AMPLIFIER class."""
     conftmpl = AMP.conftmpl
     conftmpl['init_value']['gpib'] = int
 
@@ -20,6 +22,7 @@ class AMPLIFIER(AMP):
         self.error = None
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         self.error = AMP.Init(self, ini, channel)
         # self.POn()
         self.Standby()
@@ -48,6 +51,7 @@ class AMPLIFIER(AMP):
             time.sleep(0.1)
 
     def SetFreq(self, freq):
+        """SetFreq method."""
         self.error = 0
         if (1e9 <= freq <= 18e9) and (not self.operating):
             self.Operate()
@@ -81,6 +85,7 @@ class AMPLIFIER(AMP):
 
 
 def main():
+    """main function."""
     import sys
     import io
 

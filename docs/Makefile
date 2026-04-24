@@ -3,7 +3,8 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
+VENVSPHINX    = ../.venv/bin/sphinx-build
+SPHINXBUILD   = $(if $(wildcard $(VENVSPHINX)),$(VENVSPHINX),sphinx-build)
 PAPER         =
 
 # Internal variables.
@@ -11,11 +12,12 @@ PAPEROPT_a4     = -D latex_paper_size=a4
 PAPEROPT_letter = -D latex_paper_size=letter
 ALLSPHINXOPTS   = -d build/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) source
 
-.PHONY: help clean html dirhtml pickle json htmlhelp qthelp latex changes linkcheck doctest
+.PHONY: help clean html html-strict dirhtml pickle json htmlhelp qthelp latex changes linkcheck doctest
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
 	@echo "  html      to make standalone HTML files"
+	@echo "  html-strict to make HTML and fail on warnings"
 	@echo "  dirhtml   to make HTML files named index.html in directories"
 	@echo "  pickle    to make pickle files"
 	@echo "  json      to make JSON files"
@@ -33,6 +35,11 @@ html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) build/html
 	@echo
 	@echo "Build finished. The HTML pages are in build/html."
+
+html-strict:
+	MPLCONFIGDIR=$(abspath build/matplotlib) $(SPHINXBUILD) -W --keep-going -E -a -b html $(ALLSPHINXOPTS) build/html
+	@echo
+	@echo "Strict build finished. The HTML pages are in build/html."
 
 dirhtml:
 	$(SPHINXBUILD) -b dirhtml $(ALLSPHINXOPTS) build/dirhtml

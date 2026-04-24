@@ -1,7 +1,7 @@
 .. -*-coding: utf-8 -*-
 
-:mod:`mpylab.device.legacy`
-============================
+Legacy Driver Framework
+=======================
 
 The former metaclass based driver framework and generated Qt UI helper have
 been archived under ``mpylab.device.legacy``. They are not used by the active
@@ -24,7 +24,8 @@ them.
 ===================================
 .. automodule:: mpylab.device.validators
                :members:
-               :undoc-members: 
+               :undoc-members:
+               :no-index:
 
 
 :mod:`mpylab.device.mpy_exceptions`
@@ -32,3 +33,4 @@ them.
 .. automodule:: mpylab.device.mpy_exceptions
                :members:
                :undoc-members:
+               :no-index:

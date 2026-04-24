@@ -84,7 +84,7 @@ class NETWORKANALYZER(DRIVER):
         - *SetSweepPoints*: Sweep Points (for further information see function description)
         - *SetSweepType*: Sweep Type (for further information see function description)
 
-    .. rubric:: Das _commands-Dict:
+    Das ``_commands``-Dict:
 
     Im _commands-Dict werden alle Funktionen Definiert welche möglichst in allen Driver Klassen
     Implementiert werden sollten. Durch _commands kann so sichergestellt werden, dass alle Driver die von
@@ -110,7 +110,7 @@ class NETWORKANALYZER(DRIVER):
 
     
        
-    .. rubric:: Possibiltie-Listen:
+    Possibility-Listen:
     Possibilities sind mögliche Werte für einen Parameter. Bei bestimmen Parameter können immer nur bestimmte
     Werte übergeben werden, so sind beispielsweise bei sparam (S-Paramter) außschließlich ('S11', 'S12', 'S21', 'S22')
     möglich. Damit nicht jeder kleine Schreibfehelr sofort zum Abbruch des Programm führt und damit sichergestellt ist

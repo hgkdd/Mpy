@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Base driver for field probe instruments."""
 
 from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool
@@ -53,6 +54,7 @@ class FIELDPROBE(DRIVER):
         self._internal_unit = 'Voverm'
 
     def SetFreq(self, freq):
+        """Set measurement frequency and return the confirmed value."""
         # set a certain frequency
         self.error = 0  # reset error number
         dct = self._do_cmds('SetFreq', locals())
@@ -64,6 +66,7 @@ class FIELDPROBE(DRIVER):
         return self.error, self.freq
 
     def GetFreq(self):
+        """Query and return the current measurement frequency."""
         self.error = 0
         dct = self._do_cmds('GetFreq', locals())
         self._update(dct)
@@ -72,6 +75,7 @@ class FIELDPROBE(DRIVER):
         return self.error, self.freq
 
     def Zero(self, state):
+        """Enable or disable zeroing mode."""
         self.error = 0
         self.ZeroState = 'off'
         if state.lower() == 'on':
@@ -81,18 +85,21 @@ class FIELDPROBE(DRIVER):
         return self.error, self.ZeroState
 
     def Trigger(self):
+        """Trigger one measurement cycle."""
         self.error = 0
         dct = self._do_cmds('Trigger', locals())
         self._update(dct)
         return self.error, 0
 
     def GetData(self):
+        """Return one measurement data record from the probe."""
         self.error = 0
         dct = self._do_cmds('GetData', locals())
         self._update(dct)
         return self.error, self.DATA
 
     def GetDataNB(self, retrigger):
+        """Return non-blocking measurement data with optional retrigger."""
         self.error = 0
         RETRIGGER = 'OFF'
         if retrigger.lower() == 'on':
@@ -102,12 +109,14 @@ class FIELDPROBE(DRIVER):
         return self.error, self.DATA
 
     def GetBatteryState(self):
+        """Return reported battery state."""
         self.error = 0
         dct = self._do_cmds('GetBatteryState', locals())
         self._update(dct)
         return self.error, self.BATT
 
     def GetWaveform(self):
+        """Return unsupported marker for waveform acquisition."""
         return -1, None, None, None, None
 
 

@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
+"""mpylab.device.amp_cba_1g_030d module."""
 from mpylab.device.amplifier import AMPLIFIER as AMP
 from mpylab.tools.numeric_eval import safe_numeric_eval
 
 
 class AMPLIFIER(AMP):
+    """AMPLIFIER class."""
     conftmpl = AMP.conftmpl
     conftmpl['init_value']['gpib'] = int
 
@@ -18,17 +20,20 @@ class AMPLIFIER(AMP):
         self.error = None
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         self.error = AMP.Init(self, ini, channel)
         self.POn()
         self.Operate()
         return self.error
 
     def Quit(self):
+        """Quit method."""
         self.POff()
         self.Standby()
         return 0
 
 def main():
+    """main function."""
     import sys
     import io
 

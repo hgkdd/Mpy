@@ -56,6 +56,7 @@ class RECEIVER(REC):
         self.delay = 0.1
 
     def Init(self, ini=None, channel=None):
+        """Initialize receiver state and apply configuration for one channel."""
         if channel is None:
             channel = 1
         self.error = super().Init(ini=ini, channel=channel)
@@ -139,6 +140,7 @@ class RECEIVER(REC):
         return Quantity(self.unit, UncertainInput(level, level * relerr))
 
     def SetPreamplifier(self, preamplifier):
+        """Set preamplifier state and return the applied value."""
         self.error = 0
         dct = self._do_cmds("SetPreamplifier", locals())
         self._update(dct)
@@ -147,12 +149,14 @@ class RECEIVER(REC):
         return self.error, self.preamplifier
 
     def GetPreamplifier(self):
+        """Return the current preamplifier state."""
         self.error = 0
         dct = self._do_cmds("GetPreamplifier", locals())
         self._update(dct)
         return self.error, self.preamplifier
 
     def SetDetector(self, detector):
+        """Set detector mode and return the resulting detector token."""
         self.error = 0
         detector = self.detector_map[str(detector).lower()]
         dct = self._do_cmds("SetDetector", locals())
@@ -161,12 +165,14 @@ class RECEIVER(REC):
         return self.error, self.detector
 
     def GetDetector(self):
+        """Return the currently selected detector token."""
         self.error = 0
         if self.detector is None:
             self.detector = "POS"
         return self.error, self.detector
 
     def SetMeasTime(self, meas_time):
+        """Set sweep time or keep automatic timing when requested."""
         self.error = 0
         if meas_time is None or case_insensitive_string_compare(meas_time, "auto"):
             self.meas_time = 0.1
@@ -178,12 +184,14 @@ class RECEIVER(REC):
         return self.error, self.meas_time
 
     def GetMeasTime(self):
+        """Return the configured sweep time."""
         self.error = 0
         dct = self._do_cmds("GetMeasTime", locals())
         self._update(dct)
         return self.error, self.meas_time
 
     def SetResolutionBandwidth(self, rbw):
+        """Set resolution bandwidth or enable automatic bandwidth."""
         self.error = 0
         if rbw is None or case_insensitive_string_compare(rbw, "auto"):
             self.write("BAND:AUTO ON")
@@ -195,6 +203,7 @@ class RECEIVER(REC):
         return self.error, self.rbw
 
     def SetAttenuation(self, attenuation):
+        """Set input attenuation and return the effective value in dB."""
         self.error = 0
         if attenuation is None or case_insensitive_string_compare(attenuation, "auto"):
             self.write("INP:ATT:AUTO ON")
@@ -209,6 +218,7 @@ class RECEIVER(REC):
         return self.error, self.attenuation
 
     def GetData(self):
+        """Trigger one measurement and return it as a quantity object."""
         self.error = 0
         self.Trigger()
         dct = self._do_cmds("GetData", locals())
@@ -222,6 +232,7 @@ class RECEIVER(REC):
         return self.error, obj
 
     def GetDataNB(self, retrigger):
+        """Return a non-blocking measurement and optionally retrigger."""
         obj = None
         self.error = 0
         dct = self._do_cmds("GetDataNB", locals())
@@ -237,16 +248,19 @@ class RECEIVER(REC):
         return self.error, obj
 
     def SetMinAttenuation(self, att):
+        """Set minimum attenuation floor and enforce it on current settings."""
         self.min_attenuation = max(att, 0)
         if self.attenuation is None or self.min_attenuation > self.attenuation:
             self.error, self.attenuation = self.SetAttenuation(self.min_attenuation)
         return 0, self.min_attenuation
 
     def GetMinAttenuation(self):
+        """Return the configured minimum attenuation floor in dB."""
         return 0, self.min_attenuation
 
 
 def main():
+    """Run a simple manual smoke test for the ESU receiver driver."""
     import sys
     from mpylab.tools.util import format_block
 

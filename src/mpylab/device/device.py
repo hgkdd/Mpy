@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Legacy device wrapper and unit-conversion helpers."""
 
 import math
 from mpylab.tools.configuration import fstrcmp
@@ -43,12 +44,16 @@ class Device:
         self.channel = None
 
     def GetLastError(self):
+        """Return the last stored error bitmask."""
         return self.error
 
     def GetLastErrorStr(self):
+        """Return a pipe-separated string for active error flags."""
         return '|'.join([err for i, err in list(self.__class__._ErrorDict.items()) if ((self.error & 1 << i) != 0)])
 
 class CONVERT:
+    """Legacy converter between historic UMD units and scuq units."""
+
     # (old_unit , scuq_unit , lin_factor(10 or 20) , si_factor)
     units_list = (('UMD_dimensionless', units.ONE, None, 1.),
                   ('UMD_dBm', si.WATT, 10., 1e-3),
@@ -168,6 +173,7 @@ class CONVERT:
         self.cmethods['UMD_powerratio']['UMD_amplituderatio'] = (lambda x: math.sqrt(x))
 
     def c2c(self, fromunit, tounit, data):
+        """Convert values from one legacy unit token to another."""
         isSequence = True
         try:
             len(data)
@@ -191,6 +197,7 @@ class CONVERT:
         return ret
 
     def c2scuq(self, Cunit, data):
+        """Convert legacy-unit values to scuq-compatible unit/value pairs."""
         isSequence = True
         try:
             len(data)
@@ -224,6 +231,7 @@ class CONVERT:
         return ret, uconf[0]
 
     def scuq2c(self, Sunit, Cunit, data):
+        """Convert scuq values back to legacy-unit values."""
         isSequence = True
         try:
             len(data)
@@ -258,6 +266,7 @@ class CONVERT:
         return ret, pos
 
     def get_Cunit_int(self, Cunit):
+        """Return the index of a legacy unit token in ``units_list``."""
         old_list = [l[0] for l in self.units_list]
         position = old_list.index(Cunit)
         return position
@@ -292,6 +301,8 @@ class CONVERT:
 
 
 class CONVERT:
+    """Current converter between compact display units and scuq units."""
+
     # (unit_name, scuq_unit, lin_factor(10 or 20) or None, si_factor)
     units_list = (
         ('dimensionless', units.ONE, None, 1.0),
@@ -415,6 +426,7 @@ class CONVERT:
         self.cmethods['powerratio']['amplituderatio'] = lambda x: math.sqrt(x)
 
     def c2c(self, fromunit, tounit, data):
+        """Convert values from one unit string to another."""
         is_sequence = True
         try:
             len(data)
@@ -438,6 +450,7 @@ class CONVERT:
         return ret
 
     def c2scuq(self, cunit, data):
+        """Convert native values into scuq values and return the scuq unit."""
         is_sequence = True
         try:
             len(data)
@@ -468,6 +481,7 @@ class CONVERT:
         return ret, scuq_unit
 
     def scuq2c(self, sunit, cunit, data):
+        """Convert scuq values back into the requested native unit."""
         is_sequence = True
         try:
             len(data)

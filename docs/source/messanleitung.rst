@@ -448,7 +448,7 @@ Als weiteres Beispiel sei noch ein typischer Aufbau für die Kalibrierung einer 
            }
    
 
-In Abbildung :ref:`dot-kalibrieraufbau` ist der entsprechende Aufbau zu sehen. 
+In Abbildung :ref:`Kalibrieraufbau <dot-kalibrieraufbau>` ist der entsprechende Aufbau zu sehen. 
 
 Hier sind zusätzlich noch die für die Kalibrierung notwendigen 8
 Feldsonden zu sehen. Weiterhin werden in dieser MVK auf Grund

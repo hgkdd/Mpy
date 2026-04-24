@@ -52,6 +52,7 @@ class SPECTRUMANALYZER(BASE_SPECTRUMANALYZER):
             self.__dict__.pop(name, None)
 
     def Init(self, ini=None, channel=None, ignore_bus=True):
+        """Initialize the virtual analyzer from optional INI content."""
         text = self._read_ini(ini)
         if text:
             self._load_config(text)
@@ -109,148 +110,188 @@ class SPECTRUMANALYZER(BASE_SPECTRUMANALYZER):
         self.spfreq = float(self.cfreq + self.span / 2.0)
 
     def GetDescription(self):
+        """Return the configured instrument description string."""
         self.error = 0
         return self.error, self.conf.get("description", {}).get("description", "Virtual SpectrumAnalyzer")
 
     def GetVirtual(self):
+        """Report that this driver instance is virtual."""
         self.error = 0
         return self.error, True
 
     def SetCenterFreq(self, value):
+        """Set center frequency in Hz and update start/stop frequencies."""
         self.cfreq = float(value)
         self._set_range_from_center_span()
         return 0, self.cfreq
 
     def GetCenterFreq(self):
+        """Return current center frequency in Hz."""
         return 0, self.cfreq
 
     def SetSpan(self, value):
+        """Set frequency span in Hz and update start/stop frequencies."""
         self.span = float(value)
         self._set_range_from_center_span()
         return 0, self.span
 
     def GetSpan(self):
+        """Return current frequency span in Hz."""
         return 0, self.span
 
     def SetStartFreq(self, value):
+        """Set start frequency in Hz and update center/span values."""
         self.stfreq = float(value)
         self._update_center_span()
         return 0, self.stfreq
 
     def GetStartFreq(self):
+        """Return current start frequency in Hz."""
         return 0, self.stfreq
 
     def SetStopFreq(self, value):
+        """Set stop frequency in Hz and update center/span values."""
         self.spfreq = float(value)
         self._update_center_span()
         return 0, self.spfreq
 
     def GetStopFreq(self):
+        """Return current stop frequency in Hz."""
         return 0, self.spfreq
 
     def SetRBW(self, value):
+        """Set resolution bandwidth setting."""
         self.rbw = self._numeric_or_text(value, self.rbw)
         return 0, self.rbw
 
     def GetRBW(self):
+        """Return current resolution bandwidth setting."""
         return 0, self.rbw
 
     def SetVBW(self, value):
+        """Set video bandwidth in Hz."""
         self.vbw = float(value)
         return 0, self.vbw
 
     def GetVBW(self):
+        """Return current video bandwidth in Hz."""
         return 0, self.vbw
 
     def SetRefLevel(self, value):
+        """Set display reference level."""
         self.reflevel = float(value)
         return 0, self.reflevel
 
     def GetRefLevel(self):
+        """Return current display reference level."""
         return 0, self.reflevel
 
     def SetAtt(self, value):
+        """Set input attenuation setting."""
         self.att = self._numeric_or_text(value, self.att)
         return 0, self.att
 
     def GetAtt(self):
+        """Return current input attenuation setting."""
         return 0, self.att
 
     def SetAttAuto(self):
+        """Enable automatic attenuation mode."""
         self.att = "auto"
         return 0, self.att
 
     def SetAttMode(self, value):
+        """Set attenuation mode string."""
         self.attmode = str(value).upper()
         return 0, self.attmode
 
     def GetAttMode(self):
+        """Return current attenuation mode."""
         return 0, self.attmode
 
     def SetPreAmp(self, value):
+        """Set preamplifier gain setting."""
         self.preamp = float(value)
         return 0, self.preamp
 
     def GetPreAmp(self):
+        """Return current preamplifier gain setting."""
         return 0, self.preamp
 
     def SetDetector(self, value):
+        """Set detector mode."""
         self.det = str(value).upper()
         return 0, self.det
 
     def GetDetector(self):
+        """Return current detector mode."""
         return 0, self.det
 
     def SetTraceMode(self, value):
+        """Set trace mode."""
         self.tmode = str(value).upper()
         return 0, self.tmode
 
     def GetTraceMode(self):
+        """Return current trace mode."""
         return 0, self.tmode
 
     def SetTrace(self, value):
+        """Set active trace index."""
         self.trace = int(value)
         return 0, self.trace
 
     def GetTrace(self):
+        """Return active trace index."""
         return 0, self.trace
 
     def SetSweepCount(self, value):
+        """Set configured sweep count."""
         self.scount = int(value)
         return 0, self.scount
 
     def GetSweepCount(self):
+        """Return configured sweep count."""
         return 0, self.scount
 
     def SetSweepTime(self, value):
+        """Set sweep time in seconds."""
         self.stime = float(value)
         return 0, self.stime
 
     def GetSweepTime(self):
+        """Return sweep time in seconds."""
         return 0, self.stime
 
     def SetSweepPoints(self, value):
+        """Set number of sweep points (minimum 2)."""
         self.spoints = max(2, int(value))
         return 0, self.spoints
 
     def GetSweepPoints(self):
+        """Return configured number of sweep points."""
         return 0, self.spoints
 
     def SetTriggerMode(self, value):
+        """Set trigger mode."""
         self.trgmode = str(value).upper()
         return 0, self.trgmode
 
     def GetTriggerMode(self):
+        """Return current trigger mode."""
         return 0, self.trgmode
 
     def SetTriggerDelay(self, value):
+        """Set trigger delay in seconds."""
         self.tdelay = float(value)
         return 0, self.tdelay
 
     def GetTriggerDelay(self):
+        """Return trigger delay in seconds."""
         return 0, self.tdelay
 
     def GetSpectrum(self):
+        """Generate a deterministic synthetic spectrum trace."""
         x = []
         y = []
         points = max(2, int(self.spoints))
@@ -267,9 +308,11 @@ class SPECTRUMANALYZER(BASE_SPECTRUMANALYZER):
         return 0, (x, y)
 
     def GetSpectrumNB(self):
+        """Return the same synthetic spectrum as the blocking API."""
         return self.GetSpectrum()
 
     def Quit(self):
+        """Close the virtual driver session."""
         self.error = 0
         return self.error
 

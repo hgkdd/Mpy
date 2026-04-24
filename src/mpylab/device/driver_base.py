@@ -1,6 +1,8 @@
 # this file is from LighLab
 # https://github.com/lightwave-lab/lightlab/blob/development/lightlab/equipment/visa_bases/driver_base.py
 # License is MIT
+"""Base abstractions for instrument sessions and TCP socket connections."""
+
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 import socket
@@ -14,42 +16,52 @@ class InstrumentSessionBase(ABC):
 
     @abstractmethod
     def spoll(self):
+        """Perform serial poll operation."""
         pass
 
     @abstractmethod
     def LLO(self):
+        """Issue local-lockout command."""
         pass
 
     @abstractmethod
     def LOC(self):
+        """Return instrument to local mode."""
         pass
 
     @abstractmethod
     def open(self):
+        """Open session connection."""
         pass
 
     @abstractmethod
     def close(self):
+        """Close session connection."""
         pass
 
     @abstractmethod
     def write(self):
+        """Write command to instrument."""
         pass
 
     @abstractmethod
     def query(self):
+        """Write query and return response."""
         pass
 
     @abstractmethod
     def wait(self):
+        """Wait for operation completion."""
         pass
 
     @abstractmethod
     def clear(self):
+        """Clear session or device buffers."""
         pass
 
     @abstractmethod
     def query_raw_binary(self):
+        """Query raw binary data from instrument."""
         pass
 
     def query_ascii_values(self, message, converter='f', separator=',',
@@ -66,11 +78,13 @@ class InstrumentSessionBase(ABC):
     @property
     @abstractmethod
     def timeout(self):
+        """Return session timeout in seconds."""
         pass
 
     @timeout.setter
     @abstractmethod
     def timeout(self, newTimeout):
+        """Set session timeout in seconds."""
         pass
 
 
@@ -180,6 +194,7 @@ class TCPSocketConnection(object):
                 self.disconnect()
 
     def startup(self):
+        """Perform protocol-specific startup sequence."""
         raise NotImplementedError
 
     def send(self, value):
@@ -203,4 +218,5 @@ class TCPSocketConnection(object):
         return recv
 
     def query(self, query_msg, msg_length=2048):
+        """Send query and return received response string."""
         raise NotImplementedError

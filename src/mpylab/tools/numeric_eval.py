@@ -1,3 +1,4 @@
+"""mpylab.tools.numeric_eval module."""
 import ast
 import operator as op
 import re

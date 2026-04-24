@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-#
+"""PMM EP601 field-probe driver implementation."""
+
 import io
 import re
 import struct
@@ -15,11 +16,14 @@ debug = True
 
 
 def dprint(arg):
+    """Print debug messages when global ``debug`` is enabled."""
     if debug:
         print(arg)
 
 
 class FIELDPROBE(FLDPRB):
+    """Concrete PMM EP601 field-probe driver."""
+
     conftmpl = FLDPRB.conftmpl
     conftmpl['init_value']['com'] = int
 
@@ -43,6 +47,7 @@ class FIELDPROBE(FLDPRB):
         return ans
 
     def Init(self, ini=None, channel=None):
+        """Initialize probe communication and channel settings."""
         if channel is None:
             channel = 1
         self.error = 0
@@ -67,6 +72,7 @@ class FIELDPROBE(FLDPRB):
         return self.error
 
     def GetDescription(self):
+        """Query and return probe description string."""
         self.error = 0
         self.write('#00?v*')
         des = []
@@ -83,6 +89,7 @@ class FIELDPROBE(FLDPRB):
         return self.error, f"Company: PMM, Model: {model}, FW: {fw}, DATE: {date}"
 
     def SetFreq(self, freq):
+        """Set probe frequency in Hz."""
         self.error = 0
         rfreq = None
         ifreq = int(freq * 1e-4)
@@ -103,6 +110,7 @@ class FIELDPROBE(FLDPRB):
         return self.error, rfreq  # rfreq*1e6
 
     def GetData(self):
+        """Acquire one electric-field vector sample."""
         self.error = 0
         data = None
         for i in range(5):
@@ -122,17 +130,21 @@ class FIELDPROBE(FLDPRB):
         return self.error, data
 
     def GetDataNB(self, retrigger):
+        """Acquire one non-blocking field sample."""
         return self.GetData()
 
     def Zero(self, state):
+        """Set zeroing mode state."""
         self.error = 0
         return self.error
 
     def Trigger(self):
+        """Trigger one measurement cycle."""
         self.error = 0
         return self.error
 
     def GetBatteryState(self):
+        """Query and return battery state as relative value."""
         self.error = 0
         percent = 0.0
         ans = self._query('#00?b*', 1)
@@ -147,12 +159,14 @@ class FIELDPROBE(FLDPRB):
         return self.error, percent * 0.01
 
     def Quit(self):
+        """Close serial connection and end session."""
         self.dev.close()
         self.error = 0
         return self.error
 
 
 def test():
+    """Create and initialize test probe instance with inline INI."""
     from mpylab.tools.util import format_block
     ini = format_block("""
                     [DESCRIPTION]
@@ -181,6 +195,7 @@ def test():
 
 
 def main():
+    """Start legacy traits-based field-probe test UI."""
     from mpylab.tools.util import format_block
     from mpylab.device.fieldprobe_ui import UI as UI
     #

@@ -264,6 +264,7 @@ def _default_ini():
 
 
 def main():
+    """main function."""
     parser = argparse.ArgumentParser(description="Run a smoke test for the virtual signal generator.")
     parser.add_argument("ini", nargs="?", help="Optional INI file.")
     args = parser.parse_args()

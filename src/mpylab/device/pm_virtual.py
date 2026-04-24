@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Virtual power meter driver for deterministic test scenarios."""
 #
 import io
 import sys
@@ -16,6 +17,8 @@ from mpylab.tools.numeric_eval import safe_numeric_eval
 
 
 class POWERMETER(PMMTR):
+    """Power meter simulation with expression-based value generation."""
+
     conftmpl = deepcopy(PMMTR.conftmpl)
     conftmpl['init_value']['visa'] = str
     conftmpl['channel_%d']['value'] = str
@@ -37,6 +40,7 @@ class POWERMETER(PMMTR):
 
 
     def Init(self, ini=None, channel=None):
+        """Initialize virtual channel settings from configuration."""
         if channel is None:
             self.channel = 1
         else:
@@ -58,6 +62,7 @@ class POWERMETER(PMMTR):
         return self.error
 
     def GetDescription(self):
+        """Return virtual instrument identification."""
         return 0, self.IDN
 
     def write(self, cmd):
@@ -104,13 +109,16 @@ class POWERMETER(PMMTR):
         return self.read(tmpl)
 
     def SetFreq(self, freq):
+        """Set virtual measurement frequency in Hz."""
         self.freq = freq
         return 0, self.freq
 
     def GetDataNB(self):
+        """Return non-blocking measurement data (same as blocking path)."""
         return self.GetData()
 
     def GetData(self):
+        """Return virtual power as quantity in watt with uncertainty."""
         f = self.freq
         # Keep the virtual driver deterministic but still allow simple f-dependent formulas.
         value_expr = str(self.value).replace("f", f"({f if f is not None else 0.0})")
@@ -123,6 +131,7 @@ class POWERMETER(PMMTR):
         return 0, power
 
 def main():
+    """Run a simple standalone smoke test for the virtual power meter."""
     from mpylab.tools.util import format_block
 
     try:

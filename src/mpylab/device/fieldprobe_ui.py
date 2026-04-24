@@ -52,6 +52,7 @@ std_ini_text = format_block("""
 
 
 class DriverTask(QtCore.QObject):
+    """Execute one driver callable in a worker thread."""
     completed = QtCore.Signal(object, object)
     finished = QtCore.Signal()
 
@@ -61,6 +62,7 @@ class DriverTask(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        """Execute the worker callable and emit completion signals."""
         result = None
         error = None
         try:
@@ -90,7 +92,7 @@ class FieldProbeCanvas(FigureCanvas):
         self.draw_idle()
 
     def update_plot(self, history):
-        """Redraw Ex/Ey/Ez/|E| trend data."""
+        """Redraw Ex/Ey/Ez and ``|E|`` trend data."""
         self.ax.clear()
         if history:
             idx = [row["index"] for row in history]
@@ -110,6 +112,8 @@ class FieldProbeCanvas(FigureCanvas):
 
 
 class FieldProbeWidget(QtWidgets.QWidget):
+    """Thread-aware test UI for field-probe driver implementations."""
+
     def __init__(self, instance, ini=None, parent=None, use_ini_draft=True):
         super().__init__(parent)
         self.dev = instance
@@ -358,6 +362,7 @@ class FieldProbeWidget(QtWidgets.QWidget):
         )
 
     def log_message(self, message):
+        """Append a timestamped line to the log panel."""
         self.log_edit.appendPlainText(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
 
     def _driver_display_name(self):
@@ -635,6 +640,7 @@ class FieldProbeWidget(QtWidgets.QWidget):
             field.setText(str(value))
 
     def on_load_ini_clicked(self):
+        """Load INI content from disk into the editor."""
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(
             self, "Open INI File", "", "INI Files (*.ini *.txt);;All Files (*)"
         )
@@ -645,6 +651,7 @@ class FieldProbeWidget(QtWidgets.QWidget):
         self.log_message(f"Loaded INI file: {path}")
 
     def on_save_ini_clicked(self):
+        """Save current INI editor content to disk."""
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(
             self, "Save INI File", "", "INI Files (*.ini *.txt);;All Files (*)"
         )
@@ -656,6 +663,7 @@ class FieldProbeWidget(QtWidgets.QWidget):
         self.log_message(f"Saved INI file: {path}")
 
     def on_init_clicked(self):
+        """Initialize selected field-probe driver and active channel."""
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
         try:
@@ -673,6 +681,7 @@ class FieldProbeWidget(QtWidgets.QWidget):
         self._start_task("Init", lambda: self._init_channel_driver(ini_text, channel), on_success=success)
 
     def on_quit_clicked(self):
+        """Call driver ``Quit`` and reset runtime state."""
         def success(result):
             self._is_initialized = False
             self._channel_drivers = {}
@@ -684,6 +693,7 @@ class FieldProbeWidget(QtWidgets.QWidget):
         self._start_task("Quit", lambda: self._driver_method("Quit"), on_success=success)
 
     def on_channel_changed(self, channel):
+        """Switch active channel to an already initialized channel driver."""
         driver = self._channel_drivers.get(channel)
         if driver is not None:
             self.dev = driver
@@ -692,11 +702,13 @@ class FieldProbeWidget(QtWidgets.QWidget):
             self.refresh_status()
 
     def on_set_freq_clicked(self, freq=None):
+        """Set measurement frequency on the active field-probe driver."""
         if freq is None:
             freq = self.freq_spin.value_hz()
         self._start_task("Set Frequency", lambda: self._driver_method("SetFreq", freq), on_success=self._handle_freq)
 
     def on_read_freq_clicked(self):
+        """Read current measurement frequency from the driver."""
         self._start_task("Read Frequency", lambda: self._driver_method("GetFreq"), on_success=self._handle_freq)
 
     def _handle_freq(self, result):
@@ -706,12 +718,15 @@ class FieldProbeWidget(QtWidgets.QWidget):
         self._set_status_field("GetFreq", self._display_value(result))
 
     def on_trigger_clicked(self):
+        """Trigger one measurement cycle."""
         self._start_task("Trigger", lambda: self._driver_method("Trigger"))
 
     def on_measure_clicked(self):
+        """Acquire one blocking field vector measurement."""
         self._start_task("GetData", lambda: self._driver_method("GetData"), on_success=self._handle_data_result)
 
     def on_measure_nb_clicked(self):
+        """Acquire one non-blocking field vector measurement."""
         retrigger = "on" if self.retrigger_check.isChecked() else "off"
         self._start_task(
             "GetDataNB",
@@ -720,19 +735,23 @@ class FieldProbeWidget(QtWidgets.QWidget):
         )
 
     def on_poll_toggled(self, checked):
+        """Enable or disable periodic non-blocking polling."""
         if checked:
             self._poll_timer.start(self.poll_interval_spin.value())
         else:
             self._poll_timer.stop()
 
     def on_poll_timeout(self):
+        """Polling timer callback that requests non-blocking data."""
         if not self._busy and self._is_initialized:
             self.on_measure_nb_clicked()
 
     def on_zero_clicked(self, state):
+        """Enable or disable zeroing mode on the active probe."""
         self._start_task(f"Zero {state.upper()}", lambda: self._driver_method("Zero", state))
 
     def on_raw_query_clicked(self):
+        """Execute a raw query command on the active driver."""
         cmd = self.raw_command_edit.text().strip()
         if not cmd:
             return
@@ -742,6 +761,7 @@ class FieldProbeWidget(QtWidgets.QWidget):
         self._start_task("Raw Query", lambda: self.dev.query(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_raw_write_clicked(self):
+        """Execute a raw write command on the active driver."""
         cmd = self.raw_command_edit.text().strip()
         if not cmd:
             return
@@ -751,6 +771,7 @@ class FieldProbeWidget(QtWidgets.QWidget):
         self._start_task("Raw Write", lambda: self.dev.write(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_export_csv_clicked(self):
+        """Export trend history to CSV."""
         if not self._history:
             self._show_error("Export CSV Error", ValueError("No trend data acquired"))
             return
@@ -767,15 +788,18 @@ class FieldProbeWidget(QtWidgets.QWidget):
             self._show_error("Export CSV Error", exc)
 
     def on_clear_trend_clicked(self):
+        """Clear accumulated trend history and reset sample index."""
         self._history = []
         self._sample_index = 0
         self.trend_canvas.update_plot(self._history)
 
     def on_grid_toggled(self, checked):
+        """Toggle trend plot grid visibility."""
         self.grid_button.setText("Grid On" if checked else "Grid Off")
         self.trend_canvas.set_grid_enabled(checked)
 
     def refresh_status(self):
+        """Refresh status fields from device getters and cached state."""
         def task():
             snapshot = {}
             for method_name in ("GetDescription", "GetFreq", "GetVirtual", "GetBatteryState"):
@@ -802,6 +826,7 @@ class FieldProbeWidget(QtWidgets.QWidget):
         self._start_task("Refresh Status", task, on_success=success)
 
     def on_smoke_clicked(self):
+        """Run a basic field-probe smoke test and display result lines."""
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
         freq = self.freq_spin.value_hz()
@@ -840,6 +865,7 @@ UI = FieldProbeWidget
 
 
 def main(argv=None):
+    """Start the standalone field-probe test utility."""
     parser = argparse.ArgumentParser(description="FieldProbe driver test utility")
     parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
     parser.add_argument("--virtual", action="store_true", help="Use the virtual field probe driver")

@@ -1,3 +1,5 @@
+"""Radiated-emission limits according to FCC Part 18.305 (Subpart C)."""
+
 from inspect import cleandoc
 
 from numpy import array, full_like, log10, nan, piecewise
@@ -6,10 +8,12 @@ from mpylab.limits.limit import Limit
 
 
 def uvm_to_dbuvm(uvm):
+    """Convert microvolt-per-meter values to dBµV/m."""
     return 20.0 * log10(float(uvm))
 
 
 class LIMIT(Limit):
+    """Configurable FCC Part 18.305 radiated-emission limit model."""
     description_title = "FCC 47 CFR Part 18.305 (Subpart C), radiated"
     description_case = {
         "RF lighting (consumer)": """
@@ -85,6 +89,7 @@ class LIMIT(Limit):
             self.limitline = self.no_limit
 
     def limit_RF_lighting_consumer_30_m(self, f):
+        """Return consumer RF-lighting limits at 30 m."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 30e6) & (f < 88e6), (f >= 88e6) & (f < 216e6), (f >= 216e6) & (f <= 1e9)]
@@ -92,6 +97,7 @@ class LIMIT(Limit):
         return piecewise(f, conditions, functions)
 
     def limit_RF_lighting_non_consumer_30_m(self, f):
+        """Return non-consumer RF-lighting limits at 30 m."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 30e6) & (f < 88e6), (f >= 88e6) & (f < 216e6), (f >= 216e6) & (f <= 1e9)]
@@ -99,6 +105,7 @@ class LIMIT(Limit):
         return piecewise(f, conditions, functions)
 
     def limit_Induction_cooking_range_30_m(self, f):
+        """Return induction-cooking-range limits at 30 m."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 9e3) & (f < 90e3), (f >= 90e3)]
@@ -106,6 +113,7 @@ class LIMIT(Limit):
         return piecewise(f, conditions, functions)
 
     def limit_Misc_non_ISM_less500_W_300_m(self, f):
+        """Return limits for miscellaneous non-ISM equipment below 500 W at 300 m."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         out = full_like(f, nan, dtype=float)
@@ -113,6 +121,7 @@ class LIMIT(Limit):
         return out
 
     def limit_Misc_ISM_less500_W_300_m(self, f):
+        """Return limits for miscellaneous ISM equipment below 500 W at 300 m."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         out = full_like(f, nan, dtype=float)

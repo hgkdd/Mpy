@@ -15,7 +15,7 @@ This is the grammar of data files which can be parsed with the :class:`mpylab.to
          | ( fp_value , fp_value )   # complex: (real part, imaginary part)
          | [ fp_value , fp_value ]   # complex: [magnitude, angle in deg]
 
-Allowed units and unit conversions are taken from a dictionary `uconv` in :class:`mpylab.tools.dataparser.UConv`::
+Allowed units and unit conversions are taken from a dictionary `uconv` in :class:`mpylab.tools.uconv.UConv`::
 
     uconv={ "1":    (units.ONE, _ident),
             "dimensionless":    (units.ONE, _ident),
@@ -66,4 +66,3 @@ Example data files are::
    70 [0.4, 310]
    80 [0.3, 10]
    90 [0.2, 50]
-

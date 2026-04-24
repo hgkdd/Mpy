@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Base driver for V-type LISN data sources."""
 
 from mpylab.device.driver import DRIVER
 from mpylab.tools.configuration import strbool, fstrcmp
@@ -45,6 +46,7 @@ class VLISN(DRIVER):
         self.data = {}
 
     def Init(self, ini=None, channel=None, ignore_bus=False):
+        """Initialize LISN channels and load interpolation data from files."""
         super().Init(ini=ini, channel=channel, ignore_bus=ignore_bus)
         self.path = self.conf['init_value']['path'].upper()
         for ch in self.Configuration.channel_list:
@@ -74,28 +76,34 @@ class VLISN(DRIVER):
         return self.conf[sectok][keytok]
 
     def Quit(self):
+        """Close the driver and return the status code."""
         self.error = 0
         return self.error
 
     def SetVirtual(self, virtual):
+        """Enable or disable virtual mode in runtime configuration."""
         self.error = 0
         self.conf['init_value']['virtual'] = virtual
         return self.error
 
     def GetVirtual(self):
+        """Return whether virtual mode is enabled."""
         self.error = 0
         return self.error, self.conf['init_value']['virtual']
 
     def GetDescription(self):
+        """Return the device description from configuration."""
         self.error = 0
         return self.error, self.conf['description']['description']
 
     def SetFreq(self, freq):
+        """Set current interpolation frequency in Hz."""
         self.error = 0
         self.freq = freq
         return self.error, freq
 
     def GetData(self, what):
+        """Return interpolated LISN data for the selected channel name."""
         self.error = 0
         allwhat = list(self.data.keys())
         whatguess = None
@@ -111,10 +119,12 @@ class VLISN(DRIVER):
         return self.error, obj
 
     def GetPath(self):
+        """Return the currently selected LISN path."""
         self.error = 0
         return self.error, self.path
 
     def SetPath(self, path):
+        """Set LISN path token and request manual switch confirmation."""
         self.error = 0
         self.path = None
         for _path in ('L', 'L1', 'L2', 'L3', 'N'):
@@ -127,14 +137,17 @@ class VLISN(DRIVER):
         return self.GetPath()
 
     def SetFilter(self, state):
+        """Set internal filter state flag."""
         self.error = 0
         self.filter = state
 
     def GetFilter(self):
+        """Return the current filter state flag."""
         self.error = 0
         return self.error, bool(self.filter)
 
 def main():
+    """Run a simple manual smoke test for the VLISN driver."""
     import sys
     import io
     from mpylab.tools.util import format_block

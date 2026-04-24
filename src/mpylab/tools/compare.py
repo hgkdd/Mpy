@@ -1,11 +1,14 @@
+"""mpylab.tools.compare module."""
 from os.path import commonprefix
 from Levenshtein import distance as ldistance
 
 def cmp(a, b):
+    """cmp function."""
     return (a > b) - (a < b)
 
 
 def cplx_key(a):
+    """cplx_key function."""
     try:
         # komplexer Fall
         re = a.real
@@ -21,6 +24,7 @@ def cplx_key(a):
 
 def cplx_cmp(a, b):
     # magnituide * sgn(real part)
+    """cplx_cmp function."""
     ka = cplx_key(a)
     kb = cplx_key(b)
     return cmp(ka, kb)
@@ -58,6 +62,7 @@ def relative(a, b, first_must_match=True):
     return r
 
 def fstrcmp(a, possibilities, cutoff=0.0, ignorecase=True, use_rmcp=True):
+    """fstrcmp function."""
     a = a.strip("'\"")
 
     if ignorecase:

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Power-meter adapter using marker readout on Rohde & Schwarz ZVL-6."""
 #
 import io
 import sys
@@ -11,6 +12,8 @@ from scuq.ucomponents import UncertainInput
 from scuq.si import WATT
 
 class POWERMETER(PMMTR):
+    """ZVL-6-based power meter implementation."""
+
     conftmpl = deepcopy(PMMTR.conftmpl)
     conftmpl['init_value']['visa'] = str
 
@@ -32,6 +35,7 @@ class POWERMETER(PMMTR):
 
 
     def Init(self, ini=None, channel=None):
+        """Initialize the selected channel and unit configuration."""
         if channel is None:
             channel = 1
         self.channel = channel
@@ -45,13 +49,16 @@ class POWERMETER(PMMTR):
         return self.error
 
     def SetFreq(self, freq):
+        """Set internal target frequency in Hz."""
         self.freq = freq
         return 0, self.freq
 
     def GetDataNB(self):
+        """Return non-blocking measurement data (same as blocking path)."""
         return self.GetData()
 
     def GetData(self):
+        """Acquire peak marker power and return it as watt quantity."""
         # set marker 1 to peak
         self.write('INIT1:IMM')
         self.write('CALC:MARK1:MAX')
@@ -64,6 +71,7 @@ class POWERMETER(PMMTR):
         return 0, power
 
 def main():
+    """Run a simple standalone smoke test for the ZVL-6 adapter."""
     from mpylab.tools.util import format_block
 
     try:

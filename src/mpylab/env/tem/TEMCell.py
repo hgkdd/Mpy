@@ -1653,10 +1653,12 @@ Select EUT position.
         parent[key]['parameter'] = parameter
 
     def OutputRawData_e0y(self, description=None, what=None, fname=None):
+        """Write raw e0y calibration data to stdout or a target file."""
         thedata = self.rawData_e0y
         self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
     def OutputRawData_Emission(self, description=None, what=None, fname=None):
+        """Write raw emission measurement data to stdout or a target file."""
         thedata = self.rawData_Emission
         self._run_with_output_target(fname, self.__OutputRawData, thedata, description, what)
 
@@ -1688,10 +1690,12 @@ Select EUT position.
                     print()
 
     def OutputProcessedData_e0y(self, description=None, what=None, fname=None):
+        """Write processed e0y results to stdout or a target file."""
         thedata = self.processedData_e0y
         self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
     def OutputProcessedData_Emission(self, description=None, what=None, fname=None):
+        """Write processed emission results to stdout or a target file."""
         thedata = self.processedData_Emission
         self._run_with_output_target(fname, self.__OutputProcessedData, thedata, description, what)
 
@@ -1756,6 +1760,8 @@ Select EUT position.
 
 
 class stdImmunityKernel:
+    """State-machine kernel for standard TEM immunity test sequences."""
+
     def __init__(self, field, freqs, positions, messenger, UIHandler, lcls, dwell, keylist='sS'):
         self.field = field
         self.freqs = freqs
@@ -1795,6 +1801,7 @@ class stdImmunityKernel:
         return ret
 
     def test(self, stat):
+        """Return next planned immunity-test command based on current status."""
         if stat == 'AmplifierProtectionError':
             # last command failed due to Amplifier Protection
             # look for 'LoopMarker' and continue there
@@ -1824,6 +1831,8 @@ class stdImmunityKernel:
 
 
 class TestField:
+    """Callable converter from forward power to expected field strength."""
+
     def __init__(self, instance, cal='cal'):
         self.fail = False
         if cal not in instance.processedData_ImmunityCal:
@@ -1854,6 +1863,8 @@ class TestField:
 
 
 class TestPower:
+    """Callable converter from target field strength to required forward power."""
+
     def __init__(self, instance, cal='cal'):
         self.fail = False
         self.instance = instance

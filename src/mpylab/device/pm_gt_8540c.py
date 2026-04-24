@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Driver for the Gigatronics 8540C power meter family."""
 
 import numpy as np
 from scuq import *
@@ -69,6 +70,7 @@ class POWERMETER(PWRMTR):
         return dct['SENSOR']
 
     def Zero(self, state='on'):
+        """Run zeroing sequence and return status."""
         self.error = 0
         self._lock()
         self.error, _ = PWRMTR.Zero(self, state=state)
@@ -76,6 +78,7 @@ class POWERMETER(PWRMTR):
         return self.error, 0
 
     def Init(self, ini=None, channel=None):  # , N=10, trg_threshold=0):
+        """Initialize the selected meter channel and apply presets."""
         if channel is None:
             self.channel = 1
         else:
@@ -118,6 +121,7 @@ class POWERMETER(PWRMTR):
         return self.error
 
     def update_internal_unit(self):
+        """Read meter output mode and update internal unit/averaging behavior."""
         # get internal unit
         tup = ('W', 'dBm', '%', 'dB')
         ans = self.dev.ask(f'{self.ch_tup[self.channel]}P SM')
@@ -131,6 +135,7 @@ class POWERMETER(PWRMTR):
         # self._fbuf_on()
 
     def Trigger(self):
+        """Trigger measurement acquisition (no-op for this backend)."""
         self.error = 0
         return self.error
 
@@ -143,6 +148,7 @@ class POWERMETER(PWRMTR):
         self.dev.unlock()
 
     def GetData(self):
+        """Read one power sample and return it as quantity with mismatch uncertainty."""
         self._lock()
         self.SetFreq(self.freq)
         self.dev.write(self.chsel)
@@ -165,18 +171,21 @@ class POWERMETER(PWRMTR):
         return self.error, obj  # TODO: include other uncertainties
 
     def GetDataNB(self, retrigger):
+        """Return data and optionally retrigger for the next read."""
         self.err, v = self.GetData()
         if retrigger:
             self.Trigger()
         return self.error, v
 
     def SetFreq(self, freq):
+        """Set measurement frequency in Hz."""
         self.error = 0
         self.freq = freq
         self.error, freq = PWRMTR.SetFreq(self, freq)
         return self.error, freq
 
     def GetDescription(self):
+        """Return instrument identification string."""
         self.error = 0
         self._lock()
         self.error, des = PWRMTR.GetDescription(self)
@@ -184,11 +193,13 @@ class POWERMETER(PWRMTR):
         return self.error, des
 
     def Quit(self):
+        """Close the driver and return status."""
         self.error = 0
         return self.error
 
 
 def test_init(cha):
+    """Create and initialize a test instance for one channel."""
     import io
     from mpylab.tools.util import format_block
     inst = POWERMETER()
@@ -232,6 +243,7 @@ def test_init(cha):
 
 
 def main():
+    """Start the standalone Qt test UI for this power meter driver."""
     import io
     import sys
     from PySide6 import QtWidgets

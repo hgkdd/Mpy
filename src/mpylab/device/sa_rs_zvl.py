@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #
+"""mpylab.device.sa_rs_zvl module."""
 import functools
 import io
 import re
@@ -21,6 +22,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     #
     #                    Init
     # *************************************************************************
+    """SPECTRUMANALYZER class."""
     def __init__(self, **kw):
         SPECTRUMAN.__init__(self, **kw)
 
@@ -201,6 +203,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     #  Spectrum aus Gerät auslesen
     # ************************************
     def GetSpectrum(self):
+        """GetSpectrum method."""
         self.error = 0
         dct = self._do_cmds('GetSpectrum', locals())
         self._update(dct)
@@ -327,6 +330,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
 
     # Diese Funktion schlaten das ZVL in den Spectrum Analyzer Mode
     def SetSANMode(self):
+        """SetSANMode method."""
         self.error = 0
         dct = self._do_cmds('SetSANMode', locals())
         self._update(dct)
@@ -338,6 +342,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
     # ***************************************************************************
     def Init(self, ini=None, channel=None):
 
+        """Init method."""
         if channel is None:
             channel = 1
         self.error = SPECTRUMAN.Init(self, ini, channel)
@@ -433,6 +438,7 @@ class SPECTRUMANALYZER(SPECTRUMAN):
 # Die Funktion main() wird nur zum Test des Treibers verwendet!
 ###########################################################################
 def main():
+    """main function."""
     from PySide6 import QtWidgets
     from mpylab.tools.util import format_block
     from mpylab.device.spectrumanalyzer_ui import UI as UI

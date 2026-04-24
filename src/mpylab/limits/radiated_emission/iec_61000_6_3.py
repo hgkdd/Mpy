@@ -1,3 +1,4 @@
+"""mpylab.limits.radiated_emission.iec_61000_6_3 module."""
 from inspect import cleandoc
 
 from mpylab.limits.limit import Limit
@@ -5,6 +6,7 @@ from mpylab.limits.radiated_emission.en_55011 import LIMIT as CISPR11_LIMIT
 
 
 class LIMIT(Limit):
+    """LIMIT class."""
     description_title = "IEC 61000-6-3 (generic residential/commercial), radiated"
     description_mapping = """
         This module follows the Academy EMC mapping for generic residential emission and

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Qt-based interactive test utility for network analyzer drivers."""
 
 import argparse
 import configparser
@@ -65,6 +66,7 @@ class DriverTask(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        """Execute the task function and emit ``completed``/``finished`` signals."""
         result = None
         error = None
         try:
@@ -544,9 +546,11 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._last_ini_text = content
 
     def log_edit_clear(self):
+        """Clear the log output widget."""
         self.log_edit.clear()
 
     def log_message(self, message):
+        """Append a timestamped message to the log output widget."""
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.log_edit.appendPlainText(f"[{timestamp}] {message}")
 
@@ -776,6 +780,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         return "Amplitude"
 
     def on_load_ini_clicked(self):
+        """Load INI text from a file into the editor."""
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(
             self,
             "Open INI File",
@@ -794,6 +799,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             self._show_error("INI Load Error", exc)
 
     def on_save_ini_clicked(self):
+        """Save the current INI editor content to a file."""
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save INI File",
@@ -811,6 +817,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
             self._show_error("INI Save Error", exc)
 
     def on_init_clicked(self):
+        """Initialize the active driver using the current INI editor content."""
         ini_text = self.ini_edit.toPlainText()
         self._last_ini_text = ini_text
         channel = self.channel_spin.value()
@@ -877,6 +884,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.canvas.set_y_label(self._active_sparameter_label())
 
     def refresh_status(self, on_complete=None):
+        """Read status values from the driver and update status fields."""
         def success(snapshot):
             self._apply_status_snapshot(snapshot)
             if on_complete is not None:
@@ -885,6 +893,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._start_task("Refresh Status", self._collect_status_snapshot, on_success=success)
 
     def populate_controls_from_status(self):
+        """Copy latest status readback values into writable controls."""
         mapping = {
             "center_freq": "GetCenterFreq",
             "span": "GetSpan",
@@ -1042,50 +1051,62 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._start_task(label, callable_, on_success=success)
 
     def on_set_center_freq_clicked(self, value=None):
+        """Write center frequency to the device."""
         self._set_indicator_state("center_freq", "pending", "Write in progress.")
         self._apply_and_refresh("SetCenterFreq", lambda: self._driver_method("SetCenterFreq", value if value is not None else self._line_edit_float("center_freq")))
 
     def on_set_span_clicked(self, value=None):
+        """Write span to the device."""
         self._set_indicator_state("span", "pending", "Write in progress.")
         self._apply_and_refresh("SetSpan", lambda: self._driver_method("SetSpan", value if value is not None else self._line_edit_float("span")))
 
     def on_set_rbw_clicked(self, value=None):
+        """Write RBW to the device."""
         self._set_indicator_state("rbw", "pending", "Write in progress.")
         self._apply_and_refresh("SetRBW", lambda: self._driver_method("SetRBW", value if value is not None else self._line_edit_float("rbw")))
 
     def on_set_ref_level_clicked(self):
+        """Write reference level to the device."""
         self._set_indicator_state("ref_level", "pending", "Write in progress.")
         self._apply_and_refresh("SetRefLevel", lambda: self._driver_method("SetRefLevel", self._line_edit_float("ref_level")))
 
     def on_set_division_clicked(self):
+        """Write division value to the device."""
         self._set_indicator_state("division_value", "pending", "Write in progress.")
         self._apply_and_refresh("SetDivisionValue", lambda: self._driver_method("SetDivisionValue", self._line_edit_float("division_value")))
 
     def on_set_sweep_type_clicked(self):
+        """Write sweep type to the device."""
         self._set_indicator_state("sweep_type", "pending", "Write in progress.")
         self._apply_and_refresh("SetSweepType", lambda: self._driver_method("SetSweepType", self._combo_value("sweep_type")))
 
     def on_set_sweep_mode_clicked(self):
+        """Write sweep mode to the device."""
         self._set_indicator_state("sweep_mode", "pending", "Write in progress.")
         self._apply_and_refresh("SetSweepMode", lambda: self._driver_method("SetSweepMode", self._combo_value("sweep_mode")))
 
     def on_set_sweep_count_clicked(self):
+        """Write sweep count to the device."""
         self._set_indicator_state("sweep_count", "pending", "Write in progress.")
         self._apply_and_refresh("SetSweepCount", lambda: self._driver_method("SetSweepCount", self._spin_value("sweep_count")))
 
     def on_set_sweep_points_clicked(self):
+        """Write sweep points to the device."""
         self._set_indicator_state("sweep_points", "pending", "Write in progress.")
         self._apply_and_refresh("SetSweepPoints", lambda: self._driver_method("SetSweepPoints", self._spin_value("sweep_points")))
 
     def on_set_trigger_mode_clicked(self):
+        """Write trigger mode to the device."""
         self._set_indicator_state("trigger_mode", "pending", "Write in progress.")
         self._apply_and_refresh("SetTriggerMode", lambda: self._driver_method("SetTriggerMode", self._combo_value("trigger_mode")))
 
     def on_set_trigger_delay_clicked(self):
+        """Write trigger delay to the device."""
         self._set_indicator_state("trigger_delay", "pending", "Write in progress.")
         self._apply_and_refresh("SetTriggerDelay", lambda: self._driver_method("SetTriggerDelay", self._line_edit_float("trigger_delay")))
 
     def on_single_sweep_clicked(self):
+        """Trigger one single sweep using the active driver."""
         def action():
             if hasattr(self.dv, "SetSweepMode"):
                 self._driver_method("SetSweepMode", "SINGLE")
@@ -1096,6 +1117,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._apply_and_refresh("Single Sweep", action)
 
     def on_single_sweep_and_get_spectrum_clicked(self):
+        """Trigger a single sweep and acquire one spectrum."""
         def task():
             if hasattr(self.dv, "SetSweepMode"):
                 self._driver_method("SetSweepMode", "SINGLE")
@@ -1167,6 +1189,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.refresh_all()
 
     def on_get_spectrum_clicked(self):
+        """Acquire one spectrum without forcing a sweep mode change."""
         def task():
             sweep_type = None
             if hasattr(self.dv, "GetSweepType"):
@@ -1181,6 +1204,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._start_task("Acquire Spectrum", task, on_success=self._handle_spectrum_result)
 
     def on_clear_plot_clicked(self):
+        """Clear plotted spectrum data and related cached state."""
         self.canvas.clear_plot()
         self.spectrum_edit.clear()
         self._last_trace_data = None
@@ -1189,13 +1213,16 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self.log_message("Spectrum plot cleared.")
 
     def on_plot_title_changed(self):
+        """Apply the current plot title from the title input field."""
         self.canvas.set_plot_title(self.plot_title_edit.text().strip() or self._default_plot_title)
 
     def on_grid_toggled(self, checked):
+        """Toggle grid visibility in the spectrum plot."""
         self.canvas.set_grid_enabled(checked)
         self.grid_toggle_button.setText("Grid On" if checked else "Grid Off")
 
     def on_export_csv_clicked(self):
+        """Export the last acquired trace to a CSV file."""
         if self._last_trace_data is None:
             self._show_error("Export CSV Error", ValueError("No spectrum data available."))
             return
@@ -1265,6 +1292,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         return results
 
     def on_run_smoke_test_clicked(self):
+        """Run the smoke-test routine and log its results."""
         def success(lines):
             self.log_message("Smoke test completed.")
             for line in lines:
@@ -1274,6 +1302,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._start_task("Smoke Test", self._run_smoke_test, on_success=success)
 
     def refresh_all(self):
+        """Refresh status, controls, and optional topology information."""
         def complete():
             self.populate_controls_from_status()
             self.after_refresh_all()
@@ -1324,16 +1353,19 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         return item.data(QtCore.Qt.ItemDataRole.UserRole)
 
     def on_window_selected_in_list(self):
+        """Mirror selected window list entry into the window name field."""
         item = self.window_list.currentItem()
         if item is not None:
             self.window_name_edit.setText(item.data(QtCore.Qt.ItemDataRole.UserRole))
 
     def on_trace_selected_in_list(self):
+        """Mirror selected trace list entry into the trace name field."""
         item = self.trace_list.currentItem()
         if item is not None:
             self.trace_name_edit.setText(item.data(QtCore.Qt.ItemDataRole.UserRole))
 
     def on_create_window_clicked(self):
+        """Create a new window on the active driver."""
         name = self.window_name_edit.text().strip()
         if not name:
             self._show_error("Create Window Error", ValueError("Window name is empty"))
@@ -1341,6 +1373,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._apply_and_refresh("CreateWindow", lambda: self._driver_method("CreateWindow", name))
 
     def on_select_window_clicked(self):
+        """Select the target window as active on the driver."""
         try:
             name = self.window_name_edit.text().strip() or self._selected_window_name()
         except Exception as exc:
@@ -1349,9 +1382,11 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._apply_and_refresh("SetWindow", lambda: self._driver_method("SetWindow", name))
 
     def on_delete_window_clicked(self):
+        """Delete the currently active window on the driver."""
         self._apply_and_refresh("DelWindow", lambda: self._driver_method("DelWindow"))
 
     def on_create_trace_clicked(self):
+        """Create a new trace on the active driver window."""
         trace_name = self.trace_name_edit.text().strip()
         sparam = self.sparam_combo.currentText().strip()
         if not trace_name:
@@ -1360,6 +1395,7 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._apply_and_refresh("CreateTrace", lambda: self._driver_method("CreateTrace", trace_name, sparam))
 
     def on_select_trace_clicked(self):
+        """Select the target trace as active on the driver."""
         try:
             trace_name = self.trace_name_edit.text().strip() or self._selected_trace_name()
         except Exception as exc:
@@ -1368,9 +1404,11 @@ class NetworkAnalyzerWidget(QtWidgets.QWidget):
         self._apply_and_refresh("SetTrace", lambda: self._driver_method("SetTrace", trace_name))
 
     def on_delete_trace_clicked(self):
+        """Delete the currently active trace on the driver."""
         self._apply_and_refresh("DelTrace", lambda: self._driver_method("DelTrace"))
 
     def on_set_sparameter_clicked(self):
+        """Set S-parameter for the active trace."""
         sparam = self.sparam_combo.currentText().strip()
         self._apply_and_refresh("SetSparameter", lambda: self._driver_method("SetSparameter", sparam))
 
@@ -1406,6 +1444,7 @@ def _make_default_instance(args):
 
 
 def main(argv=None):
+    """Start the standalone network analyzer test UI."""
     parser = argparse.ArgumentParser(description="Network analyzer driver test utility")
     parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
     parser.add_argument("--virtual", action="store_true", help="Use the virtual network analyzer driver.")

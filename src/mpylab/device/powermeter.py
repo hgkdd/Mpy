@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
+"""mpylab.device.powermeter module."""
 import math
 
 from scuq import *

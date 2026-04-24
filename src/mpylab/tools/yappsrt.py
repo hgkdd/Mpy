@@ -312,6 +312,7 @@ def print_error(input, err, scanner):
 
 
 def wrap_error_reporter(parser, rule):
+    """wrap_error_reporter function."""
     try:
         return getattr(parser, rule)()
     except SyntaxError as e:

@@ -59,6 +59,7 @@ class DriverTask(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        """Execute the worker callable and emit completion signals."""
         result = None
         error = None
         try:
@@ -374,6 +375,7 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._last_ini_text = content
 
     def log_message(self, message):
+        """Append a timestamped log line to the UI log view."""
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.log_edit.appendPlainText(f"[{timestamp}] {message}")
 
@@ -559,6 +561,7 @@ class ReceiverWidget(QtWidgets.QWidget):
         self.freq_indicator.setToolTip(message or "")
 
     def on_load_ini_clicked(self):
+        """Load INI content from a file into the editor."""
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(self, "Open INI File", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -572,6 +575,7 @@ class ReceiverWidget(QtWidgets.QWidget):
             self._show_error("INI Load Error", exc)
 
     def on_save_ini_clicked(self):
+        """Save current INI editor content to a file."""
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(self, "Save INI File", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -584,6 +588,7 @@ class ReceiverWidget(QtWidgets.QWidget):
             self._show_error("INI Save Error", exc)
 
     def on_init_clicked(self):
+        """Initialize the selected receiver driver from current INI text."""
         ini_text = self.ini_edit.toPlainText()
         self._last_ini_text = ini_text
         channel = self.channel_spin.value()
@@ -603,6 +608,7 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._start_task("Init", lambda: self._driver_method("Init", ini=io.StringIO(ini_text), channel=channel), on_success=success)
 
     def on_quit_clicked(self):
+        """Call driver ``Quit`` and reset UI runtime state."""
         def success(result):
             self._is_initialized = False
             self._poll_timer.stop()
@@ -613,6 +619,7 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._start_task("Quit", lambda: self._driver_method("Quit"), on_success=success)
 
     def on_set_freq_clicked(self, freq=None):
+        """Set receiver frequency and validate readback consistency."""
         freq = self.freq_control.value_hz() if freq is None else freq
         self._set_freq_indicator("pending")
 
@@ -633,6 +640,7 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._start_task("Set Frequency", lambda: self._driver_method("SetFreq", freq), on_success=success)
 
     def on_read_freq_clicked(self):
+        """Read frequency from receiver and update controls."""
         self._set_freq_indicator("pending")
 
         def success(result):
@@ -649,11 +657,13 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._start_task("Read Frequency", lambda: self._driver_method("GetFreq"), on_success=success)
 
     def on_set_rbw_clicked(self, rbw=None):
+        """Set receiver RBW to a numeric value."""
         rbw = self.rbw_control.value_hz() if rbw is None else rbw
         self.rbw_auto_check.setChecked(False)
         self._start_task("Set RBW", lambda: self._driver_method("SetResolutionBandwidth", rbw), on_success=self._handle_rbw)
 
     def on_rbw_auto_toggled(self, checked):
+        """Toggle automatic RBW mode."""
         self.rbw_control.set_enabled(not checked)
         if checked:
             self._start_task("Set RBW Auto", lambda: self._driver_method("SetResolutionBandwidth", None), on_success=self._handle_rbw)
@@ -667,6 +677,7 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._set_status_field("GetResolutionBandwidth", self._display_value(result))
 
     def on_set_meas_time_clicked(self):
+        """Set integration or measurement time on the receiver."""
         value = self.meas_time_spin.value()
         self._start_task("Set Measurement Time", lambda: self._driver_method("SetMeasTime", value), on_success=self._handle_meas_time)
 
@@ -679,19 +690,23 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._set_status_field("GetMeasTime", self._display_value(result))
 
     def on_detector_changed(self, detector):
+        """Apply detector mode change when the receiver is initialized."""
         if self._is_initialized:
             self._start_task("Set Detector", lambda: self._driver_method("SetDetector", detector), on_success=lambda result: self._set_status_field("GetDetector", self._display_value(result)))
 
     def on_preamp_changed(self, state):
+        """Apply preamplifier state change when initialized."""
         if self._is_initialized:
             self._start_task("Set Preamplifier", lambda: self._driver_method("SetPreamplifier", state), on_success=lambda result: self._set_status_field("GetPreamplifier", self._display_value(result)))
 
     def on_att_auto_toggled(self, checked):
+        """Toggle automatic attenuation mode."""
         self.att_spin.setEnabled(not checked)
         if checked:
             self._start_task("Set Attenuation Auto", lambda: self._driver_method("SetAttenuation", None), on_success=self._handle_attenuation)
 
     def on_set_attenuation_clicked(self):
+        """Set attenuation value or request automatic attenuation."""
         value = None if self.att_auto_check.isChecked() else self.att_spin.value()
         self._start_task("Set Attenuation", lambda: self._driver_method("SetAttenuation", value), on_success=self._handle_attenuation)
 
@@ -704,6 +719,7 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._set_status_field("GetAttenuation", self._display_value(result))
 
     def on_set_min_attenuation_clicked(self):
+        """Set minimum attenuation threshold."""
         value = self.min_att_spin.value()
         self._start_task("Set Min Attenuation", lambda: self._driver_method("SetMinAttenuation", value), on_success=self._handle_min_attenuation)
 
@@ -716,22 +732,27 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._set_status_field("GetMinAttenuation", self._display_value(result))
 
     def on_trigger_clicked(self):
+        """Trigger one receiver measurement cycle."""
         self._start_task("Trigger", lambda: self._driver_method("Trigger"))
 
     def on_measure_clicked(self):
+        """Acquire one blocking receiver measurement."""
         self._start_task("GetData", lambda: self._driver_method("GetData"), on_success=self._handle_reading)
 
     def on_measure_nb_clicked(self):
+        """Acquire one non-blocking receiver measurement."""
         retrigger = self.retrigger_check.isChecked()
         self._start_task("GetDataNB", lambda: self._driver_method("GetDataNB", retrigger), on_success=self._handle_reading)
 
     def on_poll_toggled(self, checked):
+        """Start or stop periodic non-blocking measurement polling."""
         if checked:
             self._poll_timer.start(self.poll_interval_spin.value())
         else:
             self._poll_timer.stop()
 
     def on_poll_timeout(self):
+        """Poll timer callback that triggers non-blocking measurement."""
         if not self._busy and self._is_initialized:
             self.on_measure_nb_clicked()
 
@@ -742,18 +763,21 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._set_status_field("_last_reading", str(value))
 
     def on_raw_query_clicked(self):
+        """Send a raw query command to the receiver and show response."""
         cmd = self.raw_command_edit.text().strip()
         if not cmd:
             return
         self._start_task("Raw Query", lambda: self.rx.query(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_raw_write_clicked(self):
+        """Send a raw write command to the receiver and show response."""
         cmd = self.raw_command_edit.text().strip()
         if not cmd:
             return
         self._start_task("Raw Write", lambda: self.rx.write(cmd), on_success=lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_smoke_clicked(self):
+        """Run receiver smoke test and print command results."""
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
         freq = self.freq_control.value_hz()
@@ -784,6 +808,7 @@ class ReceiverWidget(QtWidgets.QWidget):
         self._start_task("Smoke Test", task, on_success=success)
 
     def refresh_status(self, on_complete=None):
+        """Refresh status fields by querying supported receiver getters."""
         getters = [
             "GetDescription",
             "GetFreq",
@@ -864,6 +889,7 @@ class ReceiverWidget(QtWidgets.QWidget):
         return result
 
     def refresh_all(self):
+        """Refresh all status-dependent UI fields."""
         self.refresh_status()
 
     def closeEvent(self, event):
@@ -893,6 +919,7 @@ def _make_default_instance(args):
 
 
 def main(argv=None):
+    """Start the standalone receiver test utility."""
     parser = argparse.ArgumentParser(description="Receiver driver test utility")
     parser.add_argument("ini", nargs="?", help="Optional path to an INI file.")
     parser.add_argument("--virtual", action="store_true", help="Use the virtual receiver driver.")

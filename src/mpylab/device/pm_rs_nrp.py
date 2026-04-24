@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+"""mpylab.device.pm_rs_nrp module."""
 import time
 from copy import deepcopy
 from scuq import *
@@ -40,6 +41,7 @@ class POWERMETER(PWRMTR):
     # return self.error,0
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         if channel is None:
             self.channel = 1
         else:
@@ -66,6 +68,7 @@ class POWERMETER(PWRMTR):
         return self.error
 
     def InitSen(self, channel=None):
+        """InitSen method."""
         channel = channel
         dct = self.query("SYST:SENS{channel}:INFO?", r'(?P<inf>.*)')
         tmp = dct['inf']
@@ -237,6 +240,7 @@ class POWERMETER(PWRMTR):
         #                                  /
 
     def Unit(self, ch, unit):  # Selects the output unit          |      DBM, W,
+        """Unit method."""
         channel = ch  # for the measured power values.   |      DBUV
         unit = unit  # \
         self.write("UNIT{channel}:POW {unit}")
@@ -245,6 +249,7 @@ class POWERMETER(PWRMTR):
 
 
 def test_init(ch):
+    """test_init function."""
     import io
     from mpylab.tools.util import format_block
 
@@ -287,6 +292,7 @@ def test_init(ch):
 
 
 def main():
+    """main function."""
     import io
     import sys
     from mpylab.tools.util import format_block

@@ -23,6 +23,8 @@ Number = Union[float, int]
 
 @dataclass
 class ControlResult:
+    """Convergence result bundle for one control run."""
+
     guess: float
     actual: float
     iterations: int
@@ -75,6 +77,7 @@ class ControlBase:
         self.N = 0  # Anzahl der reader()-Aufrufe
 
     def clamp_cntrl(self, cntrl: Number) -> float:
+        """Clamp a control value to configured min/max bounds."""
         value = float(cntrl)
         if self.min_cntrl is not None:
             value = max(value, self.min_cntrl)
@@ -83,6 +86,7 @@ class ControlBase:
         return value
 
     def set_cntrl_val(self, cntrl: Number) -> float:
+        """Apply a control value via setter and return measured actual value."""
         cntrl_val = self.clamp_cntrl(cntrl)
         self.setter(cntrl_val)
         actual = float(self.reader())
@@ -90,6 +94,7 @@ class ControlBase:
         return actual
 
     def guess(self, cntrl: Sequence[float], act: Sequence[float], nominal: float) -> float:
+        """Estimate next control value from control/actual history."""
         raise NotImplementedError
 
     def _raise_boundary_or_stagnation(self, guess: float, nominal: float, last_actual: float, iteration: int) -> None:
@@ -115,6 +120,7 @@ class ControlBase:
         initial: Optional[Sequence[Number]] = None,
         return_result_object: bool = False,
     ) -> Union[Tuple[float, float], ControlResult]:
+        """Iteratively drive actual value towards nominal within tolerance."""
         nominal = float(nominal)
         cntrl_points = list(self.initial if initial is None else [float(x) for x in initial])
 
@@ -163,6 +169,8 @@ class ControlBase:
 
 
 class ControlPolyfit(ControlBase):
+    """Inverse controller using polynomial fit from actual to control."""
+
     def __init__(
         self,
         actual_reader: Callable[[], Number],
@@ -178,12 +186,15 @@ class ControlPolyfit(ControlBase):
         self.maxorder = int(maxorder)
 
     def guess(self, cntrl: Sequence[float], act: Sequence[float], nominal: float) -> float:
+        """Estimate control by inverse polynomial evaluation at nominal."""
         order = min(self.maxorder, len(cntrl) - 1)
         poly = Polynomial.fit(act, cntrl, order).convert()
         return float(poly(nominal))
 
 
 class ControlInterpol(ControlBase):
+    """Inverse controller using monotonic interpolation/extrapolation."""
+
     def _prepare_points(self, cntrl: Sequence[float], act: Sequence[float]) -> Tuple[np.ndarray, np.ndarray]:
         act_arr = np.asarray(act, dtype=float)
         cntrl_arr = np.asarray(cntrl, dtype=float)
@@ -214,6 +225,7 @@ class ControlInterpol(ControlBase):
         return np.asarray(unique_cntrl, dtype=float), np.asarray(unique_act, dtype=float)
 
     def guess(self, cntrl: Sequence[float], act: Sequence[float], nominal: float) -> float:
+        """Estimate control by inverse interpolation at nominal."""
         cntrl_u, act_u = self._prepare_points(cntrl, act)
         inv_interpol = interp1d(act_u, cntrl_u, bounds_error=False, fill_value="extrapolate")
         return float(inv_interpol(nominal))
@@ -258,6 +270,7 @@ class ControlRapp(ControlBase):
         return g * x / np.power(base, 1.0 / pp)
 
     def guess(self, cntrl: Sequence[float], act: Sequence[float], nominal: float) -> float:
+        """Estimate control by fitting Rapp model and solving inverse output."""
         cntrl_arr = np.asarray(cntrl, dtype=float)
         act_arr = np.asarray(act, dtype=float)
 
@@ -278,19 +291,12 @@ class ControlRapp(ControlBase):
 
 class ControlBracketInterpol(ControlBase):
     """
-    Monotone inverse Regelung mit Bracketing und Interpolation.
+    Monotonic inverse control using bracketing and interpolation.
 
-    Idee:
-    1. Aus den bereits gemessenen Punkten ein Intervall suchen, das den Sollwert einklammert.
-    2. Falls kein Intervall existiert:
-       - nach oben oder unten vorsichtig extrapolieren
-       - mit begrenzter Schrittweite, um Überschwingen zu vermeiden
-    3. Falls ein Intervall existiert:
-       - lineare inverse Interpolation innerhalb des Intervalls
-    4. Optional: nur von unten annähern bzw. Überschwingen dämpfen
-
-    Gut geeignet für monotone Kennlinien, z. B. HF-Pegelregelung über
-    Signalgenerator + Leistungsverstärker.
+    The controller first searches measured points that bracket the nominal
+    value. If no bracket exists yet, it performs bounded extrapolation with
+    limited step sizes. Once a bracket exists, it applies inverse linear
+    interpolation inside that interval.
     """
 
     def __init__(
@@ -365,6 +371,7 @@ class ControlBracketInterpol(ControlBase):
         return guess
 
     def guess(self, cntrl, act, nominal):
+        """Estimate next control step with bracketing and guarded extrapolation."""
         points = self._sorted_points(cntrl, act)
 
         # Letzten tatsächlich gesetzten Punkt als Ausgang für Schrittbegrenzung nehmen

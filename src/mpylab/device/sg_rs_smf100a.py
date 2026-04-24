@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Driver for the Rohde & Schwarz SMF100A signal generator."""
 #
 import io
 import sys
@@ -14,6 +15,8 @@ from mpylab.tools.configuration import fstrcmp
 # Diese greift auf die Unterklasse SIGNALGENERATOR (signalgenerator.py) und darüber auf die Unterklasse DRIVER (driver.py) zu.
 #
 class SIGNALGENERATOR(SGNLGNRTR):
+    """SMF100A-specific signal generator implementation."""
+
     def __init__(self, **kw):
         SGNLGNRTR.__init__(self, **kw)
         # print self.map
@@ -72,6 +75,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         return text.lower() or "unknown"
 
     def GetRFState(self):
+        """Query and return RF output state as normalized text."""
         self.error = 0
         dct = self._do_cmds('GetRFState', locals())
         self._update(dct)
@@ -79,6 +83,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         return self.error, self.rf_state
 
     def GetAMState(self):
+        """Query and return AM state as normalized text."""
         self.error = 0
         dct = self._do_cmds('GetAMState', locals())
         self._update(dct)
@@ -86,6 +91,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         return self.error, self.am_state
 
     def GetPMState(self):
+        """Query and return pulse-modulation state as normalized text."""
         self.error = 0
         dct = self._do_cmds('GetPMState', locals())
         self._update(dct)
@@ -93,6 +99,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         return self.error, self.pm_state
 
     def ConfAM(self, source, freq, depth, waveform, LFOut):
+        """Configure AM source, waveform, depth, frequency and LF output."""
         source = fstrcmp(source, self.AM_sources, cutoff=0, ignorecase=True)[0]
         waveform = fstrcmp(waveform, self.AM_waveforms, cutoff=0, ignorecase=True)[0]
         lfo = 1
@@ -123,6 +130,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         return SGNLGNRTR.ConfAM(self, source, freq, depth, waveform, LFOut)
 
     def ConfPM(self, source, freq, pol, width, delay):
+        """Configure pulse modulation source, polarity, width and delay."""
         source = fstrcmp(source, self.PM_sources, cutoff=0, ignorecase=True)[0]
         if source == 'EXT2':
             raise NotImplementedError
@@ -148,6 +156,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
         return self.error
 
     def Init(self, ini=None, channel=None):
+        """Initialize SMF100A channel and apply configured presets."""
         if channel is None:
             channel = 1
         self.error = SGNLGNRTR.Init(self, ini, channel)
@@ -289,6 +298,7 @@ class SIGNALGENERATOR(SGNLGNRTR):
 # Die Funktion main() wird nur zum Test des Treibers verwendet!
 #
 def main():
+    """Start the standalone SMF100A UI (or virtual fallback)."""
     import argparse
     from PySide6 import QtWidgets
     from mpylab.tools.util import format_block
@@ -339,6 +349,7 @@ def main():
 
 
 def test():
+    """Create and initialize a test SMF100A instance from default INI."""
     from mpylab.tools.util import format_block
     # from mpylab.device.signalgenerator_ui import UI as UI
     #

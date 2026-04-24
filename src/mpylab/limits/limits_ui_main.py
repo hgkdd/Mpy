@@ -1,3 +1,5 @@
+"""Qt UI entrypoint for browsing and plotting limit definitions."""
+
 import os
 from importlib import import_module
 
@@ -12,18 +14,25 @@ from PySide6.QtCore import QDir
 
 from mpylab.tools.spacing import linspace, logspace
 
-from limits_ui import Ui_MainWindow
+try:
+    from .limits_ui import Ui_MainWindow
+except ImportError:  # pragma: no cover - fallback for direct script execution
+    from limits_ui import Ui_MainWindow
 
 os.environ["QT_API"] = "PySide6"
 
 
 class MplCanvas(FigureCanvas):
+    """Matplotlib canvas wrapper used by the limits UI."""
+
     def __init__(self, parent=None, width=5, height=4, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
         super().__init__(fig)
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
+    """Main limits browser window with variation controls and plot area."""
+
     def __init__(self):
         super().__init__()
         self.mod = None
@@ -44,6 +53,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def populate_tree(self, root_path='.'):
+        """Populate the file tree with available Python limit modules."""
         tree = self.treeView
 
         model = QFileSystemModel()
@@ -86,6 +96,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         tree.hideColumn(3)
 
     def tree_view_clicked(self):
+        """Load selected limit module and rebuild variation controls."""
         index = self.treeView.selectedIndexes()[0]
         info = self.treeView.model().fileInfo(index)
         name = info.fileName()
@@ -117,6 +128,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
     def update_description(self):
+        """Recreate selected limit instance and refresh markdown description."""
         kw = {}
         for label, vars in self.variations.items():
             combobox = self.var_combobox[label]
@@ -129,6 +141,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.update_plot()
 
     def update_plot(self):
+        """Plot the currently selected limit curve on a logarithmic axis."""
         if not self.limit:
             return
         fmin = self.limit.fmin
@@ -145,6 +158,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.plot_canvas.draw()
 
     def clearLayout(self, layout):
+        """Recursively remove all widgets/items from a Qt layout."""
         if isinstance(layout, QLayout):
             while layout.count():
                 item = layout.takeAt(0)

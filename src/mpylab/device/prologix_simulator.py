@@ -1,3 +1,4 @@
+"""mpylab.device.prologix_simulator module."""
 import socketserver
 import threading
 
@@ -173,6 +174,7 @@ class _PrologixSimulatorHandler(socketserver.StreamRequestHandler):
 
 
 def start_prologix_simulator(host="127.0.0.1", port=1234):
+    """start_prologix_simulator function."""
     server = _ThreadedTCPServer((host, port), _PrologixSimulatorHandler)
     server.shared_state = {
         "default_addr": 5,

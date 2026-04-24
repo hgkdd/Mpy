@@ -64,6 +64,7 @@ dependencies = [
     "scipy-stubs~=1.16.1",
     "scuq>=0.9",
     "simpleeval>=0.9.13",
+    "sphinx>=9.0.4",
     "yapps2>=2.2.0",
     "zeroconf>=0.148.0",
 ]

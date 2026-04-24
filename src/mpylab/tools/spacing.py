@@ -94,6 +94,7 @@ def linspaceN(start, stop, number, endpoint=0, precision=2):
 
 
 def logspaceTab(start, end, ftab=None, nftab=None, endpoint=True):
+    """logspaceTab function."""
     if nftab is None:
         nftab = [20, 15, 10, 20, 20]
     if ftab is None:

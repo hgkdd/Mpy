@@ -10,6 +10,7 @@ from mpylab.device.communication_generic import generic_read, generic_write, gen
 
 
 class CommunicationDebug:
+    """CommunicationDebug class."""
     def __init__(self, idn, fout=None, fin=None):
         """
         :param idn: *str*, device identifier
@@ -78,7 +79,7 @@ class CommunicationDebug:
         """
         :param cmd: *str*, command to send
         :param tmpl: *str*, a re pattern for re.match or None
-        :param send_opc: *bool*, append '; *OPC?' to a non-query command
+        :param send_opc: *bool*, append ``; *OPC?`` to a non-query command
         :return: *str or dict or None*: dict with the parsed result
 
         See read function for more explanation regarding the re pattern

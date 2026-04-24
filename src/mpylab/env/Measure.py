@@ -670,6 +670,7 @@ class Measure(object):
         #   See there...
         #"""
         #crt.unbuffer_stdin()
+        """stdPreUserEvent method."""
         pass
 
     @staticmethod
@@ -678,6 +679,7 @@ class Measure(object):
         #   See there...
         #"""
         #crt.restore_stdin()
+        """stdPostUserEvent method."""
         pass
 
     @staticmethod
@@ -812,6 +814,7 @@ class Measure(object):
     # return cond, actual.get_v(), nominal.get_v()
 
     def make_deslist(self, thedata, description):
+        """make_deslist method."""
         if description is None:
             description = list(thedata.keys())
         if util.issequence(description):  # a sequence
@@ -828,6 +831,7 @@ class Measure(object):
         return self.make_deslist(thedata, description)
 
     def make_whatlist(self, thedata, what):
+        """make_whatlist method."""
         allwhat_withdupes = util.flatten([list(v.keys()) for v in thedata.values()])
         allwhat = list(set(allwhat_withdupes))
 
@@ -845,6 +849,7 @@ class Measure(object):
 
     @staticmethod
     def stdEutStatusChecker(status):
+        """stdEutStatusChecker method."""
         return status in ['ok', 'OK']
 
     @staticmethod
@@ -860,5 +865,6 @@ class Error(Exception):
 
 
 class AmplifierProtectionError(Error):
+    """AmplifierProtectionError class."""
     def __init__(self, message):
         self.message = message

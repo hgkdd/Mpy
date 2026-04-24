@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+"""mpylab.tools.plyparser module."""
 import os
 import io
 import re
@@ -87,6 +88,7 @@ class Parser:
         )
 
     def run(self):
+        """run method."""
         if self.filename:
             data = self._read_input_source(self.filename)
             self.parseresult = yacc.parse(data)

@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+"""TESEQ stirrer motor-controller driver and low-level serial helper."""
+
 import time
 import serial
 import atexit
@@ -7,8 +9,7 @@ from mpylab.device.motorcontroller import MOTORCONTROLLER as MC
 
 
 class Stirrer(object):
-    """
-    """
+    """Low-level serial controller for the TESEQ stirrer drive."""
     # the read termination is a space with a carriage return!
     read_termination = ' \r'
     write_termination = '\r'
@@ -88,6 +89,7 @@ class Stirrer(object):
 
     @property
     def current_angle(self):
+        """Return current stirrer angle in degrees."""
         self._status()
         return self._current_angle
 
@@ -102,6 +104,7 @@ class Stirrer(object):
 
     @current_angle.setter
     def current_angle(self, angle):
+        """Move stirrer to an absolute angle in degrees."""
         angle = self._clip_angle(angle)
         # Move Absolute
         self._write(f'RMA:{angle}')
@@ -117,11 +120,13 @@ class Stirrer(object):
 
     @property
     def motor_running(self):
+        """Return whether the motor is currently moving."""
         self._status()
         return self._motor_running
 
     @property
     def drive_initialized(self):
+        """Return whether the drive is initialized and currently idle."""
         self._status()
         if self.motor_running:
             return False
@@ -130,15 +135,18 @@ class Stirrer(object):
 
     @property
     def error(self):
+        """Return whether the controller reports an error."""
         self._status()
         return self._error
 
     @property
     def error_message(self):
+        """Return current controller error message."""
         self._status()
         return self._error_message
 
     def initialize_drive(self):
+        """Initialize the drive if required and return initialized state."""
         self._status()
         if not self.drive_initialized:
             self._write('INIT')
@@ -146,11 +154,13 @@ class Stirrer(object):
         return self.drive_initialized
 
     def stop_motor(self):
+        """Stop motor movement and return motor-running state."""
         self._write('STOP')
         self._wait()
         return self.motor_running
 
     def run_clockwise(self):
+        """Start continuous clockwise rotation."""
         self._write('DIR:1')
         time.sleep(self._inter_cmd_wait_time)
         self._write('RMS')
@@ -158,6 +168,7 @@ class Stirrer(object):
         return self.motor_running
 
     def step_clockwise_by(self, step):
+        """Move clockwise by a relative angle in degrees."""
         self._write('DIR:1')
         time.sleep(self._inter_cmd_wait_time)
         pos = self.current_angle + step
@@ -167,6 +178,7 @@ class Stirrer(object):
         return self.motor_running
 
     def run_anti_clockwise(self):
+        """Start continuous counter-clockwise rotation."""
         self._write('DIR:0')
         time.sleep(self._inter_cmd_wait_time)
         self._write('RMS')
@@ -174,6 +186,7 @@ class Stirrer(object):
         return self.motor_running
 
     def step_anti_clockwise_by(self, step):
+        """Move counter-clockwise by a relative angle in degrees."""
         self._write('DIR:0')
         time.sleep(self._inter_cmd_wait_time)
         pos = self.current_angle - step
@@ -282,10 +295,12 @@ class Stirrer(object):
             raise exception
 
     def set_next_angle(self, angle):
+        """Store the next absolute target angle on the controller."""
         self.next_angle = self._clip_angle(angle)
         self._write(f'DEG:{self.next_angle}')
 
     def goto_next_angle(self):
+        """Move to the previously stored target angle."""
         if not self.next_angle:
             return
         # Move Absolute to stored position
@@ -301,6 +316,7 @@ class Stirrer(object):
             raise Exception(self._error_message)
 
     def close(self):
+        """Close the serial port and mark drive as uninitialized."""
         self.port.close()
         self._drive_initialized = False
         # self._
@@ -310,11 +326,10 @@ class Stirrer(object):
 
 
 class AngleError(Exception):
+    """Raised when the stirrer cannot reach the requested target angle."""
 
     def __init__(self, new_angle, current_angle, angle_error_threshold):
-        """
-
-        """
+        """Create an angle-deviation error with diagnostic metadata."""
         self.new_angle = new_angle
         self.current_angle = current_angle
         self.angle_error_threshold = angle_error_threshold
@@ -327,6 +342,8 @@ class AngleError(Exception):
 
 
 class StirrerLockedError(Exception):
+    """Raised when the stirrer controller reports a locked state."""
+
     def __init__(self):
         super().__init__(
             'Try to turn it off and on again and reinit')
@@ -340,6 +357,7 @@ class MOTORCONTROLLER(MC):
         super().__init__()
 
     def Init(self, ini=None, channel=None):
+        """Initialize stirrer hardware and move to known idle state."""
         if channel is None:
             channel = 1
         # self.error=MC.Init(self, ini, channel)
@@ -359,6 +377,7 @@ class MOTORCONTROLLER(MC):
         return self.error
 
     def Goto(self, pos):
+        """Move stirrer to an absolute position in degrees."""
         if self.stirrer.drive_initialized:
             status = self.stirrer.goto_angle(pos)
             self.ca = self.stirrer._wait()
@@ -367,6 +386,7 @@ class MOTORCONTROLLER(MC):
         return self.error, self.ca
 
     def Move(self, dir):
+        """Start clockwise or counter-clockwise motion."""
         self.error = 0
         err, ca, d = self.GetState()
         if d == dir:  # nothing to do
@@ -381,6 +401,7 @@ class MOTORCONTROLLER(MC):
         return self.error, dir
 
     def GetState(self):
+        """Return error, current angle, and estimated motion direction."""
         self.error = 0
         running, self.ca, self.drive_init_ok, fail, msg = self.stirrer._status()
         stopped = not running
@@ -409,14 +430,17 @@ class MOTORCONTROLLER(MC):
             return self.error, self.ca, d
 
     def SetSpeed(self, speed):
+        """Set stirrer speed (currently not implemented)."""
         pass
         return 0
 
     def GetSpeed(self):
+        """Return configured stirrer speed placeholder value."""
         pass
         return 0, 1
 
     def Quit(self):
+        """Stop the stirrer motor."""
         self.error = 0
         self.stirrer.stop_motor()
         # self.dev.close()
@@ -426,6 +450,7 @@ class MOTORCONTROLLER(MC):
 
 
 def main():
+    """Run a simple interactive CLI for the stirrer controller."""
     import sys
     import io
 

@@ -16,6 +16,8 @@ from scuq.si import VOLT, WATT
 
 
 class RECEIVER(REC):
+    """Driver for the Rohde & Schwarz ESHS30 EMI receiver."""
+
     def __init__(self, **kw):
         REC.__init__(self, **kw)
         self._cmds = {'SetFreq': [("f'FREQUENCY {freq} HZ'", None)],
@@ -46,6 +48,7 @@ class RECEIVER(REC):
         self.delay = 0.1   # query delay
 
     def Init(self, ini=None, channel=None):
+        """Initialize the receiver channel and apply startup configuration."""
         if channel is None:
             channel = 1
         self.error = super().Init(ini=ini, channel=channel)
@@ -159,6 +162,7 @@ class RECEIVER(REC):
         return obj
 
     def SetPreamplifier(self, preamplifier):
+        """Set preamplifier state and return the applied value."""
         self.error = 0
         dct = self._do_cmds('SetPreamplifier', locals())
         self._update(dct)
@@ -167,12 +171,14 @@ class RECEIVER(REC):
         return self.error, self.preamplifier
 
     def GetPreamplifier(self):
+        """Return the current preamplifier state."""
         self.error = 0
         dct = self._do_cmds('GetPreamplifier', locals())
         self._update(dct)
         return self.error, self.preamplifier
 
     def SetDetector(self, detector):
+        """Set detector mode and return the normalized detector name."""
         self.error = 0
         detector = self.detector_map[detector.lower()]
         dct = self._do_cmds('SetDetector', locals())
@@ -185,12 +191,14 @@ class RECEIVER(REC):
         return self.error, self.detector
 
     def GetDetector(self):
+        """Return the current detector mode."""
         self.error = 0
         dct = self._do_cmds('GetDetector', locals())
         self._update(dct)
         return self.error, self.detector
 
     def SetMeasTime(self, meas_time):
+        """Set measurement time or enable automatic timing."""
         self.error = 0
         if meas_time is None or case_insensitive_string_compare(meas_time, 'auto'):
             self.write('SPECIALFUNC 2,ON', send_opc=True)   # couple meas_time to ZF bandwidth
@@ -203,12 +211,14 @@ class RECEIVER(REC):
         return self.error, self.meas_time
 
     def GetMeasTime(self):
+        """Return the configured measurement time."""
         self.error = 0
         dct = self._do_cmds('GetMeasTime', locals())
         self._update(dct)
         return self.error, self.meas_time
 
     def SetResolutionBandwidth(self, rbw):
+        """Set resolution bandwidth or enable automatic RBW."""
         self.error = 0
         if rbw is None or case_insensitive_string_compare(rbw, 'auto'):
             self.write('SPECIALFUNC 1,ON', send_opc=True)
@@ -220,6 +230,7 @@ class RECEIVER(REC):
         return self.error, self.rbw
 
     def SetAttenuation(self, attenuation):
+        """Set RF attenuation and return the effective instrument value."""
         self.error = 0
         if attenuation is None or case_insensitive_string_compare(attenuation, 'auto'):
             self.write('ATTENUATION:AUTO ON', send_opc=True)
@@ -235,6 +246,7 @@ class RECEIVER(REC):
 
 
     def GetData(self):
+        """Trigger a measurement and return the measured level as quantity."""
         self.error = 0
         self.Trigger()
         dct = self._do_cmds('GetData', locals())
@@ -267,16 +279,19 @@ class RECEIVER(REC):
         return self.error, obj
 
     def SetMinAttenuation(self, att):
+        """Set the minimum allowed attenuation floor in dB."""
         self.min_attenuation = max(att, 0)   # 0 dB is minimal min_attenuation
         if self.attenuation is None or self.min_attenuation > self.attenuation:
             self.error, self.attenuation = self.SetAttenuation(self.min_attenuation)
         return 0, self.min_attenuation
 
     def GetMinAttenuation(self):
+        """Return the configured minimum attenuation floor in dB."""
         return 0, self.min_attenuation
 
 
 def main():
+    """Run a basic manual smoke test for the ESHS30 driver."""
     import sys, io
     from mpylab.tools.util import format_block
     try:

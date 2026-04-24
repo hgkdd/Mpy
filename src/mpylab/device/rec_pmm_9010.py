@@ -76,6 +76,7 @@ class RECEIVER(REC):
         return str(value).strip().lower() in {"1", "on", "true"}
 
     def Init(self, ini=None, channel=None):
+        """Initialize receiver settings from INI channel configuration."""
         if channel is None:
             channel = 1
         self.error = super().Init(ini=ini, channel=channel)
@@ -121,21 +122,25 @@ class RECEIVER(REC):
         return Quantity(self.unit, UncertainInput(level, level * relerr))
 
     def SetFreq(self, freq):
+        """Set receiver frequency in Hz."""
         self.error = 0
         self._send(f"SMAF {freq}")
         return self.GetFreq()
 
     def GetFreq(self):
+        """Return current receiver frequency in Hz."""
         self.error = 0
         ans = self._ask("?MAF")
         self.freq = self._first_float(ans)
         return self.error, self.freq
 
     def Trigger(self):
+        """Trigger one measurement cycle."""
         self.error = 0
         return self.error
 
     def SetAttenuation(self, attenuation):
+        """Set attenuation in dB or switch to automatic attenuation."""
         self.error = 0
         if attenuation is None or case_insensitive_string_compare(attenuation, "auto"):
             self._send("SMAT -1")
@@ -146,24 +151,28 @@ class RECEIVER(REC):
         return self.GetAttenuation()
 
     def GetAttenuation(self):
+        """Return current attenuation in dB."""
         self.error = 0
         ans = self._ask("?MAT")
         self.attenuation = self._first_float(ans)
         return self.error, self.attenuation
 
     def SetMinAttenuation(self, min_attenuation):
+        """Set minimum attenuation floor in dB."""
         self.error = 0
         self.min_attenuation = max(int(round(float(min_attenuation) / 5.0) * 5), 0)
         self._send(f"STAT {self.min_attenuation}")
         return self.GetMinAttenuation()
 
     def GetMinAttenuation(self):
+        """Return configured minimum attenuation in dB."""
         self.error = 0
         ans = self._ask("?TAT")
         self.min_attenuation = int(round(self._first_float(ans)))
         return self.error, self.min_attenuation
 
     def SetMeasTime(self, meas_time):
+        """Set measurement time in seconds or enable automatic timing."""
         self.error = 0
         if meas_time is None or case_insensitive_string_compare(meas_time, "auto"):
             self.meas_time = 1.0
@@ -173,34 +182,40 @@ class RECEIVER(REC):
         return self.GetMeasTime()
 
     def GetMeasTime(self):
+        """Return measurement time in seconds."""
         self.error = 0
         ans = self._ask("?MHT")
         self.meas_time = self._first_float(ans) * 1e-3
         return self.error, self.meas_time
 
     def SetDetector(self, detector):
+        """Set detector mode."""
         self.error = 0
         det = str(detector).strip().lower()
         self.detector = det if det in self._DET_IDX else "peak"
         return self.error, self.detector
 
     def GetDetector(self):
+        """Return detector mode."""
         self.error = 0
         return self.error, self.detector
 
     def SetPreamplifier(self, preamplifier):
+        """Set preamplifier state."""
         self.error = 0
         state = "ON" if self._is_on(preamplifier) else "OFF"
         self._send(f"SMPA {state}")
         return self.GetPreamplifier()
 
     def GetPreamplifier(self):
+        """Return preamplifier state."""
         self.error = 0
         ans = self._ask("?MPA").upper()
         self.preamplifier = "ON" if "ON" in ans else "OFF"
         return self.error, self.preamplifier
 
     def SetResolutionBandwidth(self, rbw):
+        """Set receiver RBW in Hz or enable RBW auto mode."""
         self.error = 0
         if rbw is None or case_insensitive_string_compare(rbw, "auto"):
             self._send("SRBW 0")
@@ -212,6 +227,7 @@ class RECEIVER(REC):
         return self.GetResolutionBandwidth()
 
     def GetResolutionBandwidth(self):
+        """Return current receiver RBW setting."""
         self.error = 0
         ans = self._ask("?RBW")
         m = re.search(r"\b(\d+)\b", ans)
@@ -236,6 +252,7 @@ class RECEIVER(REC):
             return None
 
     def GetData(self):
+        """Acquire one blocking level reading."""
         self.error = 0
         ans = self._ask("?DET")
         level = self._extract_level_from_det(ans)
@@ -245,19 +262,23 @@ class RECEIVER(REC):
         return self.error, self._create_lev_object(level)
 
     def GetDataNB(self, retrigger):
+        """Acquire one non-blocking level reading."""
         return self.GetData()
 
     def GetDescription(self):
+        """Query and return receiver identification string."""
         self.error = 0
         self.IDN = self._ask("?IDN")
         return self.error, self.IDN
 
     def Quit(self):
+        """Close receiver session."""
         self.error = 0
         return self.error
 
 
 def main():
+    """Run a minimal command-line smoke test for the PMM receiver."""
     import sys
 
     try:

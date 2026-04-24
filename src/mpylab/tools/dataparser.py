@@ -134,6 +134,7 @@ class DatFile(Parser):
 
     # Error handling rule
     def t_error(self, t):
+        """t_error method."""
         print("Illegal character '%s'" % t.value[0])
         t.lexer.skip(1)
 
@@ -234,6 +235,7 @@ class DatFile(Parser):
 
     # Error rule for syntax errors
     def p_error(self, p):
+        """p_error method."""
         print("Syntax error in input!")
 
     def _makeuq(self, a, b, c, unit):

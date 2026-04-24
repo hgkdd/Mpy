@@ -30,6 +30,7 @@ def _quantile(coverage=0.95, both_tails=True):
     return quantile
 
 def get_k_factor(*args, coverage=0.95, both_tails=True, dist=None, **kwargs):
+    """get_k_factor function."""
     if dist is None:
         dist = 'norm'
     try:

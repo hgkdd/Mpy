@@ -5,24 +5,22 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to MpyLab's documentation!
-==================================
+Welcome to MpyLab Documentation
+===============================
 
-Contents:
+Choose Language
 
 .. toctree::
    :maxdepth: 2
 
+   en/index.rst
+   de/index.rst
+
+.. toctree::
+   :hidden:
+
    installation-walktrough.rst
-   intro-install-en.rst
-   intro-structure-en.rst
-   intro-driver-en.rst
-   intro-driver-framework-de.rst
-   dat-file-grammar.rst
-   FAQ-en.rst
-   mpylab/ui_adapter_contract.rst
-   messanleitung.rst
-   mpylab.rst
+   mpylab/driver_framework.rst
 
 Indices and tables
 ==================

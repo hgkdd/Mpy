@@ -159,6 +159,7 @@ def getIndex(val, tab):
 
 
 def combinations(L):
+    """Return cartesian combinations for a nested list-of-lists input."""
     N = len(L)
     if N == 0:
         return []
@@ -169,6 +170,7 @@ def combinations(L):
 
 
 def LookForUserInterrupt():
+    """Poll keyboard and return True when user requests abort."""
     # look for user interupt
     if anykeyevent():
         print("Execution interrupted by user.")
@@ -179,6 +181,7 @@ def LookForUserInterrupt():
 
 
 def secant_solve(f, x1, x2, ftol, xtol):
+    """Find root of ``f`` with SciPy secant solver."""
     sol = root_scalar(f, method='secant', x0=x1, x1=x2, rtol=ftol, xtol=xtol)
     return sol.root
     # f1 = f(x1)
@@ -203,11 +206,13 @@ def secant_solve(f, x1, x2, ftol, xtol):
 
 
 def mean(x, zero=0.0):
+    """Return arithmetic mean of iterable ``x``."""
     mu = sum(x, zero)
     return mu / len(x)
 
 
 def interactive(obj=None, banner=None):
+    """Start interactive Python shell with ``obj`` namespace."""
     import code
 
     if obj is None:
@@ -219,38 +224,47 @@ def interactive(obj=None, banner=None):
 
 
 def tstamp():
+    """Return local timestamp string with timezone."""
     return time.strftime('%c (%Z)')
 
 
 class OutputError:
+    """Small file-like collector used for traceback output capture."""
+
     def __init__(self):
         self.clear()
 
     def write(self, obj):
+        """Append one output item."""
         self.values.append(obj)
 
     def readlines(self, lines=None):
+        """Return up to ``lines`` collected output items."""
         if (lines is None) or (lines > len(self.values)):
             lines = len(self.values)
         ret = self.values[:lines]
         return ret
 
     def readline(self):
+        """Return next collected line and advance read cursor."""
         if self.__lcount__ > len(self.values):
             return []
         self.__lcount__ += 1
         return self.values[self.__lcount__ - 1]
 
     def seek(self, count=0):
+        """Move read cursor to ``count``."""
         count = min(count, len(self.values))
         self.__lcount__ = count
 
     def clear(self):
+        """Reset stored output and read cursor."""
         self.values = []
         self.__lcount__ = 0
 
 
 def LogError(Messenger):
+    """Send current exception traceback through project messenger."""
     out = OutputError()
     (ErrorType, ErrorValue, ErrorTB) = sys.exc_info()
     traceback.print_exc(ErrorTB, out)
@@ -262,6 +276,7 @@ def LogError(Messenger):
 
 
 def removefrom(obj, pat):
+    """Recursively delete members whose type string matches regex ``pat``."""
     if re.search(pat, str(type(obj))) is not None:
         # the obj itself matchs the pattern -> remove it
         del obj
@@ -291,11 +306,13 @@ def removefrom(obj, pat):
 
 
 def issequence(a):
+    """Return whether ``a`` is iterable but not a string."""
     # return issequence(a, Sequence) and not isinstance(a, str)
     return hasattr(a, '__iter__') and not isinstance(a, str)
 
 
 def flatten(a):
+    """Flatten nested sequences into one flat list."""
     if not issequence(a):
         return [a]  # be sure to return a list
     if len(a) == 0:
@@ -325,6 +342,7 @@ def send_email(to=None, fr=None, subj='a message from mpylab.util', msg=''):
 
 
 def get_var_from_nearest_outerframe(varstr):
+    """Lookup variable by name in nearest outer stack frames."""
     __frame = inspect.currentframe()
     __outerframes = inspect.getouterframes(__frame)
     var = None
@@ -358,6 +376,7 @@ def get_var_from_nearest_outerframe(varstr):
 
 
 def map2singlechar(i):
+    """Map integer index to compact alphanumeric symbol."""
     tup = tuple("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
     try:
         return tup[i]
@@ -460,6 +479,7 @@ def gmax_fs(f, rstep=None, s=10, hg=0.8, RH=(0.8, 0.8)):
 
 
 def isiterable(obj):
+    """Return whether object supports iteration."""
     try:
         iter(obj)
         return True
@@ -507,6 +527,7 @@ def locate(pattern, paths=None):
 
 
 def CalcSigma(lst, av=None):
+    """Calculate sample standard deviation for numeric/quantity values."""
     n = len(lst)
     try:
         unit = lst[0]._unit
@@ -525,6 +546,7 @@ def CalcSigma(lst, av=None):
 
 
 def InterpolateMResults(y, x, interpolation=None):
+    """Create interpolation function with optional log-axis transforms."""
     if interpolation is None:
         interpolation = 'linxliny'
     if 'logx' in interpolation:
@@ -536,12 +558,14 @@ def InterpolateMResults(y, x, interpolation=None):
 
 
 def MResult_Interpol(dct, interpolation):
+    """Create interpolation function from mapping of x->y values."""
     x = sorted(dct.keys())
     y = [dct[xi] for xi in x]
     return InterpolateMResults(y, x, interpolation)
 
 
 def CalcPsi(n, rho, eps=0.01):
+    """Compute PDF/CDF samples for correlation-coefficient distribution."""
     def calc_psi_int(r, n, rho):
         def kern(x):
             return x ** (n - 2) / ((1 - rho * r * x) ** (n - 1) * math.sqrt(1 - x * x))
@@ -602,6 +626,7 @@ def CalcPsi(n, rho, eps=0.01):
 
 
 def CalcRho0(r, cpsi, alpha):
+    """Return critical rho values for given cumulative probabilities."""
     if not hasattr(alpha, 'sort'):
         alpha = [alpha]
     alpha.sort()

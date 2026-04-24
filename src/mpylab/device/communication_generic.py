@@ -57,13 +57,13 @@ def generic_query(query_fn, cmd, tmpl=None, send_opc=False):
     :param query_fn: device query function
     :param cmd: *str*, command to send
     :param tmpl: *str*, a re pattern for re.match or None
-    :param send_opc: *bool*, append '; *OPC?' to a non-query command
+    :param send_opc: *bool*, append ``; *OPC?`` to a non-query command
                             and return the resulting response (usually '1')
     :return: *str or dict or None*: dict with the parsed result
 
     Safety rule:
     send_opc=True is only allowed for commands that do not already contain
-    a query marker '?', because '<query>; *OPC?' may create multiple responses
+    a query marker '?', because ``<query>; *OPC?`` may create multiple responses
     and is transport- / instrument-dependent.
     """
     dct = None

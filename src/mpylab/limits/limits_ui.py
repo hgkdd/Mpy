@@ -8,6 +8,7 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
+"""mpylab.limits.limits_ui module."""
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt)
@@ -22,7 +23,9 @@ from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QGroupBox,
     QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
+    """Ui_MainWindow class."""
     def setupUi(self, MainWindow):
+        """setupUi method."""
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1342, 772)
@@ -128,6 +131,7 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
+        """retranslateUi method."""
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.groupBox_variations.setTitle(QCoreApplication.translate("MainWindow", u"Variations", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_description), QCoreApplication.translate("MainWindow", u"Description", None))

@@ -33,6 +33,7 @@ class DriverTask(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        """Execute the worker callable and emit completion signals."""
         result = None
         error = None
         try:
@@ -354,6 +355,7 @@ class MotorControllerWidget(QtWidgets.QWidget):
         self._last_ini_text = content
 
     def log_message(self, message):
+        """Append a timestamped message to the log view."""
         self.log_edit.appendPlainText(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
 
     def _refresh_status_bar(self, state_text=None):
@@ -504,6 +506,7 @@ class MotorControllerWidget(QtWidgets.QWidget):
         self.log_message(f"Driver switched from {type(old_driver).__module__} to {type(self.dev).__module__}.")
 
     def on_load_ini_clicked(self):
+        """Load INI content from file into the editor."""
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(self, "Open INI", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -514,6 +517,7 @@ class MotorControllerWidget(QtWidgets.QWidget):
         self.log_message(f"Loaded INI file: {path}")
 
     def on_save_ini_clicked(self):
+        """Save current INI editor content to file."""
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(self, "Save INI", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -523,6 +527,7 @@ class MotorControllerWidget(QtWidgets.QWidget):
         self.log_message(f"Saved INI file: {path}")
 
     def on_init_clicked(self):
+        """Initialize active motor-controller driver from INI text."""
         ini_text = self.ini_edit.toPlainText()
         self._last_ini_text = ini_text
         try:
@@ -540,6 +545,7 @@ class MotorControllerWidget(QtWidgets.QWidget):
         self._start_task("Init", lambda: self._driver_method("Init", io.StringIO(ini_text)), success)
 
     def on_quit_clicked(self):
+        """Stop polling, request stop, and quit driver."""
         self._poll_timer.stop()
         self._start_task("Stop + Quit", lambda: (self._safe_stop(), self._driver_method("Quit")), self._handle_quit)
 
@@ -549,15 +555,19 @@ class MotorControllerWidget(QtWidgets.QWidget):
         self._refresh_status_bar()
 
     def on_goto_clicked(self):
+        """Move controller to target absolute angle."""
         self._start_task("Goto", lambda: self._driver_method("Goto", self.position_spin.value()), lambda result: self._handle_state(result))
 
     def on_move_clicked(self, direction):
+        """Start continuous movement in given direction."""
         self._start_task("Move", lambda: self._driver_method("Move", direction), lambda _result: self.refresh_status())
 
     def on_set_speed_clicked(self):
+        """Set motion speed on controller."""
         self._start_task("Set Speed", lambda: self._driver_method("SetSpeed", self.speed_spin.value()), lambda result: self._handle_speed(result))
 
     def on_stop_clicked(self):
+        """Issue emergency stop by requesting ``Move(0)``."""
         self.log_message("Safety stop requested.")
         try:
             result = self._driver_method("Move", 0)
@@ -609,6 +619,7 @@ class MotorControllerWidget(QtWidgets.QWidget):
             self._status_fields.get("GetSpeed", QtWidgets.QLineEdit()).setText(str(result))
 
     def refresh_status(self):
+        """Refresh status fields from supported driver getters."""
         def task():
             snapshot = {}
             for method_name in ("GetDescription", "GetVirtual", "GetState", "GetSpeed"):
@@ -634,6 +645,7 @@ class MotorControllerWidget(QtWidgets.QWidget):
             self._start_task("Refresh Status", task, success)
 
     def on_poll_state(self):
+        """Polling callback for fast motion-state refresh."""
         if self._is_initialized and not self._busy:
             self._refresh_motion_state()
 
@@ -666,12 +678,14 @@ class MotorControllerWidget(QtWidgets.QWidget):
             self._refresh_status_bar()
 
     def on_poll_toggled(self, checked):
+        """Enable or disable periodic state polling."""
         if checked and self._is_initialized:
             self._poll_timer.start()
         else:
             self._poll_timer.stop()
 
     def on_raw_query_clicked(self):
+        """Execute raw query command and append response."""
         cmd = self.raw_command_edit.text().strip()
         if not cmd:
             return
@@ -681,6 +695,7 @@ class MotorControllerWidget(QtWidgets.QWidget):
         self._start_task("Raw Query", lambda: self.dev.query(cmd), lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_raw_write_clicked(self):
+        """Execute raw write command and append response."""
         cmd = self.raw_command_edit.text().strip()
         if not cmd:
             return
@@ -690,6 +705,7 @@ class MotorControllerWidget(QtWidgets.QWidget):
         self._start_task("Raw Write", lambda: self.dev.write(cmd), lambda result: self.raw_output.appendPlainText(f"> {cmd}\n{result}"))
 
     def on_smoke_clicked(self):
+        """Run conservative motor-controller smoke test."""
         ini_text = self.ini_edit.toPlainText()
 
         def task():

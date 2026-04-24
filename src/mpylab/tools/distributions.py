@@ -162,6 +162,7 @@ def chi2_test(data: ArrayLike | Callable[[float], float], cdf: Callable[[float],
 
 
 def test_for_rayleigh(ees: ArrayLike) -> tuple[ArrayLike, ArrayLike, object, object, float, float]:
+    """test_for_rayleigh function."""
     n_ees = len(ees)
     hist, bins = np.histogram(ees)
     low_range = bins.min()

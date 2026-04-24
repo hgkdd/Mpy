@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+"""mpylab.device.amplifier module."""
 from mpylab.device.nport import NPORT  # parent class
 from mpylab.tools.configuration import fstrcmp  # fuzzy string compare
 from mpylab.tools.regular_expressions import FP
@@ -28,6 +29,7 @@ class AMPLIFIER(NPORT):
                       'GetDescription': [('*IDN?', r'(?P<IDN>.*)')]}
 
     def Init(self, ini=None, channel=None, ignore_bus=False):
+        """Init method."""
         return NPORT.Init(self, ini=ini, channel=channel, ignore_bus=ignore_bus)
 
     def SetState(self, state):
@@ -80,12 +82,14 @@ class AMPLIFIER(NPORT):
         return self.SetState('POff')
 
     def Quit(self):
+        """Quit method."""
         self.error = NPORT.Quit(self)
         self.error += self.POff()
         return self.error
 
 
 def main():
+    """main function."""
     import sys
     import io
     from mpylab.tools.util import format_block

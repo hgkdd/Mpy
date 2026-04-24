@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""mpylab.device.amp_blwa_0810_100 module."""
 import time
 
 from mpylab.device.amplifier import AMPLIFIER as AMP
@@ -6,6 +7,7 @@ from mpylab.tools.numeric_eval import safe_numeric_eval
 
 
 class AMPLIFIER(AMP):
+    """AMPLIFIER class."""
     conftmpl = AMP.conftmpl
     conftmpl['init_value']['gpib'] = int
 
@@ -20,6 +22,7 @@ class AMPLIFIER(AMP):
         self.term_chars = '\n'
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         self.error = AMP.Init(self, ini, channel)
         # self.POn()
         self.Standby()
@@ -27,6 +30,7 @@ class AMPLIFIER(AMP):
         return self.error
 
     def SetFreq(self, freq):
+        """SetFreq method."""
         self.error = 0
 
         if (80e6 <= freq <= 1e9) and (not self.operating):
@@ -44,6 +48,7 @@ class AMPLIFIER(AMP):
 
 
 def main():
+    """main function."""
     import sys
     import io
 

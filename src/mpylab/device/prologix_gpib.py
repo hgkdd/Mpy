@@ -3,6 +3,7 @@
 # License is MIT
 
 # prologix patch, to be inserted somewhere in visa_bases
+"""mpylab.device.prologix_gpib module."""
 import socket
 import time
 import re
@@ -88,14 +89,16 @@ class PrologixResourceManager(TCPSocketConnection):
             self.send('++savecfg 0')  # Disable saving of configuration parameters in EPROM
 
     def query(self, query_msg, msg_length=2048):
-        ''' Sends a query and receives a string from the controller. Auto-connects if necessary.
+        """Send a query and receive text from the controller.
 
-        Args:
-            query_msg (str): query message.
-            msg_length (int): maximum message length. If the received
-                message does not contain a '\n', it triggers another
-                socket recv command with the same message length.
-        '''
+        Parameters
+        ----------
+        query_msg:
+            Query message to send.
+        msg_length:
+            Maximum chunk length per socket read. The method keeps reading
+            until the received text ends with a newline.
+        """
         with self.connected():
             recv = ""
             try:
@@ -174,6 +177,7 @@ def _sanitize_address(address):
 
 class PrologixGPIBObject(InstrumentSessionBase):
 
+    """PrologixGPIBObject class."""
     def __init__(self, address=None, tempSess=False):
         '''
             Args:
@@ -243,6 +247,7 @@ class PrologixGPIBObject(InstrumentSessionBase):
 
     @termination.setter
     def termination(self, value):
+        """termination method."""
         eos = None
         if value == '\r\n':
             eos = 0
@@ -272,6 +277,7 @@ class PrologixGPIBObject(InstrumentSessionBase):
         self._prologix_rm.disconnect()
 
     def write(self, writeStr):
+        """write method."""
         with self._prologix_rm.connected() as pconn:
             pconn.send('++addr {}'.format(self._prologix_gpib_addr_formatted()))
             pconn.send(self._prologix_escape_characters(writeStr))
@@ -292,6 +298,7 @@ class PrologixGPIBObject(InstrumentSessionBase):
         return retStr.rstrip()
 
     def wait(self, bigMsTimeout=10000):
+        """wait method."""
         self.query('*OPC?', withTimeout=bigMsTimeout)
 
     def clear(self):
@@ -353,6 +360,7 @@ class PrologixGPIBObject(InstrumentSessionBase):
 
     @timeout.setter
     def timeout(self, newTimeout):
+        """timeout method."""
         if newTimeout < 0:
             raise ValueError("Timeouts cannot be negative")
         self.__timeout = newTimeout

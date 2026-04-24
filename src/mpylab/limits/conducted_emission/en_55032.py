@@ -1,3 +1,5 @@
+"""Conducted-emission limits according to EN 55032 (CISPR 32)."""
+
 from inspect import cleandoc
 from numpy import piecewise, log10, array, full_like, nan
 
@@ -5,6 +7,7 @@ from mpylab.limits.limit import Limit, log_linear
 
 
 class LIMIT(Limit):
+    """Configurable EN 55032 conducted-emission limit model."""
     description_title = "DIN EN 55032:2022-08 (CISPR-32), conducted"
     description_Group = """
                           EN 55032 applies to multimedia equipment (MME) and having a rated RMS AC or DC 
@@ -104,6 +107,7 @@ class LIMIT(Limit):
 
     # Mains
     def limit_CB_Mains_AV(self, f):
+        """Return Class B mains-port AV limits."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
@@ -117,9 +121,11 @@ class LIMIT(Limit):
         return results
 
     def limit_CB_Mains_QP(self, f):  # 10 dB higher for QP
+        """Return Class B mains-port QP limits."""
         return self.limit_CB_Mains_AV(f) + 10
 
     def limit_CA_Mains_AV(self, f):     # only <= 20 kVA
+        """Return Class A mains-port AV limits."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
@@ -131,11 +137,13 @@ class LIMIT(Limit):
         return results
 
     def limit_CA_Mains_QP(self, f):    # only <= 20 kVA
+        """Return Class A mains-port QP limits."""
         return self.limit_CA_Mains_AV(f) + 13
 
 ################################# Telekom / LAN ###########################
     # DC below 20 kVA
     def limit_CB_Telecom_LAN_AV(self, f):
+        """Return Class B telecom/LAN-port AV limits."""
         if not isinstance(f, type(array)):
             f = array(f, dtype=float)
         conditions = [(f >= 150e3) & (f < 500e3),
@@ -149,11 +157,13 @@ class LIMIT(Limit):
         return results
 
     def limit_CB_Telecom_LAN_QP(self, f):  # 10 dB higher for QP
+        """Return Class B telecom/LAN-port QP limits."""
         return self.limit_CB_Telecom_LAN_AV(f) + 10
 
     limit_CA_Telecom_LAN_AV = limit_CB_Telecom_LAN_QP
 
     def limit_CA_Telecom_LAN_QP(self, f):
+        """Return Class A telecom/LAN-port QP limits."""
         return self.limit_CA_Telecom_LAN_AV(f) + 13
 
 CISPR32 = EN55032 = LIMIT
@@ -171,5 +181,4 @@ if __name__ == '__main__':
     ax.semilogx(freqs, limit_values, freqs)
     ax.grid(True)
     fig.show()
-
 

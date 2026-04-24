@@ -66,6 +66,7 @@ _ALLOWED_BOOLOPS = {
 
 
 def safe_action_exec(expr, names):
+    """Safely execute one method-call action expression with literal arguments."""
     tree = ast.parse(expr, mode="exec")
 
     if len(tree.body) != 1 or not isinstance(tree.body[0], ast.Expr):
@@ -198,13 +199,13 @@ class Graph():
 
        The graph is created using the methods (called in this order)
 
-         - :meth:`pydot.graph_from_dot_file`
-         - :meth:`pydot.graph_from_dot_data`
-         - :meth:`pydot.graph_from_edges`
-         - :meth:`pydot.graph_from_adjacency_matrix`
-         - :meth:`pydot.graph_from_incidence_matrix`
+         - ``pydot.graph_from_dot_file``
+         - ``pydot.graph_from_dot_data``
+         - ``pydot.graph_from_edges``
+         - ``pydot.graph_from_adjacency_matrix``
+         - ``pydot.graph_from_incidence_matrix``
 
-       with the argument of the :meth:`__init__` method.
+       with the argument of the ``__init__`` method.
     """
     def __init__(self, fname_or_data=None, SearchPaths=None):
         if SearchPaths is None:
@@ -940,6 +941,7 @@ class MGraph(Graph):
         return self.CmdDevices(IgnoreInactive, "Quit")
 
     def SetFreq_Devices(self, freq, IgnoreInactive=True):
+        """Set frequency on all (optionally active) devices and return min/max."""
         minfreq = 1e100
         maxfreq = -1e100
         devices = [name for name in self.nodes if IgnoreInactive or name in self.activenodes]  # intersept
@@ -1136,6 +1138,7 @@ class MGraph(Graph):
         return eta
 
     def AmplifierProtect(self, start, end, startlevel, sg_unit=WATT, typ='save'):
+        """Check amplifier safety margins along all active paths."""
         isSafe = True
         msg = ''
         if not isinstance(startlevel, Quantity):
@@ -1199,6 +1202,7 @@ class MGraph(Graph):
         return isSafe, msg
 
     def MaxSafeLevel(self, start, end, typ='save'):
+        """Return the minimum safe start level across all active paths."""
         levels = []
         allpaths = self.find_all_paths(start, end)
         for path in allpaths:  # path is a list of edges
@@ -1247,6 +1251,7 @@ class MGraph(Graph):
             return min(absolute(levels))
 
     def CalcLevelFrom(self, sg, limiter, what):
+        """Validate nodes/path for level calculation and return status placeholder."""
         if sg not in self.nodes:
             raise UserWarning('Node not in nodes: %s' % sg)
         if limiter not in self.nodes:
@@ -1293,6 +1298,8 @@ class MGraph(Graph):
 
 
 class Leveler(object):
+    """Iterative level control helper based on measurement-graph corrections."""
+
     def __init__(self, mg, actor, output, lpoint, observer, pin=None, datafunc=None, min_actor=None):
         """
         mg: MGraph instance
@@ -1332,6 +1339,7 @@ class Leveler(object):
         self.update_interpol()
 
     def add_samples(self, pin):
+        """Add one or more actor-level samples and measured observation values."""
         if not hasattr(pin, '__iter__'):
             pin = [pin]
         pinr = []
@@ -1359,6 +1367,7 @@ class Leveler(object):
         return pinr
 
     def update_interpol(self):
+        """Rebuild forward and inverse interpolators from current sample set."""
         x = sorted(self.samples)
         y = [self.samples[xi] for xi in x]
         self.interp = interp1d(x, y)
@@ -1367,6 +1376,7 @@ class Leveler(object):
         self.i_extrap = extrap1d(self.i_interp)
 
     def adjust_level(self, soll, maxiter=10, relerr=0.01):
+        """Iteratively adjust actor level to reach requested target quantity."""
         # self.add_samples(soll/self.amp.g)
         sf = soll.get_value(self.lpointunit)
         sf = float(abs(sf))

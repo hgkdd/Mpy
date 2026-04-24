@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""mpylab.device.vlisn_cyberkombinat_usb-pd module."""
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -19,6 +20,7 @@ class VLISN(VL):
 
 
     def Init(self, ini=None, channel=None, ignore_bus=True):
+        """Init method."""
         self.path = None
         self.filter = None
         super().Init(ini=ini, channel=channel, ignore_bus=ignore_bus)
@@ -28,12 +30,15 @@ class VLISN(VL):
         return self.error
 
     def SetPath(self, path):
+        """SetPath method."""
         return path
 
     def SetFilter(self, state):
+        """SetFilter method."""
         raise NotImplementedError
 
 def main():
+    """main function."""
     import sys
     import io
     from mpylab.tools.util import format_block

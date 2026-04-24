@@ -1,3 +1,9 @@
+"""Handwritten DOT parser as migration path away from generated ``dot.py``.
+
+The module is currently kept active as a started refactoring attempt and may
+be integrated more broadly in future.
+"""
+
 from __future__ import annotations
 
 import ast
@@ -8,12 +14,16 @@ from typing import Iterator
 
 @dataclass(frozen=True)
 class Token:
+    """Token produced by the DOT tokenizer."""
+
     type: str
     value: str
     pos: int
 
 
 class DotSyntaxError(ValueError):
+    """Syntax error raised for invalid DOT input."""
+
     def __init__(self, message: str, pos: int | None = None):
         if pos is None:
             super().__init__(message)
@@ -83,12 +93,15 @@ class DotTokenizer:
         yield Token("END", "", pos)
 
     def peek(self) -> Token:
+        """Return the current token without consuming it."""
         return self.tokens[self.index]
 
     def peek_type(self) -> str:
+        """Return the type of the current token."""
         return self.peek().type
 
     def accept(self, token_type: str) -> Token | None:
+        """Consume and return token when type matches, else return ``None``."""
         if self.peek_type() == token_type:
             tok = self.peek()
             self.index += 1
@@ -96,6 +109,7 @@ class DotTokenizer:
         return None
 
     def expect(self, token_type: str) -> Token:
+        """Consume and return token, raising on type mismatch."""
         tok = self.accept(token_type)
         if tok is None:
             raise DotSyntaxError(
@@ -109,23 +123,11 @@ class DotParser:
     """
     Recursive descent parser for the supported DOT subset.
 
-    Result format:
-        (nodes, graph)
+    Return value is ``(nodes, graph)`` where:
 
-    nodes:
-        {
-            node_name: {attr_key: attr_value, ...},
-            ...
-        }
-
-    graph:
-        {
-            left_node: {
-                right_node: {attr_key: attr_value, ...},
-                ...
-            },
-            ...
-        }
+    - ``nodes`` maps each node name to a dictionary of node attributes.
+    - ``graph`` maps each left node to its right-side neighbors and edge
+      attribute dictionaries.
     """
 
     def __init__(self, text: str):
@@ -134,6 +136,7 @@ class DotParser:
         self.graph: dict[str | int, dict] = {}
 
     def parse(self) -> tuple[dict, dict]:
+        """Parse DOT text and return ``(nodes, graph)`` dictionaries."""
         self._graph()
         self.tok.expect("END")
         return self.nodes, self.graph
@@ -339,6 +342,7 @@ class DotParser:
 
 
 def parse_dot(text: str) -> tuple[dict, dict]:
+    """Parse DOT text with the handwritten parser."""
     return DotParser(text).parse()
 
 
@@ -353,6 +357,7 @@ def parse(rule: str, text: str):
     return parse_dot(text)
 
 def test_typical_graph():
+    """Run a smoke test on a representative DOT graph definition."""
     text = r'''
 digraph {
     sg [ini="sg_rs_smb100a.ini"]

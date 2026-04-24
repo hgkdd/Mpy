@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This is :mod:`mpylab.tools.directivity``.
+This is :mod:`mpylab.tools.directivity`.
 
    Provides the class UnintentionalRad and Dmax_uRad_OneCut
    see: https://ieeexplore.ieee.org/document/5715864
@@ -14,6 +14,7 @@ import math
 from numpy import euler_gamma  # Euler-Mascheroni-Constant
 
 class UnintentionalRad():
+    """UnintentionalRad class."""
     twopi = 2 * math.pi
     cvacuum = 299792458   # vacuum speed of light in m/s
 
@@ -40,21 +41,26 @@ class UnintentionalRad():
 
 
 class Dmax_uRad_OneCut(UnintentionalRad):
+    """Dmax_uRad_OneCut class."""
     def __init__(self, min_radius):
         super(Dmax_uRad_OneCut, self).__init__(min_radius)
         self.a = min_radius
 
     @staticmethod
     def n_ind(ka):
+        """n_ind method."""
         return 4 * ka + 2
 
     def chisq2fac(self, n):
+        """chisq2fac method."""
         return super(Dmax_uRad_OneCut, self).chisq2fac(n)
 
     def ka(self, f):
+        """ka method."""
         return super(Dmax_uRad_OneCut, self).ka(f)
 
     def Dmax(self, f):
+        """Dmax method."""
         ka = self.ka(f)
         if ka < 1:
             ka = 1

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""mpylab.env.custom module."""
 from mpylab.tools.util import get_var_from_nearest_outerframe
 
 

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""mpylab.device.amp_ifi_smx25 module."""
 import time
 
 from mpylab.device.amplifier import AMPLIFIER as AMP
@@ -6,6 +7,7 @@ from mpylab.tools.numeric_eval import safe_numeric_eval
 
 
 class AMPLIFIER(AMP):
+    """AMPLIFIER class."""
     conftmpl = AMP.conftmpl
     conftmpl['init_value']['gpib'] = int
 
@@ -19,6 +21,7 @@ class AMPLIFIER(AMP):
         self.term_chars = '\r\n'
 
     def Init(self, ini=None, channel=None):
+        """Init method."""
         self.error = AMP.Init(self, ini, channel)
         self.POn()
         self.Operate()
@@ -34,6 +37,7 @@ class AMPLIFIER(AMP):
         return B1, E
 
     def SetFreq(self, freq):
+        """SetFreq method."""
         AMP.SetFreq(self, freq)
         B1, E = self._getstat()
         # use ~B1 because active is LOW
@@ -53,6 +57,7 @@ class AMPLIFIER(AMP):
 
 
 def main():
+    """main function."""
     import sys
     import io
 

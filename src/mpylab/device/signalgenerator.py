@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Base signal-generator driver with shared command helpers and tests."""
 
 from math import log10
 import bidict
@@ -120,6 +121,7 @@ class SIGNALGENERATOR(DRIVER):
         return from_u, v_conv
 
     def SetFreq(self, freq):
+        """Set output frequency in Hz and read back value."""
         # set a certain frequency
         self.error = 0  # reset error number
         dct = self._do_cmds('SetFreq', locals())
@@ -131,6 +133,7 @@ class SIGNALGENERATOR(DRIVER):
         return self.error, self.freq
 
     def GetFreq(self):
+        """Read and return output frequency in Hz."""
         self.error = 0
         dct = self._do_cmds('GetFreq', locals())
         self._update(dct)
@@ -139,6 +142,7 @@ class SIGNALGENERATOR(DRIVER):
         return self.error, self.freq
 
     def SetLevel(self, lv):
+        """Set RF output level as scuq quantity and return readback quantity."""
         self.error = 0
 
         if self._internal_unit.lower() in ('dbm', 'w'):
@@ -170,6 +174,7 @@ class SIGNALGENERATOR(DRIVER):
         return self.error, obj
 
     def GetLevel(self):
+        """Read and return RF output level as scuq quantity."""
         self.error = 0
         dct = self._do_cmds('GetLevel', locals())
         self._update(dct)
@@ -184,6 +189,7 @@ class SIGNALGENERATOR(DRIVER):
         return self.error, obj
 
     def SetState(self, state):
+        """Set RF output state using ``on``/``off`` semantics."""
         self.error = 0
         if str(state).lower() == 'on':
             dct = self._do_cmds('RFOn', locals())
@@ -194,6 +200,7 @@ class SIGNALGENERATOR(DRIVER):
         return self.error, 0
 
     def ConfAM(self, source, freq, depth, waveform, LFOut):
+        """Configure AM modulation parameters."""
         self.error = 0
         source = fstrcmp(source, self.AM_sources, cutoff=0, ignorecase=True)[0]
         source = self.map['AM_sources'][source]
@@ -215,6 +222,7 @@ class SIGNALGENERATOR(DRIVER):
         return self.error
 
     def ConfPM(self, source, freq, pol, width, delay):
+        """Configure PM modulation parameters."""
         self.error = 0
         source = fstrcmp(source, self.PM_sources, cutoff=0, ignorecase=True)[0]
         source = self.map['PM_sources'][source]
@@ -229,6 +237,7 @@ class SIGNALGENERATOR(DRIVER):
         return self.error
 
     def SetAM(self, state):
+        """Enable or disable AM modulation."""
         self.error = 0
         if str(state).lower() == 'on':
             dct = self._do_cmds('AMOn', locals())
@@ -239,6 +248,7 @@ class SIGNALGENERATOR(DRIVER):
         return self.error, 0
 
     def SetPM(self, state):
+        """Enable or disable PM modulation."""
         self.error = 0
         if str(state).lower() == 'on':
             dct = self._do_cmds('PMOn', locals())
@@ -249,24 +259,31 @@ class SIGNALGENERATOR(DRIVER):
         return self.error, 0
 
     def RFOn(self):
+        """Switch RF output on."""
         return self.SetState('ON')
 
     def RFOff(self):
+        """Switch RF output off."""
         return self.SetState('OFF')
 
     def AMOn(self):
+        """Switch AM modulation on."""
         return self.SetAM('ON')
 
     def AMOff(self):
+        """Switch AM modulation off."""
         return self.SetAM('OFF')
 
     def PMOn(self):
+        """Switch PM modulation on."""
         return self.SetPM('ON')
 
     def PMOff(self):
+        """Switch PM modulation off."""
         return self.SetPM('OFF')
 
 def test_signalgenerator_virtual():
+    """Run internal virtual-driver smoke test."""
     import io
     import re
     from scuq import quantities
@@ -440,6 +457,7 @@ def test_signalgenerator_virtual():
     print("test_signalgenerator_virtual passed")
 
 def test_normal():
+    """Run manual integration test against configured driver."""
     import sys
 
     try:

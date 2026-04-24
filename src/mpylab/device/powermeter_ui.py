@@ -66,6 +66,7 @@ class DriverTask(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        """Execute the worker callable and emit completion signals."""
         result = None
         error = None
         try:
@@ -354,9 +355,11 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self._last_ini_text = content
 
     def log_edit_clear(self):
+        """Clear the log output widget."""
         self.log_edit.clear()
 
     def log_message(self, message):
+        """Append a timestamped line to the log output widget."""
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.log_edit.appendPlainText(f"[{timestamp}] {message}")
 
@@ -578,6 +581,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self.freq_indicator.setToolTip(message or "")
 
     def on_load_ini_clicked(self):
+        """Load INI content from file into the editor."""
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(
             self,
             "Open INI File",
@@ -596,6 +600,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
             self._show_error("INI Load Error", exc)
 
     def on_save_ini_clicked(self):
+        """Save current INI editor content to file."""
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save INI File",
@@ -613,6 +618,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
             self._show_error("INI Save Error", exc)
 
     def on_init_clicked(self):
+        """Initialize active powermeter driver from current INI text."""
         ini_text = self.ini_edit.toPlainText()
         self._last_ini_text = ini_text
         channel = self.channel_spin.value()
@@ -683,6 +689,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
             driver.Init(ini=io.StringIO(ini_text), channel=channel)
 
     def on_quit_clicked(self):
+        """Call driver ``Quit`` and reset channel/runtime state."""
         def success(result):
             self._is_initialized = False
             self._channel_drivers = {}
@@ -692,6 +699,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self._start_task("Quit", lambda: self._driver_method("Quit"), on_success=success)
 
     def on_channel_changed(self, channel):
+        """Switch active driver instance to selected initialized channel."""
         driver = self._channel_drivers.get(channel)
         if driver is not None:
             self.pm = driver
@@ -700,6 +708,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
             self.refresh_status()
 
     def on_apply_freq_clicked(self, freq=None):
+        """Set powermeter frequency and validate readback."""
         if freq is None:
             freq = self.freq_spin.value_hz()
         self._set_freq_indicator("pending")
@@ -710,6 +719,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self._start_task("Set Frequency", lambda: self._driver_method("SetFreq", freq), on_success=success)
 
     def on_read_freq_clicked(self):
+        """Read current powermeter frequency."""
         self._set_freq_indicator("pending")
 
         def success(result):
@@ -735,12 +745,15 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self._set_status_field("GetFreq", self._display_value(result))
 
     def on_trigger_clicked(self):
+        """Trigger one powermeter measurement cycle."""
         self._start_task("Trigger", lambda: self._driver_method("Trigger"))
 
     def on_measure_clicked(self):
+        """Acquire one blocking power reading."""
         self._start_task("GetData", lambda: self._driver_method("GetData"), on_success=self._handle_power_result)
 
     def on_measure_nb_clicked(self):
+        """Acquire one non-blocking power reading."""
         retrigger = self.retrigger_check.isChecked()
 
         def task():
@@ -754,6 +767,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self._start_task("GetDataNB", task, on_success=self._handle_power_result)
 
     def on_zero_clicked(self, state):
+        """Enable or disable sensor zeroing mode."""
         self._start_task(f"Zero {state.upper()}", lambda: self._driver_method("Zero", state))
 
     def _handle_power_result(self, result):
@@ -770,6 +784,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self.log_message(f"Power read: {data}")
 
     def on_raw_query_clicked(self):
+        """Execute raw query command and display response."""
         cmd = self.command_combo.currentText().strip()
         tmpl = self.regex_edit.text().strip() or None
         if not cmd:
@@ -787,6 +802,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self._start_task("Raw Query", task, on_success=success)
 
     def on_raw_write_clicked(self):
+        """Execute raw write command and display response."""
         cmd = self.command_combo.currentText().strip()
         if not cmd:
             return
@@ -803,6 +819,7 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self._start_task("Raw Write", task, on_success=success)
 
     def on_run_smoke_test_clicked(self):
+        """Run conservative powermeter smoke test."""
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
         freq = self.freq_spin.value_hz()
@@ -831,9 +848,11 @@ class PowerMeterWidget(QtWidgets.QWidget):
         self._start_task("Smoke Test", task, on_success=success)
 
     def refresh_all(self):
+        """Refresh all status fields."""
         self.refresh_status()
 
     def refresh_status(self, on_complete=None):
+        """Refresh status fields from device getters and cached state."""
         def task():
             return self._collect_status_snapshot()
 
@@ -937,6 +956,7 @@ def _make_default_instance(args):
 
 
 def main(argv=None):
+    """Start standalone powermeter test utility."""
     parser = argparse.ArgumentParser(description="Powermeter driver test utility")
     parser.add_argument("--virtual", action="store_true", help="Use the virtual powermeter driver")
     parser.add_argument("--ini", help="Path to an INI file to preload")

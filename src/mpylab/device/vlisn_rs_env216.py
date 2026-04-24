@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""mpylab.device.vlisn_rs_env216 module."""
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -62,6 +63,7 @@ class VLISN(VL):
 
 
     def Init(self, ini=None, channel=None, ignore_bus=True):
+        """Init method."""
         self.path = None
         self.ip = None
         self.filter = None
@@ -79,6 +81,7 @@ class VLISN(VL):
         return self.error
 
     def SetPath(self, path):
+        """SetPath method."""
         self.error = 0
         self.path = None
         for _path in ('L', 'N'):
@@ -94,10 +97,12 @@ class VLISN(VL):
         return self.GetPath()
 
     def SetFilter(self, state):
+        """SetFilter method."""
         self._set_filter(state)
         self.filter = bool(state)
 
 def main():
+    """main function."""
     import sys
     import io
     from mpylab.tools.util import format_block

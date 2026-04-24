@@ -111,6 +111,7 @@ class DriverTask(QtCore.QObject):
 
     @QtCore.Slot()
     def run(self):
+        """Execute the wrapped task and emit result/error signals."""
         result = None
         error = None
         try:
@@ -335,6 +336,7 @@ class NPortWidget(QtWidgets.QWidget):
         self._last_ini_text = content
 
     def log_message(self, message):
+        """Append one timestamped line to the log tab."""
         self.log_edit.appendPlainText(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
 
     def _refresh_status_bar(self, state=None):
@@ -428,6 +430,7 @@ class NPortWidget(QtWidgets.QWidget):
         self._refresh_status_bar()
 
     def on_load_ini_clicked(self):
+        """Load INI text from a file into the editor."""
         path, _filter = QtWidgets.QFileDialog.getOpenFileName(self, "Open INI", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -435,6 +438,7 @@ class NPortWidget(QtWidgets.QWidget):
             self.ini_edit.setPlainText(handle.read())
 
     def on_save_ini_clicked(self):
+        """Save the current INI editor content to a file."""
         path, _filter = QtWidgets.QFileDialog.getSaveFileName(self, "Save INI", "", "INI Files (*.ini *.txt);;All Files (*)")
         if not path:
             return
@@ -443,6 +447,7 @@ class NPortWidget(QtWidgets.QWidget):
         clear_ini_draft(self)
 
     def on_init_clicked(self):
+        """Initialize or reinitialize the driver with current INI settings."""
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
 
@@ -457,6 +462,7 @@ class NPortWidget(QtWidgets.QWidget):
         self._start_task("Init", task, success)
 
     def refresh_status(self):
+        """Query driver status and refresh the status and channel widgets."""
         def task():
             return {
                 "description": self.dev.GetDescription(),
@@ -505,11 +511,13 @@ class NPortWidget(QtWidgets.QWidget):
         self.log_message(f"Plot range set from INI data: {fstart:g} Hz .. {fstop:g} Hz.")
 
     def on_set_freq_clicked(self, freq=None):
+        """Set frequency from UI control or provided value."""
         if freq is None:
             freq = self.freq_spin.value_hz()
         self._start_task("Set Frequency", lambda: self.dev.SetFreq(freq), lambda result: self.freq_edit.setText(str(result[1])))
 
     def on_get_data_clicked(self):
+        """Fetch one data point for the selected channel and frequency."""
         what = self.what_combo.currentText().strip()
         freq = self.freq_spin.value_hz()
 
@@ -523,6 +531,7 @@ class NPortWidget(QtWidgets.QWidget):
         self._start_task("Get Data", task, success)
 
     def on_plot_clicked(self):
+        """Acquire a sweep and plot values over the selected frequency range."""
         what = self.plot_what_combo.currentText().strip()
         start = self.start_spin.value_hz()
         stop = self.stop_spin.value_hz()
@@ -594,6 +603,7 @@ class NPortWidget(QtWidgets.QWidget):
         self.canvas.draw()
 
     def on_export_csv_clicked(self):
+        """Export the currently plotted rows to a CSV file."""
         if not self._last_plot_rows:
             QtWidgets.QMessageBox.information(self, "No data", "Plot data first.")
             return
@@ -608,6 +618,7 @@ class NPortWidget(QtWidgets.QWidget):
         self.log_message(f"Exported CSV: {path}")
 
     def on_smoke_clicked(self):
+        """Run a compact end-to-end smoke test and show textual results."""
         ini_text = self.ini_edit.toPlainText()
         channel = self.channel_spin.value()
 
@@ -640,6 +651,7 @@ UI = NPortWidget
 
 
 def make_instance(kind):
+    """Create the passive driver instance for the requested kind."""
     kind = kind.lower()
     if kind == "cable":
         return CABLE()
@@ -649,6 +661,7 @@ def make_instance(kind):
 
 
 def main(argv=None):
+    """Start the standalone NPORT/CABLE/ANTENNA test utility."""
     parser = argparse.ArgumentParser(description="Passive n-port/cable/antenna test utility")
     parser.add_argument("--kind", choices=("nport", "cable", "antenna"), default="nport")
     parser.add_argument("--ini", help="Path to an INI file to preload")
