@@ -1,0 +1,24 @@
+stages:
+  - deploy
+
+pages:
+  image: python:3.11
+  stage: deploy
+  variables:
+    PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    MPLCONFIGDIR: "$CI_PROJECT_DIR/.cache/matplotlib"
+  cache:
+    key: "pip-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - .cache/pip
+  before_script:
+    - python -m pip install --upgrade pip
+    - python -m pip install -e .
+    - python -m pip install sphinx
+  script:
+    - python tools/docs_generate_api.py
+    - python tools/docs_audit.py --fail-on-uncovered
+    - sphinx-build -W --keep-going -E -a -b html docs/source public
+  pages: true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
