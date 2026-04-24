@@ -33,12 +33,12 @@ class ControlResult:
 
 class ControlBase:
     """
-    Basisklasse für iterative inverse Regel-/Abgleichverfahren.
+    Base class for iterative inverse control/calibration procedures.
 
-    Prinzip:
-    - setter(cntrl) setzt den Stellwert
-    - reader() liest den Istwert
-    - aus gemessenen (cntrl, actual)-Paaren wird ein neuer Stellwert geschätzt
+    Principle:
+    - ``setter(cntrl)`` applies a control value
+    - ``reader()`` reads the measured actual value
+    - a new control value is estimated from measured ``(cntrl, actual)`` pairs
     """
 
     def __init__(
@@ -233,7 +233,7 @@ class ControlInterpol(ControlBase):
 
 class ControlRapp(ControlBase):
     """
-    Fit eines sättigenden Rapp-Modells:
+    Fit a saturating Rapp model:
 
         y = g*x / (1 + (g*x/sat)^(2p))^(1/(2p))
     """

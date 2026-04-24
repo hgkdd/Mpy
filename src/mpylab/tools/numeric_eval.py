@@ -33,11 +33,10 @@ _SI_PREFIXES = {
 
 def _replace_si_tokens(expr: str) -> str:
     """
-    Ersetzt Tokens wie 10M, 2.45G, 100kHz, 3.3V, -20dBm
-    durch numerische Werte oder durch die nackte Zahl mit optional
-    stehen gelassenem Einheitensuffix.
+    Replace SI-prefixed tokens like ``10M``, ``2.45G``, ``100kHz``, ``3.3V``,
+    and ``-20dBm`` with numeric values.
 
-    Beispiele:
+    Examples:
         10M     -> 10000000.0
         2.45GHz -> 2450000000.0
         3.3V    -> 3.3
@@ -74,13 +73,13 @@ def _replace_si_tokens(expr: str) -> str:
         if prefix:
             value *= _SI_PREFIXES[prefix]
 
-        # Einheit wird hier bewusst ignoriert.
-        # Beispiele:
+        # Unit suffixes are intentionally ignored.
+        # Examples:
         #   3.3V   -> 3.3
         #   2.45GHz -> 2.45e9
         #   -20dBm -> -20
         #
-        # Für "Freq / Hz" ist das meist genau richtig.
+        # For expressions such as "Freq / Hz" this is usually desired.
         return f"{left}{value}{right}"
 
     return number_re.sub(repl, expr)
@@ -88,9 +87,9 @@ def _replace_si_tokens(expr: str) -> str:
 
 def safe_numeric_eval(expr: str) -> float:
     """
-    Sichere Auswertung einfacher numerischer Ausdrücke mit SI-Präfixen.
+    Safely evaluate simple numeric expressions with SI prefixes.
 
-    Erlaubt:
+    Allowed:
         1e9
         1e9/4
         10M
@@ -100,7 +99,7 @@ def safe_numeric_eval(expr: str) -> float:
         -20dBm
         (2.45G + 100M) / 2
 
-    Nicht erlaubt:
+    Not allowed:
         abs(1)
         x + 1
         __import__('os').system(...)

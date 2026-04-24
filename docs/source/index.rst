@@ -21,6 +21,7 @@ Choose Language
 
    installation-walktrough.rst
    mpylab/driver_framework.rst
+   mpylab/ui_adapter_contract.rst
 
 Indices and tables
 ==================

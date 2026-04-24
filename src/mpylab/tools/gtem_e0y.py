@@ -59,35 +59,33 @@ class GTEM:
 
     def generate_points(self, zmax, num_points_z, num_points_xy):
         """
-        Erzeugt ein 3D-Array von Punkten (x, y, z) basierend auf den gegebenen Bedingungen.
+        Generate a 3D array of points ``(x, y, z)`` from chamber geometry.
 
         Parameters:
-            zmax (float): Maximale z-Koordinate.
-            a_func (function): Funktion a(z), die den Bereich der x-Koordinate definiert.
-            h_func (function): Funktion h(z), die den Bereich der y-Koordinate definiert.
-            num_points_z (int): Anzahl der Punkte entlang der z-Achse.
-            num_points_xy (int): Anzahl der Punkte entlang der x- und y-Achse.
+            zmax (float): Maximum z coordinate.
+            num_points_z (int): Number of samples along the z axis.
+            num_points_xy (int): Number of samples for x and y per z slice.
 
         Returns:
-            numpy.ndarray: Array mit den Punkten (x, y, z).
+            numpy.ndarray: Array containing points ``(x, y, z)``.
         """
-        # Erstelle z-Werte
+        # Generate z values.
         z_values = np.linspace(zmax/num_points_z, zmax, num_points_z)
         points = []
 
         for z in z_values:
-            # Bereich für x und y basierend auf z
+            # Ranges for x and y based on z.
             x_min, x_max = -self.a(z)/2, self.a(z)/2
             y_min, y_max = 0, self.h(z)
 
-            # Erstelle x- und y-Werte
+            # Generate x and y values.
             x_values = np.linspace(x_min, x_max, num_points_xy)
             y_values = np.linspace(y_min, y_max, num_points_xy)
 
-            # Erstelle Gitter für x und y
+            # Build x/y grid.
             x_grid, y_grid = np.meshgrid(x_values, y_values)
 
-            # Kombiniere x, y, z zu Punkten
+            # Combine x, y, z to points.
             for i in range(x_grid.shape[0]):
                 for j in range(x_grid.shape[1]):
                     points.append([x_grid[i, j], y_grid[i, j], z])
@@ -96,10 +94,12 @@ class GTEM:
 
     def evaluate_function_on_points(self, points, fnc, chunk_size: int = 20000, **kwargs):
         """
-        points: (N,3)
-        fnc: Funktion wie e0y(x,y,z, ...)
-        chunk_size: wie viele Punkte pro Block (RAM-schonend)
-        kwargs: wird an fnc weitergereicht (z.B. max_m=100)
+        Evaluate a field function on a ``(N, 3)`` point cloud.
+
+        :param points: Input points shaped ``(N, 3)``.
+        :param fnc: Function compatible with ``e0y(x, y, z, ...)``.
+        :param chunk_size: Number of points processed per chunk.
+        :param kwargs: Additional keyword arguments forwarded to ``fnc``.
         """
         x, y, z = points[:, 0], points[:, 1], points[:, 2]
         out = np.empty(x.shape[0], dtype=float)

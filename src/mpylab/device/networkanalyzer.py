@@ -84,44 +84,29 @@ class NETWORKANALYZER(DRIVER):
         - *SetSweepPoints*: Sweep Points (for further information see function description)
         - *SetSweepType*: Sweep Type (for further information see function description)
 
-    Das ``_commands``-Dict:
+    The ``_commands`` dictionary:
 
-    Im _commands-Dict werden alle Funktionen Definiert welche möglichst in allen Driver Klassen
-    Implementiert werden sollten. Durch _commands kann so sichergestellt werden, dass alle Driver die von
-    dieser Klasse abgeleitet werden eine Reihe standard Funktionen haben, die in allen Implementierungen
-    gleich sind.
-    
-    Beim Schreiben des Dicti ist folgende Konvention einzuhalten::
-        
-        _commands={"Name_der_Funktion": {'parameter': String-Tupel_von_Strings-None,
-                                     'returntype': Standard_Pthon-Typ oder r_type},
-                    ......
-                   
-    Historischer Hinweis: r_types und Meta_Driver liegen inzwischen im
-    Legacy-Bereich :mod:`mpylab.device.legacy` und werden von den aktiven
-    Treibern nicht mehr verwendet.
-    
-    Siehe historisch auch :class:`mpylab.device.legacy.meta_driver.Meta_Driver`
-    
-    Die Driver Metaklasse prüft anhand von _commands ob Funktionen, deren Name im Dict vorhanden ist, die gleich 
-    Parameter-Liste besitzen, das heißt: gleiche Anzahl und gleiche Reihenfolge der Parameter. Fehlt in einer 
-    konkreten Implementierung eines Drivers ein in _commands defniniert Funktion, so baut die Metaklasse ein 
-    Funktion welche einen NotImplementedError wirft.
+    ``_commands`` defines functions that should be available in concrete
+    driver implementations derived from this class.
 
-    
-       
-    Possibility-Listen:
-    Possibilities sind mögliche Werte für einen Parameter. Bei bestimmen Parameter können immer nur bestimmte
-    Werte übergeben werden, so sind beispielsweise bei sparam (S-Paramter) außschließlich ('S11', 'S12', 'S21', 'S22')
-    möglich. Damit nicht jeder kleine Schreibfehelr sofort zum Abbruch des Programm führt und damit sichergestellt ist
-    das immer ein richtier Wert übergeben wird, wird mit Hilfe eines Fuzzy-string-compares der übergebene Wert auf einen 
-    in der Posssibilites-Liste vorhandenen zurückgeführt.
-        
-    Possibility-Listen können sowol in einer konkreten Implementierung einer Driver-Klasse als auch in einer Driver-
-    Superklasse definiert werden. Es wird geraten die Definition immer in der Super-Klasse vorzunehmen, damit die 
-    Possibilities für alle Driver gleich sind.
-        
-    Historisch siehe: :class:`mpylab.device.legacy.meta_driver.Meta_Driver`
+    Convention example::
+
+        _commands={"function_name": {'parameter': tuple_of_parameter_names_or_None,
+                                     'returntype': python_type_or_r_type},
+                    ...}
+
+    Historical note: ``r_types`` and ``Meta_Driver`` are archived under
+    :mod:`mpylab.device.legacy` and are not used by active drivers.
+    See also :class:`mpylab.device.legacy.meta_driver.Meta_Driver`.
+
+    Possibility lists:
+    Possibilities define valid values for specific parameters. For example,
+    ``sparam`` is restricted to values like ``('S11', 'S12', 'S21', 'S22')``.
+    A fuzzy string compare may map small typos to known valid entries.
+
+    Possibility lists can be defined in a concrete driver class or in a
+    base class. Defining them in shared base classes is recommended so valid
+    values remain consistent across drivers.
 
     .. rubric:: Methods:
     .. method:: SetCenterFreq(cfreq):

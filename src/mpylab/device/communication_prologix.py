@@ -28,17 +28,17 @@ class CommunicationPrologix:
         encoding="ascii",
     ):
         """
-        Kommunikation über einen PROLOGIX GPIB-Ethernet-Adapter.
+        Communication via a PROLOGIX GPIB-over-Ethernet adapter.
 
-        :param ip: IP-Adresse des Prologix-Adapters
-        :param port: TCP-Port des Prologix-Adapters
-        :param gpib: GPIB-Adresse des Zielgeräts
-        :param bufsize: TCP-Receive-Buffergröße
-        :param TXEOL: Zeilenende für Prologix-Befehle und SCPI-Kommandos
-        :param timeout_s: Timeout in Sekunden
-        :param send_clr: Wenn True, beim Initialisieren ++clr senden
-        :param send_ifc: Wenn True, beim Initialisieren ++ifc senden
-        :param encoding: Text-Encoding für Kommandos/Antworten
+        :param ip: IP address of the adapter.
+        :param port: TCP port of the adapter.
+        :param gpib: GPIB address of the target instrument.
+        :param bufsize: TCP receive buffer size.
+        :param TXEOL: Line ending used for adapter and SCPI commands.
+        :param timeout_s: I/O timeout in seconds.
+        :param send_clr: Send ``++clr`` during initialization when ``True``.
+        :param send_ifc: Send ``++ifc`` during initialization when ``True``.
+        :param encoding: Text encoding for commands and responses.
         """
         if not isinstance(ip, str) or not ip.strip():
             raise ValueError("ip must be a non-empty string")
@@ -65,7 +65,7 @@ class CommunicationPrologix:
 
         self._lock = threading.Lock()
 
-        # Adapter einmal initialisieren
+        # Initialize the adapter once.
         with self._open_socket() as s:
             self._initialize_adapter(s)
 
@@ -77,7 +77,7 @@ class CommunicationPrologix:
 
     def _send_line(self, sock, data):
         """
-        Sendet bytes oder str immer mit TXEOL abgeschlossen.
+        Send bytes or text and always append ``TXEOL``.
         """
         if isinstance(data, str):
             data = data.encode(self.encoding)
@@ -85,11 +85,12 @@ class CommunicationPrologix:
 
     def _recv_all_available(self, sock):
         """
-        Liest alle verfügbaren Daten robust ein.
-        Ende ist erreicht, wenn:
-        - select() keine Lesebereitschaft mehr meldet
-        - recv() keine Daten mehr liefert
-        - weniger als bufsize Bytes empfangen wurden
+        Read currently available data chunks from the socket.
+
+        Reading stops when:
+        - ``select()`` reports no readiness
+        - ``recv()`` returns no bytes
+        - fewer than ``bufsize`` bytes are received
         """
         chunks = []
 
@@ -104,7 +105,7 @@ class CommunicationPrologix:
 
             chunks.append(chunk)
 
-            # Typischer Hinweis darauf, dass aktuell kein weiterer Block mehr anliegt
+            # Usually indicates that no further chunk is immediately available.
             if len(chunk) < self.bufsize:
                 break
 
@@ -112,11 +113,11 @@ class CommunicationPrologix:
 
     def _initialize_adapter(self, sock):
         """
-        Initialisiert den Prologix-Adapter.
+        Initialize base adapter settings.
         """
-        self._send_line(sock, "++savecfg 0")  # nichts persistent ins EEPROM schreiben
-        self._send_line(sock, "++mode 1")     # Controller-Modus
-        self._send_line(sock, "++auto 0")     # kein read-after-write
+        self._send_line(sock, "++savecfg 0")  # do not persist settings in EEPROM
+        self._send_line(sock, "++mode 1")     # controller mode
+        self._send_line(sock, "++auto 0")     # disable read-after-write
         self._send_line(sock, f"++read_tmo_ms {int(self.timeout_s * 1000)}")
         self._send_line(sock, f"++addr {self.gpib}")
 
@@ -128,17 +129,18 @@ class CommunicationPrologix:
 
     def _prepare_transaction(self, sock):
         """
-        Setzt vor jeder Transaktion mindestens die Zieladresse und das Read-Timeout.
-        Das macht den Zugriff robuster, falls sich der Adapterzustand geändert hat.
+        Ensure key adapter state before each transaction.
+
+        This improves robustness when adapter state was changed externally.
         """
         self._send_line(sock, f"++addr {self.gpib}")
         self._send_line(sock, f"++read_tmo_ms {int(self.timeout_s * 1000)}")
 
     def write(self, cmd):
         """
-        :param cmd: str, Kommando an das Instrument
+        :param cmd: Command text sent to the instrument.
 
-        :return: int, Anzahl der gesendeten Zeichen des Nutzkommandos
+        :return: Number of characters sent for the payload command.
         """
         def write_fn(cmd_to_send):
             with self._lock:
@@ -151,9 +153,9 @@ class CommunicationPrologix:
 
     def read(self, tmpl=None):
         """
-        :param tmpl: str oder None, Regex-Pattern für generic_read
+        :param tmpl: Regex pattern for ``generic_read`` or ``None``.
 
-        :return: str oder dict oder None
+        :return: Parsed response, raw response, or ``None``.
         """
         def read_fn():
             with self._lock:
@@ -171,11 +173,11 @@ class CommunicationPrologix:
 
     def query(self, cmd, tmpl=None, send_opc=False):
         """
-        :param cmd: str, Kommando an das Instrument
-        :param tmpl: str oder None, Regex-Pattern für generic_query
-        :param send_opc: bool, append ``; *OPC?`` to a non-query command
+        :param cmd: Command text sent to the instrument.
+        :param tmpl: Regex pattern for ``generic_query`` or ``None``.
+        :param send_opc: Append ``; *OPC?`` to non-query commands when ``True``.
 
-        :return: str oder dict oder None
+        :return: Parsed response, raw response, or ``None``.
         """
         def query_fn(cmd_to_send):
             with self._lock:
