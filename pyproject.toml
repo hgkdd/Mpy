@@ -1,10 +1,9 @@
 [build-system]
-requires = ["uv_build"]
-build-backend = "uv_build"
+requires = ["setuptools>=61.0", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "mpylab"
-version = "0.9.5"
 requires-python = ">=3.11"
 authors = [
     {name = "Hans Georg Krauthäuser", email = "hgk@ieee.org"},
@@ -69,8 +68,35 @@ dependencies = [
     "zeroconf>=0.148.0",
 ]
 
+# Optional: Extrainstallation (z.B. für Docs)
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black",
+    "flake8",
+]
+docs = [
+    "sphinx>=8.0",
+    "sphinx-rtd-theme",
+    "breathe",
+]
+
+
 [project.urls]
-Repository = "https://github.com/hgkdd/Mpy"
+Homepage = "https://www.tu-dresden.de/et/tet"
+Repository = "https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab/mpylab.git"
+Documentation = "https://mpylab-75fcff.gp.hrz.tu-chemnitz.de/"
 
 [project.optional-dependencies]
 gui = ["PySide6"]
+
+[tool.setuptools.packages.find]
+where = ["src"]  # Wenn dein Code im 'src' Ordner liegt
+# Falls dein Code im Root liegt, ändere dies zu: where = ["."]
+
+[tool.setuptools_scm]
+# Konfiguration für die Versionsgenerierung
+write_to = "src/mpylab/_version.py"  # Erstellt eine Datei mit der Version im Code
+write_to_template = '__version__ = "{version}"\n'
+# Fallback Version, falls kein Tag existiert (nur für lokale Entwicklung)
+fallback_version = "0.0.0.dev0"

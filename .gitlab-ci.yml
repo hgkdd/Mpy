@@ -1,8 +1,10 @@
 stages:
   - deploy
 
+# ============================================
+# JOB 1: GitLab Pages (Dokumentation)
+# ============================================
 create-pages:
-  image: python:3.11 # Dies wird ignoriert, da wir den Shell-Executor nutzen, aber gut für Referenz
   stage: deploy
   variables:
     PIP_DISABLE_PIP_VERSION_CHECK: "1"
@@ -12,24 +14,71 @@ create-pages:
     paths:
       - .cache/pip
       - .cache/matplotlib
-      - .ci_venv  # Wir cachen jetzt auch das Venv!
+      - .ci_venv
   before_script:
-    # - export PATH="/opt/homebrew/bin:$PATH"
-    # 1. Virtuelle Umgebung erstellen (falls nicht vorhanden)
     - python3 -m venv .ci_venv
-    # 2. Aktivieren
     - source .ci_venv/bin/activate
-    # 3. Pip im Venv updaten
     - pip3 install --upgrade pip
-    # 4. Abhängigkeiten installieren
     - pip3 install -e .
     - pip3 install sphinx
   script:
     - mkdir -p public
-    # Alle folgenden Befehle laufen jetzt im aktiven Venv
     - python3 tools/docs_generate_api.py
     - python3 tools/docs_audit.py --fail-on-uncovered
     - sphinx-build -W --keep-going -E -a -b html docs/source public
   pages: true
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# ============================================
+# JOB 2: PyPI Deployment (Produktion)
+# ============================================
+deploy_pypi:
+  stage: deploy
+  # KEIN 'image:' Befehl! Shell-Runner nutzt dein System
+  variables:
+    PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  cache:
+    key: "${CI_COMMIT_TAG}-pypi"
+    paths:
+      - .ci_venv
+  before_script:
+    - python3 -m venv .ci_venv
+    - source .ci_venv/bin/activate
+    - pip3 install --upgrade pip
+    - pip3 install build twine
+  script:
+    - python3 -m build
+    - twine upload dist/* --repository pypi --username __token__ --password $PYPI_TOKEN
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: always
+    - when: never
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+
+# ============================================
+# JOB 3: TestPyPI Deployment (Optional, empfohlen)
+# ============================================
+deploy_test_pypi:
+  stage: deploy
+  variables:
+    PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  before_script:
+    - python3 -m venv .ci_venv
+    - source .ci_venv/bin/activate
+    - pip3 install --upgrade pip
+    - pip3 install build twine
+  script:
+    - python3 -m build
+    - twine upload dist/* --repository testpypi --username __token__ --password $TEST_PYPI_TOKEN
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+-rc/'  # Nur RC-Tags
+      when: always
+    - when: never
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
