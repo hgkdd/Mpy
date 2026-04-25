@@ -14,21 +14,21 @@ create-pages:
       - .cache/matplotlib
       - .ci_venv  # Wir cachen jetzt auch das Venv!
   before_script:
-    - export PATH="/opt/homebrew/bin:$PATH"
+    # - export PATH="/opt/homebrew/bin:$PATH"
     # 1. Virtuelle Umgebung erstellen (falls nicht vorhanden)
-    - python -m venv .ci_venv
+    - python3 -m venv .ci_venv
     # 2. Aktivieren
     - source .ci_venv/bin/activate
     # 3. Pip im Venv updaten
-    - pip install --upgrade pip
+    - pip3 install --upgrade pip
     # 4. Abhängigkeiten installieren
-    - pip install -e .
-    - pip install sphinx
+    - pip3 install -e .
+    - pip3 install sphinx
   script:
     - mkdir -p public
     # Alle folgenden Befehle laufen jetzt im aktiven Venv
-    - python tools/docs_generate_api.py
-    - python tools/docs_audit.py --fail-on-uncovered
+    - python3 tools/docs_generate_api.py
+    - python3 tools/docs_audit.py --fail-on-uncovered
     - sphinx-build -W --keep-going -E -a -b html docs/source public
   pages: true
   rules:
