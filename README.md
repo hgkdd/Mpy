@@ -19,6 +19,10 @@ GPL-3 or higher
 
 [https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab/mpylab.git](https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab/mpylab.git)
 
+The documentation is also available from the gitlab server of TU Chemnitz:
+
+[https://mpylab-75fcff.gp.hrz.tu-chemnitz.de/](https://mpylab-75fcff.gp.hrz.tu-chemnitz.de/)
+
 ## Contact
 
 Prof. Dr. Hans Georg Krauthäuser (hgk@ieee.org)  
