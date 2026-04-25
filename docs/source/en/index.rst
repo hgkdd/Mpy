@@ -4,13 +4,21 @@ English Documentation
 .. toctree::
    :maxdepth: 2
 
-   ../intro-install-en.rst
-   ../intro-structure-en.rst
-   ../intro-driver-en.rst
-   ../FAQ-en.rst
-   ../mpylab/ui_adapter_contract-en.rst
-   ../messanleitung-en.rst
-   ../dat-file-grammar-en.rst
-   ../dot-grammar-en.rst
-   ../mpylab-en.rst
-   ../docs_maintenance-en.rst
+   intro-install.rst
+   intro-structure.rst
+   intro-driver.rst
+   FAQ.rst
+   mpylab/ui_adapter_contract.rst
+   measurement-guide.rst
+   dat-file-grammar.rst
+   dot-grammar.rst
+   mpylab.rst
+   docs_maintenance.rst
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+
+   messanleitung.rst
+   measurement-guide.rst
+   historical-measurement-guide.rst

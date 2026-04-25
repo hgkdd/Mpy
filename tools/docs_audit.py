@@ -216,25 +216,36 @@ def discover_public_api_symbols(source_modules: dict[str, Path]) -> tuple[list[S
 
 
 def discover_language_counterpart_gaps(docs_root: Path) -> tuple[list[str], list[str]]:
-    """Return missing ``-de`` and missing ``-en`` pages based on suffix variants."""
-    variants: dict[str, set[str]] = {}
+    """Return missing language counterparts for suffix and ``de/``/``en/`` layouts."""
+    suffix_variants: dict[str, set[str]] = {}
+    dir_variants: dict[str, set[str]] = {}
     for rst in docs_root.rglob("*.rst"):
         rel = rst.relative_to(docs_root).as_posix()
+        if rel.startswith("de/"):
+            dir_variants.setdefault(rel[3:], set()).add("de")
+        elif rel.startswith("en/"):
+            dir_variants.setdefault(rel[3:], set()).add("en")
         match = LANG_SUFFIX_RE.match(rel)
         if not match:
             continue
         base = match.group("base")
         lang = match.group("lang")
-        variants.setdefault(base, set()).add(lang)
+        suffix_variants.setdefault(base, set()).add(lang)
 
-    missing_de: list[str] = []
-    missing_en: list[str] = []
-    for base, langs in sorted(variants.items()):
+    missing_de: set[str] = set()
+    missing_en: set[str] = set()
+    for rel, langs in sorted(dir_variants.items()):
         if "de" in langs and "en" not in langs:
-            missing_en.append(f"{base}-en.rst")
+            missing_en.add(f"en/{rel}")
         if "en" in langs and "de" not in langs:
-            missing_de.append(f"{base}-de.rst")
-    return missing_de, missing_en
+            missing_de.add(f"de/{rel}")
+
+    for base, langs in sorted(suffix_variants.items()):
+        if "de" in langs and "en" not in langs:
+            missing_en.add(f"{base}-en.rst")
+        if "en" in langs and "de" not in langs:
+            missing_de.add(f"{base}-de.rst")
+    return sorted(missing_de), sorted(missing_en)
 
 
 def find_non_english_docstrings(symbols: list[SymbolDoc]) -> list[DocstringLanguageIssue]:
@@ -280,7 +291,11 @@ def read_toctree_entries(index_file: Path) -> list[str]:
 
 def normalize_lang_entry(entry: str) -> str:
     """Normalize ``-de``/``-en`` suffixes so EN and DE toctrees can be compared."""
-    return LANG_TRAILING_SUFFIX_RE.sub(".rst", entry)
+    normalized = entry.strip()
+    if normalized.startswith("../"):
+        normalized = normalized[3:]
+    normalized = re.sub(r"^(de|en)/", "", normalized)
+    return LANG_TRAILING_SUFFIX_RE.sub(".rst", normalized)
 
 
 def discover_toctree_order_mismatches(docs_root: Path) -> list[str]:

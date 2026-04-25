@@ -20,6 +20,8 @@ Choose Language
    :hidden:
 
    installation-walktrough.rst
+   messanleitung.rst
+   en/messanleitung-historisch.rst
    dat-file-grammar.rst
    dot-grammar.rst
    mpylab.rst
@@ -27,6 +29,17 @@ Choose Language
    mpylab/driver_framework.rst
    mpylab/ui_adapter_contract.rst
    legacy/index.rst
+
+.. toctree::
+   :hidden:
+   :glob:
+
+   *-de
+   *-en
+   legacy/*-de
+   legacy/*-en
+   mpylab/*-de
+   mpylab/*-en
 
 Indices and tables
 ==================

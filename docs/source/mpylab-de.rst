@@ -1,9 +1,6 @@
-API-Dokumentation
-=================
+API-Dokumentation (Kompatibilitätspfad)
+=======================================
 
-Die API-Referenz wird aus dem Quellbaum generiert.
+Diese Seite bleibt als Kompatibilitätspfad erhalten.
+Die gepflegte deutsche Seite ist :doc:`de/mpylab`.
 
-.. toctree::
-   :maxdepth: 2
-
-   api/modules.rst

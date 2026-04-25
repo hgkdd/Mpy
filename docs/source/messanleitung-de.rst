@@ -1,12 +1,6 @@
-.. -*-coding: utf-8 -*-
+Messanleitung (Kompatibilitätspfad)
+===================================
 
-Hinweise zur Durchführung von Messungen in Modenverwirbelungskammern
-=====================================================================
+Diese Seite bleibt als Kompatibilitätspfad erhalten.
+Die gepflegte deutsche Seite ist :doc:`de/messanleitung`.
 
-Diese Seite ist der DE-Einstiegspunkt für die Messanleitung.
-Das historische, ausführliche Dokument ist hier verlinkt:
-
-.. toctree::
-   :maxdepth: 1
-
-   messanleitung.rst
