@@ -3,6 +3,7 @@ requires = ["setuptools>=61.0", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
+dynamic = ["version"]  # <--- WICHTIG: Dies sagt, dass die Version dynamisch ist
 name = "mpylab"
 requires-python = ">=3.11"
 authors = [
@@ -30,7 +31,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    #"License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Topic :: Scientific/Engineering",
     # Specify the Python versions you support here.
     "Programming Language :: Python :: 3",
@@ -80,15 +81,13 @@ docs = [
     "sphinx-rtd-theme",
     "breathe",
 ]
+gui = ["PySide6"]
 
 
 [project.urls]
 Homepage = "https://www.tu-dresden.de/et/tet"
 Repository = "https://gitlab.hrz.tu-chemnitz.de/chair-of-electromagnetic-theory-and-compatibility-at-tu-dresden/mpylab/mpylab.git"
 Documentation = "https://mpylab-75fcff.gp.hrz.tu-chemnitz.de/"
-
-[project.optional-dependencies]
-gui = ["PySide6"]
 
 [tool.setuptools.packages.find]
 where = ["src"]  # Wenn dein Code im 'src' Ordner liegt
